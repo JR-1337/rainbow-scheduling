@@ -5160,6 +5160,7 @@ export default function App() {
   
   const saveShift = async (s) => {
     const k = `${s.employeeId}-${s.date}`;
+    console.log('saveShift called:', { key: k, shift: s, deleted: s.deleted });
     
     // Optimistic update - update UI immediately
     if (s.deleted) { 
@@ -5188,11 +5189,15 @@ export default function App() {
       deleted: s.deleted || false
     };
     
+    console.log('Sending to API:', shiftForApi);
+    
     // Call API in background to persist to Google Sheets
     const result = await apiCall('saveShift', {
       callerEmail: currentUser.email,
       shift: shiftForApi
     });
+    
+    console.log('API result:', result);
     
     if (result.success) {
       showToast('success', s.deleted ? 'Shift deleted' : 'Shift saved');
