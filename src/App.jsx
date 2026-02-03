@@ -4936,7 +4936,7 @@ export default function App() {
       setPublishedShifts(shiftsObj); // Start with same data for published
       
       // Process requests into the 3 types with field mapping
-      // Backend uses employeeName/employeeEmail, frontend uses different field names
+      // Backend uses employeeName/employeeEmail/requestId, frontend uses different names
       const timeOff = (requests || []).filter(r => r.requestType === 'time_off').map(r => ({
         ...r,
         name: r.employeeName || r.name,
@@ -4956,6 +4956,8 @@ export default function App() {
         initiatorName: s.employeeName || s.initiatorName,
         initiatorEmail: s.employeeEmail || s.initiatorEmail
       }));
+      
+      console.log('Loaded requests - timeOff:', timeOff.length, 'offers:', offers.length, 'swaps:', swaps.length);
       
       setTimeOffRequests(timeOff);
       setShiftOffers(offers);
@@ -5319,7 +5321,6 @@ export default function App() {
   
   // Cancel a time off request (employee action on their own pending request)
   const cancelTimeOffRequest = async (requestId) => {
-    // Call API to persist cancellation
     const result = await apiCall('cancelTimeOffRequest', {
       callerEmail: currentUser.email,
       requestId: requestId
@@ -5328,25 +5329,18 @@ export default function App() {
     if (result.success) {
       setTimeOffRequests(prev => prev.map(req => {
         if (req.requestId === requestId && req.status === 'pending') {
-          return {
-            ...req,
-            status: 'cancelled',
-            decidedTimestamp: new Date().toISOString(),
-            decidedBy: currentUser?.email || ''
-          };
+          return { ...req, status: 'cancelled', decidedTimestamp: new Date().toISOString(), decidedBy: currentUser?.email || '' };
         }
         return req;
       }));
       showToast('success', 'Request cancelled');
     } else {
       showToast('error', result.error?.message || 'Failed to cancel request');
-      console.error('Cancel time off failed:', result.error);
     }
   };
   
   // Submit a new time off request (employee or admin action)
   const submitTimeOffRequest = async (request) => {
-    // Call API to persist request
     const result = await apiCall('submitTimeOffRequest', {
       callerEmail: currentUser.email,
       dates: request.datesRequested.split(','),
@@ -5354,11 +5348,12 @@ export default function App() {
     });
     
     if (result.success) {
-      // Add to local state with the server-generated requestId
       const serverRequest = {
         ...request,
         requestId: result.data.requestId,
         requestType: 'time_off',
+        name: request.name,
+        email: request.email,
         employeeName: request.name,
         employeeEmail: request.email,
         createdTimestamp: result.data.createdTimestamp
@@ -5373,7 +5368,6 @@ export default function App() {
   
   // Submit a shift offer (employee action)
   const submitShiftOffer = async (offer) => {
-    // Call API to persist offer
     const result = await apiCall('submitShiftOffer', {
       callerEmail: currentUser.email,
       recipientEmail: offer.recipientEmail,
@@ -5384,10 +5378,9 @@ export default function App() {
     });
     
     if (result.success) {
-      // Add to local state with server-generated ID
       const serverOffer = {
         ...offer,
-        offerId: result.data.requestId, // Backend uses requestId
+        offerId: result.data.requestId,
         requestId: result.data.requestId,
         requestType: 'shift_offer',
         employeeName: offer.offererName,
@@ -5398,7 +5391,6 @@ export default function App() {
       showToast('success', 'Shift offer sent');
     } else {
       showToast('error', result.error?.message || 'Failed to submit offer');
-      console.error('Submit shift offer failed:', result.error);
     }
   };
   
@@ -5412,18 +5404,13 @@ export default function App() {
     if (result.success) {
       setShiftOffers(prev => prev.map(offer => {
         if ((offer.offerId === offerId || offer.requestId === offerId) && ['awaiting_recipient', 'awaiting_admin'].includes(offer.status)) {
-          return {
-            ...offer,
-            status: 'cancelled',
-            cancelledTimestamp: new Date().toISOString()
-          };
+          return { ...offer, status: 'cancelled', cancelledTimestamp: new Date().toISOString() };
         }
         return offer;
       }));
       showToast('success', 'Offer cancelled');
     } else {
       showToast('error', result.error?.message || 'Failed to cancel offer');
-      console.error('Cancel shift offer failed:', result.error);
     }
   };
   
@@ -5437,18 +5424,13 @@ export default function App() {
     if (result.success) {
       setShiftOffers(prev => prev.map(offer => {
         if ((offer.offerId === offerId || offer.requestId === offerId) && offer.status === 'awaiting_recipient') {
-          return {
-            ...offer,
-            status: 'awaiting_admin',
-            recipientRespondedTimestamp: new Date().toISOString()
-          };
+          return { ...offer, status: 'awaiting_admin', recipientRespondedTimestamp: new Date().toISOString() };
         }
         return offer;
       }));
       showToast('success', 'Offer accepted - awaiting admin approval');
     } else {
       showToast('error', result.error?.message || 'Failed to accept offer');
-      console.error('Accept shift offer failed:', result.error);
     }
   };
   
@@ -5463,25 +5445,18 @@ export default function App() {
     if (result.success) {
       setShiftOffers(prev => prev.map(offer => {
         if ((offer.offerId === offerId || offer.requestId === offerId) && offer.status === 'awaiting_recipient') {
-          return {
-            ...offer,
-            status: 'recipient_rejected',
-            recipientNote: note || '',
-            recipientRespondedTimestamp: new Date().toISOString()
-          };
+          return { ...offer, status: 'recipient_rejected', recipientNote: note || '', recipientRespondedTimestamp: new Date().toISOString() };
         }
         return offer;
       }));
       showToast('success', 'Offer declined');
     } else {
       showToast('error', result.error?.message || 'Failed to decline offer');
-      console.error('Decline shift offer failed:', result.error);
     }
   };
   
   // Approve a shift offer (admin action) - reassign the shift
   const approveShiftOffer = async (offerId) => {
-    // First, find the offer we're approving
     const offer = shiftOffers.find(o => (o.offerId === offerId || o.requestId === offerId) && o.status === 'awaiting_admin');
     if (!offer) return;
     
@@ -5491,45 +5466,29 @@ export default function App() {
     });
     
     if (result.success) {
-      // Find the offerer and recipient
       const offerer = employees.find(e => e.email === (offer.offererEmail || offer.employeeEmail));
       const recipient = employees.find(e => e.email === offer.recipientEmail);
-      if (!offerer || !recipient) return;
-      
-      // Find the shift key
-      const shiftKey = `${offerer.id}-${offer.shiftDate}`;
-      const oldShift = shifts[shiftKey];
-      
-      if (oldShift) {
-        // Update the shifts - remove from offerer, add to recipient
-        setShifts(prevShifts => {
-          const newShifts = { ...prevShifts };
-          delete newShifts[shiftKey];
-          newShifts[`${recipient.id}-${offer.shiftDate}`] = {
-            ...oldShift,
-            employeeId: recipient.id,
-            employeeName: recipient.name
-          };
-          return newShifts;
-        });
+      if (offerer && recipient) {
+        const shiftKey = `${offerer.id}-${offer.shiftDate}`;
+        const oldShift = shifts[shiftKey];
+        if (oldShift) {
+          setShifts(prevShifts => {
+            const newShifts = { ...prevShifts };
+            delete newShifts[shiftKey];
+            newShifts[`${recipient.id}-${offer.shiftDate}`] = { ...oldShift, employeeId: recipient.id, employeeName: recipient.name };
+            return newShifts;
+          });
+        }
       }
-      
-      // Update the offer status
       setShiftOffers(prev => prev.map(o => {
         if (o.offerId === offerId || o.requestId === offerId) {
-          return {
-            ...o,
-            status: 'approved',
-            adminDecidedTimestamp: new Date().toISOString(),
-            adminDecidedBy: currentUser?.email || ''
-          };
+          return { ...o, status: 'approved', adminDecidedTimestamp: new Date().toISOString(), adminDecidedBy: currentUser?.email || '' };
         }
         return o;
       }));
       showToast('success', 'Shift offer approved');
     } else {
       showToast('error', result.error?.message || 'Failed to approve offer');
-      console.error('Approve shift offer failed:', result.error);
     }
   };
   
@@ -5544,20 +5503,13 @@ export default function App() {
     if (result.success) {
       setShiftOffers(prev => prev.map(offer => {
         if ((offer.offerId === offerId || offer.requestId === offerId) && offer.status === 'awaiting_admin') {
-          return {
-            ...offer,
-            status: 'rejected',
-            adminNote: note || '',
-            adminDecidedTimestamp: new Date().toISOString(),
-            adminDecidedBy: currentUser?.email || ''
-          };
+          return { ...offer, status: 'rejected', adminNote: note || '', adminDecidedTimestamp: new Date().toISOString(), adminDecidedBy: currentUser?.email || '' };
         }
         return offer;
       }));
       showToast('success', 'Shift offer rejected');
     } else {
       showToast('error', result.error?.message || 'Failed to reject offer');
-      console.error('Reject shift offer failed:', result.error);
     }
   };
   
@@ -5566,7 +5518,6 @@ export default function App() {
     const offer = shiftOffers.find(o => (o.offerId === offerId || o.requestId === offerId) && o.status === 'approved');
     if (!offer) return;
     
-    // Check if shift date is in the future
     const shiftDate = new Date(offer.shiftDate + 'T12:00:00');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -5581,44 +5532,29 @@ export default function App() {
     });
     
     if (result.success) {
-      // Find the offerer and recipient
       const offerer = employees.find(e => e.email === (offer.offererEmail || offer.employeeEmail));
       const recipient = employees.find(e => e.email === offer.recipientEmail);
-      if (!offerer || !recipient) return;
-      
-      // Move shift back from recipient to offerer
-      const recipientShiftKey = `${recipient.id}-${offer.shiftDate}`;
-      const currentShift = shifts[recipientShiftKey];
-      
-      if (currentShift) {
-        setShifts(prevShifts => {
-          const newShifts = { ...prevShifts };
-          delete newShifts[recipientShiftKey];
-          newShifts[`${offerer.id}-${offer.shiftDate}`] = {
-            ...currentShift,
-            employeeId: offerer.id,
-            employeeName: offerer.name
-          };
-          return newShifts;
-        });
+      if (offerer && recipient) {
+        const recipientShiftKey = `${recipient.id}-${offer.shiftDate}`;
+        const currentShift = shifts[recipientShiftKey];
+        if (currentShift) {
+          setShifts(prevShifts => {
+            const newShifts = { ...prevShifts };
+            delete newShifts[recipientShiftKey];
+            newShifts[`${offerer.id}-${offer.shiftDate}`] = { ...currentShift, employeeId: offerer.id, employeeName: offerer.name };
+            return newShifts;
+          });
+        }
       }
-      
-      // Update offer status
       setShiftOffers(prev => prev.map(o => {
         if (o.offerId === offerId || o.requestId === offerId) {
-          return {
-            ...o,
-            status: 'revoked',
-            revokedTimestamp: new Date().toISOString(),
-            revokedBy: currentUser?.email || ''
-          };
+          return { ...o, status: 'revoked', revokedTimestamp: new Date().toISOString(), revokedBy: currentUser?.email || '' };
         }
         return o;
       }));
       showToast('success', 'Shift offer revoked');
     } else {
       showToast('error', result.error?.message || 'Failed to revoke offer');
-      console.error('Revoke shift offer failed:', result.error);
     }
   };
   
@@ -5656,10 +5592,10 @@ export default function App() {
         createdTimestamp: result.data.createdTimestamp
       };
       setShiftSwaps(prev => [...prev, serverSwap]);
-      showToast('success', 'Swap request sent');
+      showToast('success', 'Swap request sent to ' + swap.partnerName);
     } else {
       showToast('error', result.error?.message || 'Failed to submit swap request');
-      console.error('Submit swap request failed:', result.error);
+      console.error('Submit swap failed:', result.error);
     }
   };
   
@@ -5673,17 +5609,13 @@ export default function App() {
     if (result.success) {
       setShiftSwaps(prev => prev.map(swap => {
         if ((swap.swapId === swapId || swap.requestId === swapId) && ['awaiting_partner', 'awaiting_admin'].includes(swap.status)) {
-          return {
-            ...swap,
-            status: 'cancelled'
-          };
+          return { ...swap, status: 'cancelled' };
         }
         return swap;
       }));
       showToast('success', 'Swap request cancelled');
     } else {
       showToast('error', result.error?.message || 'Failed to cancel swap');
-      console.error('Cancel swap request failed:', result.error);
     }
   };
   
@@ -5697,18 +5629,13 @@ export default function App() {
     if (result.success) {
       setShiftSwaps(prev => prev.map(swap => {
         if ((swap.swapId === swapId || swap.requestId === swapId) && swap.status === 'awaiting_partner') {
-          return {
-            ...swap,
-            status: 'awaiting_admin',
-            partnerRespondedTimestamp: new Date().toISOString()
-          };
+          return { ...swap, status: 'awaiting_admin', partnerRespondedTimestamp: new Date().toISOString() };
         }
         return swap;
       }));
       showToast('success', 'Swap accepted - awaiting admin approval');
     } else {
       showToast('error', result.error?.message || 'Failed to accept swap');
-      console.error('Accept swap request failed:', result.error);
     }
   };
   
@@ -5723,19 +5650,13 @@ export default function App() {
     if (result.success) {
       setShiftSwaps(prev => prev.map(swap => {
         if ((swap.swapId === swapId || swap.requestId === swapId) && swap.status === 'awaiting_partner') {
-          return {
-            ...swap,
-            status: 'partner_rejected',
-            partnerNote: note || '',
-            partnerRespondedTimestamp: new Date().toISOString()
-          };
+          return { ...swap, status: 'partner_rejected', partnerNote: note || '', partnerRespondedTimestamp: new Date().toISOString() };
         }
         return swap;
       }));
-      showToast('success', 'Swap declined');
+      showToast('success', 'Swap request declined');
     } else {
       showToast('error', result.error?.message || 'Failed to decline swap');
-      console.error('Decline swap request failed:', result.error);
     }
   };
   
@@ -5750,63 +5671,38 @@ export default function App() {
     });
     
     if (result.success) {
-      // Find both employees
       const initiator = employees.find(e => e.email === (swap.initiatorEmail || swap.employeeEmail));
       const partner = employees.find(e => e.email === swap.partnerEmail);
-      if (!initiator || !partner) return;
       
-      // Get shift keys
-      const initiatorShiftKey = `${initiator.id}-${swap.initiatorShiftDate}`;
-      const partnerShiftKey = `${partner.id}-${swap.partnerShiftDate}`;
-      
-      const initiatorShift = shifts[initiatorShiftKey];
-      const partnerShift = shifts[partnerShiftKey];
-      
-      // Swap the shifts
-      setShifts(prevShifts => {
-        const newShifts = { ...prevShifts };
+      if (initiator && partner) {
+        const initiatorShiftKey = `${initiator.id}-${swap.initiatorShiftDate}`;
+        const partnerShiftKey = `${partner.id}-${swap.partnerShiftDate}`;
+        const initiatorShift = shifts[initiatorShiftKey];
+        const partnerShift = shifts[partnerShiftKey];
         
-        // Remove old keys
-        delete newShifts[initiatorShiftKey];
-        delete newShifts[partnerShiftKey];
-        
-        // Add swapped shifts
-        if (initiatorShift) {
-          // Initiator's shift goes to partner on initiator's date
-          newShifts[`${partner.id}-${swap.initiatorShiftDate}`] = {
-            ...initiatorShift,
-            employeeId: partner.id,
-            employeeName: partner.name
-          };
-        }
-        if (partnerShift) {
-          // Partner's shift goes to initiator on partner's date
-          newShifts[`${initiator.id}-${swap.partnerShiftDate}`] = {
-            ...partnerShift,
-            employeeId: initiator.id,
-            employeeName: initiator.name
-          };
-        }
-        
-        return newShifts;
-      });
+        setShifts(prevShifts => {
+          const newShifts = { ...prevShifts };
+          delete newShifts[initiatorShiftKey];
+          delete newShifts[partnerShiftKey];
+          if (initiatorShift) {
+            newShifts[`${partner.id}-${swap.initiatorShiftDate}`] = { ...initiatorShift, employeeId: partner.id, employeeName: partner.name };
+          }
+          if (partnerShift) {
+            newShifts[`${initiator.id}-${swap.partnerShiftDate}`] = { ...partnerShift, employeeId: initiator.id, employeeName: initiator.name };
+          }
+          return newShifts;
+        });
+      }
       
-      // Update swap status
       setShiftSwaps(prev => prev.map(s => {
         if (s.swapId === swapId || s.requestId === swapId) {
-          return {
-            ...s,
-            status: 'approved',
-            adminDecidedTimestamp: new Date().toISOString(),
-            adminDecidedBy: currentUser?.email || ''
-          };
+          return { ...s, status: 'approved', adminDecidedTimestamp: new Date().toISOString(), adminDecidedBy: currentUser?.email || '' };
         }
         return s;
       }));
-      showToast('success', 'Swap approved');
+      showToast('success', 'Swap request approved');
     } else {
       showToast('error', result.error?.message || 'Failed to approve swap');
-      console.error('Approve swap request failed:', result.error);
     }
   };
   
@@ -5821,20 +5717,13 @@ export default function App() {
     if (result.success) {
       setShiftSwaps(prev => prev.map(swap => {
         if ((swap.swapId === swapId || swap.requestId === swapId) && swap.status === 'awaiting_admin') {
-          return {
-            ...swap,
-            status: 'rejected',
-            adminNote: note || '',
-            adminDecidedTimestamp: new Date().toISOString(),
-            adminDecidedBy: currentUser?.email || ''
-          };
+          return { ...swap, status: 'rejected', adminNote: note || '', adminDecidedTimestamp: new Date().toISOString(), adminDecidedBy: currentUser?.email || '' };
         }
         return swap;
       }));
-      showToast('success', 'Swap rejected');
+      showToast('success', 'Swap request rejected');
     } else {
       showToast('error', result.error?.message || 'Failed to reject swap');
-      console.error('Reject swap request failed:', result.error);
     }
   };
   
@@ -5843,7 +5732,6 @@ export default function App() {
     const swap = shiftSwaps.find(s => (s.swapId === swapId || s.requestId === swapId) && s.status === 'approved');
     if (!swap) return;
     
-    // Check if both shift dates are in the future
     const initiatorDate = new Date(swap.initiatorShiftDate + 'T12:00:00');
     const partnerDate = new Date(swap.partnerShiftDate + 'T12:00:00');
     const today = new Date();
@@ -5860,61 +5748,38 @@ export default function App() {
     });
     
     if (result.success) {
-      // Find both employees
       const initiator = employees.find(e => e.email === (swap.initiatorEmail || swap.employeeEmail));
       const partner = employees.find(e => e.email === swap.partnerEmail);
-      if (!initiator || !partner) return;
       
-      // Current shift keys (after the swap was approved)
-      const partnerOnInitiatorDateKey = `${partner.id}-${swap.initiatorShiftDate}`;
-      const initiatorOnPartnerDateKey = `${initiator.id}-${swap.partnerShiftDate}`;
-      
-      const partnerOnInitiatorDateShift = shifts[partnerOnInitiatorDateKey];
-      const initiatorOnPartnerDateShift = shifts[initiatorOnPartnerDateKey];
-      
-      // Swap shifts back
-      setShifts(prevShifts => {
-        const newShifts = { ...prevShifts };
+      if (initiator && partner) {
+        const partnerOnInitiatorDateKey = `${partner.id}-${swap.initiatorShiftDate}`;
+        const initiatorOnPartnerDateKey = `${initiator.id}-${swap.partnerShiftDate}`;
+        const partnerOnInitiatorDateShift = shifts[partnerOnInitiatorDateKey];
+        const initiatorOnPartnerDateShift = shifts[initiatorOnPartnerDateKey];
         
-        // Remove current keys
-        delete newShifts[partnerOnInitiatorDateKey];
-        delete newShifts[initiatorOnPartnerDateKey];
-        
-        // Restore original assignments
-        if (partnerOnInitiatorDateShift) {
-          newShifts[`${initiator.id}-${swap.initiatorShiftDate}`] = {
-            ...partnerOnInitiatorDateShift,
-            employeeId: initiator.id,
-            employeeName: initiator.name
-          };
-        }
-        if (initiatorOnPartnerDateShift) {
-          newShifts[`${partner.id}-${swap.partnerShiftDate}`] = {
-            ...initiatorOnPartnerDateShift,
-            employeeId: partner.id,
-            employeeName: partner.name
-          };
-        }
-        
-        return newShifts;
-      });
+        setShifts(prevShifts => {
+          const newShifts = { ...prevShifts };
+          delete newShifts[partnerOnInitiatorDateKey];
+          delete newShifts[initiatorOnPartnerDateKey];
+          if (partnerOnInitiatorDateShift) {
+            newShifts[`${initiator.id}-${swap.initiatorShiftDate}`] = { ...partnerOnInitiatorDateShift, employeeId: initiator.id, employeeName: initiator.name };
+          }
+          if (initiatorOnPartnerDateShift) {
+            newShifts[`${partner.id}-${swap.partnerShiftDate}`] = { ...initiatorOnPartnerDateShift, employeeId: partner.id, employeeName: partner.name };
+          }
+          return newShifts;
+        });
+      }
       
-      // Update swap status
       setShiftSwaps(prev => prev.map(s => {
         if (s.swapId === swapId || s.requestId === swapId) {
-          return {
-            ...s,
-            status: 'revoked',
-            revokedTimestamp: new Date().toISOString(),
-            revokedBy: currentUser?.email || ''
-          };
+          return { ...s, status: 'revoked', revokedTimestamp: new Date().toISOString(), revokedBy: currentUser?.email || '' };
         }
         return s;
       }));
       showToast('success', 'Swap revoked');
     } else {
       showToast('error', result.error?.message || 'Failed to revoke swap');
-      console.error('Revoke swap request failed:', result.error);
     }
   };
   
@@ -5922,26 +5787,20 @@ export default function App() {
   const approveTimeOffRequest = async (requestId, notes) => {
     const result = await apiCall('approveTimeOffRequest', {
       callerEmail: currentUser.email,
-      requestId: requestId
+      requestId: requestId,
+      note: notes || ''
     });
     
     if (result.success) {
       setTimeOffRequests(prev => prev.map(req => {
         if (req.requestId === requestId && req.status === 'pending') {
-          return {
-            ...req,
-            status: 'approved',
-            reason: notes || '',
-            decidedTimestamp: new Date().toISOString(),
-            decidedBy: currentUser?.email || ''
-          };
+          return { ...req, status: 'approved', reason: notes || '', decidedTimestamp: new Date().toISOString(), decidedBy: currentUser?.email || '' };
         }
         return req;
       }));
-      showToast('success', 'Time off approved');
+      showToast('success', 'Request approved');
     } else {
       showToast('error', result.error?.message || 'Failed to approve request');
-      console.error('Approve time off failed:', result.error);
     }
   };
   
@@ -5956,20 +5815,13 @@ export default function App() {
     if (result.success) {
       setTimeOffRequests(prev => prev.map(req => {
         if (req.requestId === requestId && req.status === 'pending') {
-          return {
-            ...req,
-            status: 'denied',
-            reason: notes || '',
-            decidedTimestamp: new Date().toISOString(),
-            decidedBy: currentUser?.email || ''
-          };
+          return { ...req, status: 'denied', reason: notes || '', decidedTimestamp: new Date().toISOString(), decidedBy: currentUser?.email || '' };
         }
         return req;
       }));
-      showToast('success', 'Time off denied');
+      showToast('success', 'Request denied');
     } else {
       showToast('error', result.error?.message || 'Failed to deny request');
-      console.error('Deny time off failed:', result.error);
     }
   };
   
@@ -5992,26 +5844,19 @@ export default function App() {
     const result = await apiCall('revokeTimeOffRequest', {
       callerEmail: currentUser.email,
       requestId: requestId,
-      reason: notes || ''
+      note: notes || ''
     });
     
     if (result.success) {
       setTimeOffRequests(prev => prev.map(req => {
         if (req.requestId === requestId && req.status === 'approved') {
-          return {
-            ...req,
-            status: 'revoked',
-            reason: notes || req.reason,
-            revokedTimestamp: new Date().toISOString(),
-            revokedBy: currentUser?.email || ''
-          };
+          return { ...req, status: 'revoked', reason: notes || req.reason, revokedTimestamp: new Date().toISOString(), revokedBy: currentUser?.email || '' };
         }
         return req;
       }));
-      showToast('success', 'Time off revoked');
+      showToast('success', 'Request revoked');
     } else {
       showToast('error', result.error?.message || 'Failed to revoke request');
-      console.error('Revoke time off failed:', result.error);
     }
   };
   
