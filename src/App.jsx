@@ -5081,6 +5081,47 @@ export default function App() {
     }
   };
   
+  // Save schedule without going LIVE (batch save shifts to Sheets, stay in Edit Mode)
+  const saveSchedule = async () => {
+    // Collect all shifts for this period
+    const periodShifts = [];
+    const periodDates = [];
+    dates.forEach(date => {
+      const dateStr = date.toISOString().split('T')[0];
+      periodDates.push(dateStr);
+      employees.forEach(emp => {
+        const key = `${emp.id}-${dateStr}`;
+        if (shifts[key]) {
+          periodShifts.push({
+            id: shifts[key].id || `shift-${emp.id}-${dateStr}`,
+            employeeId: emp.id,
+            employeeName: emp.name,
+            employeeEmail: emp.email,
+            date: dateStr,
+            startTime: shifts[key].startTime,
+            endTime: shifts[key].endTime,
+            role: shifts[key].role || 'none',
+            task: shifts[key].task || ''
+          });
+        }
+      });
+    });
+    
+    showToast('success', 'Saving...', 2000);
+    const saveResult = await apiCall('batchSaveShifts', {
+      callerEmail: currentUser.email,
+      shifts: periodShifts,
+      periodDates: periodDates
+    });
+    
+    if (saveResult.success) {
+      setUnsaved(false);
+      showToast('success', `Saved ${saveResult.data?.savedCount || 0} shifts`);
+    } else {
+      showToast('error', saveResult.error?.message || 'Failed to save');
+    }
+  };
+  
   // Active employees for scheduling (exclude owner, exclude admins unless showOnSchedule)
   const schedulableEmployees = useMemo(() => [...employees]
     .filter(e => e.active && !e.deleted && !e.isOwner)
@@ -5823,7 +5864,7 @@ export default function App() {
               <TooltipButton tooltip={currentAnnouncement?.message ? "Export PDF (includes announcement)" : "Export PDF"} onClick={() => generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement)}><FileText size={12} /></TooltipButton>
               {currentAnnouncement?.message && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full" style={{ backgroundColor: THEME.accent.blue }} />}
             </div>
-            <TooltipButton tooltip="Save Changes" onClick={() => setUnsaved(false)} disabled={!unsaved}><Save size={12} /></TooltipButton>
+            <TooltipButton tooltip="Save Changes" onClick={saveSchedule} disabled={!unsaved}><Save size={12} /></TooltipButton>
             <div className="relative">
               <TooltipButton tooltip={currentAnnouncement?.message ? "Email Schedules (includes announcement)" : "Email Schedules"} variant="primary" onClick={() => setEmailOpen(true)}><Mail size={12} />Publish</TooltipButton>
               {currentAnnouncement?.message && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full" style={{ backgroundColor: THEME.accent.blue }} />}
