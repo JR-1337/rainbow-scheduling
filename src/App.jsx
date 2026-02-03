@@ -4944,6 +4944,19 @@ export default function App() {
       setShiftOffers(offers);
       setShiftSwaps(swaps);
       
+      // Load live periods from backend
+      const { livePeriods: loadedLivePeriods } = result.data;
+      if (loadedLivePeriods && Array.isArray(loadedLivePeriods)) {
+        // Convert array of live period indexes to editModeByPeriod object
+        // Live periods have editMode = false, others default to true
+        const editModeObj = {};
+        loadedLivePeriods.forEach(pIndex => {
+          editModeObj[pIndex] = false; // LIVE = not in edit mode
+        });
+        setEditModeByPeriod(editModeObj);
+        console.log('Loaded live periods:', loadedLivePeriods, 'editModeByPeriod:', editModeObj);
+      }
+      
       setIsLoadingData(false);
       return true;
     } else {
@@ -4972,13 +4985,53 @@ export default function App() {
   const currentDates = activeWeek === 1 ? week1 : week2;
   
   // Toggle between Edit Mode and LIVE for the CURRENT pay period
-  // When going LIVE: copy current period's shifts to publishedShifts
+  // When going LIVE: batch save shifts + persist LIVE status to backend
   // MUST be defined after `dates` is available
-  const toggleEditMode = () => {
+  const toggleEditMode = async () => {
     const currentlyEditing = editModeByPeriod[periodIndex] ?? true;
     
     if (currentlyEditing) {
-      // Going from Edit Mode → LIVE: publish shifts for this period's dates
+      // Going from Edit Mode → LIVE: batch save shifts and mark as LIVE
+      
+      // Collect all shifts for this period
+      const periodShifts = [];
+      const periodDates = [];
+      dates.forEach(date => {
+        const dateStr = date.toISOString().split('T')[0];
+        periodDates.push(dateStr);
+        employees.forEach(emp => {
+          const key = `${emp.id}-${dateStr}`;
+          if (shifts[key]) {
+            // Build full shift object for API
+            periodShifts.push({
+              id: shifts[key].id || `shift-${emp.id}-${dateStr}`,
+              employeeId: emp.id,
+              employeeName: emp.name,
+              employeeEmail: emp.email,
+              date: dateStr,
+              startTime: shifts[key].startTime,
+              endTime: shifts[key].endTime,
+              role: shifts[key].role || 'none',
+              task: shifts[key].task || ''
+            });
+          }
+        });
+      });
+      
+      // Batch save shifts to backend
+      showToast('success', 'Saving schedule...', 2000);
+      const saveResult = await apiCall('batchSaveShifts', {
+        callerEmail: currentUser.email,
+        shifts: periodShifts,
+        periodDates: periodDates
+      });
+      
+      if (!saveResult.success) {
+        showToast('error', saveResult.error?.message || 'Failed to save schedule');
+        return;
+      }
+      
+      // Update local published shifts
       const newPublished = { ...publishedShifts };
       dates.forEach(date => {
         const dateStr = date.toISOString().split('T')[0];
@@ -4987,15 +5040,44 @@ export default function App() {
           if (shifts[key]) {
             newPublished[key] = { ...shifts[key] };
           } else {
-            delete newPublished[key]; // Remove if shift was deleted
+            delete newPublished[key];
           }
         });
       });
       setPublishedShifts(newPublished);
-      setEditModeByPeriod(prev => ({ ...prev, [periodIndex]: false }));
+      
+      // Calculate new live periods array and save to backend
+      const newEditMode = { ...editModeByPeriod, [periodIndex]: false };
+      setEditModeByPeriod(newEditMode);
+      
+      // Get all period indexes that are LIVE (editMode = false)
+      const livePeriodIndexes = Object.entries(newEditMode)
+        .filter(([_, isEditing]) => !isEditing)
+        .map(([idx, _]) => parseInt(idx, 10));
+      
+      await apiCall('saveLivePeriods', {
+        callerEmail: currentUser.email,
+        livePeriods: livePeriodIndexes
+      });
+      
+      showToast('success', `Schedule is now LIVE! Saved ${saveResult.data?.savedCount || 0} shifts.`);
+      
     } else {
-      // Going from LIVE → Edit Mode: admin can now edit privately
-      setEditModeByPeriod(prev => ({ ...prev, [periodIndex]: true }));
+      // Going from LIVE → Edit Mode: just update local state and save to backend
+      const newEditMode = { ...editModeByPeriod, [periodIndex]: true };
+      setEditModeByPeriod(newEditMode);
+      
+      // Get all period indexes that are LIVE
+      const livePeriodIndexes = Object.entries(newEditMode)
+        .filter(([_, isEditing]) => !isEditing)
+        .map(([idx, _]) => parseInt(idx, 10));
+      
+      await apiCall('saveLivePeriods', {
+        callerEmail: currentUser.email,
+        livePeriods: livePeriodIndexes
+      });
+      
+      showToast('success', 'Switched to Edit Mode');
     }
   };
   
@@ -5159,54 +5241,22 @@ export default function App() {
     }
   };
   
-  const saveShift = async (s) => {
+  const saveShift = (s) => {
     const k = `${s.employeeId}-${s.date}`;
-    console.log('saveShift called:', { key: k, shift: s, deleted: s.deleted });
+    console.log('saveShift called (local only):', { key: k, shift: s, deleted: s.deleted });
     
-    // Optimistic update - update UI immediately
+    // Update local state only - shifts are batch saved when going LIVE
     if (s.deleted) { 
       const n = { ...shifts }; 
       delete n[k]; 
       setShifts(n); 
+      showToast('success', 'Shift removed (will save when you Go Live)');
     } else {
       setShifts({ ...shifts, [k]: s });
+      showToast('success', 'Shift updated (will save when you Go Live)');
     }
     setUnsaved(true); 
     setPublished(false);
-    
-    // Build shift object with all fields required by Sheets
-    // Sheets headers: id, employeeId, employeeName, employeeEmail, date, startTime, endTime, role, task
-    const emp = employees.find(e => e.id === s.employeeId);
-    const shiftForApi = {
-      id: s.id || `shift-${s.employeeId}-${s.date}`, // Generate ID if not present
-      employeeId: s.employeeId,
-      employeeName: s.employeeName || emp?.name || '',
-      employeeEmail: s.employeeEmail || emp?.email || '',
-      date: s.date,
-      startTime: s.startTime,
-      endTime: s.endTime,
-      role: s.role || 'none',
-      task: s.task || '',
-      deleted: s.deleted || false
-    };
-    
-    console.log('Sending to API:', shiftForApi);
-    
-    // Call API in background to persist to Google Sheets
-    const result = await apiCall('saveShift', {
-      callerEmail: currentUser.email,
-      shift: shiftForApi
-    });
-    
-    console.log('API result:', result);
-    
-    if (result.success) {
-      showToast('success', s.deleted ? 'Shift deleted' : 'Shift saved');
-    } else {
-      // Show error but keep optimistic update (user can retry or refresh)
-      showToast('error', result.error?.message || 'Failed to save shift. Changes may not persist.');
-      console.error('Shift save failed:', result.error);
-    }
   };
   
   // Cancel a time off request (employee action on their own pending request)
