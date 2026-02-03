@@ -4923,7 +4923,8 @@ export default function App() {
           ...shift,
           date: dateStr,
           startTime: startTime,
-          endTime: endTime
+          endTime: endTime,
+          hours: calculateHours(startTime, endTime) // Calculate hours from times
         };
         
         const key = `${fixedShift.employeeId}-${dateStr}`;
