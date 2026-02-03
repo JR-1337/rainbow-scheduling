@@ -4890,10 +4890,13 @@ export default function App() {
       
       // Convert shifts array to keyed object { "empId-date": shiftData }
       const shiftsObj = {};
+      console.log('Raw shifts from API:', shiftData);
       (shiftData || []).forEach(shift => {
         const key = `${shift.employeeId}-${shift.date}`;
+        console.log('Processing shift:', key, shift);
         shiftsObj[key] = shift;
       });
+      console.log('Final shiftsObj:', shiftsObj);
       setShifts(shiftsObj);
       setPublishedShifts(shiftsObj); // Start with same data for published
       
@@ -6039,15 +6042,16 @@ export default function App() {
         shifts={shifts}
       />
       
-      {/* Toast Notification - fixed position at top center */}
+      {/* Toast Notification - fixed position at top center, ABOVE modals */}
       {toast && (
         <div 
-          className="fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-xl flex items-center gap-2 z-50 animate-pulse"
+          className="fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-xl flex items-center gap-2"
           style={{ 
             backgroundColor: toast.type === 'success' ? THEME.status.success : THEME.status.error,
             color: '#fff',
             minWidth: 200,
-            textAlign: 'center'
+            textAlign: 'center',
+            zIndex: 100001  // Above modal's z-[100] and tooltips
           }}
         >
           {toast.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
