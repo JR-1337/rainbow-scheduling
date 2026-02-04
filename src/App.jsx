@@ -4141,7 +4141,7 @@ const EmployeeViewRow = ({ employee, dates, shifts, loggedInEmpId, getEmployeeHo
   );
 };
 
-const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLogout, timeOffRequests, onCancelRequest, onSubmitRequest, shiftOffers, onSubmitOffer, onCancelOffer, onAcceptOffer, onRejectOffer, shiftSwaps, onSubmitSwap, onCancelSwap, onAcceptSwap, onRejectSwap, periodIndex = 0, onPeriodChange, isEditMode = false }) => {
+const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLogout, timeOffRequests, onCancelRequest, onSubmitRequest, shiftOffers, onSubmitOffer, onCancelOffer, onAcceptOffer, onRejectOffer, shiftSwaps, onSubmitSwap, onCancelSwap, onAcceptSwap, onRejectSwap, periodIndex = 0, onPeriodChange, isEditMode = false, announcement }) => {
   const [activeWeek, setActiveWeek] = useState(1);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [daysOffModalOpen, setDaysOffModalOpen] = useState(false);
@@ -4395,6 +4395,28 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
             <div className="flex items-center gap-1"><Star size={10} fill={THEME.task} color={THEME.task} /><span style={{ color: THEME.task }}>Your Task</span></div>
           </div>
           
+          {/* Period Announcement - Only show when period is LIVE and has content */}
+          {!isEditMode && announcement?.message && (
+            <div className="mt-3 p-4 rounded-xl" style={{ 
+              backgroundColor: THEME.accent.blue + '10', 
+              border: `1px solid ${THEME.accent.blue}40`
+            }}>
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg" style={{ backgroundColor: THEME.accent.blue + '20' }}>
+                  <Bell size={20} style={{ color: THEME.accent.blue }} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold mb-1 flex items-center gap-2" style={{ color: THEME.accent.blue }}>
+                    📢 {announcement.subject || 'Announcement'}
+                  </h3>
+                  <div className="text-sm whitespace-pre-wrap" style={{ color: THEME.text.primary, lineHeight: 1.6 }}>
+                    {announcement.message}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* My Schedule Summary */}
           <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
             <h3 className="text-sm font-semibold mb-2" style={{ color: THEME.text.primary }}>Your Schedule This Period</h3>
@@ -4588,9 +4610,18 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMMUNICATIONS PANEL - Announcement editor (saved per pay period)
 // ═══════════════════════════════════════════════════════════════════════════════
-const CommunicationsPanel = ({ employees, shifts, dates, periodInfo, adminContacts, announcement, onAnnouncementChange }) => {
+const CommunicationsPanel = ({ employees, shifts, dates, periodInfo, adminContacts, announcement, onAnnouncementChange, onSave, onClear, isEditMode, isSaving }) => {
   const weekNum1 = getWeekNumber(dates[0]);
   const weekNum2 = getWeekNumber(dates[7]);
+  
+  // Track if local changes differ from saved version
+  const [localAnnouncement, setLocalAnnouncement] = useState(announcement);
+  const hasUnsavedChanges = localAnnouncement.subject !== announcement.subject || localAnnouncement.message !== announcement.message;
+  
+  // Sync local state when announcement prop changes (e.g., after save or period change)
+  useEffect(() => {
+    setLocalAnnouncement(announcement);
+  }, [announcement.subject, announcement.message]);
   
   // Get employees with shifts this period
   const scheduledCount = useMemo(() => {
@@ -4601,9 +4632,27 @@ const CommunicationsPanel = ({ employees, shifts, dates, periodInfo, adminContac
       .length;
   }, [employees, shifts, dates]);
   
-  const handleClear = () => {
-    onAnnouncementChange({ subject: '', message: '' });
+  const handleLocalChange = (newAnn) => {
+    setLocalAnnouncement(newAnn);
   };
+  
+  const handleSave = () => {
+    onAnnouncementChange(localAnnouncement); // Update parent state
+    onSave(localAnnouncement); // Save to backend
+  };
+  
+  const handleClear = () => {
+    setLocalAnnouncement({ subject: '', message: '' });
+    onAnnouncementChange({ subject: '', message: '' });
+    onClear();
+  };
+  
+  const handleDiscard = () => {
+    setLocalAnnouncement(announcement); // Revert to saved version
+  };
+  
+  // Locked state when period is LIVE
+  const isLocked = !isEditMode;
   
   return (
     <div className="rounded-xl p-4" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
@@ -4617,31 +4666,66 @@ const CommunicationsPanel = ({ employees, shifts, dates, periodInfo, adminContac
             Week {weekNum1} & {weekNum2} • {scheduledCount} staff scheduled
           </p>
         </div>
-        {announcement.message && (
-          <div className="flex items-center gap-1 px-2 py-1 rounded-lg" style={{ backgroundColor: THEME.status.success + '20' }}>
-            <Check size={14} style={{ color: THEME.status.success }} />
-            <span className="text-xs" style={{ color: THEME.status.success }}>Saved</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Status indicators */}
+          {isLocked && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg" style={{ backgroundColor: THEME.status.error + '20' }}>
+              <Eye size={14} style={{ color: THEME.status.error }} />
+              <span className="text-xs" style={{ color: THEME.status.error }}>LIVE - Read Only</span>
+            </div>
+          )}
+          {!isLocked && hasUnsavedChanges && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg" style={{ backgroundColor: THEME.status.warning + '20' }}>
+              <AlertCircle size={14} style={{ color: THEME.status.warning }} />
+              <span className="text-xs" style={{ color: THEME.status.warning }}>Unsaved</span>
+            </div>
+          )}
+          {!isLocked && !hasUnsavedChanges && announcement.message && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg" style={{ backgroundColor: THEME.status.success + '20' }}>
+              <Check size={14} style={{ color: THEME.status.success }} />
+              <span className="text-xs" style={{ color: THEME.status.success }}>Saved</span>
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Info about where announcement appears */}
       <div className="mb-4 p-2 rounded-lg text-xs" style={{ backgroundColor: THEME.accent.blue + '10', border: `1px solid ${THEME.accent.blue}30` }}>
         <p style={{ color: THEME.accent.blue }}>
-          💡 This announcement will appear in the <strong>PDF export</strong> and <strong>published schedule emails</strong> for this pay period.
+          💡 This announcement will appear in the <strong>PDF export</strong>, <strong>published schedule emails</strong>, and <strong>employee dashboard</strong> for this pay period.
         </p>
       </div>
+      
+      {/* Locked notice */}
+      {isLocked && (
+        <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: THEME.status.error + '10', border: `1px solid ${THEME.status.error}30` }}>
+          <p className="text-sm font-medium flex items-center gap-2" style={{ color: THEME.status.error }}>
+            <Eye size={16} />
+            This period is LIVE
+          </p>
+          <p className="text-xs mt-1" style={{ color: THEME.text.muted }}>
+            Switch to Edit Mode in the header to modify the announcement.
+          </p>
+        </div>
+      )}
       
       {/* Subject line */}
       <div className="mb-3">
         <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Announcement Title</label>
         <input
           type="text"
-          value={announcement.subject}
-          onChange={e => onAnnouncementChange({ ...announcement, subject: e.target.value })}
+          value={localAnnouncement.subject}
+          onChange={e => handleLocalChange({ ...localAnnouncement, subject: e.target.value })}
           placeholder="e.g. Staff Meeting This Friday"
           className="w-full px-3 py-2 rounded-lg outline-none text-sm"
-          style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
+          style={{ 
+            backgroundColor: isLocked ? THEME.bg.tertiary : THEME.bg.elevated, 
+            border: `1px solid ${THEME.border.default}`, 
+            color: THEME.text.primary,
+            opacity: isLocked ? 0.6 : 1,
+            cursor: isLocked ? 'not-allowed' : 'text'
+          }}
+          disabled={isLocked}
         />
       </div>
       
@@ -4649,32 +4733,77 @@ const CommunicationsPanel = ({ employees, shifts, dates, periodInfo, adminContac
       <div className="mb-3">
         <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Message (max ~4 paragraphs recommended)</label>
         <textarea
-          value={announcement.message}
-          onChange={e => onAnnouncementChange({ ...announcement, message: e.target.value })}
+          value={localAnnouncement.message}
+          onChange={e => handleLocalChange({ ...localAnnouncement, message: e.target.value })}
           placeholder="Hi team! Just a quick note about..."
           rows={6}
           className="w-full px-3 py-2 rounded-lg outline-none text-sm resize-none"
-          style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
+          style={{ 
+            backgroundColor: isLocked ? THEME.bg.tertiary : THEME.bg.elevated, 
+            border: `1px solid ${THEME.border.default}`, 
+            color: THEME.text.primary,
+            opacity: isLocked ? 0.6 : 1,
+            cursor: isLocked ? 'not-allowed' : 'text'
+          }}
+          disabled={isLocked}
         />
         <p className="text-xs mt-1" style={{ color: THEME.text.muted }}>
-          {announcement.message.length} characters • {announcement.message.split('\n\n').filter(p => p.trim()).length} paragraphs
+          {localAnnouncement.message.length} characters • {localAnnouncement.message.split('\n\n').filter(p => p.trim()).length} paragraphs
         </p>
       </div>
       
       {/* Actions */}
       <div className="flex items-center justify-between pt-3" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
-        <button 
-          onClick={handleClear}
-          className="px-3 py-1.5 rounded-lg text-xs"
-          style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}
-          disabled={!announcement.subject && !announcement.message}
-        >
-          Clear
-        </button>
+        <div className="flex items-center gap-2">
+          {!isLocked && (
+            <>
+              <button 
+                onClick={handleClear}
+                className="px-3 py-1.5 rounded-lg text-xs"
+                style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}
+                disabled={!localAnnouncement.subject && !localAnnouncement.message}
+              >
+                Clear
+              </button>
+              {hasUnsavedChanges && (
+                <button 
+                  onClick={handleDiscard}
+                  className="px-3 py-1.5 rounded-lg text-xs"
+                  style={{ backgroundColor: THEME.bg.tertiary, color: THEME.status.warning }}
+                >
+                  Discard Changes
+                </button>
+              )}
+            </>
+          )}
+        </div>
         
-        <p className="text-xs" style={{ color: THEME.text.muted }}>
-          Auto-saved • Click <strong>Publish</strong> to send with schedule
-        </p>
+        <div className="flex items-center gap-2">
+          {!isLocked && (
+            <button 
+              onClick={handleSave}
+              disabled={!hasUnsavedChanges || isSaving}
+              className="px-4 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5"
+              style={{ 
+                backgroundColor: hasUnsavedChanges ? THEME.accent.blue : THEME.bg.tertiary, 
+                color: hasUnsavedChanges ? 'white' : THEME.text.muted,
+                opacity: isSaving ? 0.6 : 1
+              }}
+            >
+              {isSaving ? (
+                <>
+                  <Loader size={12} className="animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save size={12} />
+                  Save Announcement
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -4839,6 +4968,63 @@ export default function App() {
   // Get/set announcement for current period
   const currentAnnouncement = announcements[periodIndex] || { subject: '', message: '' };
   const setCurrentAnnouncement = (ann) => setAnnouncements(prev => ({ ...prev, [periodIndex]: ann }));
+  const [savingAnnouncement, setSavingAnnouncement] = useState(false);
+  
+  // Save announcement to backend
+  const saveAnnouncement = async (announcement) => {
+    if (!currentUser?.email) return;
+    
+    setSavingAnnouncement(true);
+    const result = await apiCall('saveAnnouncement', {
+      callerEmail: currentUser.email,
+      periodIndex: periodIndex,
+      subject: announcement.subject,
+      message: announcement.message
+    });
+    
+    if (result.success) {
+      console.log('Announcement saved:', result.data);
+      // Update local state with the saved announcement (includes id and createdAt)
+      setAnnouncements(prev => ({
+        ...prev,
+        [periodIndex]: result.data.announcement
+      }));
+    } else {
+      console.error('Failed to save announcement:', result.error);
+      alert('Failed to save announcement: ' + (result.error?.message || 'Unknown error'));
+    }
+    setSavingAnnouncement(false);
+  };
+  
+  // Clear/delete announcement from backend
+  const clearAnnouncement = async () => {
+    if (!currentUser?.email) return;
+    
+    // Only call delete if there's an existing announcement with content
+    const existing = announcements[periodIndex];
+    if (existing?.id) {
+      setSavingAnnouncement(true);
+      const result = await apiCall('deleteAnnouncement', {
+        callerEmail: currentUser.email,
+        periodIndex: periodIndex
+      });
+      
+      if (result.success) {
+        console.log('Announcement deleted');
+      } else {
+        console.error('Failed to delete announcement:', result.error);
+        // Don't show error - clearing locally is fine even if backend delete fails
+      }
+      setSavingAnnouncement(false);
+    }
+    
+    // Clear local state
+    setAnnouncements(prev => ({
+      ...prev,
+      [periodIndex]: { subject: '', message: '' }
+    }));
+  };
+  
   const [inactivePanelOpen, setInactivePanelOpen] = useState(false);
   const [tooltipData, setTooltipData] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -4974,6 +5160,23 @@ export default function App() {
         });
         setEditModeByPeriod(editModeObj);
         console.log('Loaded live periods:', loadedLivePeriods, 'editModeByPeriod:', editModeObj);
+      }
+      
+      // Load announcements from backend
+      const { announcements: loadedAnnouncements } = result.data;
+      if (loadedAnnouncements && Array.isArray(loadedAnnouncements)) {
+        // Convert array to object keyed by periodIndex
+        const announcementsObj = {};
+        loadedAnnouncements.forEach(ann => {
+          announcementsObj[ann.periodIndex] = {
+            id: ann.id,
+            subject: ann.subject || '',
+            message: ann.message || '',
+            createdAt: ann.createdAt
+          };
+        });
+        setAnnouncements(announcementsObj);
+        console.log('Loaded announcements:', loadedAnnouncements, 'announcementsObj:', announcementsObj);
       }
       
       setIsLoadingData(false);
@@ -5928,7 +6131,7 @@ export default function App() {
   
   // Show employee view if not admin
   if (!currentUser.isAdmin) {
-    return <EmployeeView employees={employees} shifts={publishedShifts} dates={dates} periodInfo={{ startDate, endDate }} currentUser={currentUser} onLogout={() => setCurrentUser(null)} timeOffRequests={timeOffRequests} onCancelRequest={cancelTimeOffRequest} onSubmitRequest={submitTimeOffRequest} shiftOffers={shiftOffers} onSubmitOffer={submitShiftOffer} onCancelOffer={cancelShiftOffer} onAcceptOffer={acceptShiftOffer} onRejectOffer={rejectShiftOffer} shiftSwaps={shiftSwaps} onSubmitSwap={submitSwapRequest} onCancelSwap={cancelSwapRequest} onAcceptSwap={acceptSwapRequest} onRejectSwap={rejectSwapRequest} periodIndex={periodIndex} onPeriodChange={setPeriodIndex} isEditMode={isCurrentPeriodEditMode} />;
+    return <EmployeeView employees={employees} shifts={publishedShifts} dates={dates} periodInfo={{ startDate, endDate }} currentUser={currentUser} onLogout={() => setCurrentUser(null)} timeOffRequests={timeOffRequests} onCancelRequest={cancelTimeOffRequest} onSubmitRequest={submitTimeOffRequest} shiftOffers={shiftOffers} onSubmitOffer={submitShiftOffer} onCancelOffer={cancelShiftOffer} onAcceptOffer={acceptShiftOffer} onRejectOffer={rejectShiftOffer} shiftSwaps={shiftSwaps} onSubmitSwap={submitSwapRequest} onCancelSwap={cancelSwapRequest} onAcceptSwap={acceptSwapRequest} onRejectSwap={rejectSwapRequest} periodIndex={periodIndex} onPeriodChange={setPeriodIndex} isEditMode={isCurrentPeriodEditMode} announcement={currentAnnouncement} />;
   }
 
   // Admin view below
@@ -6172,6 +6375,10 @@ export default function App() {
                 adminContacts={adminContacts}
                 announcement={currentAnnouncement}
                 onAnnouncementChange={setCurrentAnnouncement}
+                onSave={saveAnnouncement}
+                onClear={clearAnnouncement}
+                isEditMode={isCurrentPeriodEditMode}
+                isSaving={savingAnnouncement}
               />
             </div>
           ) : (
