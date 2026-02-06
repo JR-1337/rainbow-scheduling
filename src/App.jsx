@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule } from './MobileEmployeeView';
+import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, MobileEmployeeQuickView } from './MobileAdminView';
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
   User, Users, Phone, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu
@@ -5736,6 +5737,7 @@ const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrides, sta
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
+  const isMobileAdmin = useIsMobile();
   const [employees, setEmployees] = useState([]);
   const [periodIndex, setPeriodIndex] = useState(0);
   const [shifts, setShifts] = useState({});
@@ -5866,6 +5868,11 @@ export default function App() {
   const [adminRequestModalOpen, setAdminRequestModalOpen] = useState(false);
   const [adminDaysOffModalOpen, setAdminDaysOffModalOpen] = useState(false);
   const [autoPopulateConfirm, setAutoPopulateConfirm] = useState(null); // { type: 'populate-all' | 'populate-week' | 'clear-week' | 'clear-all', employee?: obj, week?: 1|2 }
+  
+  // Mobile admin state
+  const [mobileAdminDrawerOpen, setMobileAdminDrawerOpen] = useState(false);
+  const [mobileAdminTab, setMobileAdminTab] = useState('schedule'); // 'schedule' | 'requests' | 'comms'
+  const [mobileAdminChangePasswordOpen, setMobileAdminChangePasswordOpen] = useState(false);
   
   // Admin handler for selecting request type
   const handleAdminSelectRequestType = (type) => {
@@ -7210,7 +7217,264 @@ export default function App() {
     return <EmployeeView employees={employees} shifts={publishedShifts} dates={dates} periodInfo={{ startDate, endDate }} currentUser={currentUser} onLogout={() => setCurrentUser(null)} timeOffRequests={timeOffRequests} onCancelRequest={cancelTimeOffRequest} onSubmitRequest={submitTimeOffRequest} shiftOffers={shiftOffers} onSubmitOffer={submitShiftOffer} onCancelOffer={cancelShiftOffer} onAcceptOffer={acceptShiftOffer} onRejectOffer={rejectShiftOffer} shiftSwaps={shiftSwaps} onSubmitSwap={submitSwapRequest} onCancelSwap={cancelSwapRequest} onAcceptSwap={acceptSwapRequest} onRejectSwap={rejectSwapRequest} periodIndex={periodIndex} onPeriodChange={setPeriodIndex} isEditMode={isCurrentPeriodEditMode} announcement={currentAnnouncement} />;
   }
 
-  // Admin view below
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MOBILE ADMIN VIEW
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (isMobileAdmin) {
+    const mobileCurrentDates = activeWeek === 1 ? week1 : week2;
+    
+    return (
+      <div className="min-h-screen" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@300;400;600&display=swap');`}</style>
+        <GradientBackground />
+        
+        {/* Mobile Admin Header */}
+        <header className="px-3 py-2 sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: `1px solid ${THEME.border.subtle}`, zIndex: 100 }}>
+          <div className="flex items-center justify-between">
+            {/* Left: hamburger + logo */}
+            <div className="flex items-center gap-2">
+              <button onClick={() => setMobileAdminDrawerOpen(true)} className="p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.primary }}>
+                <Menu size={18} />
+              </button>
+              <div style={{ fontFamily: "'Josefin Sans', sans-serif" }}>
+                <span className="text-xs tracking-[0.15em] font-semibold" style={{ color: THEME.text.primary }}>RAINBOW</span>
+              </div>
+            </div>
+            
+            {/* Center: period nav */}
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPeriodIndex(periodIndex - 1)} className="p-0.5 rounded" style={{ color: THEME.text.secondary }}>
+                <ChevronLeft size={14} />
+              </button>
+              <div className="text-center min-w-[90px]">
+                <p className="font-medium" style={{ color: THEME.text.primary, fontSize: '10px' }}>{formatDate(startDate)} – {formatDate(endDate)}</p>
+                {periodIndex === 0 && <p style={{ color: THEME.accent.cyan, fontSize: '9px' }}>Current</p>}
+                {periodIndex > 0 && <p style={{ color: THEME.accent.purple, fontSize: '9px' }}>Future</p>}
+                {periodIndex < 0 && <p style={{ color: THEME.text.muted, fontSize: '9px' }}>Past</p>}
+              </div>
+              <button onClick={() => setPeriodIndex(periodIndex + 1)} className="p-0.5 rounded" style={{ color: THEME.text.secondary }}>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+            
+            {/* Right: Edit/Live toggle + Save */}
+            <div className="flex items-center gap-1.5">
+              {unsaved && (
+                <button
+                  onClick={saveSchedule}
+                  disabled={scheduleSaving}
+                  className="p-1.5 rounded-lg"
+                  style={{ backgroundColor: THEME.accent.blue + '20', color: THEME.accent.blue }}
+                  title="Save Changes"
+                >
+                  {scheduleSaving ? <Loader size={14} className="animate-spin" /> : <Save size={14} />}
+                </button>
+              )}
+              <button
+                onClick={toggleEditMode}
+                disabled={scheduleSaving}
+                className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
+                style={{
+                  backgroundColor: scheduleSaving ? THEME.accent.blue + '20'
+                    : isCurrentPeriodEditMode ? THEME.status.warning + '20' : THEME.status.success + '20',
+                  color: scheduleSaving ? THEME.accent.blue
+                    : isCurrentPeriodEditMode ? THEME.status.warning : THEME.status.success,
+                  border: `1px solid ${scheduleSaving ? THEME.accent.blue + '40'
+                    : isCurrentPeriodEditMode ? THEME.status.warning + '40' : THEME.status.success + '40'}`
+                }}
+              >
+                {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Saving</> :
+                  isCurrentPeriodEditMode ? <><Edit3 size={10} /> Edit</> : <><Eye size={10} /> LIVE</>}
+              </button>
+            </div>
+          </div>
+        </header>
+        
+        {/* Tab bar */}
+        <div className="flex px-2 pt-1" style={{ backgroundColor: THEME.bg.primary }}>
+          {[
+            { id: 'wk1', label: `Wk ${weekNum1}`, tab: 'schedule', week: 1 },
+            { id: 'wk2', label: `Wk ${weekNum2}`, tab: 'schedule', week: 2 },
+            { id: 'requests', label: 'Requests', tab: 'requests', badge: pendingRequestCount },
+            { id: 'comms', label: 'Comms', tab: 'comms', badge: currentAnnouncement?.message ? 1 : 0 },
+          ].map(t => {
+            const isActive = t.tab === 'schedule' 
+              ? mobileAdminTab === 'schedule' && activeWeek === t.week 
+              : mobileAdminTab === t.tab;
+            return (
+              <button 
+                key={t.id}
+                onClick={() => { 
+                  setMobileAdminTab(t.tab); 
+                  if (t.week) setActiveWeek(t.week); 
+                }}
+                className="flex-1 py-2 text-xs font-medium relative flex items-center justify-center gap-1"
+                style={{ 
+                  color: isActive ? THEME.text.primary : THEME.text.muted,
+                  borderBottom: `2px solid ${isActive ? THEME.accent.purple : 'transparent'}`
+                }}
+              >
+                {t.label}
+                {t.badge > 0 && (
+                  <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center" 
+                    style={{ backgroundColor: THEME.status.warning, color: '#000', fontSize: '9px' }}>
+                    {t.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        
+        {/* Content */}
+        <main className="p-2">
+          {mobileAdminTab === 'schedule' ? (
+            <>
+              {/* Edit mode indicator */}
+              {!isCurrentPeriodEditMode && (
+                <div className="mb-2 px-3 py-1.5 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.status.success + '15', border: `1px solid ${THEME.status.success}30` }}>
+                  <Eye size={12} style={{ color: THEME.status.success }} />
+                  <span className="text-xs font-medium" style={{ color: THEME.status.success }}>Schedule is LIVE — visible to staff</span>
+                </div>
+              )}
+              {isCurrentPeriodEditMode && (
+                <div className="mb-2 px-3 py-1.5 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.status.warning + '15', border: `1px solid ${THEME.status.warning}30` }}>
+                  <Edit3 size={12} style={{ color: THEME.status.warning }} />
+                  <span className="text-xs font-medium" style={{ color: THEME.status.warning }}>Edit Mode — tap cells to edit shifts</span>
+                </div>
+              )}
+              
+              {/* Schedule Grid */}
+              <MobileAdminScheduleGrid
+                employees={schedulableEmployees}
+                shifts={shifts}
+                dates={mobileCurrentDates}
+                loggedInUser={currentUser}
+                getEmployeeHours={getEmpHours}
+                timeOffRequests={timeOffRequests}
+                getScheduledCount={getScheduledCount}
+                getStaffingTarget={getStaffingTarget}
+                staffingTargetOverrides={staffingTargetOverrides}
+                storeHoursOverrides={storeHoursOverrides}
+                isEditMode={isCurrentPeriodEditMode}
+                onCellClick={(emp, date, shift) => {
+                  if (isCurrentPeriodEditMode) {
+                    setEditingShift({ employee: emp, date, shift });
+                  }
+                }}
+              />
+            </>
+          ) : mobileAdminTab === 'requests' ? (
+            <div className="space-y-3">
+              {/* Time Off */}
+              <CollapsibleSection 
+                title="Time Off Requests" icon={Calendar} iconColor={THEME.accent.cyan}
+                badge={timeOffRequests.filter(r => r.status === 'pending').length || undefined}
+                badgeColor={THEME.status.warning}
+                defaultOpen={timeOffRequests.filter(r => r.status === 'pending').length > 0}
+              >
+                <AdminTimeOffPanel requests={timeOffRequests} onApprove={approveTimeOffRequest} onDeny={denyTimeOffRequest} onRevoke={revokeTimeOffRequest} currentAdminEmail={currentUser?.email} />
+              </CollapsibleSection>
+              
+              {/* Take My Shift */}
+              <CollapsibleSection 
+                title="Take My Shift" icon={ArrowRight} iconColor={THEME.accent.pink}
+                badge={shiftOffers.filter(o => o.status === 'awaiting_admin').length || undefined}
+                badgeColor={THEME.status.warning}
+                defaultOpen={shiftOffers.filter(o => o.status === 'awaiting_admin').length > 0}
+              >
+                <AdminShiftOffersPanel offers={shiftOffers} onApprove={approveShiftOffer} onReject={adminRejectShiftOffer} onRevoke={revokeShiftOffer} currentAdminEmail={currentUser?.email} />
+              </CollapsibleSection>
+              
+              {/* Shift Swaps */}
+              <CollapsibleSection 
+                title="Shift Swaps" icon={ArrowRightLeft} iconColor={THEME.accent.purple}
+                badge={shiftSwaps.filter(s => s.status === 'awaiting_admin').length || undefined}
+                badgeColor={THEME.status.warning}
+                defaultOpen={shiftSwaps.filter(s => s.status === 'awaiting_admin').length > 0}
+              >
+                <AdminShiftSwapsPanel swaps={shiftSwaps} onApprove={approveSwapRequest} onReject={adminRejectSwapRequest} onRevoke={revokeSwapRequest} currentAdminEmail={currentUser?.email} />
+              </CollapsibleSection>
+            </div>
+          ) : (
+            /* Announcements */
+            <MobileAnnouncementPanel
+              announcement={currentAnnouncement}
+              onAnnouncementChange={setCurrentAnnouncement}
+              onSave={saveAnnouncement}
+              onClear={clearAnnouncement}
+              isEditMode={isCurrentPeriodEditMode}
+              isSaving={savingAnnouncement}
+            />
+          )}
+        </main>
+        
+        {/* Admin Drawer */}
+        <MobileAdminDrawer
+          isOpen={mobileAdminDrawerOpen}
+          onClose={() => setMobileAdminDrawerOpen(false)}
+          currentUser={currentUser}
+          onLogout={() => setCurrentUser(null)}
+          onOpenChangePassword={() => setMobileAdminChangePasswordOpen(true)}
+          onOpenOwnRequests={() => setAdminRequestModalOpen(true)}
+          pendingRequestCount={pendingRequestCount}
+        />
+        
+        {/* Shift Editor Modal (reused from desktop) */}
+        {editingShift && (
+          <ShiftEditorModal 
+            isOpen 
+            onClose={() => setEditingShift(null)} 
+            onSave={saveShift} 
+            employee={editingShift.employee} 
+            date={editingShift.date} 
+            existingShift={editingShift.shift} 
+            totalPeriodHours={getEmpHours(editingShift.employee.id)} 
+          />
+        )}
+        
+        {/* Change Password Modal */}
+        <ChangePasswordModal
+          isOpen={mobileAdminChangePasswordOpen}
+          onClose={() => setMobileAdminChangePasswordOpen(false)}
+          currentUser={currentUser}
+        />
+        
+        {/* Admin's own request modals */}
+        <RequestTimeOffModal 
+          isOpen={adminRequestModalOpen} 
+          onClose={() => setAdminRequestModalOpen(false)} 
+          onSelectType={handleAdminSelectRequestType}
+          currentUser={currentUser}
+        />
+        <RequestDaysOffModal 
+          isOpen={adminDaysOffModalOpen} 
+          onClose={() => setAdminDaysOffModalOpen(false)} 
+          onSubmit={submitTimeOffRequest}
+          currentUser={currentUser}
+          timeOffRequests={timeOffRequests}
+          shiftOffers={shiftOffers}
+          shiftSwaps={shiftSwaps}
+          shifts={shifts}
+        />
+        
+        {/* Toast */}
+        {toast && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-xl flex items-center gap-2"
+            style={{ 
+              backgroundColor: toast.type === 'success' ? THEME.status.success : toast.type === 'warning' ? THEME.status.warning : toast.type === 'saving' ? THEME.accent.blue : THEME.status.error,
+              color: '#fff', minWidth: 200, textAlign: 'center', zIndex: 100001
+            }}>
+            {toast.type === 'saving' ? <Loader size={16} className="animate-spin" /> : toast.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
+            <span className="text-sm font-medium">{toast.message}</span>
+            {toast.type !== 'saving' && <button onClick={() => setToast(null)} className="ml-2 hover:opacity-70"><X size={14} /></button>}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Admin DESKTOP view below
   return (
     <div className="min-h-screen relative" style={{ fontFamily: "'Inter', sans-serif" }}>
       <GradientBackground />
