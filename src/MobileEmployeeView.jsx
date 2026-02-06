@@ -183,6 +183,14 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
     });
   }, [employees]);
   
+  // Find index where part-time starts (for divider)
+  const ptStartIndex = useMemo(() => {
+    const idx = sortedEmployees.findIndex(e => e.employmentType !== 'full-time' && e.name.toLowerCase() !== 'sarvi');
+    const hasFT = sortedEmployees.some(e => e.employmentType === 'full-time' || e.name.toLowerCase() === 'sarvi');
+    const hasPT = sortedEmployees.some(e => e.employmentType !== 'full-time' && e.name.toLowerCase() !== 'sarvi');
+    return hasFT && hasPT ? idx : -1;
+  }, [sortedEmployees]);
+  
   const hasApprovedTimeOff = (emp, dateStr) => {
     return timeOffRequests.some(req => 
       req.email === emp.email && 
@@ -248,11 +256,20 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
             </tr>
           </thead>
           <tbody>
-            {sortedEmployees.map(emp => {
+            {sortedEmployees.map((emp, empIndex) => {
               const hours = getEmployeeHours(emp.id);
               const isMe = emp.id === loggedInUser.id;
+              const showDivider = empIndex === ptStartIndex;
               return (
-                <tr key={emp.id} style={isMe ? { outline: `1.5px solid ${THEME.accent.purple}60`, outlineOffset: '-1px', borderRadius: '4px' } : undefined}>
+                <React.Fragment key={emp.id}>
+                  {showDivider && (
+                    <tr>
+                      <td colSpan={dates.length + 1} style={{ height: 6, padding: 0 }}>
+                        <div style={{ height: 1, margin: '2px 8px', backgroundColor: THEME.border.default }} />
+                      </td>
+                    </tr>
+                  )}
+                  <tr style={isMe ? { outline: `1.5px solid ${THEME.accent.purple}60`, outlineOffset: '-1px', borderRadius: '4px' } : undefined}>
                   {/* Name cell - frozen left */}
                   <td style={{ 
                     width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH,
@@ -328,6 +345,7 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                     );
                   })}
                 </tr>
+                </React.Fragment>
               );
             })}
           </tbody>

@@ -4867,7 +4867,16 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                 );
               })}
             </div>
-            <div>{schedulableEmployees.map(e => <EmployeeViewRow key={e.id} employee={e} dates={currentDates} shifts={shifts} loggedInEmpId={currentUser.id} getEmployeeHours={getEmpHours} timeOffRequests={timeOffRequests} />)}</div>
+            <div>{schedulableEmployees.map((e, i) => {
+              const isFirstPT = i > 0 && e.employmentType !== 'full-time' && e.name.toLowerCase() !== 'sarvi' && 
+                (schedulableEmployees[i-1].employmentType === 'full-time' || schedulableEmployees[i-1].name.toLowerCase() === 'sarvi');
+              return (
+                <React.Fragment key={e.id}>
+                  {isFirstPT && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
+                  <EmployeeViewRow employee={e} dates={currentDates} shifts={shifts} loggedInEmpId={currentUser.id} getEmployeeHours={getEmpHours} timeOffRequests={timeOffRequests} />
+                </React.Fragment>
+              );
+            })}</div>
           </div>
           
           {/* Legend */}
@@ -7306,19 +7315,31 @@ export default function App() {
                   </button>
                 )
               ) : (
-                /* Currently LIVE → show Edit button to re-enter edit mode */
-                <button
-                  onClick={toggleEditMode}
-                  disabled={scheduleSaving}
-                  className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
-                  style={{
-                    backgroundColor: THEME.status.warning + '20',
-                    color: THEME.status.warning,
-                    border: `1px solid ${THEME.status.warning}40`
-                  }}
-                >
-                  <Edit3 size={10} /> Edit
-                </button>
+                /* Currently LIVE → show Edit + Publish buttons */
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={toggleEditMode}
+                    disabled={scheduleSaving}
+                    className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
+                    style={{
+                      backgroundColor: THEME.status.warning + '20',
+                      color: THEME.status.warning,
+                      border: `1px solid ${THEME.status.warning}40`
+                    }}
+                  >
+                    <Edit3 size={10} /> Edit
+                  </button>
+                  <button
+                    onClick={() => setEmailOpen(true)}
+                    className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
+                    style={{
+                      background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
+                      color: '#fff'
+                    }}
+                  >
+                    <Mail size={10} /> Publish
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -7507,6 +7528,18 @@ export default function App() {
           shiftOffers={shiftOffers}
           shiftSwaps={shiftSwaps}
           shifts={shifts}
+        />
+        
+        {/* Email Publish Modal */}
+        <EmailModal 
+          isOpen={emailOpen} 
+          onClose={() => setEmailOpen(false)} 
+          employees={employees} 
+          shifts={shifts} 
+          dates={dates} 
+          periodInfo={{ startDate, endDate }} 
+          announcement={currentAnnouncement} 
+          onComplete={() => { setPublished(true); setUnsaved(false); }} 
         />
         
         {/* Toast */}
@@ -7837,7 +7870,16 @@ export default function App() {
                     );
                   })}
                 </div>
-                <div>{schedulableEmployees.map(e => <EmployeeRow key={e.id} employee={e} dates={currentDates} shifts={shifts} onCellClick={(emp, d, s) => setEditingShift({ employee: emp, date: d, shift: s })} getEmployeeHours={getEmpHours} onEdit={emp => { setEditingEmp(emp); setEmpFormOpen(true); }} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={!isCurrentPeriodEditMode} />)}</div>
+                <div>{schedulableEmployees.map((e, i) => {
+                  const isFirstPT = i > 0 && e.employmentType !== 'full-time' && e.name.toLowerCase() !== 'sarvi' && 
+                    (schedulableEmployees[i-1].employmentType === 'full-time' || schedulableEmployees[i-1].name.toLowerCase() === 'sarvi');
+                  return (
+                    <React.Fragment key={e.id}>
+                      {isFirstPT && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
+                      <EmployeeRow employee={e} dates={currentDates} shifts={shifts} onCellClick={(emp, d, s) => setEditingShift({ employee: emp, date: d, shift: s })} getEmployeeHours={getEmpHours} onEdit={emp => { setEditingEmp(emp); setEmpFormOpen(true); }} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={!isCurrentPeriodEditMode} />
+                    </React.Fragment>
+                  );
+                })}</div>
                 
                 {/* Deleted employees with historical shifts */}
                 {deletedWithShifts.length > 0 && (
