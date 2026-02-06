@@ -166,16 +166,22 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
   // Sort: Sarvi first, then logged-in user, then alphabetical
   const sortedEmployees = useMemo(() => {
     return [...employees].sort((a, b) => {
-      // Sarvi (admin with showOnSchedule) first
-      if (a.isAdmin && a.showOnSchedule && !(b.isAdmin && b.showOnSchedule)) return -1;
-      if (b.isAdmin && b.showOnSchedule && !(a.isAdmin && a.showOnSchedule)) return 1;
-      // Logged-in user second
-      if (a.id === loggedInUser.id && !(b.isAdmin && b.showOnSchedule)) return -1;
-      if (b.id === loggedInUser.id && !(a.isAdmin && a.showOnSchedule)) return 1;
-      // Alphabetical
+      // Sarvi always first
+      const aIsSarvi = a.name.toLowerCase() === 'sarvi';
+      const bIsSarvi = b.name.toLowerCase() === 'sarvi';
+      if (aIsSarvi && !bIsSarvi) return -1;
+      if (bIsSarvi && !aIsSarvi) return 1;
+      
+      // Full-time before part-time
+      const aFT = a.employmentType === 'full-time';
+      const bFT = b.employmentType === 'full-time';
+      if (aFT && !bFT) return -1;
+      if (bFT && !aFT) return 1;
+      
+      // Alphabetical within same type
       return a.name.localeCompare(b.name);
     });
-  }, [employees, loggedInUser.id]);
+  }, [employees]);
   
   const hasApprovedTimeOff = (emp, dateStr) => {
     return timeOffRequests.some(req => 

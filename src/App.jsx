@@ -4354,7 +4354,22 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
   const schedulableEmployees = [...employees]
     .filter(e => e.active && !e.deleted && !e.isOwner)
     .filter(e => !e.isAdmin || e.showOnSchedule)
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => {
+      // Sarvi always first
+      const aIsSarvi = a.name.toLowerCase() === 'sarvi';
+      const bIsSarvi = b.name.toLowerCase() === 'sarvi';
+      if (aIsSarvi && !bIsSarvi) return -1;
+      if (bIsSarvi && !aIsSarvi) return 1;
+      
+      // Full-time before part-time
+      const aFT = a.employmentType === 'full-time';
+      const bFT = b.employmentType === 'full-time';
+      if (aFT && !bFT) return -1;
+      if (bFT && !aFT) return 1;
+      
+      // Alphabetical within same type
+      return a.name.localeCompare(b.name);
+    });
   
   // Admin contacts for display
   const adminContacts = employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
@@ -7262,15 +7277,15 @@ export default function App() {
             <div className="flex items-center gap-1.5">
               {isCurrentPeriodEditMode ? (
                 unsaved ? (
-                  /* Unsaved changes → show Save button */
+                  /* Unsaved changes → show Save button — bright and prominent */
                   <button
                     onClick={saveSchedule}
                     disabled={scheduleSaving}
-                    className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 disabled:opacity-50"
                     style={{
-                      backgroundColor: THEME.accent.blue + '20',
-                      color: THEME.accent.blue,
-                      border: `1px solid ${THEME.accent.blue}40`
+                      background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
+                      color: '#fff',
+                      boxShadow: `0 0 12px ${THEME.accent.blue}50`
                     }}
                   >
                     {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Saving</> : <><Save size={10} /> Save</>}
@@ -7314,6 +7329,7 @@ export default function App() {
           {[
             { id: 'wk1', label: `Wk ${weekNum1}`, tab: 'schedule', week: 1 },
             { id: 'wk2', label: `Wk ${weekNum2}`, tab: 'schedule', week: 2 },
+            { id: 'mine', label: 'Mine', tab: 'mine' },
             { id: 'requests', label: 'Requests', tab: 'requests', badge: pendingRequestCount },
             { id: 'comms', label: 'Comms', tab: 'comms', badge: currentAnnouncement?.message ? 1 : 0 },
           ].map(t => {
@@ -7416,7 +7432,15 @@ export default function App() {
                 <AdminShiftSwapsPanel swaps={shiftSwaps} onApprove={approveSwapRequest} onReject={adminRejectSwapRequest} onRevoke={revokeSwapRequest} currentAdminEmail={currentUser?.email} />
               </CollapsibleSection>
             </div>
-          ) : (
+          ) : mobileAdminTab === 'mine' ? (
+            /* Admin's own schedule */
+            <MobileMySchedule
+              currentUser={currentUser}
+              shifts={shifts}
+              dates={dates}
+              timeOffRequests={timeOffRequests}
+            />
+          ) : mobileAdminTab === 'comms' ? (
             /* Announcements */
             <MobileAnnouncementPanel
               announcement={currentAnnouncement}
@@ -7426,7 +7450,7 @@ export default function App() {
               isEditMode={isCurrentPeriodEditMode}
               isSaving={savingAnnouncement}
             />
-          )}
+          ) : null}
         </main>
         
         {/* Admin Drawer */}
@@ -7460,20 +7484,11 @@ export default function App() {
           currentUser={currentUser}
         />
         
-        {/* Employee Quick View - tap name to see contact/hours */}
+        {/* Employee Quick View - tap name to see contact info */}
         <MobileEmployeeQuickView
           isOpen={!!quickViewEmployee}
           onClose={() => setQuickViewEmployee(null)}
           employee={quickViewEmployee}
-          periodHours={quickViewEmployee ? getEmpHours(quickViewEmployee.id) : 0}
-          weekHours={quickViewEmployee ? (() => {
-            let t = 0;
-            mobileCurrentDates.forEach(d => {
-              const s = shifts[`${quickViewEmployee.id}-${d.toISOString().split('T')[0]}`];
-              if (s) t += s.hours || 0;
-            });
-            return t;
-          })() : 0}
         />
         
         {/* Admin's own request modals */}
@@ -7534,15 +7549,15 @@ export default function App() {
             <div className="h-8 w-px" style={{ backgroundColor: THEME.border.default }} />
             {isCurrentPeriodEditMode ? (
               unsaved ? (
-                /* Unsaved changes → Save button */
+                /* Unsaved changes → Save button — bright and prominent */
                 <button
                   onClick={saveSchedule}
                   disabled={scheduleSaving}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   style={{
-                    backgroundColor: THEME.accent.blue + '20',
-                    color: THEME.accent.blue,
-                    border: `1px solid ${THEME.accent.blue}50`
+                    background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
+                    color: '#fff',
+                    boxShadow: `0 0 12px ${THEME.accent.blue}50`
                   }}
                   title="Save changes (schedule stays hidden from employees)"
                 >

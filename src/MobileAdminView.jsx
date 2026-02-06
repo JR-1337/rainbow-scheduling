@@ -126,13 +126,31 @@ export const MobileAdminScheduleGrid = ({
   
   const sortedEmployees = useMemo(() => {
     return [...employees].sort((a, b) => {
-      if (a.isAdmin && a.showOnSchedule && !(b.isAdmin && b.showOnSchedule)) return -1;
-      if (b.isAdmin && b.showOnSchedule && !(a.isAdmin && a.showOnSchedule)) return 1;
-      if (a.id === loggedInUser.id && !(b.isAdmin && b.showOnSchedule)) return -1;
-      if (b.id === loggedInUser.id && !(a.isAdmin && a.showOnSchedule)) return 1;
+      // Sarvi always first
+      const aIsSarvi = a.name.toLowerCase() === 'sarvi';
+      const bIsSarvi = b.name.toLowerCase() === 'sarvi';
+      if (aIsSarvi && !bIsSarvi) return -1;
+      if (bIsSarvi && !aIsSarvi) return 1;
+      
+      // Full-time before part-time
+      const aFT = a.employmentType === 'full-time';
+      const bFT = b.employmentType === 'full-time';
+      if (aFT && !bFT) return -1;
+      if (bFT && !aFT) return 1;
+      
+      // Alphabetical within same type
       return a.name.localeCompare(b.name);
     });
-  }, [employees, loggedInUser.id]);
+  }, [employees]);
+  
+  // Find index where part-time starts (for divider)
+  const ptStartIndex = useMemo(() => {
+    const idx = sortedEmployees.findIndex(e => e.employmentType !== 'full-time' && e.name.toLowerCase() !== 'sarvi');
+    // Only show divider if there are both FT and PT employees
+    const hasFT = sortedEmployees.some(e => e.employmentType === 'full-time' || e.name.toLowerCase() === 'sarvi');
+    const hasPT = sortedEmployees.some(e => e.employmentType !== 'full-time' && e.name.toLowerCase() !== 'sarvi');
+    return hasFT && hasPT ? idx : -1;
+  }, [sortedEmployees]);
 
   const totalWidth = NAME_COL_WIDTH + (dates.length * CELL_WIDTH);
   const todayStr = new Date().toISOString().split('T')[0];
@@ -201,12 +219,21 @@ export const MobileAdminScheduleGrid = ({
             </tr>
           </thead>
           <tbody>
-            {sortedEmployees.map((emp) => {
+            {sortedEmployees.map((emp, empIndex) => {
               const isLoggedIn = emp.id === loggedInUser.id;
               const weekHours = getEmployeeHours(emp.id);
+              const showDivider = empIndex === ptStartIndex;
               
               return (
-                <tr key={emp.id} style={isLoggedIn ? { outline: `2px solid ${THEME.accent.purple}40`, outlineOffset: -1, borderRadius: 4 } : {}}>
+                <React.Fragment key={emp.id}>
+                  {showDivider && (
+                    <tr>
+                      <td colSpan={dates.length + 1} style={{ height: 6, padding: 0 }}>
+                        <div style={{ height: 1, margin: '2px 8px', backgroundColor: THEME.border.default }} />
+                      </td>
+                    </tr>
+                  )}
+                  <tr style={isLoggedIn ? { outline: `2px solid ${THEME.accent.purple}40`, outlineOffset: -1, borderRadius: 4 } : {}}>
                   {/* Frozen name column */}
                   <td 
                     onClick={() => onNameClick && onNameClick(emp)}
@@ -286,6 +313,7 @@ export const MobileAdminScheduleGrid = ({
                     );
                   })}
                 </tr>
+                </React.Fragment>
               );
             })}
           </tbody>
@@ -308,6 +336,36 @@ export const MobileAnnouncementPanel = ({
   React.useEffect(() => {
     setLocalAnn(announcement);
   }, [announcement.subject, announcement.message]);
+  
+  // Read-only when schedule is LIVE (not in edit mode)
+  if (!isEditMode) {
+    return (
+      <div className="rounded-xl p-3" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: THEME.accent.cyan }}>
+            <MessageSquare size={14} />
+            Announcement
+          </h3>
+          {announcement.message && (
+            <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: THEME.accent.blue + '20', color: THEME.accent.blue }}>Active</span>
+          )}
+        </div>
+        {announcement.message ? (
+          <div className="space-y-1.5">
+            {announcement.subject && <p className="text-xs font-semibold" style={{ color: THEME.text.primary }}>{announcement.subject}</p>}
+            <p className="text-xs" style={{ color: THEME.text.secondary, lineHeight: 1.5 }}>{announcement.message}</p>
+          </div>
+        ) : (
+          <p className="text-xs" style={{ color: THEME.text.muted }}>No announcement for this period.</p>
+        )}
+        <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
+          <p className="text-xs flex items-center gap-1.5" style={{ color: THEME.text.muted }}>
+            <Edit3 size={10} /> Enter Edit Mode to modify announcements
+          </p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="rounded-xl p-3" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
@@ -365,9 +423,9 @@ export const MobileAnnouncementPanel = ({
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MOBILE EMPLOYEE QUICK VIEW - Tap employee name to see hours + contact
+// MOBILE EMPLOYEE QUICK VIEW - Tap employee name to see contact info
 // ═══════════════════════════════════════════════════════════════════════════════
-export const MobileEmployeeQuickView = ({ isOpen, onClose, employee, periodHours, weekHours }) => {
+export const MobileEmployeeQuickView = ({ isOpen, onClose, employee }) => {
   if (!isOpen || !employee) return null;
   
   return (
@@ -386,43 +444,28 @@ export const MobileEmployeeQuickView = ({ isOpen, onClose, employee, periodHours
             </div>
             <div>
               <p className="text-sm font-semibold" style={{ color: THEME.text.primary }}>{employee.name}</p>
-              {employee.isAdmin && <span className="text-xs" style={{ color: THEME.accent.purple }}>Admin</span>}
+              <p className="text-xs" style={{ color: employee.isAdmin ? THEME.accent.purple : THEME.text.muted }}>
+                {employee.isAdmin ? 'Admin' : ''}{employee.isAdmin && ' · '}{employee.employmentType === 'full-time' ? 'Full-Time' : 'Part-Time'}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="p-1 rounded-lg" style={{ color: THEME.text.muted }}><X size={16} /></button>
         </div>
         
-        <div className="p-4 space-y-3">
-          {/* Hours */}
-          <div className="flex gap-3">
-            <div className="flex-1 p-2 rounded-lg text-center" style={{ backgroundColor: THEME.bg.tertiary }}>
-              <p className="text-lg font-bold" style={{ color: THEME.accent.cyan }}>{weekHours?.toFixed(1) || '0.0'}</p>
-              <p className="text-xs" style={{ color: THEME.text.muted }}>This week</p>
-            </div>
-            <div className="flex-1 p-2 rounded-lg text-center" style={{ backgroundColor: THEME.bg.tertiary }}>
-              <p className="text-lg font-bold" style={{ color: THEME.accent.purple }}>{periodHours?.toFixed(1) || '0.0'}</p>
-              <p className="text-xs" style={{ color: THEME.text.muted }}>Period total</p>
-            </div>
-          </div>
-          
-          {/* Contact */}
-          <div className="space-y-1.5">
-            {employee.email && (
-              <a href={`mailto:${employee.email}`} className="flex items-center gap-2 text-xs p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.accent.cyan }}>
-                <Mail size={12} /> {employee.email}
-              </a>
-            )}
-            {employee.phone && (
-              <a href={`tel:${employee.phone}`} className="flex items-center gap-2 text-xs p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.accent.cyan }}>
-                <User size={12} /> {employee.phone}
-              </a>
-            )}
-          </div>
-          
-          {/* Employment type */}
-          <div className="text-xs" style={{ color: THEME.text.muted }}>
-            {employee.employmentType === 'full-time' ? 'Full-Time' : 'Part-Time'}
-          </div>
+        <div className="p-4 space-y-1.5">
+          {employee.email && (
+            <a href={`mailto:${employee.email}`} className="flex items-center gap-2 text-xs p-2.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.accent.cyan }}>
+              <Mail size={13} /> {employee.email}
+            </a>
+          )}
+          {employee.phone && (
+            <a href={`tel:${employee.phone}`} className="flex items-center gap-2 text-xs p-2.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.accent.cyan }}>
+              <User size={13} /> {employee.phone}
+            </a>
+          )}
+          {!employee.email && !employee.phone && (
+            <p className="text-xs py-2" style={{ color: THEME.text.muted }}>No contact info on file</p>
+          )}
         </div>
       </div>
     </div>
