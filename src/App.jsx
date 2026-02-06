@@ -4528,7 +4528,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                 <button 
                   key={tab.id}
                   onClick={() => setMobileActiveTab(tab.id)}
-                  className="px-4 py-1.5 text-xs font-medium relative"
+                  className="px-4 py-2 text-xs relative"
                   style={{ 
                     backgroundColor: isActive ? THEME.bg.primary : THEME.bg.tertiary,
                     color: isActive ? THEME.accent.purple : THEME.text.muted,
@@ -4540,7 +4540,9 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                     borderBottom: isActive ? 'none' : `1px solid ${THEME.border.default}`,
                     marginRight: -1,
                     zIndex: isActive ? 10 : 1,
-                    fontWeight: isActive ? 600 : 500
+                    fontWeight: isActive ? 700 : 500,
+                    boxShadow: isActive ? `0 -2px 8px ${THEME.accent.purple}15` : 'none',
+                    fontSize: isActive ? '12px' : '11px'
                   }}
                 >
                   {tab.label}
@@ -7254,8 +7256,9 @@ export default function App() {
         <GradientBackground />
         
         {/* Mobile Admin Header */}
-        <header className="px-3 py-2 sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: `1px solid ${THEME.border.subtle}`, zIndex: 100 }}>
-          <div className="flex items-center justify-between">
+        <header className="sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: 'none', zIndex: 100 }}>
+          {/* Row 1: Hamburger + Logo + Period Nav */}
+          <div className="flex items-center justify-between px-3 py-2">
             {/* Left: hamburger + logo */}
             <div className="flex items-center gap-2">
               <button onClick={() => setMobileAdminDrawerOpen(true)} className="p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.primary }}>
@@ -7282,105 +7285,120 @@ export default function App() {
               </button>
             </div>
             
-            {/* Right: Save / Go Live (two-state) */}
-            <div className="flex items-center gap-1.5">
-              {isCurrentPeriodEditMode ? (
-                unsaved ? (
-                  /* Unsaved changes → show Save button — bright and prominent */
-                  <button
-                    onClick={saveSchedule}
-                    disabled={scheduleSaving}
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 disabled:opacity-50"
-                    style={{
-                      background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
-                      color: '#fff',
-                      boxShadow: `0 0 12px ${THEME.accent.blue}50`
-                    }}
-                  >
-                    {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Saving</> : <><Save size={10} /> Save</>}
-                  </button>
-                ) : (
-                  /* Saved / no changes → show Go Live button */
-                  <button
-                    onClick={toggleEditMode}
-                    disabled={scheduleSaving}
-                    className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
-                    style={{
-                      backgroundColor: THEME.status.success + '20',
-                      color: THEME.status.success,
-                      border: `1px solid ${THEME.status.success}40`
-                    }}
-                  >
-                    {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Going Live</> : <><Eye size={10} /> Go Live</>}
-                  </button>
-                )
+            {/* Right: spacer to balance layout (actions moved to Row 2) */}
+            <div style={{ width: 62 }} />
+          </div>
+          
+          {/* Row 2: Action Buttons — centered with breathing room */}
+          <div className="flex items-center justify-center gap-2 px-3 pb-2">
+            {isCurrentPeriodEditMode ? (
+              unsaved ? (
+                /* Unsaved changes → Save button */
+                <button
+                  onClick={saveSchedule}
+                  disabled={scheduleSaving}
+                  className="px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"
+                  style={{
+                    background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
+                    color: '#fff',
+                    boxShadow: `0 0 12px ${THEME.accent.blue}50`
+                  }}
+                >
+                  {scheduleSaving ? <><Loader size={12} className="animate-spin" /> Saving...</> : <><Save size={12} /> Save Changes</>}
+                </button>
               ) : (
-                /* Currently LIVE → show Edit + Publish buttons */
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={toggleEditMode}
-                    disabled={scheduleSaving}
-                    className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
-                    style={{
-                      backgroundColor: THEME.status.warning + '20',
-                      color: THEME.status.warning,
-                      border: `1px solid ${THEME.status.warning}40`
-                    }}
-                  >
-                    <Edit3 size={10} /> Edit
-                  </button>
-                  <button
-                    onClick={() => setEmailOpen(true)}
-                    className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
-                    style={{
-                      background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
-                      color: '#fff'
-                    }}
-                  >
-                    <Mail size={10} /> Publish
-                  </button>
-                </div>
-              )}
-            </div>
+                /* No changes → Go Live button */
+                <button
+                  onClick={toggleEditMode}
+                  disabled={scheduleSaving}
+                  className="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
+                  style={{
+                    backgroundColor: THEME.status.success + '20',
+                    color: THEME.status.success,
+                    border: `1px solid ${THEME.status.success}40`
+                  }}
+                >
+                  {scheduleSaving ? <><Loader size={12} className="animate-spin" /> Going Live...</> : <><Eye size={12} /> Go Live</>}
+                </button>
+              )
+            ) : (
+              /* Currently LIVE → Edit + Publish buttons */
+              <>
+                <button
+                  onClick={toggleEditMode}
+                  disabled={scheduleSaving}
+                  className="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
+                  style={{
+                    backgroundColor: THEME.status.warning + '20',
+                    color: THEME.status.warning,
+                    border: `1px solid ${THEME.status.warning}40`
+                  }}
+                >
+                  <Edit3 size={12} /> Edit
+                </button>
+                <button
+                  onClick={() => setEmailOpen(true)}
+                  className="px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5"
+                  style={{
+                    background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
+                    color: '#fff',
+                    boxShadow: `0 0 8px ${THEME.accent.blue}30`
+                  }}
+                >
+                  <Mail size={12} /> Publish
+                </button>
+              </>
+            )}
+          </div>
+          
+          {/* Row 3: Raised Filing Tabs */}
+          <div className="flex items-end px-3" style={{ marginBottom: -1 }}>
+            {[
+              { id: 'wk1', label: `Wk ${weekNum1}`, tab: 'schedule', week: 1 },
+              { id: 'wk2', label: `Wk ${weekNum2}`, tab: 'schedule', week: 2 },
+              { id: 'mine', label: 'Mine', tab: 'mine' },
+              { id: 'requests', label: 'Requests', tab: 'requests', badge: pendingRequestCount },
+              { id: 'comms', label: 'Comms', tab: 'comms', badge: currentAnnouncement?.message ? 1 : 0 },
+            ].map(t => {
+              const isActive = t.tab === 'schedule' 
+                ? mobileAdminTab === 'schedule' && activeWeek === t.week 
+                : mobileAdminTab === t.tab;
+              return (
+                <button 
+                  key={t.id}
+                  onClick={() => { 
+                    setMobileAdminTab(t.tab); 
+                    if (t.week) setActiveWeek(t.week); 
+                  }}
+                  className="flex-1 py-1.5 text-xs font-medium relative flex items-center justify-center gap-1"
+                  style={{ 
+                    backgroundColor: isActive ? THEME.bg.primary : THEME.bg.tertiary,
+                    color: isActive ? THEME.accent.purple : THEME.text.muted,
+                    borderTopLeftRadius: 8,
+                    borderTopRightRadius: 8,
+                    borderTop: `2px solid ${isActive ? THEME.accent.purple : 'transparent'}`,
+                    borderLeft: `1px solid ${isActive ? THEME.border.default : 'transparent'}`,
+                    borderRight: `1px solid ${isActive ? THEME.border.default : 'transparent'}`,
+                    borderBottom: isActive ? 'none' : `1px solid ${THEME.border.default}`,
+                    marginRight: -1,
+                    zIndex: isActive ? 10 : 1,
+                    fontWeight: isActive ? 600 : 500
+                  }}
+                >
+                  {t.label}
+                  {t.badge > 0 && (
+                    <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center" 
+                      style={{ backgroundColor: THEME.status.warning, color: '#000', fontSize: '9px' }}>
+                      {t.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            {/* Fill rest of bottom border */}
+            <div className="flex-grow-0" style={{ borderBottom: `1px solid ${THEME.border.default}`, width: 0 }} />
           </div>
         </header>
-        
-        {/* Tab bar */}
-        <div className="flex px-2 pt-1" style={{ backgroundColor: THEME.bg.primary }}>
-          {[
-            { id: 'wk1', label: `Wk ${weekNum1}`, tab: 'schedule', week: 1 },
-            { id: 'wk2', label: `Wk ${weekNum2}`, tab: 'schedule', week: 2 },
-            { id: 'mine', label: 'Mine', tab: 'mine' },
-            { id: 'requests', label: 'Requests', tab: 'requests', badge: pendingRequestCount },
-            { id: 'comms', label: 'Comms', tab: 'comms', badge: currentAnnouncement?.message ? 1 : 0 },
-          ].map(t => {
-            const isActive = t.tab === 'schedule' 
-              ? mobileAdminTab === 'schedule' && activeWeek === t.week 
-              : mobileAdminTab === t.tab;
-            return (
-              <button 
-                key={t.id}
-                onClick={() => { 
-                  setMobileAdminTab(t.tab); 
-                  if (t.week) setActiveWeek(t.week); 
-                }}
-                className="flex-1 py-2 text-xs font-medium relative flex items-center justify-center gap-1"
-                style={{ 
-                  color: isActive ? THEME.text.primary : THEME.text.muted,
-                  borderBottom: `2px solid ${isActive ? THEME.accent.purple : 'transparent'}`
-                }}
-              >
-                {t.label}
-                {t.badge > 0 && (
-                  <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center" 
-                    style={{ backgroundColor: THEME.status.warning, color: '#000', fontSize: '9px' }}>
-                    {t.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
         
         {/* Content */}
         <main className="p-2">
