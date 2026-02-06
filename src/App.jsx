@@ -5873,6 +5873,7 @@ export default function App() {
   const [mobileAdminDrawerOpen, setMobileAdminDrawerOpen] = useState(false);
   const [mobileAdminTab, setMobileAdminTab] = useState('schedule'); // 'schedule' | 'requests' | 'comms'
   const [mobileAdminChangePasswordOpen, setMobileAdminChangePasswordOpen] = useState(false);
+  const [quickViewEmployee, setQuickViewEmployee] = useState(null);
   
   // Admin handler for selecting request type
   const handleAdminSelectRequestType = (type) => {
@@ -7257,35 +7258,53 @@ export default function App() {
               </button>
             </div>
             
-            {/* Right: Edit/Live toggle + Save */}
+            {/* Right: Save / Go Live (two-state) */}
             <div className="flex items-center gap-1.5">
-              {unsaved && (
+              {isCurrentPeriodEditMode ? (
+                unsaved ? (
+                  /* Unsaved changes → show Save button */
+                  <button
+                    onClick={saveSchedule}
+                    disabled={scheduleSaving}
+                    className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
+                    style={{
+                      backgroundColor: THEME.accent.blue + '20',
+                      color: THEME.accent.blue,
+                      border: `1px solid ${THEME.accent.blue}40`
+                    }}
+                  >
+                    {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Saving</> : <><Save size={10} /> Save</>}
+                  </button>
+                ) : (
+                  /* Saved / no changes → show Go Live button */
+                  <button
+                    onClick={toggleEditMode}
+                    disabled={scheduleSaving}
+                    className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
+                    style={{
+                      backgroundColor: THEME.status.success + '20',
+                      color: THEME.status.success,
+                      border: `1px solid ${THEME.status.success}40`
+                    }}
+                  >
+                    {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Going Live</> : <><Eye size={10} /> Go Live</>}
+                  </button>
+                )
+              ) : (
+                /* Currently LIVE → show Edit button to re-enter edit mode */
                 <button
-                  onClick={saveSchedule}
+                  onClick={toggleEditMode}
                   disabled={scheduleSaving}
-                  className="p-1.5 rounded-lg"
-                  style={{ backgroundColor: THEME.accent.blue + '20', color: THEME.accent.blue }}
-                  title="Save Changes"
+                  className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
+                  style={{
+                    backgroundColor: THEME.status.warning + '20',
+                    color: THEME.status.warning,
+                    border: `1px solid ${THEME.status.warning}40`
+                  }}
                 >
-                  {scheduleSaving ? <Loader size={14} className="animate-spin" /> : <Save size={14} />}
+                  <Edit3 size={10} /> Edit
                 </button>
               )}
-              <button
-                onClick={toggleEditMode}
-                disabled={scheduleSaving}
-                className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
-                style={{
-                  backgroundColor: scheduleSaving ? THEME.accent.blue + '20'
-                    : isCurrentPeriodEditMode ? THEME.status.warning + '20' : THEME.status.success + '20',
-                  color: scheduleSaving ? THEME.accent.blue
-                    : isCurrentPeriodEditMode ? THEME.status.warning : THEME.status.success,
-                  border: `1px solid ${scheduleSaving ? THEME.accent.blue + '40'
-                    : isCurrentPeriodEditMode ? THEME.status.warning + '40' : THEME.status.success + '40'}`
-                }}
-              >
-                {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Saving</> :
-                  isCurrentPeriodEditMode ? <><Edit3 size={10} /> Edit</> : <><Eye size={10} /> LIVE</>}
-              </button>
             </div>
           </div>
         </header>
@@ -7362,6 +7381,7 @@ export default function App() {
                     setEditingShift({ employee: emp, date, shift });
                   }
                 }}
+                onNameClick={(emp) => setQuickViewEmployee(emp)}
               />
             </>
           ) : mobileAdminTab === 'requests' ? (
@@ -7440,6 +7460,22 @@ export default function App() {
           currentUser={currentUser}
         />
         
+        {/* Employee Quick View - tap name to see contact/hours */}
+        <MobileEmployeeQuickView
+          isOpen={!!quickViewEmployee}
+          onClose={() => setQuickViewEmployee(null)}
+          employee={quickViewEmployee}
+          periodHours={quickViewEmployee ? getEmpHours(quickViewEmployee.id) : 0}
+          weekHours={quickViewEmployee ? (() => {
+            let t = 0;
+            mobileCurrentDates.forEach(d => {
+              const s = shifts[`${quickViewEmployee.id}-${d.toISOString().split('T')[0]}`];
+              if (s) t += s.hours || 0;
+            });
+            return t;
+          })() : 0}
+        />
+        
         {/* Admin's own request modals */}
         <RequestTimeOffModal 
           isOpen={adminRequestModalOpen} 
@@ -7494,43 +7530,60 @@ export default function App() {
               <button onClick={() => setPeriodIndex(periodIndex + 1)} className="p-1 rounded-lg hover:scale-105" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary }}><ChevronRight size={14} /></button>
             </div>
             
-            {/* Edit Mode / LIVE Toggle */}
+            {/* Save / Go Live / Edit - Three-state button */}
             <div className="h-8 w-px" style={{ backgroundColor: THEME.border.default }} />
-            <button
-              onClick={toggleEditMode}
-              disabled={scheduleSaving}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-              style={{
-                backgroundColor: scheduleSaving ? THEME.accent.blue + '20' 
-                  : isCurrentPeriodEditMode ? THEME.status.warning + '20' : THEME.status.success + '20',
-                color: scheduleSaving ? THEME.accent.blue 
-                  : isCurrentPeriodEditMode ? THEME.status.warning : THEME.status.success,
-                border: `1px solid ${scheduleSaving ? THEME.accent.blue + '50' 
-                  : isCurrentPeriodEditMode ? THEME.status.warning + '50' : THEME.status.success + '50'}`
-              }}
-              title={scheduleSaving ? 'Saving in progress...' : isCurrentPeriodEditMode ? 'Click to publish changes to employees' : 'Click to enter edit mode (employees won\'t see changes)'}
-            >
-              {scheduleSaving ? (
-                <>
-                  <Loader size={12} className="animate-spin" />
-                  <span>SAVING...</span>
-                </>
-              ) : isCurrentPeriodEditMode ? (
-                <>
-                  <Edit3 size={12} />
-                  <span>EDIT MODE</span>
-                </>
+            {isCurrentPeriodEditMode ? (
+              unsaved ? (
+                /* Unsaved changes → Save button */
+                <button
+                  onClick={saveSchedule}
+                  disabled={scheduleSaving}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  style={{
+                    backgroundColor: THEME.accent.blue + '20',
+                    color: THEME.accent.blue,
+                    border: `1px solid ${THEME.accent.blue}50`
+                  }}
+                  title="Save changes (schedule stays hidden from employees)"
+                >
+                  {scheduleSaving ? <><Loader size={12} className="animate-spin" /><span>SAVING...</span></> : <><Save size={12} /><span>SAVE</span></>}
+                </button>
               ) : (
-                <>
-                  <Eye size={12} />
-                  <span>LIVE</span>
-                </>
-              )}
-            </button>
+                /* Saved / clean → Go Live button */
+                <button
+                  onClick={toggleEditMode}
+                  disabled={scheduleSaving}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  style={{
+                    backgroundColor: THEME.status.success + '20',
+                    color: THEME.status.success,
+                    border: `1px solid ${THEME.status.success}50`
+                  }}
+                  title="Publish schedule — employees will see it"
+                >
+                  {scheduleSaving ? <><Loader size={12} className="animate-spin" /><span>GOING LIVE...</span></> : <><Eye size={12} /><span>GO LIVE</span></>}
+                </button>
+              )
+            ) : (
+              /* Currently LIVE → Edit button */
+              <button
+                onClick={toggleEditMode}
+                disabled={scheduleSaving}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                style={{
+                  backgroundColor: THEME.status.warning + '20',
+                  color: THEME.status.warning,
+                  border: `1px solid ${THEME.status.warning}50`
+                }}
+                title="Enter edit mode (employees won't see changes)"
+              >
+                <Edit3 size={12} />
+                <span>EDIT MODE</span>
+              </button>
+            )}
           </div>
           
           <div className="flex items-center gap-1.5">
-            {unsaved && <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: THEME.status.warning + '20', color: THEME.status.warning }}><AlertCircle size={10} />Unsaved</span>}
             {published && !unsaved && <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: THEME.status.success + '20', color: THEME.status.success }}><Check size={10} />Published</span>}
             <TooltipButton tooltip="Add Employee" onClick={() => { setEditingEmp(null); setEmpFormOpen(true); }}><User size={12} /></TooltipButton>
             <div className="relative">
@@ -7541,7 +7594,6 @@ export default function App() {
               <TooltipButton tooltip={currentAnnouncement?.message ? "Export PDF (includes announcement)" : "Export PDF"} onClick={() => generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement)}><FileText size={12} /></TooltipButton>
               {currentAnnouncement?.message && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full" style={{ backgroundColor: THEME.accent.blue }} />}
             </div>
-            <TooltipButton tooltip={scheduleSaving ? "Saving..." : "Save Changes"} onClick={saveSchedule} disabled={!unsaved || scheduleSaving}>{scheduleSaving ? <Loader size={12} className="animate-spin" /> : <Save size={12} />}</TooltipButton>
             <div className="relative">
               <TooltipButton tooltip={currentAnnouncement?.message ? "Email Schedules (includes announcement)" : "Email Schedules"} variant="primary" onClick={() => setEmailOpen(true)}><Mail size={12} />Publish</TooltipButton>
               {currentAnnouncement?.message && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full" style={{ backgroundColor: THEME.accent.blue }} />}

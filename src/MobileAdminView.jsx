@@ -116,7 +116,7 @@ export const MobileAdminScheduleGrid = ({
   employees, shifts, dates, loggedInUser, getEmployeeHours, 
   timeOffRequests = [], getScheduledCount, getStaffingTarget,
   staffingTargetOverrides = {}, storeHoursOverrides = {},
-  isEditMode = false, onCellClick
+  isEditMode = false, onCellClick, onNameClick
 }) => {
   const scrollContainerRef = React.useRef(null);
   const NAME_COL_WIDTH = 90;
@@ -208,15 +208,18 @@ export const MobileAdminScheduleGrid = ({
               return (
                 <tr key={emp.id} style={isLoggedIn ? { outline: `2px solid ${THEME.accent.purple}40`, outlineOffset: -1, borderRadius: 4 } : {}}>
                   {/* Frozen name column */}
-                  <td style={{ 
+                  <td 
+                    onClick={() => onNameClick && onNameClick(emp)}
+                    style={{ 
                     position: 'sticky', left: 0, zIndex: 10,
                     width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH, height: CELL_HEIGHT,
                     backgroundColor: THEME.bg.secondary,
                     borderBottom: `1px solid ${THEME.border.subtle}`,
                     borderRight: `1px solid ${THEME.border.default}`,
-                    padding: '4px'
+                    padding: '4px',
+                    cursor: onNameClick ? 'pointer' : 'default'
                   }}>
-                    <p className="font-semibold truncate" style={{ color: THEME.text.primary, fontSize: '11px' }}>{emp.name}</p>
+                    <p className="font-semibold truncate" style={{ color: onNameClick ? THEME.accent.cyan : THEME.text.primary, fontSize: '11px' }}>{emp.name}</p>
                     <p style={{ color: THEME.accent.cyan, fontSize: '9px' }}>{weekHours.toFixed(1)}h</p>
                     {emp.isAdmin && <Shield size={8} style={{ color: THEME.accent.purple, marginTop: 1 }} />}
                   </td>
