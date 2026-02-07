@@ -7257,39 +7257,41 @@ export default function App() {
         
         {/* Mobile Admin Header */}
         <header className="sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: 'none', zIndex: 100 }}>
-          {/* Row 1: Hamburger + Logo + Period Nav */}
+          {/* Row 1: Hamburger + centered RAINBOW logo */}
+          <div className="flex items-center px-3 pt-3 pb-1.5" style={{ position: 'relative' }}>
+            <button onClick={() => setMobileAdminDrawerOpen(true)} className="p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.primary, zIndex: 1 }}>
+              <Menu size={18} />
+            </button>
+            <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', fontFamily: "'Josefin Sans', sans-serif" }}>
+              <span className="tracking-[0.2em] font-semibold" style={{ color: THEME.text.primary, fontSize: '14px' }}>RAINBOW</span>
+            </div>
+          </div>
+
+          {/* Row 2: Period nav (centered, bigger) + action buttons (right) */}
           <div className="flex items-center justify-between px-3 py-2">
-            {/* Left: hamburger + logo */}
-            <div className="flex items-center gap-2">
-              <button onClick={() => setMobileAdminDrawerOpen(true)} className="p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.primary }}>
-                <Menu size={18} />
-              </button>
-              <div style={{ fontFamily: "'Josefin Sans', sans-serif" }}>
-                <span className="text-xs tracking-[0.15em] font-semibold" style={{ color: THEME.text.primary }}>RAINBOW</span>
-              </div>
-            </div>
-            
+            {/* Spacer to balance buttons on right */}
+            <div style={{ width: 70 }} />
+
             {/* Center: period nav */}
-            <div className="flex items-center gap-1">
-              <button onClick={() => setPeriodIndex(periodIndex - 1)} className="p-0.5 rounded" style={{ color: THEME.text.secondary }}>
-                <ChevronLeft size={14} />
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setPeriodIndex(periodIndex - 1)} className="p-1 rounded" style={{ color: THEME.text.secondary }}>
+                <ChevronLeft size={16} />
               </button>
-              <div className="text-center min-w-[90px]">
-                <p className="font-medium" style={{ color: THEME.text.primary, fontSize: '10px' }}>{formatDate(startDate)} – {formatDate(endDate)}</p>
-                {periodIndex === 0 && <p style={{ color: THEME.accent.cyan, fontSize: '9px' }}>Current</p>}
-                {periodIndex > 0 && <p style={{ color: THEME.accent.purple, fontSize: '9px' }}>Future</p>}
-                {periodIndex < 0 && <p style={{ color: THEME.text.muted, fontSize: '9px' }}>Past</p>}
+              <div className="text-center">
+                <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '13px' }}>{formatDate(startDate)} – {formatDate(endDate)}</p>
+                {periodIndex === 0 && <p className="font-medium" style={{ color: THEME.accent.cyan, fontSize: '10px', marginTop: 1 }}>Current Period</p>}
+                {periodIndex > 0 && <p className="font-medium" style={{ color: THEME.accent.purple, fontSize: '10px', marginTop: 1 }}>Future</p>}
+                {periodIndex < 0 && <p className="font-medium" style={{ color: THEME.text.muted, fontSize: '10px', marginTop: 1 }}>Past</p>}
               </div>
-              <button onClick={() => setPeriodIndex(periodIndex + 1)} className="p-0.5 rounded" style={{ color: THEME.text.secondary }}>
-                <ChevronRight size={14} />
+              <button onClick={() => setPeriodIndex(periodIndex + 1)} className="p-1 rounded" style={{ color: THEME.text.secondary }}>
+                <ChevronRight size={16} />
               </button>
             </div>
-            
+
             {/* Right: compact action buttons */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" style={{ minWidth: 70, justifyContent: 'flex-end' }}>
               {isCurrentPeriodEditMode ? (
                 unsaved ? (
-                  /* Unsaved changes → Save button (most prominent) */
                   <button
                     onClick={saveSchedule}
                     disabled={scheduleSaving}
@@ -7304,7 +7306,6 @@ export default function App() {
                     {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Saving</> : <><Save size={10} /> Save</>}
                   </button>
                 ) : (
-                  /* No changes → Go Live button */
                   <button
                     onClick={toggleEditMode}
                     disabled={scheduleSaving}
@@ -7320,7 +7321,6 @@ export default function App() {
                   </button>
                 )
               ) : (
-                /* Currently LIVE → Edit + Publish pills */
                 <>
                   <button
                     onClick={toggleEditMode}
@@ -7350,9 +7350,9 @@ export default function App() {
               )}
             </div>
           </div>
-          
+
           {/* Row 3: Raised Filing Tabs */}
-          <div className="flex items-end px-3" style={{ marginBottom: -1 }}>
+          <div className="flex items-end px-3 pt-1.5" style={{ marginBottom: -1 }}>
             {[
               { id: 'wk1', label: `Wk ${weekNum1}`, tab: 'schedule', week: 1 },
               { id: 'wk2', label: `Wk ${weekNum2}`, tab: 'schedule', week: 2 },
