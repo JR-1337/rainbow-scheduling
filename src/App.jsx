@@ -4421,79 +4421,60 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
         <GradientBackground />
         
         {/* Mobile Header - Sticky */}
-        <header className="sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: `1px solid ${THEME.border.subtle}`, zIndex: 100 }}>
-          {/* Row 1: Logo Banner */}
-          <div className="relative flex items-center justify-center py-2" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
-            <div style={{ fontFamily: "'Josefin Sans', sans-serif" }} className="text-center">
-              <p style={{ color: THEME.text.muted, fontSize: '8px', letterSpacing: '0.2em' }}>OVER THE</p>
-              <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '16px', letterSpacing: '0.12em', lineHeight: 1 }}>RAINBOW</p>
-            </div>
-            {isEditMode ? (
-              <div 
-                className="absolute px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1"
-                style={{
-                  right: '12px',
-                  backgroundColor: THEME.status.warning + '15',
-                  color: THEME.status.warning,
-                  border: `1px solid ${THEME.status.warning}30`,
-                  fontSize: '10px'
-                }}
-              >
-                <Loader size={9} className="animate-pulse" />
-                <span>Pending</span>
-              </div>
-            ) : (
-              <div 
-                className="absolute px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1"
-                style={{
-                  right: '12px',
-                  backgroundColor: THEME.status.success + '15',
-                  color: THEME.status.success,
-                  border: `1px solid ${THEME.status.success}30`,
-                  fontSize: '10px'
-                }}
-              >
-                <Eye size={9} />
-                <span>LIVE</span>
-              </div>
-            )}
-          </div>
-          
-          {/* Row 2: Hamburger + Period Arrows + Bell */}
-          <div className="flex items-center justify-between px-3 py-1.5">
-            {/* Hamburger */}
-            <button 
+        <header className="sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: 'none', zIndex: 100 }}>
+          {/* Row 1: Hamburger + centered RAINBOW logo + Bell */}
+          <div className="flex items-center px-3 pt-3 pb-2" style={{ position: 'relative' }}>
+            <button
               onClick={() => setMobileMenuOpen(true)}
               className="p-1.5 rounded-lg relative flex-shrink-0"
-              style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.primary }}
+              style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.primary, zIndex: 1 }}
             >
               <Menu size={18} />
               {totalNotifications > 0 && (
-                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center" 
+                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
                   style={{ backgroundColor: THEME.status.error, fontSize: '9px', color: 'white', fontWeight: 700 }}>
                   {totalNotifications > 9 ? '9+' : totalNotifications}
                 </div>
               )}
             </button>
-            
-            {/* Period Navigation */}
-            <div className="flex items-center gap-1">
-              <button 
+            <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', fontFamily: "'Josefin Sans', sans-serif" }}>
+              <p style={{ color: THEME.text.muted, fontSize: '8px', letterSpacing: '0.2em' }}>OVER THE</p>
+              <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '16px', letterSpacing: '0.12em', lineHeight: 1 }}>RAINBOW</p>
+            </div>
+            <div className="ml-auto" style={{ zIndex: 1 }}>
+              <button
+                onClick={() => hasAnnouncement && setMobileAnnouncementOpen(true)}
+                className="p-1.5 rounded-lg flex-shrink-0"
+                style={{
+                  backgroundColor: hasAnnouncement ? THEME.accent.blue + '20' : THEME.bg.tertiary,
+                  color: hasAnnouncement ? THEME.accent.blue : THEME.text.muted,
+                  border: hasAnnouncement ? `1px solid ${THEME.accent.blue}40` : 'none'
+                }}
+              >
+                <Bell size={18} fill={hasAnnouncement ? THEME.accent.blue : 'none'} />
+              </button>
+            </div>
+          </div>
+
+          {/* Row 2: Period nav centered, bigger */}
+          <div className="flex items-center justify-center px-3 pb-2">
+            <div className="flex items-center gap-1.5">
+              <button
                 onClick={() => onPeriodChange && onPeriodChange(periodIndex - 1)}
                 className="p-1 rounded"
                 style={{ color: THEME.text.secondary }}
               >
                 <ChevronLeft size={16} />
               </button>
-              <div className="text-center min-w-[100px]">
-                <p style={{ color: THEME.text.muted, fontSize: '10px' }}>
+              <div className="text-center">
+                <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '13px' }}>
                   {formatDate(periodInfo.startDate)} – {formatDate(periodInfo.endDate)}
                 </p>
-                {periodIndex === 0 && <p style={{ color: THEME.accent.cyan, fontSize: '9px' }}>Current</p>}
-                {periodIndex > 0 && <p style={{ color: THEME.accent.purple, fontSize: '9px' }}>Future</p>}
-                {periodIndex < 0 && <p style={{ color: THEME.text.muted, fontSize: '9px' }}>Past</p>}
+                {periodIndex === 0 && <p className="font-medium" style={{ color: THEME.accent.cyan, fontSize: '10px', marginTop: 1 }}>Current Period</p>}
+                {periodIndex > 0 && <p className="font-medium" style={{ color: THEME.accent.purple, fontSize: '10px', marginTop: 1 }}>Future</p>}
+                {periodIndex < 0 && <p className="font-medium" style={{ color: THEME.text.muted, fontSize: '10px', marginTop: 1 }}>Past</p>}
               </div>
-              <button 
+              <button
                 onClick={() => onPeriodChange && onPeriodChange(periodIndex + 1)}
                 className="p-1 rounded"
                 style={{ color: THEME.text.secondary }}
@@ -4501,22 +4482,24 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                 <ChevronRight size={16} />
               </button>
             </div>
-            
-            {/* Announcement Bell */}
-            <button 
-              onClick={() => hasAnnouncement && setMobileAnnouncementOpen(true)}
-              className="p-1.5 rounded-lg flex-shrink-0"
-              style={{ 
-                backgroundColor: hasAnnouncement ? THEME.accent.blue + '20' : THEME.bg.tertiary, 
-                color: hasAnnouncement ? THEME.accent.blue : THEME.text.muted,
-                border: hasAnnouncement ? `1px solid ${THEME.accent.blue}40` : 'none'
-              }}
-            >
-              <Bell size={18} fill={hasAnnouncement ? THEME.accent.blue : 'none'} />
-            </button>
           </div>
-          
-          {/* Row 3: Raised Filing Tabs */}
+
+          {/* Row 3: Status banner */}
+          <div className="px-3 pb-2">
+            {isEditMode ? (
+              <div className="px-3 py-1.5 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.status.warning + '15', border: `1px solid ${THEME.status.warning}30` }}>
+                <Loader size={12} className="animate-pulse" style={{ color: THEME.status.warning }} />
+                <span className="text-xs font-medium" style={{ color: THEME.status.warning }}>Schedule pending — not yet published</span>
+              </div>
+            ) : (
+              <div className="px-3 py-1.5 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.status.success + '15', border: `1px solid ${THEME.status.success}30` }}>
+                <Eye size={12} style={{ color: THEME.status.success }} />
+                <span className="text-xs font-medium" style={{ color: THEME.status.success }}>Schedule is LIVE</span>
+              </div>
+            )}
+          </div>
+
+          {/* Row 4: Raised Filing Tabs */}
           <div className="flex items-end px-3" style={{ marginBottom: -1 }}>
             {[
               { id: 'week1', label: `Wk ${mobileWeekNum1}` },
@@ -4525,11 +4508,11 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
             ].map(tab => {
               const isActive = mobileActiveTab === tab.id;
               return (
-                <button 
+                <button
                   key={tab.id}
                   onClick={() => setMobileActiveTab(tab.id)}
                   className="px-4 py-2 text-xs relative"
-                  style={{ 
+                  style={{
                     backgroundColor: isActive ? THEME.bg.primary : THEME.bg.tertiary,
                     color: isActive ? THEME.accent.purple : THEME.text.muted,
                     borderTopLeftRadius: 8,
@@ -4553,7 +4536,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
             <div className="flex-1" style={{ borderBottom: `1px solid ${THEME.border.default}` }} />
           </div>
         </header>
-        
+
         {/* Main Content */}
         <main className="p-2">
           
@@ -7258,7 +7241,7 @@ export default function App() {
         {/* Mobile Admin Header */}
         <header className="sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: 'none', zIndex: 100 }}>
           {/* Row 1: Hamburger + centered RAINBOW logo */}
-          <div className="flex items-center px-3 pt-3 pb-1.5" style={{ position: 'relative' }}>
+          <div className="flex items-center px-3 pt-3 pb-2" style={{ position: 'relative' }}>
             <button onClick={() => setMobileAdminDrawerOpen(true)} className="p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.primary, zIndex: 1 }}>
               <Menu size={18} />
             </button>
@@ -7267,12 +7250,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Row 2: Period nav (centered, bigger) + action buttons (right) */}
-          <div className="flex items-center justify-between px-3 py-2">
-            {/* Spacer to balance buttons on right */}
-            <div style={{ width: 70 }} />
-
-            {/* Center: period nav */}
+          {/* Row 2: Period nav centered */}
+          <div className="flex items-center justify-center px-3 pb-2">
             <div className="flex items-center gap-1.5">
               <button onClick={() => setPeriodIndex(periodIndex - 1)} className="p-1 rounded" style={{ color: THEME.text.secondary }}>
                 <ChevronLeft size={16} />
@@ -7287,72 +7266,87 @@ export default function App() {
                 <ChevronRight size={16} />
               </button>
             </div>
-
-            {/* Right: compact action buttons */}
-            <div className="flex items-center gap-1.5" style={{ minWidth: 70, justifyContent: 'flex-end' }}>
-              {isCurrentPeriodEditMode ? (
-                unsaved ? (
-                  <button
-                    onClick={saveSchedule}
-                    disabled={scheduleSaving}
-                    className="px-2.5 py-1 rounded-md font-bold flex items-center gap-1 disabled:opacity-50"
-                    style={{
-                      fontSize: '10px',
-                      background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
-                      color: '#fff',
-                      boxShadow: `0 0 8px ${THEME.accent.blue}40`
-                    }}
-                  >
-                    {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Saving</> : <><Save size={10} /> Save</>}
-                  </button>
-                ) : (
-                  <button
-                    onClick={toggleEditMode}
-                    disabled={scheduleSaving}
-                    className="px-2 py-0.5 rounded-md font-semibold flex items-center gap-1 disabled:opacity-50"
-                    style={{
-                      fontSize: '10px',
-                      backgroundColor: THEME.status.success + '20',
-                      color: THEME.status.success,
-                      border: `1px solid ${THEME.status.success}40`
-                    }}
-                  >
-                    {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Live</> : <><Eye size={10} /> Go Live</>}
-                  </button>
-                )
-              ) : (
-                <>
-                  <button
-                    onClick={toggleEditMode}
-                    disabled={scheduleSaving}
-                    className="px-2 py-0.5 rounded-md font-medium flex items-center gap-1 disabled:opacity-50"
-                    style={{
-                      fontSize: '10px',
-                      backgroundColor: THEME.status.warning + '20',
-                      color: THEME.status.warning,
-                      border: `1px solid ${THEME.status.warning}40`
-                    }}
-                  >
-                    <Edit3 size={10} /> Edit
-                  </button>
-                  <button
-                    onClick={() => setEmailOpen(true)}
-                    className="px-2 py-0.5 rounded-md font-medium flex items-center gap-1"
-                    style={{
-                      fontSize: '10px',
-                      background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
-                      color: '#fff'
-                    }}
-                  >
-                    <Mail size={10} /> Publish
-                  </button>
-                </>
-              )}
-            </div>
           </div>
 
-          {/* Row 3: Raised Filing Tabs */}
-          <div className="flex items-end px-3 pt-1.5" style={{ marginBottom: -1 }}>
+          {/* Row 3: Action buttons right-aligned */}
+          <div className="flex items-center justify-end px-3 pb-2 gap-1.5">
+            {isCurrentPeriodEditMode ? (
+              unsaved ? (
+                <button
+                  onClick={saveSchedule}
+                  disabled={scheduleSaving}
+                  className="px-2.5 py-1 rounded-md font-bold flex items-center gap-1 disabled:opacity-50"
+                  style={{
+                    fontSize: '10px',
+                    background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
+                    color: '#fff',
+                    boxShadow: `0 0 8px ${THEME.accent.blue}40`
+                  }}
+                >
+                  {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Saving</> : <><Save size={10} /> Save</>}
+                </button>
+              ) : (
+                <button
+                  onClick={toggleEditMode}
+                  disabled={scheduleSaving}
+                  className="px-2 py-0.5 rounded-md font-semibold flex items-center gap-1 disabled:opacity-50"
+                  style={{
+                    fontSize: '10px',
+                    backgroundColor: THEME.status.success + '20',
+                    color: THEME.status.success,
+                    border: `1px solid ${THEME.status.success}40`
+                  }}
+                >
+                  {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Live</> : <><Eye size={10} /> Go Live</>}
+                </button>
+              )
+            ) : (
+              <>
+                <button
+                  onClick={toggleEditMode}
+                  disabled={scheduleSaving}
+                  className="px-2 py-0.5 rounded-md font-medium flex items-center gap-1 disabled:opacity-50"
+                  style={{
+                    fontSize: '10px',
+                    backgroundColor: THEME.status.warning + '20',
+                    color: THEME.status.warning,
+                    border: `1px solid ${THEME.status.warning}40`
+                  }}
+                >
+                  <Edit3 size={10} /> Edit
+                </button>
+                <button
+                  onClick={() => setEmailOpen(true)}
+                  className="px-2 py-0.5 rounded-md font-medium flex items-center gap-1"
+                  style={{
+                    fontSize: '10px',
+                    background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
+                    color: '#fff'
+                  }}
+                >
+                  <Mail size={10} /> Publish
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Row 4: Status banner */}
+          <div className="px-3 pb-2">
+            {!isCurrentPeriodEditMode ? (
+              <div className="px-3 py-1.5 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.status.success + '15', border: `1px solid ${THEME.status.success}30` }}>
+                <Eye size={12} style={{ color: THEME.status.success }} />
+                <span className="text-xs font-medium" style={{ color: THEME.status.success }}>Schedule is LIVE — visible to staff</span>
+              </div>
+            ) : (
+              <div className="px-3 py-1.5 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.status.warning + '15', border: `1px solid ${THEME.status.warning}30` }}>
+                <Edit3 size={12} style={{ color: THEME.status.warning }} />
+                <span className="text-xs font-medium" style={{ color: THEME.status.warning }}>Edit Mode — tap cells to edit shifts</span>
+              </div>
+            )}
+          </div>
+
+          {/* Row 5: Raised Filing Tabs */}
+          <div className="flex items-end px-3" style={{ marginBottom: -1 }}>
             {[
               { id: 'wk1', label: `Wk ${weekNum1}`, tab: 'schedule', week: 1 },
               { id: 'wk2', label: `Wk ${weekNum2}`, tab: 'schedule', week: 2 },
@@ -7404,20 +7398,6 @@ export default function App() {
         <main className="p-2">
           {mobileAdminTab === 'schedule' ? (
             <>
-              {/* Edit mode indicator */}
-              {!isCurrentPeriodEditMode && (
-                <div className="mb-2 px-3 py-1.5 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.status.success + '15', border: `1px solid ${THEME.status.success}30` }}>
-                  <Eye size={12} style={{ color: THEME.status.success }} />
-                  <span className="text-xs font-medium" style={{ color: THEME.status.success }}>Schedule is LIVE — visible to staff</span>
-                </div>
-              )}
-              {isCurrentPeriodEditMode && (
-                <div className="mb-2 px-3 py-1.5 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.status.warning + '15', border: `1px solid ${THEME.status.warning}30` }}>
-                  <Edit3 size={12} style={{ color: THEME.status.warning }} />
-                  <span className="text-xs font-medium" style={{ color: THEME.status.warning }}>Edit Mode — tap cells to edit shifts</span>
-                </div>
-              )}
-              
               {/* Schedule Grid */}
               <MobileAdminScheduleGrid
                 employees={schedulableEmployees}
