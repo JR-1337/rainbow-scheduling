@@ -7285,70 +7285,70 @@ export default function App() {
               </button>
             </div>
             
-            {/* Right: spacer to balance layout (actions moved to Row 2) */}
-            <div style={{ width: 62 }} />
-          </div>
-          
-          {/* Row 2: Action Buttons — centered with breathing room */}
-          <div className="flex items-center justify-center gap-2 px-3 pb-2">
-            {isCurrentPeriodEditMode ? (
-              unsaved ? (
-                /* Unsaved changes → Save button */
-                <button
-                  onClick={saveSchedule}
-                  disabled={scheduleSaving}
-                  className="px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"
-                  style={{
-                    background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
-                    color: '#fff',
-                    boxShadow: `0 0 12px ${THEME.accent.blue}50`
-                  }}
-                >
-                  {scheduleSaving ? <><Loader size={12} className="animate-spin" /> Saving...</> : <><Save size={12} /> Save Changes</>}
-                </button>
+            {/* Right: compact action buttons */}
+            <div className="flex items-center gap-1.5">
+              {isCurrentPeriodEditMode ? (
+                unsaved ? (
+                  /* Unsaved changes → Save button (most prominent) */
+                  <button
+                    onClick={saveSchedule}
+                    disabled={scheduleSaving}
+                    className="px-2.5 py-1 rounded-md font-bold flex items-center gap-1 disabled:opacity-50"
+                    style={{
+                      fontSize: '10px',
+                      background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
+                      color: '#fff',
+                      boxShadow: `0 0 8px ${THEME.accent.blue}40`
+                    }}
+                  >
+                    {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Saving</> : <><Save size={10} /> Save</>}
+                  </button>
+                ) : (
+                  /* No changes → Go Live button */
+                  <button
+                    onClick={toggleEditMode}
+                    disabled={scheduleSaving}
+                    className="px-2 py-0.5 rounded-md font-semibold flex items-center gap-1 disabled:opacity-50"
+                    style={{
+                      fontSize: '10px',
+                      backgroundColor: THEME.status.success + '20',
+                      color: THEME.status.success,
+                      border: `1px solid ${THEME.status.success}40`
+                    }}
+                  >
+                    {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Live</> : <><Eye size={10} /> Go Live</>}
+                  </button>
+                )
               ) : (
-                /* No changes → Go Live button */
-                <button
-                  onClick={toggleEditMode}
-                  disabled={scheduleSaving}
-                  className="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
-                  style={{
-                    backgroundColor: THEME.status.success + '20',
-                    color: THEME.status.success,
-                    border: `1px solid ${THEME.status.success}40`
-                  }}
-                >
-                  {scheduleSaving ? <><Loader size={12} className="animate-spin" /> Going Live...</> : <><Eye size={12} /> Go Live</>}
-                </button>
-              )
-            ) : (
-              /* Currently LIVE → Edit + Publish buttons */
-              <>
-                <button
-                  onClick={toggleEditMode}
-                  disabled={scheduleSaving}
-                  className="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
-                  style={{
-                    backgroundColor: THEME.status.warning + '20',
-                    color: THEME.status.warning,
-                    border: `1px solid ${THEME.status.warning}40`
-                  }}
-                >
-                  <Edit3 size={12} /> Edit
-                </button>
-                <button
-                  onClick={() => setEmailOpen(true)}
-                  className="px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5"
-                  style={{
-                    background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
-                    color: '#fff',
-                    boxShadow: `0 0 8px ${THEME.accent.blue}30`
-                  }}
-                >
-                  <Mail size={12} /> Publish
-                </button>
-              </>
-            )}
+                /* Currently LIVE → Edit + Publish pills */
+                <>
+                  <button
+                    onClick={toggleEditMode}
+                    disabled={scheduleSaving}
+                    className="px-2 py-0.5 rounded-md font-medium flex items-center gap-1 disabled:opacity-50"
+                    style={{
+                      fontSize: '10px',
+                      backgroundColor: THEME.status.warning + '20',
+                      color: THEME.status.warning,
+                      border: `1px solid ${THEME.status.warning}40`
+                    }}
+                  >
+                    <Edit3 size={10} /> Edit
+                  </button>
+                  <button
+                    onClick={() => setEmailOpen(true)}
+                    className="px-2 py-0.5 rounded-md font-medium flex items-center gap-1"
+                    style={{
+                      fontSize: '10px',
+                      background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
+                      color: '#fff'
+                    }}
+                  >
+                    <Mail size={10} /> Publish
+                  </button>
+                </>
+              )}
+            </div>
           </div>
           
           {/* Row 3: Raised Filing Tabs */}

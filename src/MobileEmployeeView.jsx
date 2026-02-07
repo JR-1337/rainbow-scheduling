@@ -158,7 +158,7 @@ export const MobileAnnouncementPopup = ({ isOpen, onClose, announcement }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, getEmployeeHours, timeOffRequests = [] }) => {
   const scrollContainerRef = useRef(null);
-  const NAME_COL_WIDTH = 90;
+  const NAME_COL_WIDTH = 72;
   const CELL_WIDTH = 80;
   const CELL_HEIGHT = 56;
   const HEADER_HEIGHT = 52;
@@ -271,22 +271,28 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                   )}
                   <tr style={isMe ? { outline: `1.5px solid ${THEME.accent.purple}60`, outlineOffset: '-1px', borderRadius: '4px' } : undefined}>
                   {/* Name cell - frozen left */}
-                  <td style={{ 
+                  <td style={{
                     width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH,
                     backgroundColor: THEME.bg.secondary,
                     borderRight: `1px solid ${THEME.border.default}`,
                     borderBottom: `1px solid ${THEME.border.subtle}`,
-                    padding: '4px 6px', verticalAlign: 'middle'
+                    padding: '4px', verticalAlign: 'middle'
                   }}>
-                    <p className="font-medium truncate" style={{ 
-                      color: THEME.text.primary, 
-                      fontSize: '11px', maxWidth: NAME_COL_WIDTH - 12 
+                    <p className="font-medium truncate" style={{
+                      color: THEME.text.primary,
+                      fontSize: '10px', lineHeight: 1.2
                     }}>
                       {emp.name.split(' ')[0]}
                     </p>
-                    <p className="font-semibold" style={{ 
-                      color: hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan, 
-                      fontSize: '10px' 
+                    <p className="truncate" style={{
+                      color: THEME.text.muted,
+                      fontSize: '9px', lineHeight: 1.2
+                    }}>
+                      {emp.name.split(' ').slice(1).join(' ')}
+                    </p>
+                    <p className="font-semibold" style={{
+                      color: hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan,
+                      fontSize: '9px', lineHeight: 1.2
                     }}>{hours.toFixed(1)}h</p>
                   </td>
                   

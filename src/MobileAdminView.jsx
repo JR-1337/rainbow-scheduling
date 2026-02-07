@@ -119,7 +119,7 @@ export const MobileAdminScheduleGrid = ({
   isEditMode = false, onCellClick, onNameClick
 }) => {
   const scrollContainerRef = React.useRef(null);
-  const NAME_COL_WIDTH = 90;
+  const NAME_COL_WIDTH = 72;
   const CELL_WIDTH = 80;
   const CELL_HEIGHT = 56;
   const HEADER_HEIGHT = 68; // Taller to fit staffing counter
@@ -246,9 +246,9 @@ export const MobileAdminScheduleGrid = ({
                     padding: '4px',
                     cursor: onNameClick ? 'pointer' : 'default'
                   }}>
-                    <p className="font-semibold truncate" style={{ color: onNameClick ? THEME.accent.cyan : THEME.text.primary, fontSize: '11px' }}>{emp.name}</p>
-                    <p style={{ color: THEME.accent.cyan, fontSize: '9px' }}>{weekHours.toFixed(1)}h</p>
-                    {emp.isAdmin && <Shield size={8} style={{ color: THEME.accent.purple, marginTop: 1 }} />}
+                    <p className="font-semibold truncate" style={{ color: onNameClick ? THEME.accent.cyan : THEME.text.primary, fontSize: '10px', lineHeight: 1.2 }}>{emp.name.split(' ')[0]}</p>
+                    <p className="truncate" style={{ color: THEME.text.muted, fontSize: '9px', lineHeight: 1.2 }}>{emp.name.split(' ').slice(1).join(' ')}</p>
+                    <p style={{ color: THEME.accent.cyan, fontSize: '9px', lineHeight: 1.2 }}>{weekHours.toFixed(1)}h{emp.isAdmin ? ' ★' : ''}</p>
                   </td>
                   
                   {/* Day cells */}
