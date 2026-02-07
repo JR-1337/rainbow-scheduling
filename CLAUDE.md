@@ -225,7 +225,15 @@ These are intentionally excluded from mobile admin:
 
 ## Current Status
 
-Phase 5.5 complete. Phase 6 candidates:
+Phase 6 in progress (2026-02-07). Recent changes:
+- Git + GitHub CLI connected — Claude pushes directly to `main`, Vercel auto-deploys
+- Mobile admin header consolidated: buttons merged into top row as compact pills, Row 2 eliminated
+- Name columns in both mobile grids now stack first/last name vertically (72px width, down from 90px)
+- Confirmed MobileEmployeeQuickView and email publish were already wired up on mobile (removed from to-do)
+- Announcement bell popup and accept/decline offers/swaps tested and working on mobile
+
+Phase 6 candidates:
 - Shared utils refactor (extract THEME, ROLES, helpers into dedicated files)
 - Real device testing (all testing so far is Chrome DevTools)
 - Professional sender email (dedicated Google Workspace account vs personal Gmail)
+- Further mobile UI polish based on real-device feedback

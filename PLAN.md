@@ -1,9 +1,9 @@
 # Rainbow Scheduling App - Development Plan
 
-## Current Status: Phase 5.5 (Mobile Admin + Password Mgmt) ✅ COMPLETE
-**Last Updated:** 2026-02-06
-**Current Version:** Code.gs v2.10, App.jsx ~8130 lines + MobileEmployeeView.jsx ~438 lines + MobileAdminView.jsx ~427 lines
-**Chat:** RS-20-P5-MobileAdminView
+## Current Status: Phase 6 (Polish & Infrastructure) 🔄 IN PROGRESS
+**Last Updated:** 2026-02-07
+**Current Version:** Code.gs v2.10, App.jsx ~8150 lines + MobileEmployeeView.jsx ~450 lines + MobileAdminView.jsx ~430 lines
+**Chat:** RS-21-P6-UIPolish
 
 ---
 
@@ -161,20 +161,43 @@
 - Employee management (add/edit/delete)
 - Auto-populate toolbar
 - Admin settings (staffing targets, store hours overrides)
-- PDF export / Email publish
+- PDF export
 - Inactive employees panel
 
 ---
 
-## Future Items / Phase 6 Candidates
+### Phase 6: Polish & Infrastructure 🔄 IN PROGRESS (2026-02-07)
 
-- [ ] Professional sender email (dedicated business account — "OTR Scheduling" display name done, full solution deferred until Google Workspace)
-- [ ] Shared utils refactor (extract THEME, ROLES, helpers, BaseComponents into separate files — deferred to dedicated session)
-- [ ] Employee quick-view on mobile (tap name to see contact/hours — component built but not wired)
-- [ ] Mobile admin: email publish integration
-- [ ] Test announcement bell popup (employee mobile)
-- [ ] Test accept/decline on offers and swaps from mobile hamburger drawer
-- [ ] Test on actual phones (not just Chrome DevTools)
+#### RS-21 Session (2026-02-07):
+
+| # | Feature | Status | Description |
+|---|---------|--------|-------------|
+| 1 | Git + GitHub CLI setup | ✅ DONE | `gh` installed, authenticated as JR-1337, repo connected. Claude pushes to main, Vercel auto-deploys |
+| 2 | CLAUDE.md created & refined | ✅ DONE | Architecture reference for Claude Code sessions, tracked in GitHub |
+| 3 | PLAN.md moved to repo root | ✅ DONE | Alongside CLAUDE.md, tracked in GitHub |
+| 4 | MobileEmployeeQuickView verified | ✅ ALREADY DONE | Was already wired up — removed from to-do |
+| 5 | Mobile admin email publish verified | ✅ ALREADY DONE | Was already wired up — removed from to-do |
+| 6 | Announcement bell popup tested | ✅ PASS | Tested on mobile, working |
+| 7 | Accept/decline offers/swaps tested | ✅ PASS | Tested on mobile hamburger drawer, working |
+| 8 | Mobile admin header consolidated | ✅ DONE | Buttons merged into Row 1 as compact pills, Row 2 eliminated |
+| 9 | Stacked names in mobile grids | ✅ DONE | First/last stacked vertically, NAME_COL_WIDTH 90→72px in both admin and employee grids |
+| 10 | Button visual hierarchy | ✅ DONE | Save most prominent, Go Live/Edit/Publish as subtle compact pills |
+| 11 | Real device testing | ⬜ TODO | All testing still Chrome DevTools — need actual phone testing |
+
+#### Key Infrastructure Change:
+- **Old workflow:** JR manually uploads files to GitHub
+- **New workflow:** Claude edits `src/` files, commits, pushes. Vercel auto-deploys. No manual uploads.
+- **Old folder structure:** Current Version / Past Version 1-3 (rolling backup) — retired
+- **New folder structure:** Standard git repo with `src/`, version history in git
+
+---
+
+## Future Items / Phase 6+ Candidates
+
+- [ ] Real device testing (actual phones, not just Chrome DevTools)
+- [ ] Shared utils refactor (extract THEME, ROLES, helpers, BaseComponents into separate files)
+- [ ] Professional sender email (dedicated Google Workspace account)
+- [ ] Further mobile UI polish based on real-device feedback
 - [ ] Additional Sarvi feature requests (TBD)
 
 ---
@@ -201,6 +224,10 @@
 | 2026-02-05 | Per-date overrides for hours & targets | Holidays, special events need one-off changes without changing weekly defaults |
 | 2026-02-05 | Generic `saveSetting` endpoint | One API for any key-value pair, avoids creating per-setting endpoints |
 | 2026-02-05 | Draft shifts hidden from employees | publishedShifts only includes shifts from LIVE periods on data load |
+| 2026-02-07 | Retire Current Version / Past Version folders | Git tracks full history; rolling backup folders replaced by git commits |
+| 2026-02-07 | Claude pushes directly to GitHub | gh CLI authenticated, edits in src/, push to main triggers Vercel deploy |
+| 2026-02-07 | Compact pill buttons in mobile admin header | Buttons merged into header Row 1, sized by importance — saves vertical space |
+| 2026-02-07 | Stacked first/last names in mobile grids | NAME_COL_WIDTH reduced 90→72px, more room for schedule cells |
 | 2026-02-05 | Chunked batch save for large shift payloads | GET URL has ~8KB limit; 80 shifts = ~15KB encoded, so split into chunks of 15 |
 
 ---
@@ -248,3 +275,4 @@
 | RS-18-P4-TestingCleanup | 2026-02-06 | All 9 RS-17 tests passed, past date counter fix, email subject/sender updates |
 | RS-19-P5-MobileEmployeeView | 2026-02-06 | Mobile employee view, password management, Code.gs type coercion fix |
 | RS-20-P5-MobileAdminView | 2026-02-06 | Mobile admin view: schedule editing, request review, announcements, three-state Save/GoLive/Edit |
+| RS-21-P6-UIPolish | 2026-02-07 | Git/GitHub setup, verified mobile features already wired, header consolidation, stacked names, button hierarchy |
