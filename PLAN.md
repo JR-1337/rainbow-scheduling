@@ -179,10 +179,12 @@
 | 5 | Mobile admin email publish verified | ✅ ALREADY DONE | Was already wired up — removed from to-do |
 | 6 | Announcement bell popup tested | ✅ PASS | Tested on mobile, working |
 | 7 | Accept/decline offers/swaps tested | ✅ PASS | Tested on mobile hamburger drawer, working |
-| 8 | Mobile admin header consolidated | ✅ DONE | Buttons merged into Row 1 as compact pills, Row 2 eliminated |
-| 9 | Stacked names in mobile grids | ✅ DONE | First/last stacked vertically, NAME_COL_WIDTH 90→72px in both admin and employee grids |
-| 10 | Button visual hierarchy | ✅ DONE | Save most prominent, Go Live/Edit/Publish as subtle compact pills |
-| 11 | Real device testing | ⬜ TODO | All testing still Chrome DevTools — need actual phone testing |
+| 8 | Stacked names in mobile grids | ✅ DONE | First/last stacked vertically, NAME_COL_WIDTH 90→72px in both admin and employee grids |
+| 9 | Mobile header redesign (both views) | ✅ DONE | Logo row → date picker centered (13px) → buttons right-aligned → status banner → tabs. Proper spacing between rows |
+| 10 | Status banner repositioned | ✅ DONE | Moved above tabs (was below), directly connected to schedule content |
+| 11 | Tab color differentiation | ✅ DONE | Each tab has unique active color + icon: cyan (weeks), purple/user (Mine), orange/doc (Requests), blue/mail (Comms) |
+| 12 | Button visual hierarchy | ✅ DONE | Save most prominent, Go Live/Edit/Publish as subtle compact pills, right-aligned under date picker |
+| 13 | Real device testing | ⬜ TODO | All UI changes deployed — JR to test on actual phone and report back |
 
 #### Key Infrastructure Change:
 - **Old workflow:** JR manually uploads files to GitHub
@@ -226,8 +228,10 @@
 | 2026-02-05 | Draft shifts hidden from employees | publishedShifts only includes shifts from LIVE periods on data load |
 | 2026-02-07 | Retire Current Version / Past Version folders | Git tracks full history; rolling backup folders replaced by git commits |
 | 2026-02-07 | Claude pushes directly to GitHub | gh CLI authenticated, edits in src/, push to main triggers Vercel deploy |
-| 2026-02-07 | Compact pill buttons in mobile admin header | Buttons merged into header Row 1, sized by importance — saves vertical space |
+| 2026-02-07 | Compact pill buttons in mobile admin header | Buttons sized by importance — Save prominent, Edit/Publish subtle pills |
 | 2026-02-07 | Stacked first/last names in mobile grids | NAME_COL_WIDTH reduced 90→72px, more room for schedule cells |
+| 2026-02-07 | Header layout: logo → date → buttons → banner → tabs | Each element on its own row with breathing room; status banner above tabs connects to schedule |
+| 2026-02-07 | Color-coded tabs with icons | Each tab has unique active color (cyan/purple/orange/blue) and icon so they're visually distinct |
 | 2026-02-05 | Chunked batch save for large shift payloads | GET URL has ~8KB limit; 80 shifts = ~15KB encoded, so split into chunks of 15 |
 
 ---
