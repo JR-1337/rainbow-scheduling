@@ -4502,32 +4502,33 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
           {/* Row 4: Raised Filing Tabs */}
           <div className="flex items-end px-3" style={{ marginBottom: -1 }}>
             {[
-              { id: 'week1', label: `Wk ${mobileWeekNum1}` },
-              { id: 'week2', label: `Wk ${mobileWeekNum2}` },
-              { id: 'my-schedule', label: 'Mine' }
+              { id: 'week1', label: `Wk ${mobileWeekNum1}`, color: THEME.accent.cyan, icon: null },
+              { id: 'week2', label: `Wk ${mobileWeekNum2}`, color: THEME.accent.cyan, icon: null },
+              { id: 'my-schedule', label: 'Mine', color: THEME.accent.purple, icon: <User size={10} /> }
             ].map(tab => {
               const isActive = mobileActiveTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setMobileActiveTab(tab.id)}
-                  className="px-4 py-2 text-xs relative"
+                  className="px-4 py-2 text-xs relative flex items-center justify-center gap-1"
                   style={{
                     backgroundColor: isActive ? THEME.bg.primary : THEME.bg.tertiary,
-                    color: isActive ? THEME.accent.purple : THEME.text.muted,
+                    color: isActive ? tab.color : THEME.text.muted,
                     borderTopLeftRadius: 8,
                     borderTopRightRadius: 8,
-                    borderTop: `2px solid ${isActive ? THEME.accent.purple : 'transparent'}`,
+                    borderTop: `2px solid ${isActive ? tab.color : 'transparent'}`,
                     borderLeft: `1px solid ${isActive ? THEME.border.default : 'transparent'}`,
                     borderRight: `1px solid ${isActive ? THEME.border.default : 'transparent'}`,
                     borderBottom: isActive ? 'none' : `1px solid ${THEME.border.default}`,
                     marginRight: -1,
                     zIndex: isActive ? 10 : 1,
                     fontWeight: isActive ? 700 : 500,
-                    boxShadow: isActive ? `0 -2px 8px ${THEME.accent.purple}15` : 'none',
+                    boxShadow: isActive ? `0 -2px 8px ${tab.color}15` : 'none',
                     fontSize: isActive ? '12px' : '11px'
                   }}
                 >
+                  {tab.icon}
                   {tab.label}
                 </button>
               );
@@ -7348,29 +7349,29 @@ export default function App() {
           {/* Row 5: Raised Filing Tabs */}
           <div className="flex items-end px-3" style={{ marginBottom: -1 }}>
             {[
-              { id: 'wk1', label: `Wk ${weekNum1}`, tab: 'schedule', week: 1 },
-              { id: 'wk2', label: `Wk ${weekNum2}`, tab: 'schedule', week: 2 },
-              { id: 'mine', label: 'Mine', tab: 'mine' },
-              { id: 'requests', label: 'Requests', tab: 'requests', badge: pendingRequestCount },
-              { id: 'comms', label: 'Comms', tab: 'comms', badge: currentAnnouncement?.message ? 1 : 0 },
+              { id: 'wk1', label: `Wk ${weekNum1}`, tab: 'schedule', week: 1, color: THEME.accent.cyan, icon: null },
+              { id: 'wk2', label: `Wk ${weekNum2}`, tab: 'schedule', week: 2, color: THEME.accent.cyan, icon: null },
+              { id: 'mine', label: 'Mine', tab: 'mine', color: THEME.accent.purple, icon: <User size={10} /> },
+              { id: 'requests', label: 'Requests', tab: 'requests', badge: pendingRequestCount, color: THEME.status.warning, icon: <FileText size={10} /> },
+              { id: 'comms', label: 'Comms', tab: 'comms', badge: currentAnnouncement?.message ? 1 : 0, color: THEME.accent.blue, icon: <Mail size={10} /> },
             ].map(t => {
-              const isActive = t.tab === 'schedule' 
-                ? mobileAdminTab === 'schedule' && activeWeek === t.week 
+              const isActive = t.tab === 'schedule'
+                ? mobileAdminTab === 'schedule' && activeWeek === t.week
                 : mobileAdminTab === t.tab;
               return (
-                <button 
+                <button
                   key={t.id}
-                  onClick={() => { 
-                    setMobileAdminTab(t.tab); 
-                    if (t.week) setActiveWeek(t.week); 
+                  onClick={() => {
+                    setMobileAdminTab(t.tab);
+                    if (t.week) setActiveWeek(t.week);
                   }}
                   className="flex-1 py-1.5 text-xs font-medium relative flex items-center justify-center gap-1"
-                  style={{ 
+                  style={{
                     backgroundColor: isActive ? THEME.bg.primary : THEME.bg.tertiary,
-                    color: isActive ? THEME.accent.purple : THEME.text.muted,
+                    color: isActive ? t.color : THEME.text.muted,
                     borderTopLeftRadius: 8,
                     borderTopRightRadius: 8,
-                    borderTop: `2px solid ${isActive ? THEME.accent.purple : 'transparent'}`,
+                    borderTop: `2px solid ${isActive ? t.color : 'transparent'}`,
                     borderLeft: `1px solid ${isActive ? THEME.border.default : 'transparent'}`,
                     borderRight: `1px solid ${isActive ? THEME.border.default : 'transparent'}`,
                     borderBottom: isActive ? 'none' : `1px solid ${THEME.border.default}`,
@@ -7379,10 +7380,11 @@ export default function App() {
                     fontWeight: isActive ? 600 : 500
                   }}
                 >
+                  {t.icon}
                   {t.label}
                   {t.badge > 0 && (
-                    <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center" 
-                      style={{ backgroundColor: THEME.status.warning, color: '#000', fontSize: '9px' }}>
+                    <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center"
+                      style={{ backgroundColor: t.color, color: '#000', fontSize: '9px' }}>
                       {t.badge}
                     </span>
                   )}
