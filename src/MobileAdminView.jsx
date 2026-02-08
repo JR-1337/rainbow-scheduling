@@ -121,7 +121,7 @@ export const MobileAdminScheduleGrid = ({
   const scrollContainerRef = React.useRef(null);
   const NAME_COL_WIDTH = 72;
   const CELL_WIDTH = 80;
-  const CELL_HEIGHT = 56;
+  const CELL_HEIGHT = 66;
   const HEADER_HEIGHT = 68; // Taller to fit staffing counter
   
   const sortedEmployees = useMemo(() => {

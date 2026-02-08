@@ -160,7 +160,7 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
   const scrollContainerRef = useRef(null);
   const NAME_COL_WIDTH = 72;
   const CELL_WIDTH = 80;
-  const CELL_HEIGHT = 56;
+  const CELL_HEIGHT = 66;
   const HEADER_HEIGHT = 52;
   
   // Sort: Sarvi first, then logged-in user, then alphabetical

@@ -4500,7 +4500,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
           </div>
 
           {/* Row 4: Raised Filing Tabs */}
-          <div className="flex items-end px-3" style={{ marginBottom: -1 }}>
+          <div className="flex items-end px-2 gap-1" style={{ marginBottom: -1 }}>
             {[
               { id: 'week1', label: `Wk ${mobileWeekNum1}`, color: THEME.accent.cyan, icon: null },
               { id: 'week2', label: `Wk ${mobileWeekNum2}`, color: THEME.accent.cyan, icon: null },
@@ -4515,13 +4515,11 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                   style={{
                     backgroundColor: isActive ? THEME.bg.primary : THEME.bg.tertiary,
                     color: isActive ? tab.color : THEME.text.muted,
-                    borderTopLeftRadius: 8,
-                    borderTopRightRadius: 8,
-                    borderTop: `2px solid ${isActive ? tab.color : 'transparent'}`,
-                    borderLeft: `1px solid ${isActive ? THEME.border.default : 'transparent'}`,
-                    borderRight: `1px solid ${isActive ? THEME.border.default : 'transparent'}`,
+                    borderRadius: '8px 8px 0 0',
+                    borderTop: `2px solid ${isActive ? tab.color : THEME.border.subtle}`,
+                    borderLeft: `1px solid ${isActive ? THEME.border.default : THEME.border.subtle}`,
+                    borderRight: `1px solid ${isActive ? THEME.border.default : THEME.border.subtle}`,
                     borderBottom: isActive ? 'none' : `1px solid ${THEME.border.default}`,
-                    marginRight: -1,
                     zIndex: isActive ? 10 : 1,
                     fontWeight: isActive ? 700 : 500,
                     boxShadow: isActive ? `0 -2px 8px ${tab.color}15` : 'none',
@@ -4533,8 +4531,6 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                 </button>
               );
             })}
-            {/* Fill rest of bottom border */}
-            <div className="flex-1" style={{ borderBottom: `1px solid ${THEME.border.default}` }} />
           </div>
         </header>
 
@@ -7347,7 +7343,7 @@ export default function App() {
           </div>
 
           {/* Row 5: Raised Filing Tabs */}
-          <div className="flex items-end px-3" style={{ marginBottom: -1 }}>
+          <div className="flex items-end px-2 gap-1" style={{ marginBottom: -1 }}>
             {[
               { id: 'wk1', label: `Wk ${weekNum1}`, tab: 'schedule', week: 1, color: THEME.accent.cyan, icon: null },
               { id: 'wk2', label: `Wk ${weekNum2}`, tab: 'schedule', week: 2, color: THEME.accent.cyan, icon: null },
@@ -7369,13 +7365,11 @@ export default function App() {
                   style={{
                     backgroundColor: isActive ? THEME.bg.primary : THEME.bg.tertiary,
                     color: isActive ? t.color : THEME.text.muted,
-                    borderTopLeftRadius: 8,
-                    borderTopRightRadius: 8,
-                    borderTop: `2px solid ${isActive ? t.color : 'transparent'}`,
-                    borderLeft: `1px solid ${isActive ? THEME.border.default : 'transparent'}`,
-                    borderRight: `1px solid ${isActive ? THEME.border.default : 'transparent'}`,
+                    borderRadius: '8px 8px 0 0',
+                    borderTop: `2px solid ${isActive ? t.color : THEME.border.subtle}`,
+                    borderLeft: `1px solid ${isActive ? THEME.border.default : THEME.border.subtle}`,
+                    borderRight: `1px solid ${isActive ? THEME.border.default : THEME.border.subtle}`,
                     borderBottom: isActive ? 'none' : `1px solid ${THEME.border.default}`,
-                    marginRight: -1,
                     zIndex: isActive ? 10 : 1,
                     fontWeight: isActive ? 600 : 500
                   }}
@@ -7391,8 +7385,6 @@ export default function App() {
                 </button>
               );
             })}
-            {/* Fill rest of bottom border */}
-            <div className="flex-grow-0" style={{ borderBottom: `1px solid ${THEME.border.default}`, width: 0 }} />
           </div>
         </header>
         
