@@ -2,7 +2,7 @@
 
 ## Current Status: Phase 6 (Polish & Infrastructure) 🔄 IN PROGRESS
 **Last Updated:** 2026-02-07
-**Current Version:** Code.gs v2.10, App.jsx ~8150 lines + MobileEmployeeView.jsx ~450 lines + MobileAdminView.jsx ~430 lines
+**Current Version:** Code.gs v2.10, App.jsx ~8500 lines + MobileEmployeeView.jsx ~450 lines + MobileAdminView.jsx ~430 lines
 **Chat:** RS-21-P6-UIPolish
 
 ---
@@ -184,7 +184,12 @@
 | 10 | Status banner repositioned | ✅ DONE | Moved above tabs (was below), directly connected to schedule content |
 | 11 | Tab color differentiation | ✅ DONE | Each tab has unique active color + icon: cyan (weeks), purple/user (Mine), orange/doc (Requests), blue/mail (Comms) |
 | 12 | Button visual hierarchy | ✅ DONE | Save most prominent, Go Live/Edit/Publish as subtle compact pills, right-aligned under date picker |
-| 13 | Real device testing | ⬜ TODO | All UI changes deployed — JR to test on actual phone and report back |
+| 13 | Real device testing (round 1) | ✅ DONE | Tested on phone — header layout good, found cell text clipping and tab bleed issues |
+| 14 | Fix clipped cell text | ✅ DONE | CELL_HEIGHT 56→66px in both mobile grids, role name no longer cut off at top of shift cells |
+| 15 | Fix tab spacing/bleed | ✅ DONE | Added gap-1 between tabs, removed negative margin overlap, inactive tabs show subtle borders |
+| 16 | Reorder employee drawer | ✅ DONE | Panels grouped logically: action items → my requests → history (was interleaved) |
+| 17 | Unified Requests History | ✅ DONE | Replaced 5 separate panels with one sortable list — filter pills (All/Time Off/Offers/Swaps), date sort toggle, type badges, cancel buttons on pending items |
+| 18 | Staff user testing | ⬜ TODO | JR's GF to test with a few staff members — awaiting feedback |
 
 #### Key Infrastructure Change:
 - **Old workflow:** JR manually uploads files to GitHub
@@ -196,10 +201,10 @@
 
 ## Future Items / Phase 6+ Candidates
 
-- [ ] Real device testing (actual phones, not just Chrome DevTools)
+- [ ] Staff user testing feedback and fixes
 - [ ] Shared utils refactor (extract THEME, ROLES, helpers, BaseComponents into separate files)
 - [ ] Professional sender email (dedicated Google Workspace account)
-- [ ] Further mobile UI polish based on real-device feedback
+- [ ] Further mobile UI polish based on user testing feedback
 - [ ] Additional Sarvi feature requests (TBD)
 
 ---
@@ -232,6 +237,9 @@
 | 2026-02-07 | Stacked first/last names in mobile grids | NAME_COL_WIDTH reduced 90→72px, more room for schedule cells |
 | 2026-02-07 | Header layout: logo → date → buttons → banner → tabs | Each element on its own row with breathing room; status banner above tabs connects to schedule |
 | 2026-02-07 | Color-coded tabs with icons | Each tab has unique active color (cyan/purple/orange/blue) and icon so they're visually distinct |
+| 2026-02-07 | CELL_HEIGHT 56→66px in mobile grids | Role name text was clipped at top of shift cells on real device |
+| 2026-02-07 | Gap between tabs, subtle inactive borders | Tabs bled into each other (especially Requests/Comms) due to negative margin overlap |
+| 2026-02-07 | Unified Requests History in employee drawer | 5 separate collapsible panels replaced with one sortable/filterable list — cleaner UX, less scrolling |
 | 2026-02-05 | Chunked batch save for large shift payloads | GET URL has ~8KB limit; 80 shifts = ~15KB encoded, so split into chunks of 15 |
 
 ---
@@ -248,7 +256,7 @@
 
 | File | Location | Purpose | Lines |
 |------|----------|---------|-------|
-| App.jsx | src/ | Main React app | ~8130 |
+| App.jsx | src/ | Main React app | ~8500 |
 | MobileEmployeeView.jsx | src/ | Mobile employee components | ~438 |
 | MobileAdminView.jsx | src/ | Mobile admin components | ~427 |
 | Code.gs | Apps Script | Google Apps Script backend | ~2631 |
@@ -279,4 +287,5 @@
 | RS-18-P4-TestingCleanup | 2026-02-06 | All 9 RS-17 tests passed, past date counter fix, email subject/sender updates |
 | RS-19-P5-MobileEmployeeView | 2026-02-06 | Mobile employee view, password management, Code.gs type coercion fix |
 | RS-20-P5-MobileAdminView | 2026-02-06 | Mobile admin view: schedule editing, request review, announcements, three-state Save/GoLive/Edit |
-| RS-21-P6-UIPolish | 2026-02-07 | Git/GitHub setup, verified mobile features already wired, header consolidation, stacked names, button hierarchy |
+| RS-21-P6-UIPolish | 2026-02-07 | Git/GitHub setup, verified mobile features, header redesign, stacked names, tab colors |
+| RS-22-P6-PhoneTesting | 2026-02-07 | Real device testing, cell height fix, tab spacing fix, unified Requests History, staff user testing prep |

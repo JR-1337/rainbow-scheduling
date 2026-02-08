@@ -26,7 +26,7 @@ All active code lives in `src/`:
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `src/App.jsx` | ~8,200 | Main React app — login, admin desktop view, mobile admin if-branch, employee desktop view, all modals, state management, shared exports |
+| `src/App.jsx` | ~8,500 | Main React app — login, admin desktop view, mobile admin if-branch, employee desktop view, all modals, state management, shared exports |
 | `src/MobileEmployeeView.jsx` | ~440 | Mobile employee components: frozen grid, hamburger drawer, My Schedule tab, announcement popup |
 | `src/MobileAdminView.jsx` | ~430 | Mobile admin components: schedule grid, request review panels, announcement panel, employee quick-view |
 | `src/main.jsx` | — | Vite entry point |
@@ -233,9 +233,13 @@ Phase 6 in progress (2026-02-07). Recent changes:
 - Status banner moved above tabs (was below tabs, disconnected from schedule)
 - Tabs now color-coded per type: cyan (schedule weeks), purple (Mine), orange (Requests), blue (Comms) — with icons for non-schedule tabs
 - Name columns in both mobile grids stack first/last vertically (72px width, down from 90px)
-- Awaiting real-device testing on phone to validate all UI changes
+- Grid cell height increased 56→66px to prevent role name text clipping at top of shift cells
+- Tab spacing fixed — gap between tabs, subtle borders on inactive tabs, no more bleeding between Requests/Comms
+- Employee mobile drawer: unified "Requests History" replaces 5 separate panels (time off, offers sent/received, swaps sent/received) with filter pills (All/Time Off/Offers/Swaps) and date sort toggle
+- Real device testing done — header layout confirmed good, cell clipping and tab bleed fixed
+- Preparing for staff user testing (Sarvi's team)
 
 Phase 6 candidates:
-- Real device testing and UI polish based on feedback
+- Staff user testing feedback and fixes
 - Shared utils refactor (extract THEME, ROLES, helpers into dedicated files)
 - Professional sender email (dedicated Google Workspace account vs personal Gmail)
