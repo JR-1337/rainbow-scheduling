@@ -4586,50 +4586,30 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
           onOpenChangePassword={() => setChangePasswordOpen(true)}
           adminContacts={adminContacts}
         >
-          {/* Incoming offers needing response */}
-          <IncomingOffersPanel 
+          {/* ── ACTION ITEMS (need your response) ── */}
+          <IncomingOffersPanel
             offers={shiftOffers}
             currentUserEmail={currentUser.email}
             onAccept={onAcceptOffer}
             onReject={onRejectOffer}
           />
-          
-          {/* Incoming swaps needing response */}
-          <IncomingSwapsPanel 
+          <IncomingSwapsPanel
             swaps={shiftSwaps}
             currentUserEmail={currentUser.email}
             onAccept={onAcceptSwap}
             onReject={onRejectSwap}
           />
-          
-          {/* My Time Off Requests */}
-          <MyRequestsPanel 
-            requests={timeOffRequests} 
-            currentUserEmail={currentUser.email} 
+
+          {/* ── MY REQUESTS (things I submitted) ── */}
+          <MyRequestsPanel
+            requests={timeOffRequests}
+            currentUserEmail={currentUser.email}
             onCancel={onCancelRequest}
             notificationCount={unseenTimeOffIds.length}
             onOpen={() => markAsSeen(unseenTimeOffIds)}
           />
-          
-          {/* Received offers history */}
-          <ReceivedOffersHistoryPanel 
-            offers={shiftOffers}
-            currentUserEmail={currentUser.email}
-            notificationCount={unseenReceivedOfferIds.length}
-            onOpen={() => markAsSeen(unseenReceivedOfferIds)}
-          />
-          
-          {/* Received swaps history */}
-          <ReceivedSwapsHistoryPanel 
-            swaps={shiftSwaps}
-            currentUserEmail={currentUser.email}
-            notificationCount={unseenReceivedSwapIds.length}
-            onOpen={() => markAsSeen(unseenReceivedSwapIds)}
-          />
-          
-          {/* My shift offers */}
           {shiftOffers.some(o => o.offererEmail === currentUser.email) && (
-            <CollapsibleSection 
+            <CollapsibleSection
               title="My Take My Shift Requests"
               icon={ArrowRight}
               iconColor={THEME.accent.pink}
@@ -4639,17 +4619,15 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
               notificationCount={unseenOfferIds.length}
               onOpen={() => markAsSeen(unseenOfferIds)}
             >
-              <MyShiftOffersPanel 
+              <MyShiftOffersPanel
                 offers={shiftOffers}
                 currentUserEmail={currentUser.email}
                 onCancel={onCancelOffer}
               />
             </CollapsibleSection>
           )}
-          
-          {/* My swap requests */}
           {shiftSwaps.some(s => s.initiatorEmail === currentUser.email) && (
-            <CollapsibleSection 
+            <CollapsibleSection
               title="My Swap Requests"
               icon={ArrowRightLeft}
               iconColor={THEME.accent.purple}
@@ -4659,13 +4637,27 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
               notificationCount={unseenSwapIds.length}
               onOpen={() => markAsSeen(unseenSwapIds)}
             >
-              <MySwapsPanel 
+              <MySwapsPanel
                 swaps={shiftSwaps}
                 currentUserEmail={currentUser.email}
                 onCancel={onCancelSwap}
               />
             </CollapsibleSection>
           )}
+
+          {/* ── HISTORY (received from others) ── */}
+          <ReceivedOffersHistoryPanel
+            offers={shiftOffers}
+            currentUserEmail={currentUser.email}
+            notificationCount={unseenReceivedOfferIds.length}
+            onOpen={() => markAsSeen(unseenReceivedOfferIds)}
+          />
+          <ReceivedSwapsHistoryPanel
+            swaps={shiftSwaps}
+            currentUserEmail={currentUser.email}
+            notificationCount={unseenReceivedSwapIds.length}
+            onOpen={() => markAsSeen(unseenReceivedSwapIds)}
+          />
         </MobileMenuDrawer>
         
         {/* Mobile Announcement Popup */}
