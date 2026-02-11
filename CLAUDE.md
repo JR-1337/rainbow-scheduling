@@ -220,7 +220,6 @@ These caused real production bugs — do not reintroduce:
 These are intentionally excluded from mobile admin:
 - Employee management (add/edit/delete)
 - Per-employee auto-populate dropdowns (mobile has simplified Auto-Fill/Clear per week)
-- Admin settings (staffing targets, store hours overrides)
 - PDF export
 
 ## Current Status
@@ -234,6 +233,7 @@ Phase 6 in progress (2026-02-10). Recent changes:
 - Mobile admin auto-populate: Auto-Fill and Clear buttons in edit mode banner, per-week based on active tab
 - Desktop auto-fill changed to per-week (was both weeks) — consistent with mobile, clear, and per-employee behavior
 - AdminTimeOffPanel double border fixed (stripped redundant card wrapper)
+- Feature parity: Admin Settings added to mobile admin drawer (was desktop-only), notification badge added to desktop employee "Shift Changes" button (matches mobile hamburger badge), admin contacts confirmed already on desktop
 - Staff user testing in progress (Sarvi's team)
 
 Phase 6 candidates:
