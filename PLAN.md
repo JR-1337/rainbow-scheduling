@@ -201,6 +201,9 @@
 | 22 | Uniform tab labels | ✅ DONE | "Needs Approval" → "Pending" on offers & swaps admin panels (matches time-off) |
 | 23 | Uniform empty state messages | ✅ DONE | All three admin panels: "No pending requests" / "No requests found" |
 | 24 | Compact empty state styling | ✅ DONE | Removed oversized icons and double padding from time-off & swaps empty states |
+| 25 | Remove AdminTimeOffPanel double border | ✅ DONE | Stripped redundant card wrapper — panel is always inside CollapsibleSection |
+| 26 | Mobile admin auto-populate | ✅ DONE | Auto-Fill and Clear buttons in edit mode banner, per-week (matches active tab), confirmation modal for overwrites/clears |
+| 27 | Desktop auto-fill changed to per-week | ✅ DONE | "Auto-Fill All FT" now fills only active week tab (was both weeks), consistent with mobile and clear behavior |
 
 #### Key Infrastructure Change:
 - **Old workflow:** JR manually uploads files to GitHub
@@ -300,4 +303,4 @@
 | RS-20-P5-MobileAdminView | 2026-02-06 | Mobile admin view: schedule editing, request review, announcements, three-state Save/GoLive/Edit |
 | RS-21-P6-UIPolish | 2026-02-07 | Git/GitHub setup, verified mobile features, header redesign, stacked names, tab colors |
 | RS-22-P6-PhoneTesting | 2026-02-07 | Real device testing, cell height fix, tab spacing fix, unified Requests History, staff user testing prep |
-| RS-23-P6-RequestPolish | 2026-02-10 | Admin rejection modals (offers+swaps), sort toggles on all history panels, uniform tab labels & empty states |
+| RS-23-P6-RequestPolish | 2026-02-10 | Rejection modals, sort toggles, uniform tabs/empty states, mobile auto-populate, per-week auto-fill on desktop |

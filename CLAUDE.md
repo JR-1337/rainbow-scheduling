@@ -219,7 +219,7 @@ These caused real production bugs — do not reintroduce:
 
 These are intentionally excluded from mobile admin:
 - Employee management (add/edit/delete)
-- Auto-populate toolbar
+- Per-employee auto-populate dropdowns (mobile has simplified Auto-Fill/Clear per week)
 - Admin settings (staffing targets, store hours overrides)
 - PDF export
 
@@ -231,6 +231,9 @@ Phase 6 in progress (2026-02-10). Recent changes:
 - Uniform tab labels: "Needs Approval" renamed to "Pending" on offers and swaps admin panels (matches time-off panel)
 - Uniform empty states: all three admin request panels show "No pending requests" / "No requests found" consistently
 - Compact empty state styling: removed oversized icons and double padding from empty request cards
+- Mobile admin auto-populate: Auto-Fill and Clear buttons in edit mode banner, per-week based on active tab
+- Desktop auto-fill changed to per-week (was both weeks) — consistent with mobile, clear, and per-employee behavior
+- AdminTimeOffPanel double border fixed (stripped redundant card wrapper)
 - Staff user testing in progress (Sarvi's team)
 
 Phase 6 candidates:
