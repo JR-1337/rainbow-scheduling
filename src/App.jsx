@@ -2773,13 +2773,7 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
   };
   
   return (
-    <div className="p-4 rounded-xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
-      {/* Header */}
-      <h2 className="text-sm font-semibold flex items-center gap-2 mb-3" style={{ color: THEME.text.primary }}>
-        <ClipboardList size={16} style={{ color: THEME.accent.purple }} />
-        Time Off Requests
-      </h2>
-      
+    <div className="space-y-3">
       {/* Filter tabs + sort toggle */}
       <div className="flex gap-2 flex-wrap items-center mb-4">
         {[
