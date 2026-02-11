@@ -2676,6 +2676,7 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
   const [revokeModalOpen, setRevokeModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [adminNotes, setAdminNotes] = useState('');
+  const [sortDir, setSortDir] = useState('desc');
   
   // Filter requests based on selected filter
   const filteredRequests = requests.filter(r => {
@@ -2685,12 +2686,11 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
     return r.status === filter;
   });
   
-  // Sort: pending by created date (oldest first for queue), settled by decided date (newest first)
+  // Sort by created/decided date, respecting sortDir toggle
   const sortedRequests = [...filteredRequests].sort((a, b) => {
-    if (filter === 'pending') {
-      return new Date(a.createdTimestamp) - new Date(b.createdTimestamp);
-    }
-    return new Date(b.decidedTimestamp || b.createdTimestamp) - new Date(a.decidedTimestamp || a.createdTimestamp);
+    const da = new Date(a.decidedTimestamp || a.createdTimestamp);
+    const db = new Date(b.decidedTimestamp || b.createdTimestamp);
+    return sortDir === 'desc' ? db - da : da - db;
   });
   
   const pendingCount = requests.filter(r => r.status === 'pending').length;
@@ -2780,8 +2780,8 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
         Time Off Requests
       </h2>
       
-      {/* Filter tabs - matching other panels */}
-      <div className="flex gap-2 flex-wrap mb-4">
+      {/* Filter tabs + sort toggle */}
+      <div className="flex gap-2 flex-wrap items-center mb-4">
         {[
           { id: 'pending', label: 'Pending', count: pendingCount },
           { id: 'settled', label: 'Settled' },
@@ -2803,13 +2803,21 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
             )}
           </button>
         ))}
+        <button
+          onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+          className="ml-auto px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
+          style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
+          title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
+        >
+          <Clock size={9} />
+          {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
+        </button>
       </div>
       
       {/* Requests list */}
       {sortedRequests.length === 0 ? (
-        <div className="text-center py-8">
-          <ClipboardList size={32} style={{ color: THEME.text.muted, margin: '0 auto 8px' }} />
-          <p className="text-sm" style={{ color: THEME.text.muted }}>
+        <div className="p-4 text-center rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
+          <p className="text-xs" style={{ color: THEME.text.muted }}>
             {filter === 'pending' ? 'No pending requests' : 'No requests found'}
           </p>
         </div>
@@ -2983,14 +2991,16 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
 // MY REQUESTS PANEL - Employee's own time off requests
 // ═══════════════════════════════════════════════════════════════════════════════
 const MyRequestsPanel = ({ requests, currentUserEmail, onCancel, notificationCount, onOpen }) => {
+  const [sortDir, setSortDir] = useState('desc');
   // Filter to show only this user's requests
   const myRequests = requests.filter(r => r.email === currentUserEmail);
-  
-  // Sort: pending first, then by date (newest first)
+
+  // Sort: pending first, then by date
   const sortedRequests = [...myRequests].sort((a, b) => {
     if (a.status === 'pending' && b.status !== 'pending') return -1;
     if (b.status === 'pending' && a.status !== 'pending') return 1;
-    return new Date(b.createdTimestamp) - new Date(a.createdTimestamp);
+    const da = new Date(a.createdTimestamp), db = new Date(b.createdTimestamp);
+    return sortDir === 'desc' ? db - da : da - db;
   });
   
   const formatRequestDates = (datesStr) => {
@@ -3041,7 +3051,7 @@ const MyRequestsPanel = ({ requests, currentUserEmail, onCancel, notificationCou
   }
   
   return (
-    <CollapsibleSection 
+    <CollapsibleSection
       title="My Time Off Requests"
       icon={Calendar}
       iconColor={THEME.accent.cyan}
@@ -3051,11 +3061,22 @@ const MyRequestsPanel = ({ requests, currentUserEmail, onCancel, notificationCou
       notificationCount={notificationCount}
       onOpen={onOpen}
     >
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+          className="px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
+          style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
+          title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
+        >
+          <Clock size={9} />
+          {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
+        </button>
+      </div>
       <div className="space-y-2">
         {sortedRequests.map(request => (
-          <div key={request.requestId} className="p-2 rounded-lg" style={{ 
-            backgroundColor: request.status === 'pending' ? THEME.status.warning + '10' : THEME.bg.tertiary, 
-            border: `1px solid ${request.status === 'pending' ? THEME.status.warning + '30' : THEME.border.subtle}` 
+          <div key={request.requestId} className="p-2 rounded-lg" style={{
+            backgroundColor: request.status === 'pending' ? THEME.status.warning + '10' : THEME.bg.tertiary,
+            border: `1px solid ${request.status === 'pending' ? THEME.status.warning + '30' : THEME.border.subtle}`
           }}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
@@ -3063,12 +3084,12 @@ const MyRequestsPanel = ({ requests, currentUserEmail, onCancel, notificationCou
                 <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>
                   {formatRequestDates(request.datesRequested)}
                 </p>
-                
+
                 {/* Submitted date */}
                 <p className="text-xs mt-0.5" style={{ color: THEME.text.muted }}>
                   Submitted {formatTimestamp(request.createdTimestamp)}
                 </p>
-                
+
                 {/* My reason (always show if present) */}
                 {request.reason && (
                   <div className="mt-1 p-1.5 rounded text-xs" style={{ backgroundColor: THEME.bg.elevated }}>
@@ -3077,19 +3098,19 @@ const MyRequestsPanel = ({ requests, currentUserEmail, onCancel, notificationCou
                   </div>
                 )}
               </div>
-              
+
               <div className="flex flex-col items-end gap-1">
                 {/* Status badge */}
-                <span 
+                <span
                   className="text-xs font-medium px-1.5 py-0.5 rounded"
-                  style={{ 
+                  style={{
                     backgroundColor: REQUEST_STATUS_COLORS[request.status] + '20',
                     color: REQUEST_STATUS_COLORS[request.status]
                   }}
                 >
                   {getStatusLabel(request.status)}
                 </span>
-                
+
                 {/* Cancel button for pending requests */}
                 {request.status === 'pending' && (
                   <button
@@ -3114,14 +3135,16 @@ const MyRequestsPanel = ({ requests, currentUserEmail, onCancel, notificationCou
 // ADMIN MY TIME OFF PANEL - Admin's personal time off requests (shown below schedule)
 // ═══════════════════════════════════════════════════════════════════════════════
 const AdminMyTimeOffPanel = ({ requests, currentUserEmail, onCancel }) => {
+  const [sortDir, setSortDir] = useState('desc');
   // Filter to show only this admin's requests
   const myRequests = requests.filter(r => r.email === currentUserEmail);
-  
-  // Sort: pending first, then by date (newest first)
+
+  // Sort: pending first, then by date
   const sortedRequests = [...myRequests].sort((a, b) => {
     if (a.status === 'pending' && b.status !== 'pending') return -1;
     if (b.status === 'pending' && a.status !== 'pending') return 1;
-    return new Date(b.createdTimestamp) - new Date(a.createdTimestamp);
+    const da = new Date(a.createdTimestamp), db = new Date(b.createdTimestamp);
+    return sortDir === 'desc' ? db - da : da - db;
   });
   
   const formatRequestDates = (datesStr) => {
@@ -3169,7 +3192,7 @@ const AdminMyTimeOffPanel = ({ requests, currentUserEmail, onCancel }) => {
   
   // Always show for admins, even if empty (so they know they can request time off)
   return (
-    <CollapsibleSection 
+    <CollapsibleSection
       title="My Time Off Requests"
       icon={Calendar}
       iconColor={THEME.accent.cyan}
@@ -3184,6 +3207,18 @@ const AdminMyTimeOffPanel = ({ requests, currentUserEmail, onCancel }) => {
           <p className="text-xs mt-1" style={{ color: THEME.text.muted }}>Use "Shift Changes" button to request time off</p>
         </div>
       ) : (
+        <>
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+            className="px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
+            style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
+            title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
+          >
+            <Clock size={9} />
+            {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
+          </button>
+        </div>
         <div className="space-y-2">
           {sortedRequests.map(request => (
             <div key={request.requestId} className="p-2 rounded-lg" style={{ 
@@ -3246,6 +3281,7 @@ const AdminMyTimeOffPanel = ({ requests, currentUserEmail, onCancel }) => {
             </div>
           ))}
         </div>
+        </>
       )}
     </CollapsibleSection>
   );
@@ -3256,7 +3292,26 @@ const AdminMyTimeOffPanel = ({ requests, currentUserEmail, onCancel }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentAdminEmail }) => {
   const [filter, setFilter] = useState('awaiting_admin');
-  
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [selectedOffer, setSelectedOffer] = useState(null);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [sortDir, setSortDir] = useState('desc');
+
+  const openRejectModal = (offer) => {
+    setSelectedOffer(offer);
+    setAdminNotes('');
+    setRejectModalOpen(true);
+  };
+
+  const handleReject = () => {
+    if (selectedOffer) {
+      onReject(selectedOffer.offerId, adminNotes);
+      setRejectModalOpen(false);
+      setSelectedOffer(null);
+      setAdminNotes('');
+    }
+  };
+
   // Get today for date comparison
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -3276,7 +3331,8 @@ const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentA
     if (b.status === 'awaiting_admin' && a.status !== 'awaiting_admin') return 1;
     if (a.status === 'approved' && b.status !== 'approved') return -1;
     if (b.status === 'approved' && a.status !== 'approved') return 1;
-    return new Date(b.createdTimestamp) - new Date(a.createdTimestamp);
+    const da = new Date(a.createdTimestamp), db = new Date(b.createdTimestamp);
+    return sortDir === 'desc' ? db - da : da - db;
   });
   
   const pendingAdminCount = offers.filter(o => o.status === 'awaiting_admin').length;
@@ -3289,10 +3345,10 @@ const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentA
   
   return (
     <div className="space-y-3">
-      {/* Filter tabs */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Filter tabs + sort toggle */}
+      <div className="flex gap-2 flex-wrap items-center">
         {[
-          { id: 'awaiting_admin', label: 'Needs Approval', count: pendingAdminCount },
+          { id: 'awaiting_admin', label: 'Pending', count: pendingAdminCount },
           { id: 'awaiting_recipient', label: 'Awaiting Reply', count: pendingRecipientCount },
           { id: 'settled', label: 'Settled' },
           { id: 'all', label: 'All' },
@@ -3313,12 +3369,23 @@ const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentA
             )}
           </button>
         ))}
+        <button
+          onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+          className="ml-auto px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
+          style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
+          title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
+        >
+          <Clock size={9} />
+          {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
+        </button>
       </div>
-      
+
       {/* Offers list */}
       {sortedOffers.length === 0 ? (
         <div className="p-4 text-center rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
-          <p className="text-xs" style={{ color: THEME.text.muted }}>No Take My Shift requests in this category</p>
+          <p className="text-xs" style={{ color: THEME.text.muted }}>
+            {filter === 'awaiting_admin' ? 'No pending requests' : 'No requests found'}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -3351,26 +3418,29 @@ const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentA
                       {offer.recipientNote && (
                         <span className="text-xs italic" style={{ color: THEME.text.muted }}>"{offer.recipientNote}"</span>
                       )}
+                      {offer.adminNote && (
+                        <span className="text-xs italic" style={{ color: THEME.text.muted }}>Admin: "{offer.adminNote}"</span>
+                      )}
                       {offer.status === 'revoked' && (
                         <span className="text-xs italic" style={{ color: THEME.text.muted }}>
                           Revoked {offer.revokedTimestamp ? new Date(offer.revokedTimestamp).toLocaleDateString() : ''}
                         </span>
                       )}
                     </div>
-                    
+
                     {/* Timestamps */}
                     <div className="text-xs mt-1" style={{ color: THEME.text.muted }}>
                       Submitted {new Date(offer.createdTimestamp).toLocaleDateString()}
                       {offer.recipientRespondedTimestamp && ` • Accepted ${new Date(offer.recipientRespondedTimestamp).toLocaleDateString()}`}
                     </div>
                   </div>
-                  
+
                   {/* Action buttons */}
                   <div className="flex gap-2">
                     {canApprove && (
                       <>
                         <button
-                          onClick={() => onReject(offer.offerId)}
+                          onClick={() => openRejectModal(offer)}
                           className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 hover:opacity-80"
                           style={{ backgroundColor: THEME.status.error, color: 'white' }}
                         >
@@ -3401,6 +3471,34 @@ const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentA
           })}
         </div>
       )}
+
+      {/* Reject Offer Modal */}
+      {rejectModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={() => setRejectModalOpen(false)}>
+          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+            <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
+              <h2 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Reject Shift Offer</h2>
+              <button onClick={() => setRejectModalOpen(false)} className="p-1 rounded-lg hover:bg-white/10" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+            </div>
+            <div className="p-3">
+              <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
+                Rejecting shift offer from <strong>{selectedOffer?.offererName}</strong> to <strong>{selectedOffer?.recipientName}</strong>
+              </p>
+              <textarea
+                value={adminNotes}
+                onChange={e => setAdminNotes(e.target.value)}
+                placeholder="Reason for rejection (optional but recommended)"
+                className="w-full px-2 py-1.5 rounded-lg outline-none text-xs resize-none"
+                style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary, minHeight: 60 }}
+              />
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => setRejectModalOpen(false)} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}>Cancel</button>
+                <button onClick={handleReject} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.status.error, color: 'white' }}>Reject Offer</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -3409,21 +3507,24 @@ const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentA
 // MY SHIFT OFFERS PANEL - Employee view of shift offers they have sent
 // ═══════════════════════════════════════════════════════════════════════════════
 const MyShiftOffersPanel = ({ offers, currentUserEmail, onCancel }) => {
+  const [sortDir, setSortDir] = useState('desc');
   // Filter to only offers from this user
   const myOffers = offers.filter(o => o.offererEmail === currentUserEmail);
-  
+
   const getRoleName = (roleId) => {
     const role = ROLES.find(r => r.id === roleId);
     return role ? role.fullName : 'No Role';
   };
-  
+
   // Sort: pending first, then by date
   const sortedOffers = [...myOffers].sort((a, b) => {
     const aActive = ['awaiting_recipient', 'awaiting_admin'].includes(a.status);
     const bActive = ['awaiting_recipient', 'awaiting_admin'].includes(b.status);
     if (aActive && !bActive) return -1;
     if (!aActive && bActive) return 1;
-    return new Date(b.createdTimestamp) - new Date(a.createdTimestamp);
+    const da = new Date(b.createdTimestamp);
+    const db = new Date(a.createdTimestamp);
+    return sortDir === 'desc' ? da - db : db - da;
   });
   
   if (sortedOffers.length === 0) {
@@ -3435,44 +3536,57 @@ const MyShiftOffersPanel = ({ offers, currentUserEmail, onCancel }) => {
   }
   
   return (
-    <div className="space-y-2">
-      {sortedOffers.map(offer => {
-        const shiftDate = new Date(offer.shiftDate + 'T12:00:00');
-        const canCancel = ['awaiting_recipient', 'awaiting_admin'].includes(offer.status);
-        
-        return (
-          <div key={offer.offerId} className="p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium mb-0.5" style={{ color: THEME.text.primary }}>
-                  Offered to {offer.recipientName}
+    <>
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+          className="px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
+          style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
+          title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
+        >
+          <Clock size={9} />
+          {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
+        </button>
+      </div>
+      <div className="space-y-2">
+        {sortedOffers.map(offer => {
+          const shiftDate = new Date(offer.shiftDate + 'T12:00:00');
+          const canCancel = ['awaiting_recipient', 'awaiting_admin'].includes(offer.status);
+
+          return (
+            <div key={offer.offerId} className="p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium mb-0.5" style={{ color: THEME.text.primary }}>
+                    Offered to {offer.recipientName}
+                  </div>
+                  <div className="text-xs" style={{ color: THEME.text.secondary }}>
+                    {getDayNameShort(shiftDate)}, {formatDate(shiftDate)} • {formatTimeDisplay(offer.shiftStart)} – {formatTimeDisplay(offer.shiftEnd)}
+                  </div>
+                  {offer.recipientNote && (
+                    <div className="text-xs italic mt-1" style={{ color: THEME.text.muted }}>Note: "{offer.recipientNote}"</div>
+                  )}
                 </div>
-                <div className="text-xs" style={{ color: THEME.text.secondary }}>
-                  {getDayNameShort(shiftDate)}, {formatDate(shiftDate)} • {formatTimeDisplay(offer.shiftStart)} – {formatTimeDisplay(offer.shiftEnd)}
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: OFFER_STATUS_COLORS[offer.status] + '20', color: OFFER_STATUS_COLORS[offer.status] }}>
+                    {OFFER_STATUS_LABELS[offer.status]}
+                  </span>
+                  {canCancel && (
+                    <button
+                      onClick={() => onCancel(offer.offerId)}
+                      className="text-xs px-1.5 py-0.5 rounded flex items-center gap-1"
+                      style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}
+                    >
+                      <X size={8} /> Cancel
+                    </button>
+                  )}
                 </div>
-                {offer.recipientNote && (
-                  <div className="text-xs italic mt-1" style={{ color: THEME.text.muted }}>Note: "{offer.recipientNote}"</div>
-                )}
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: OFFER_STATUS_COLORS[offer.status] + '20', color: OFFER_STATUS_COLORS[offer.status] }}>
-                  {OFFER_STATUS_LABELS[offer.status]}
-                </span>
-                {canCancel && (
-                  <button
-                    onClick={() => onCancel(offer.offerId)}
-                    className="text-xs px-1.5 py-0.5 rounded flex items-center gap-1"
-                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}
-                  >
-                    <X size={8} /> Cancel
-                  </button>
-                )}
               </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    </>
   );
 };
 
@@ -3595,22 +3709,25 @@ const IncomingOffersPanel = ({ offers, currentUserEmail, onAccept, onReject }) =
 // RECEIVED OFFERS HISTORY - Shows offers user received that are beyond initial response
 // ═══════════════════════════════════════════════════════════════════════════════
 const ReceivedOffersHistoryPanel = ({ offers, currentUserEmail, notificationCount, onOpen }) => {
+  const [sortDir, setSortDir] = useState('desc');
   // Offers where user is recipient and NOT awaiting their response (already responded or resolved)
-  const historyOffers = offers.filter(o => 
-    o.recipientEmail === currentUserEmail && 
+  const historyOffers = offers.filter(o =>
+    o.recipientEmail === currentUserEmail &&
     o.status !== 'awaiting_recipient'
   );
-  
+
   const getRoleName = (roleId) => {
     const role = ROLES.find(r => r.id === roleId);
     return role ? role.fullName : 'No Role';
   };
-  
+
   // Sort: active first (awaiting_admin), then by date
   const sortedOffers = [...historyOffers].sort((a, b) => {
     if (a.status === 'awaiting_admin' && b.status !== 'awaiting_admin') return -1;
     if (b.status === 'awaiting_admin' && a.status !== 'awaiting_admin') return 1;
-    return new Date(b.createdTimestamp) - new Date(a.createdTimestamp);
+    const da = new Date(a.createdTimestamp);
+    const db = new Date(b.createdTimestamp);
+    return sortDir === 'desc' ? db - da : da - db;
   });
   
   if (sortedOffers.length === 0) {
@@ -3630,36 +3747,49 @@ const ReceivedOffersHistoryPanel = ({ offers, currentUserEmail, notificationCoun
       notificationCount={notificationCount}
       onOpen={onOpen}
     >
-      <div className="space-y-2">
-        {sortedOffers.map(offer => {
-          const shiftDate = new Date(offer.shiftDate + 'T12:00:00');
-          const isActive = offer.status === 'awaiting_admin';
-          
-          return (
-            <div key={offer.offerId} className="p-2 rounded-lg" style={{ 
-              backgroundColor: isActive ? THEME.status.warning + '10' : THEME.bg.tertiary, 
-              border: `1px solid ${isActive ? THEME.status.warning + '30' : THEME.border.subtle}` 
-            }}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1">
-                  <div className="text-xs font-medium mb-0.5" style={{ color: THEME.text.primary }}>
-                    From {offer.offererName}
+      <>
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+            className="px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
+            style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
+            title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
+          >
+            <Clock size={9} />
+            {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
+          </button>
+        </div>
+        <div className="space-y-2">
+          {sortedOffers.map(offer => {
+            const shiftDate = new Date(offer.shiftDate + 'T12:00:00');
+            const isActive = offer.status === 'awaiting_admin';
+
+            return (
+              <div key={offer.offerId} className="p-2 rounded-lg" style={{
+                backgroundColor: isActive ? THEME.status.warning + '10' : THEME.bg.tertiary,
+                border: `1px solid ${isActive ? THEME.status.warning + '30' : THEME.border.subtle}`
+              }}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="text-xs font-medium mb-0.5" style={{ color: THEME.text.primary }}>
+                      From {offer.offererName}
+                    </div>
+                    <div className="text-xs" style={{ color: THEME.text.secondary }}>
+                      {getDayNameShort(shiftDate)}, {formatDate(shiftDate)} • {formatTimeDisplay(offer.shiftStart)} – {formatTimeDisplay(offer.shiftEnd)}
+                    </div>
                   </div>
-                  <div className="text-xs" style={{ color: THEME.text.secondary }}>
-                    {getDayNameShort(shiftDate)}, {formatDate(shiftDate)} • {formatTimeDisplay(offer.shiftStart)} – {formatTimeDisplay(offer.shiftEnd)}
-                  </div>
+                  <span className="text-xs px-1.5 py-0.5 rounded" style={{
+                    backgroundColor: OFFER_STATUS_COLORS[offer.status] + '20',
+                    color: OFFER_STATUS_COLORS[offer.status]
+                  }}>
+                    {OFFER_STATUS_LABELS[offer.status]}
+                  </span>
                 </div>
-                <span className="text-xs px-1.5 py-0.5 rounded" style={{ 
-                  backgroundColor: OFFER_STATUS_COLORS[offer.status] + '20', 
-                  color: OFFER_STATUS_COLORS[offer.status] 
-                }}>
-                  {OFFER_STATUS_LABELS[offer.status]}
-                </span>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </>
     </CollapsibleSection>
   );
 };
@@ -3800,25 +3930,28 @@ const IncomingSwapsPanel = ({ swaps, currentUserEmail, onAccept, onReject }) => 
 // MY SWAPS PANEL - Employee view of swap requests they have initiated
 // ═══════════════════════════════════════════════════════════════════════════════
 const MySwapsPanel = ({ swaps, currentUserEmail, onCancel }) => {
+  const [sortDir, setSortDir] = useState('desc');
   const mySwaps = swaps.filter(s => s.initiatorEmail === currentUserEmail);
-  
+
   const getRoleName = (roleId) => {
     const role = ROLES.find(r => r.id === roleId);
     return role ? role.name : '—';
   };
-  
+
   const getRoleColor = (roleId) => {
     const role = ROLES.find(r => r.id === roleId);
     return role ? role.color : THEME.text.muted;
   };
-  
+
   // Sort: pending first, then by date
   const sortedSwaps = [...mySwaps].sort((a, b) => {
     const aActive = ['awaiting_partner', 'awaiting_admin'].includes(a.status);
     const bActive = ['awaiting_partner', 'awaiting_admin'].includes(b.status);
     if (aActive && !bActive) return -1;
     if (!aActive && bActive) return 1;
-    return new Date(b.createdTimestamp) - new Date(a.createdTimestamp);
+    const da = new Date(a.createdTimestamp);
+    const db = new Date(b.createdTimestamp);
+    return sortDir === 'desc' ? db - da : da - db;
   });
   
   if (sortedSwaps.length === 0) {
@@ -3830,58 +3963,71 @@ const MySwapsPanel = ({ swaps, currentUserEmail, onCancel }) => {
   }
   
   return (
-    <div className="space-y-2">
-      {sortedSwaps.map(swap => {
-        const myShiftDate = new Date(swap.initiatorShiftDate + 'T12:00:00');
-        const theirShiftDate = new Date(swap.partnerShiftDate + 'T12:00:00');
-        const canCancel = ['awaiting_partner', 'awaiting_admin'].includes(swap.status);
-        
-        return (
-          <div key={swap.swapId} className="p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium mb-0.5" style={{ color: THEME.text.primary }}>
-                  Swap with {swap.partnerName}
-                </div>
-                <div className="text-xs space-y-0.5">
-                  <div style={{ color: THEME.text.secondary }}>
-                    <span style={{ color: THEME.text.muted }}>You: </span>
-                    {getDayNameShort(myShiftDate)}, {formatDate(myShiftDate)}
-                    <span className="ml-1 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: getRoleColor(swap.initiatorShiftRole) + '20', color: getRoleColor(swap.initiatorShiftRole) }}>
-                      {getRoleName(swap.initiatorShiftRole)}
-                    </span>
+    <>
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+          className="px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
+          style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
+          title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
+        >
+          <Clock size={9} />
+          {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
+        </button>
+      </div>
+      <div className="space-y-2">
+        {sortedSwaps.map(swap => {
+          const myShiftDate = new Date(swap.initiatorShiftDate + 'T12:00:00');
+          const theirShiftDate = new Date(swap.partnerShiftDate + 'T12:00:00');
+          const canCancel = ['awaiting_partner', 'awaiting_admin'].includes(swap.status);
+
+          return (
+            <div key={swap.swapId} className="p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium mb-0.5" style={{ color: THEME.text.primary }}>
+                    Swap with {swap.partnerName}
                   </div>
-                  <div style={{ color: THEME.text.secondary }}>
-                    <span style={{ color: THEME.text.muted }}>Them: </span>
-                    {getDayNameShort(theirShiftDate)}, {formatDate(theirShiftDate)}
-                    <span className="ml-1 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: getRoleColor(swap.partnerShiftRole) + '20', color: getRoleColor(swap.partnerShiftRole) }}>
-                      {getRoleName(swap.partnerShiftRole)}
-                    </span>
+                  <div className="text-xs space-y-0.5">
+                    <div style={{ color: THEME.text.secondary }}>
+                      <span style={{ color: THEME.text.muted }}>You: </span>
+                      {getDayNameShort(myShiftDate)}, {formatDate(myShiftDate)}
+                      <span className="ml-1 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: getRoleColor(swap.initiatorShiftRole) + '20', color: getRoleColor(swap.initiatorShiftRole) }}>
+                        {getRoleName(swap.initiatorShiftRole)}
+                      </span>
+                    </div>
+                    <div style={{ color: THEME.text.secondary }}>
+                      <span style={{ color: THEME.text.muted }}>Them: </span>
+                      {getDayNameShort(theirShiftDate)}, {formatDate(theirShiftDate)}
+                      <span className="ml-1 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: getRoleColor(swap.partnerShiftRole) + '20', color: getRoleColor(swap.partnerShiftRole) }}>
+                        {getRoleName(swap.partnerShiftRole)}
+                      </span>
+                    </div>
                   </div>
+                  {swap.partnerNote && (
+                    <div className="text-xs italic mt-1" style={{ color: THEME.text.muted }}>Note: "{swap.partnerNote}"</div>
+                  )}
                 </div>
-                {swap.partnerNote && (
-                  <div className="text-xs italic mt-1" style={{ color: THEME.text.muted }}>Note: "{swap.partnerNote}"</div>
-                )}
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: SWAP_STATUS_COLORS[swap.status] + '20', color: SWAP_STATUS_COLORS[swap.status] }}>
-                  {SWAP_STATUS_LABELS[swap.status]}
-                </span>
-                {canCancel && (
-                  <button
-                    onClick={() => onCancel(swap.swapId)}
-                    className="text-xs px-1.5 py-0.5 rounded flex items-center gap-1"
-                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}
-                  >
-                    <X size={8} /> Cancel
-                  </button>
-                )}
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: SWAP_STATUS_COLORS[swap.status] + '20', color: SWAP_STATUS_COLORS[swap.status] }}>
+                    {SWAP_STATUS_LABELS[swap.status]}
+                  </span>
+                  {canCancel && (
+                    <button
+                      onClick={() => onCancel(swap.swapId)}
+                      className="text-xs px-1.5 py-0.5 rounded flex items-center gap-1"
+                      style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}
+                    >
+                      <X size={8} /> Cancel
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    </>
   );
 };
 
@@ -3889,27 +4035,30 @@ const MySwapsPanel = ({ swaps, currentUserEmail, onCancel }) => {
 // RECEIVED SWAPS HISTORY PANEL - Shows swaps user received that are beyond initial response
 // ═══════════════════════════════════════════════════════════════════════════════
 const ReceivedSwapsHistoryPanel = ({ swaps, currentUserEmail, notificationCount, onOpen }) => {
+  const [sortDir, setSortDir] = useState('desc');
   // Swaps where user is partner and NOT awaiting their response
-  const historySwaps = swaps.filter(s => 
-    s.partnerEmail === currentUserEmail && 
+  const historySwaps = swaps.filter(s =>
+    s.partnerEmail === currentUserEmail &&
     s.status !== 'awaiting_partner'
   );
-  
+
   const getRoleName = (roleId) => {
     const role = ROLES.find(r => r.id === roleId);
     return role ? role.name : '—';
   };
-  
+
   const getRoleColor = (roleId) => {
     const role = ROLES.find(r => r.id === roleId);
     return role ? role.color : THEME.text.muted;
   };
-  
+
   // Sort: active first (awaiting_admin), then by date
   const sortedSwaps = [...historySwaps].sort((a, b) => {
     if (a.status === 'awaiting_admin' && b.status !== 'awaiting_admin') return -1;
     if (b.status === 'awaiting_admin' && a.status !== 'awaiting_admin') return 1;
-    return new Date(b.createdTimestamp) - new Date(a.createdTimestamp);
+    const da = new Date(a.createdTimestamp);
+    const db = new Date(b.createdTimestamp);
+    return sortDir === 'desc' ? db - da : da - db;
   });
   
   if (sortedSwaps.length === 0) {
@@ -3929,50 +4078,63 @@ const ReceivedSwapsHistoryPanel = ({ swaps, currentUserEmail, notificationCount,
       notificationCount={notificationCount}
       onOpen={onOpen}
     >
-      <div className="space-y-2">
-        {sortedSwaps.map(swap => {
-          const theirShiftDate = new Date(swap.initiatorShiftDate + 'T12:00:00');
-          const myShiftDate = new Date(swap.partnerShiftDate + 'T12:00:00');
-          const isActive = swap.status === 'awaiting_admin';
-          
-          return (
-            <div key={swap.swapId} className="p-2 rounded-lg" style={{ 
-              backgroundColor: isActive ? THEME.status.warning + '10' : THEME.bg.tertiary, 
-              border: `1px solid ${isActive ? THEME.status.warning + '30' : THEME.border.subtle}` 
-            }}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1">
-                  <div className="text-xs font-medium mb-0.5" style={{ color: THEME.text.primary }}>
-                    From {swap.initiatorName}
-                  </div>
-                  <div className="text-xs space-y-0.5">
-                    <div style={{ color: THEME.text.secondary }}>
-                      <span style={{ color: THEME.text.muted }}>Their: </span>
-                      {getDayNameShort(theirShiftDate)}, {formatDate(theirShiftDate)}
-                      <span className="ml-1 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: getRoleColor(swap.initiatorShiftRole) + '20', color: getRoleColor(swap.initiatorShiftRole) }}>
-                        {getRoleName(swap.initiatorShiftRole)}
-                      </span>
+      <>
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+            className="px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
+            style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
+            title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
+          >
+            <Clock size={9} />
+            {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
+          </button>
+        </div>
+        <div className="space-y-2">
+          {sortedSwaps.map(swap => {
+            const theirShiftDate = new Date(swap.initiatorShiftDate + 'T12:00:00');
+            const myShiftDate = new Date(swap.partnerShiftDate + 'T12:00:00');
+            const isActive = swap.status === 'awaiting_admin';
+
+            return (
+              <div key={swap.swapId} className="p-2 rounded-lg" style={{
+                backgroundColor: isActive ? THEME.status.warning + '10' : THEME.bg.tertiary,
+                border: `1px solid ${isActive ? THEME.status.warning + '30' : THEME.border.subtle}`
+              }}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="text-xs font-medium mb-0.5" style={{ color: THEME.text.primary }}>
+                      From {swap.initiatorName}
                     </div>
-                    <div style={{ color: THEME.text.secondary }}>
-                      <span style={{ color: THEME.text.muted }}>Your: </span>
-                      {getDayNameShort(myShiftDate)}, {formatDate(myShiftDate)}
-                      <span className="ml-1 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: getRoleColor(swap.partnerShiftRole) + '20', color: getRoleColor(swap.partnerShiftRole) }}>
-                        {getRoleName(swap.partnerShiftRole)}
-                      </span>
+                    <div className="text-xs space-y-0.5">
+                      <div style={{ color: THEME.text.secondary }}>
+                        <span style={{ color: THEME.text.muted }}>Their: </span>
+                        {getDayNameShort(theirShiftDate)}, {formatDate(theirShiftDate)}
+                        <span className="ml-1 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: getRoleColor(swap.initiatorShiftRole) + '20', color: getRoleColor(swap.initiatorShiftRole) }}>
+                          {getRoleName(swap.initiatorShiftRole)}
+                        </span>
+                      </div>
+                      <div style={{ color: THEME.text.secondary }}>
+                        <span style={{ color: THEME.text.muted }}>Your: </span>
+                        {getDayNameShort(myShiftDate)}, {formatDate(myShiftDate)}
+                        <span className="ml-1 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: getRoleColor(swap.partnerShiftRole) + '20', color: getRoleColor(swap.partnerShiftRole) }}>
+                          {getRoleName(swap.partnerShiftRole)}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <span className="text-xs px-1.5 py-0.5 rounded" style={{
+                    backgroundColor: SWAP_STATUS_COLORS[swap.status] + '20',
+                    color: SWAP_STATUS_COLORS[swap.status]
+                  }}>
+                    {SWAP_STATUS_LABELS[swap.status]}
+                  </span>
                 </div>
-                <span className="text-xs px-1.5 py-0.5 rounded" style={{ 
-                  backgroundColor: SWAP_STATUS_COLORS[swap.status] + '20', 
-                  color: SWAP_STATUS_COLORS[swap.status] 
-                }}>
-                  {SWAP_STATUS_LABELS[swap.status]}
-                </span>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </>
     </CollapsibleSection>
   );
 };
@@ -4274,7 +4436,26 @@ const UnifiedRequestHistory = ({
 // ═══════════════════════════════════════════════════════════════════════════════
 const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdminEmail }) => {
   const [filter, setFilter] = useState('awaiting_admin');
-  
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [selectedSwap, setSelectedSwap] = useState(null);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [sortDir, setSortDir] = useState('desc');
+
+  const openRejectModal = (swap) => {
+    setSelectedSwap(swap);
+    setAdminNotes('');
+    setRejectModalOpen(true);
+  };
+
+  const handleReject = () => {
+    if (selectedSwap) {
+      onReject(selectedSwap.swapId, adminNotes);
+      setRejectModalOpen(false);
+      setSelectedSwap(null);
+      setAdminNotes('');
+    }
+  };
+
   // Get today for date comparison
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -4294,28 +4475,29 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
     if (b.status === 'awaiting_admin' && a.status !== 'awaiting_admin') return 1;
     if (a.status === 'approved' && b.status !== 'approved') return -1;
     if (b.status === 'approved' && a.status !== 'approved') return 1;
-    return new Date(b.createdTimestamp) - new Date(a.createdTimestamp);
+    const da = new Date(a.createdTimestamp), db = new Date(b.createdTimestamp);
+    return sortDir === 'desc' ? db - da : da - db;
   });
-  
+
   const pendingAdminCount = swaps.filter(s => s.status === 'awaiting_admin').length;
   const pendingPartnerCount = swaps.filter(s => s.status === 'awaiting_partner').length;
-  
+
   const getRoleName = (roleId) => {
     const role = ROLES.find(r => r.id === roleId);
     return role ? role.name : '—';
   };
-  
+
   const getRoleColor = (roleId) => {
     const role = ROLES.find(r => r.id === roleId);
     return role ? role.color : THEME.text.muted;
   };
-  
+
   return (
     <div className="space-y-3">
-      {/* Filter tabs */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Filter tabs + sort toggle */}
+      <div className="flex gap-2 flex-wrap items-center">
         {[
-          { id: 'awaiting_admin', label: 'Needs Approval', count: pendingAdminCount },
+          { id: 'awaiting_admin', label: 'Pending', count: pendingAdminCount },
           { id: 'awaiting_partner', label: 'Awaiting Reply', count: pendingPartnerCount },
           { id: 'settled', label: 'Settled' },
           { id: 'all', label: 'All' },
@@ -4337,14 +4519,22 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
             )}
           </button>
         ))}
+        <button
+          onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+          className="ml-auto px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
+          style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
+          title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
+        >
+          <Clock size={9} />
+          {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
+        </button>
       </div>
-      
+
       {/* Swaps list */}
       {sortedSwaps.length === 0 ? (
-        <div className="text-center py-4">
-          <ArrowRightLeft size={24} style={{ color: THEME.text.muted, margin: '0 auto 8px' }} />
+        <div className="p-4 text-center rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
           <p className="text-xs" style={{ color: THEME.text.muted }}>
-            {filter === 'awaiting_admin' ? 'No swaps awaiting approval' : 'No swap requests found'}
+            {filter === 'awaiting_admin' ? 'No pending requests' : 'No requests found'}
           </p>
         </div>
       ) : (
@@ -4353,13 +4543,13 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
             const initiatorShiftDate = new Date(swap.initiatorShiftDate + 'T12:00:00');
             const partnerShiftDate = new Date(swap.partnerShiftDate + 'T12:00:00');
             const canApprove = swap.status === 'awaiting_admin';
-            
+
             // Check if BOTH shifts are in the future for revoke eligibility
             const bothFuture = initiatorShiftDate >= today && partnerShiftDate >= today;
             const canRevoke = swap.status === 'approved' && bothFuture;
-            
+
             return (
-              <div key={swap.swapId} className="p-3 rounded-lg" style={{ 
+              <div key={swap.swapId} className="p-3 rounded-lg" style={{
                 backgroundColor: canApprove ? THEME.status.warning + '10' : THEME.bg.tertiary,
                 border: `1px solid ${canApprove ? THEME.status.warning + '30' : THEME.border.subtle}`
               }}>
@@ -4371,7 +4561,7 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
                       <ArrowRightLeft size={10} style={{ color: THEME.text.muted }} />
                       <span className="text-xs font-medium" style={{ color: THEME.text.primary }}>{swap.partnerName}</span>
                     </div>
-                    
+
                     {/* Shift details with roles */}
                     <div className="text-xs mb-2 space-y-1">
                       <div style={{ color: THEME.text.secondary }}>
@@ -4389,7 +4579,7 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
                         </span>
                       </div>
                     </div>
-                    
+
                     {/* Status and notes */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: SWAP_STATUS_COLORS[swap.status] + '20', color: SWAP_STATUS_COLORS[swap.status] }}>
@@ -4398,26 +4588,29 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
                       {swap.partnerNote && (
                         <span className="text-xs italic" style={{ color: THEME.text.muted }}>"{swap.partnerNote}"</span>
                       )}
+                      {swap.adminNote && (
+                        <span className="text-xs italic" style={{ color: THEME.text.muted }}>Admin: "{swap.adminNote}"</span>
+                      )}
                       {swap.status === 'revoked' && (
                         <span className="text-xs italic" style={{ color: THEME.text.muted }}>
                           Revoked {swap.revokedTimestamp ? new Date(swap.revokedTimestamp).toLocaleDateString() : ''}
                         </span>
                       )}
                     </div>
-                    
+
                     {/* Timestamps */}
                     <div className="text-xs mt-1" style={{ color: THEME.text.muted }}>
                       Submitted {new Date(swap.createdTimestamp).toLocaleDateString()}
                       {swap.partnerRespondedTimestamp && ` • Accepted ${new Date(swap.partnerRespondedTimestamp).toLocaleDateString()}`}
                     </div>
                   </div>
-                  
+
                   {/* Action buttons */}
                   <div className="flex gap-2">
                     {canApprove && (
                       <>
                         <button
-                          onClick={() => onReject(swap.swapId)}
+                          onClick={() => openRejectModal(swap)}
                           className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 hover:opacity-80"
                           style={{ backgroundColor: THEME.status.error, color: 'white' }}
                         >
@@ -4446,6 +4639,34 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Reject Swap Modal */}
+      {rejectModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={() => setRejectModalOpen(false)}>
+          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+            <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
+              <h2 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Reject Swap Request</h2>
+              <button onClick={() => setRejectModalOpen(false)} className="p-1 rounded-lg hover:bg-white/10" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+            </div>
+            <div className="p-3">
+              <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
+                Rejecting swap between <strong>{selectedSwap?.initiatorName}</strong> and <strong>{selectedSwap?.partnerName}</strong>
+              </p>
+              <textarea
+                value={adminNotes}
+                onChange={e => setAdminNotes(e.target.value)}
+                placeholder="Reason for rejection (optional but recommended)"
+                className="w-full px-2 py-1.5 rounded-lg outline-none text-xs resize-none"
+                style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary, minHeight: 60 }}
+              />
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => setRejectModalOpen(false)} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}>Cancel</button>
+                <button onClick={handleReject} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.status.error, color: 'white' }}>Reject Swap</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
