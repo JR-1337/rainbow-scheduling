@@ -2816,7 +2816,7 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
       
       {/* Requests list */}
       {sortedRequests.length === 0 ? (
-        <div className="p-4 text-center rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
+        <div className="text-center py-3">
           <p className="text-xs" style={{ color: THEME.text.muted }}>
             {filter === 'pending' ? 'No pending requests' : 'No requests found'}
           </p>
