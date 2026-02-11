@@ -7793,9 +7793,42 @@ export default function App() {
                 <span className="text-xs font-medium" style={{ color: THEME.status.success }}>Schedule is LIVE — visible to staff</span>
               </div>
             ) : (
-              <div className="px-3 py-1.5 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.status.warning + '15', border: `1px solid ${THEME.status.warning}30` }}>
-                <Edit3 size={12} style={{ color: THEME.status.warning }} />
-                <span className="text-xs font-medium" style={{ color: THEME.status.warning }}>Edit Mode — tap cells to edit shifts</span>
+              <div className="px-3 py-1.5 rounded-lg flex items-center gap-2 flex-wrap" style={{ backgroundColor: THEME.status.warning + '15', border: `1px solid ${THEME.status.warning}30` }}>
+                <Edit3 size={12} style={{ color: THEME.status.warning, flexShrink: 0 }} />
+                <span className="text-xs font-medium" style={{ color: THEME.status.warning }}>Edit Mode</span>
+                {fullTimeEmployees.length > 0 && (
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <button
+                      onClick={() => {
+                        const hasExisting = fullTimeEmployees.some(e =>
+                          employeeHasShiftsInWeek(e, week1) || employeeHasShiftsInWeek(e, week2)
+                        );
+                        if (hasExisting) {
+                          setAutoPopulateConfirm({ type: 'populate-all' });
+                        } else {
+                          const w1Count = autoPopulateWeek(week1);
+                          const w2Count = autoPopulateWeek(week2);
+                          const total = w1Count + w2Count;
+                          if (total > 0) showToast('success', `Added ${total} shifts for full-time employees`);
+                          else showToast('warning', 'No shifts added — check availability');
+                        }
+                      }}
+                      className="px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1"
+                      style={{ backgroundColor: THEME.accent.blue, color: 'white' }}
+                    >
+                      <Zap size={9} />
+                      Auto-Fill
+                    </button>
+                    <button
+                      onClick={() => setAutoPopulateConfirm({ type: 'clear-all', week: activeWeek })}
+                      className="px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1"
+                      style={{ backgroundColor: THEME.status.error + '20', color: THEME.status.error }}
+                    >
+                      <Trash2 size={9} />
+                      Clear Wk {activeWeek}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -7992,10 +8025,56 @@ export default function App() {
           onComplete={() => { setPublished(true); setUnsaved(false); }} 
         />
         
+        {/* Auto-populate confirmation modal */}
+        {autoPopulateConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={() => setAutoPopulateConfirm(null)}>
+            <div className="max-w-xs w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary }} onClick={e => e.stopPropagation()}>
+              <div className="text-center p-4">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
+                  style={{ backgroundColor: autoPopulateConfirm.type.includes('clear') ? THEME.status.error + '20' : THEME.accent.blue + '20' }}>
+                  {autoPopulateConfirm.type.includes('clear')
+                    ? <Trash2 size={24} style={{ color: THEME.status.error }} />
+                    : <Zap size={24} style={{ color: THEME.accent.blue }} />
+                  }
+                </div>
+                <p className="text-sm font-medium mb-2" style={{ color: THEME.text.primary }}>
+                  {autoPopulateConfirm.type === 'populate-all' && 'Auto-Fill All Full-Time Employees?'}
+                  {autoPopulateConfirm.type === 'clear-all' && `Clear All Full-Time Shifts for Week ${autoPopulateConfirm.week}?`}
+                </p>
+                <p className="text-xs mb-4" style={{ color: THEME.text.secondary }}>
+                  {autoPopulateConfirm.type.includes('populate')
+                    ? 'Some shifts already exist and will be preserved. Only empty days will be filled based on availability.'
+                    : 'This will remove the selected shifts. You can undo by not saving changes.'
+                  }
+                </p>
+                <div className="flex justify-center gap-2">
+                  <button
+                    onClick={() => setAutoPopulateConfirm(null)}
+                    className="px-4 py-2 rounded-lg text-xs font-medium"
+                    style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}` }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAutoPopulateConfirm}
+                    className="px-4 py-2 rounded-lg text-xs font-medium"
+                    style={{
+                      backgroundColor: autoPopulateConfirm.type.includes('clear') ? THEME.status.error : THEME.accent.blue,
+                      color: 'white'
+                    }}
+                  >
+                    {autoPopulateConfirm.type.includes('clear') ? 'Clear Shifts' : 'Auto-Fill'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Toast */}
         {toast && (
           <div className="fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-xl flex items-center gap-2"
-            style={{ 
+            style={{
               backgroundColor: toast.type === 'success' ? THEME.status.success : toast.type === 'warning' ? THEME.status.warning : toast.type === 'saving' ? THEME.accent.blue : THEME.status.error,
               color: '#fff', minWidth: 200, textAlign: 'center', zIndex: 100001
             }}>
