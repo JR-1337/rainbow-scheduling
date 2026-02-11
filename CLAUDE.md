@@ -225,19 +225,13 @@ These are intentionally excluded from mobile admin:
 
 ## Current Status
 
-Phase 6 in progress (2026-02-07). Recent changes:
-- Git + GitHub CLI connected — Claude pushes directly to `main`, Vercel auto-deploys
-- Confirmed MobileEmployeeQuickView and email publish were already wired up on mobile
-- Announcement bell popup and accept/decline offers/swaps tested and working on mobile
-- Mobile header redesigned (both views): logo row → date picker centered (13px) → buttons right → status banner → tabs
-- Status banner moved above tabs (was below tabs, disconnected from schedule)
-- Tabs now color-coded per type: cyan (schedule weeks), purple (Mine), orange (Requests), blue (Comms) — with icons for non-schedule tabs
-- Name columns in both mobile grids stack first/last vertically (72px width, down from 90px)
-- Grid cell height increased 56→66px to prevent role name text clipping at top of shift cells
-- Tab spacing fixed — gap between tabs, subtle borders on inactive tabs, no more bleeding between Requests/Comms
-- Employee mobile drawer: unified "Requests History" replaces 5 separate panels (time off, offers sent/received, swaps sent/received) with filter pills (All/Time Off/Offers/Swaps) and date sort toggle
-- Real device testing done — header layout confirmed good, cell clipping and tab bleed fixed
-- Preparing for staff user testing (Sarvi's team)
+Phase 6 in progress (2026-02-10). Recent changes:
+- Admin rejection modals: shift swap and shift offer rejection now prompts admin for optional reason (matching existing time-off denial pattern), reason displayed on settled items
+- Sort toggles (newest/oldest) added to all 10 shift change history panels across admin and employee views
+- Uniform tab labels: "Needs Approval" renamed to "Pending" on offers and swaps admin panels (matches time-off panel)
+- Uniform empty states: all three admin request panels show "No pending requests" / "No requests found" consistently
+- Compact empty state styling: removed oversized icons and double padding from empty request cards
+- Staff user testing in progress (Sarvi's team)
 
 Phase 6 candidates:
 - Staff user testing feedback and fixes

@@ -1,7 +1,7 @@
 # Rainbow Scheduling App - Development Plan
 
 ## Current Status: Phase 6 (Polish & Infrastructure) 🔄 IN PROGRESS
-**Last Updated:** 2026-02-07
+**Last Updated:** 2026-02-10
 **Current Version:** Code.gs v2.10, App.jsx ~8500 lines + MobileEmployeeView.jsx ~450 lines + MobileAdminView.jsx ~430 lines
 **Chat:** RS-21-P6-UIPolish
 
@@ -189,7 +189,18 @@
 | 15 | Fix tab spacing/bleed | ✅ DONE | Added gap-1 between tabs, removed negative margin overlap, inactive tabs show subtle borders |
 | 16 | Reorder employee drawer | ✅ DONE | Panels grouped logically: action items → my requests → history (was interleaved) |
 | 17 | Unified Requests History | ✅ DONE | Replaced 5 separate panels with one sortable list — filter pills (All/Time Off/Offers/Swaps), date sort toggle, type badges, cancel buttons on pending items |
-| 18 | Staff user testing | ⬜ TODO | JR's GF to test with a few staff members — awaiting feedback |
+| 18 | Staff user testing | 🔄 IN PROGRESS | JR's GF to test with a few staff members — awaiting feedback |
+
+#### RS-23 Session (2026-02-10):
+
+| # | Feature | Status | Description |
+|---|---------|--------|-------------|
+| 19 | Admin rejection reason modal (swaps) | ✅ DONE | Reject button opens modal with optional reason textarea, passes adminNote to backend, displays on settled items |
+| 20 | Admin rejection reason modal (offers) | ✅ DONE | Same pattern as swaps — modal with reason field on reject |
+| 21 | Sort toggles on all history panels | ✅ DONE | Clock+chevron toggle (newest/oldest) added to all 10 shift change history panels across admin & employee views |
+| 22 | Uniform tab labels | ✅ DONE | "Needs Approval" → "Pending" on offers & swaps admin panels (matches time-off) |
+| 23 | Uniform empty state messages | ✅ DONE | All three admin panels: "No pending requests" / "No requests found" |
+| 24 | Compact empty state styling | ✅ DONE | Removed oversized icons and double padding from time-off & swaps empty states |
 
 #### Key Infrastructure Change:
 - **Old workflow:** JR manually uploads files to GitHub
@@ -289,3 +300,4 @@
 | RS-20-P5-MobileAdminView | 2026-02-06 | Mobile admin view: schedule editing, request review, announcements, three-state Save/GoLive/Edit |
 | RS-21-P6-UIPolish | 2026-02-07 | Git/GitHub setup, verified mobile features, header redesign, stacked names, tab colors |
 | RS-22-P6-PhoneTesting | 2026-02-07 | Real device testing, cell height fix, tab spacing fix, unified Requests History, staff user testing prep |
+| RS-23-P6-RequestPolish | 2026-02-10 | Admin rejection modals (offers+swaps), sort toggles on all history panels, uniform tab labels & empty states |
