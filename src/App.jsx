@@ -6898,9 +6898,12 @@ export default function App() {
     const weekDates = week === 1 ? week1 : week2;
     
     if (type === 'populate-all') {
-      const w1Count = autoPopulateWeek(week1);
-      const w2Count = autoPopulateWeek(week2);
-      const total = w1Count + w2Count;
+      let total;
+      if (week) {
+        total = autoPopulateWeek(weekDates);
+      } else {
+        total = autoPopulateWeek(week1) + autoPopulateWeek(week2);
+      }
       if (total > 0) showToast('success', `Added ${total} shifts for full-time employees`);
       else showToast('warning', 'No shifts added — check that full-time employees have availability set');
     } else if (type === 'populate-week' && employee) {
@@ -7794,16 +7797,13 @@ export default function App() {
                   <div className="flex items-center gap-1.5 ml-auto">
                     <button
                       onClick={() => {
-                        const hasExisting = fullTimeEmployees.some(e =>
-                          employeeHasShiftsInWeek(e, week1) || employeeHasShiftsInWeek(e, week2)
-                        );
+                        const weekDates = activeWeek === 1 ? week1 : week2;
+                        const hasExisting = fullTimeEmployees.some(e => employeeHasShiftsInWeek(e, weekDates));
                         if (hasExisting) {
-                          setAutoPopulateConfirm({ type: 'populate-all' });
+                          setAutoPopulateConfirm({ type: 'populate-all', week: activeWeek });
                         } else {
-                          const w1Count = autoPopulateWeek(week1);
-                          const w2Count = autoPopulateWeek(week2);
-                          const total = w1Count + w2Count;
-                          if (total > 0) showToast('success', `Added ${total} shifts for full-time employees`);
+                          const count = autoPopulateWeek(weekDates);
+                          if (count > 0) showToast('success', `Added ${count} shifts for full-time employees`);
                           else showToast('warning', 'No shifts added — check availability');
                         }
                       }}
@@ -7811,7 +7811,7 @@ export default function App() {
                       style={{ backgroundColor: THEME.accent.blue, color: 'white' }}
                     >
                       <Zap size={9} />
-                      Auto-Fill
+                      Fill Wk {activeWeek}
                     </button>
                     <button
                       onClick={() => setAutoPopulateConfirm({ type: 'clear-all', week: activeWeek })}
@@ -8032,7 +8032,7 @@ export default function App() {
                   }
                 </div>
                 <p className="text-sm font-medium mb-2" style={{ color: THEME.text.primary }}>
-                  {autoPopulateConfirm.type === 'populate-all' && 'Auto-Fill All Full-Time Employees?'}
+                  {autoPopulateConfirm.type === 'populate-all' && (autoPopulateConfirm.week ? `Auto-Fill Full-Time for Week ${autoPopulateConfirm.week}?` : 'Auto-Fill All Full-Time Employees?')}
                   {autoPopulateConfirm.type === 'clear-all' && `Clear All Full-Time Shifts for Week ${autoPopulateConfirm.week}?`}
                 </p>
                 <p className="text-xs mb-4" style={{ color: THEME.text.secondary }}>
