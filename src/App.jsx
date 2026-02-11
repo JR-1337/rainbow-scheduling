@@ -8251,17 +8251,13 @@ export default function App() {
                   {/* Auto-fill buttons */}
                   <button
                     onClick={() => {
-                      // Check if any FT employees have shifts in Week 1 or Week 2
-                      const hasExisting = fullTimeEmployees.some(e => 
-                        employeeHasShiftsInWeek(e, week1) || employeeHasShiftsInWeek(e, week2)
-                      );
+                      const weekDates = activeWeek === 1 ? week1 : week2;
+                      const hasExisting = fullTimeEmployees.some(e => employeeHasShiftsInWeek(e, weekDates));
                       if (hasExisting) {
-                        setAutoPopulateConfirm({ type: 'populate-all' });
+                        setAutoPopulateConfirm({ type: 'populate-all', week: activeWeek });
                       } else {
-                        const w1Count = autoPopulateWeek(week1);
-                        const w2Count = autoPopulateWeek(week2);
-                        const total = w1Count + w2Count;
-                        if (total > 0) showToast('success', `Added ${total} shifts for full-time employees`);
+                        const count = autoPopulateWeek(weekDates);
+                        if (count > 0) showToast('success', `Added ${count} shifts for full-time employees`);
                         else showToast('warning', 'No shifts added — check that full-time employees have availability set');
                       }
                     }}
@@ -8269,7 +8265,7 @@ export default function App() {
                     style={{ backgroundColor: THEME.accent.blue, color: 'white' }}
                   >
                     <Zap size={10} />
-                    Auto-Fill All FT
+                    Auto-Fill All FT Week {activeWeek}
                   </button>
                   
                   {/* Per-employee dropdown */}
@@ -8647,7 +8643,7 @@ export default function App() {
             </div>
             
             <p className="text-sm font-medium mb-2" style={{ color: THEME.text.primary }}>
-              {autoPopulateConfirm.type === 'populate-all' && 'Auto-Fill All Full-Time Employees?'}
+              {autoPopulateConfirm.type === 'populate-all' && `Auto-Fill All Full-Time for Week ${autoPopulateConfirm.week}?`}
               {autoPopulateConfirm.type === 'populate-week' && `Auto-Fill Week ${autoPopulateConfirm.week} for ${autoPopulateConfirm.employee?.name}?`}
               {autoPopulateConfirm.type === 'clear-week' && `Clear Week ${autoPopulateConfirm.week} for ${autoPopulateConfirm.employee?.name}?`}
               {autoPopulateConfirm.type === 'clear-all' && `Clear All Full-Time Shifts for Week ${autoPopulateConfirm.week}?`}
