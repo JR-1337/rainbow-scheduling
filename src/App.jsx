@@ -5243,11 +5243,17 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
             {/* Shift Changes button */}
             <button
               onClick={() => setRequestModalOpen(true)}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg flex items-center gap-1.5 hover:opacity-90"
+              className="px-3 py-1.5 text-xs font-medium rounded-lg flex items-center gap-1.5 hover:opacity-90 relative"
               style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: 'white' }}
             >
               <Calendar size={12} />
               Shift Changes
+              {(unseenTimeOffIds.length + unseenOfferIds.length + unseenReceivedOfferIds.length + unseenSwapIds.length + unseenReceivedSwapIds.length) > 0 && (
+                <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: THEME.status.error, fontSize: '9px', color: 'white', fontWeight: 700 }}>
+                  {(unseenTimeOffIds.length + unseenOfferIds.length + unseenReceivedOfferIds.length + unseenSwapIds.length + unseenReceivedSwapIds.length) > 9 ? '9+' : (unseenTimeOffIds.length + unseenOfferIds.length + unseenReceivedOfferIds.length + unseenSwapIds.length + unseenReceivedSwapIds.length)}
+                </div>
+              )}
             </button>
             <div className="text-right">
               <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>{currentUser.name}</p>
@@ -7958,6 +7964,7 @@ export default function App() {
           currentUser={currentUser}
           onLogout={() => setCurrentUser(null)}
           onOpenChangePassword={() => setMobileAdminChangePasswordOpen(true)}
+          onOpenSettings={() => setSettingsOpen(true)}
           onOpenOwnRequests={() => setAdminRequestModalOpen(true)}
           pendingRequestCount={pendingRequestCount}
         />
@@ -7981,7 +7988,10 @@ export default function App() {
           onClose={() => setMobileAdminChangePasswordOpen(false)}
           currentUser={currentUser}
         />
-        
+
+        {/* Admin Settings Modal */}
+        <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />
+
         {/* Employee Quick View - tap name to see contact info */}
         <MobileEmployeeQuickView
           isOpen={!!quickViewEmployee}

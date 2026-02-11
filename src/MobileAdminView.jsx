@@ -70,6 +70,17 @@ export const MobileAdminDrawer = ({
             <Calendar size={16} />
             My Shift Changes
           </button>
+          {/* Admin Settings */}
+          {onOpenSettings && (
+            <button
+              onClick={() => { onOpenSettings(); onClose(); }}
+              className="w-full px-4 py-2.5 text-sm font-medium rounded-lg flex items-center gap-3"
+              style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}` }}
+            >
+              <Settings size={16} />
+              Admin Settings
+            </button>
+          )}
         </div>
         
         {/* Info */}
@@ -77,7 +88,7 @@ export const MobileAdminDrawer = ({
           <div className="p-3 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
             <p className="text-xs font-semibold mb-1.5" style={{ color: THEME.text.muted }}>MOBILE VIEW</p>
             <p className="text-xs" style={{ color: THEME.text.secondary, lineHeight: 1.5 }}>
-              Schedule editing, employee management, and settings are available on desktop.
+              Employee management and PDF export are available on desktop.
             </p>
           </div>
         </div>
