@@ -13,7 +13,7 @@ export const THEME = {
   bg: { primary: '#0D0D1A', secondary: '#13132B', tertiary: '#1A1A3E', elevated: '#242452', hover: '#2D2D6B' },
   tooltip: { bg: '#050508', border: '#1a1a2e' },
   accent: { blue: '#4F46E5', purple: '#7C3AED', cyan: '#06B6D4', pink: '#EC4899' },
-  text: { primary: '#F8FAFC', secondary: '#94A3B8', muted: '#64748B' },
+  text: { primary: '#F8FAFC', secondary: '#CBD5E1', muted: '#94A3B8' },
   roles: { cashier: '#8B5CF6', backupCashier: '#A78BFA', mens: '#3B82F6', womens: '#F472B6', floorMonitor: '#F59E0B', none: '#475569' },
   border: { subtle: 'rgba(148, 163, 184, 0.1)', default: 'rgba(148, 163, 184, 0.2)', bright: 'rgba(79, 70, 229, 0.5)' },
   status: { success: '#10B981', warning: '#F59E0B', error: '#EF4444' },
@@ -337,7 +337,7 @@ const getAvailabilityShading = (avail, storeHours) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PDF GENERATION - Dark theme matching app
+// PDF GENERATION - Printer-friendly light theme
 // ═══════════════════════════════════════════════════════════════════════════════
 const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null) => {
   const week1 = dates.slice(0, 7);
@@ -362,31 +362,31 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
   
   // Announcement HTML (goes at top after header)
   const announcementHtml = (announcement && announcement.message) ? `
-    <div style="margin:15px 0;padding:15px;background:linear-gradient(135deg, #1e1e3f 0%, #1a1a2e 100%);border-radius:8px;border-left:4px solid #3b82f6;">
-      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:#3b82f6;font-size:13px;font-weight:700;letter-spacing:0.5px;">📢 ${announcement.subject}</h3>` : '<h3 style="margin:0 0 10px;color:#3b82f6;font-size:13px;font-weight:700;">📢 Announcement</h3>'}
-      <div style="color:#e2e8f0;font-size:11px;line-height:1.6;white-space:pre-wrap;">${announcement.message}</div>
+    <div style="margin:15px 0;padding:15px;background:#eff6ff;border-radius:8px;border-left:4px solid #3b82f6;">
+      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:#1d4ed8;font-size:13px;font-weight:700;letter-spacing:0.5px;">📢 ${announcement.subject}</h3>` : '<h3 style="margin:0 0 10px;color:#1d4ed8;font-size:13px;font-weight:700;">📢 Announcement</h3>'}
+      <div style="color:#1e3a5f;font-size:11px;line-height:1.6;white-space:pre-wrap;">${announcement.message}</div>
     </div>
   ` : '';
   
   const makeWeekTable = (weekDates, weekNum) => {
     const headers = weekDates.map(d => {
       const hol = isStatHoliday(d);
-      return `<th style="padding:8px 4px;border:1px solid #2d2d6b;background:${hol ? '#78350f' : '#1a1a2e'};font-size:11px;text-align:center;width:11%;">
-        <div style="font-weight:600;color:${hol ? '#fbbf24' : '#e2e8f0'};text-transform:uppercase;font-size:9px;">${getDayNameShort(d)}</div>
-        <div style="font-size:16px;font-weight:700;color:#fff;">${d.getDate()}</div>
+      return `<th style="padding:8px 4px;border:1px solid #cbd5e1;background:${hol ? '#fef3c7' : '#f1f5f9'};font-size:11px;text-align:center;width:11%;">
+        <div style="font-weight:600;color:${hol ? '#92400e' : '#334155'};text-transform:uppercase;font-size:9px;">${getDayNameShort(d)}</div>
+        <div style="font-size:16px;font-weight:700;color:#0f172a;">${d.getDate()}</div>
       </th>`;
     }).join('');
     
     const rows = schedulable.map(emp => {
       const cells = weekDates.map(date => {
         const shift = shifts[`${emp.id}-${date.toISOString().split('T')[0]}`];
-        if (!shift) return '<td style="padding:6px;border:1px solid #2d2d6b;background:#0f0f1a;"></td>';
+        if (!shift) return '<td style="padding:6px;border:1px solid #cbd5e1;background:#f8fafc;"></td>';
         const role = ROLES.find(r => r.id === shift.role);
-        return `<td style="padding:6px;border:1px solid #2d2d6b;background:${role?.color}20;text-align:center;">
+        return `<td style="padding:6px;border:1px solid #cbd5e1;background:${role?.color}15;text-align:center;">
           <div style="font-size:10px;font-weight:700;color:${role?.color};margin-bottom:2px;">${role?.name}</div>
-          <div style="font-size:9px;color:#94a3b8;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
+          <div style="font-size:9px;color:#475569;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
           <div style="font-size:8px;color:#64748b;">${shift.hours}h</div>
-          ${shift.task ? '<div style="font-size:8px;color:#fbbf24;margin-top:2px;">★</div>' : ''}
+          ${shift.task ? '<div style="font-size:8px;color:#d97706;margin-top:2px;">★</div>' : ''}
         </td>`;
       }).join('');
       
@@ -394,8 +394,8 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
       const hoursColor = hours >= 40 ? '#ef4444' : hours >= 35 ? '#fbbf24' : '#22d3ee';
       
       return `<tr>
-        <td style="padding:8px;border:1px solid #2d2d6b;background:#1a1a2e;">
-          <div style="font-weight:600;font-size:11px;color:#fff;">${emp.name}</div>
+        <td style="padding:8px;border:1px solid #cbd5e1;background:#f1f5f9;">
+          <div style="font-weight:600;font-size:11px;color:#0f172a;">${emp.name}</div>
           <div style="font-size:10px;color:${hoursColor};font-weight:600;">${hours.toFixed(1)}h</div>
         </td>
         ${cells}
@@ -409,25 +409,25 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
           <p style="margin:2px 0 0;color:rgba(255,255,255,0.8);font-size:11px;">${formatDate(weekDates[0])} — ${formatDate(weekDates[6])}</p>
         </div>
         <table style="width:100%;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
-          <thead><tr><th style="padding:8px;border:1px solid #2d2d6b;background:#1a1a2e;width:15%;font-size:10px;text-align:left;color:#94a3b8;text-transform:uppercase;">Employee</th>${headers}</tr></thead>
+          <thead><tr><th style="padding:8px;border:1px solid #cbd5e1;background:#f1f5f9;width:15%;font-size:10px;text-align:left;color:#475569;text-transform:uppercase;">Employee</th>${headers}</tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
     `;
   };
   
-  const legendItems = ROLES.filter(r => r.id !== 'none').map(r => 
+  const legendItems = ROLES.filter(r => r.id !== 'none').map(r =>
     `<span style="margin-right:15px;font-size:10px;display:inline-flex;align-items:center;gap:5px;">
       <span style="display:inline-block;width:12px;height:12px;background:${r.color};border-radius:3px;"></span>
-      <span style="color:#e2e8f0;">${r.fullName}</span>
+      <span style="color:#334155;">${r.fullName}</span>
     </span>`
   ).join('');
   
   // Admin contacts HTML
   const adminContactsHtml = adminContacts.length > 0 ? `
-    <div style="margin-top:12px;padding:10px 15px;background:#1a1a2e;border-radius:8px;border:1px solid #2d2d6b;">
+    <div style="margin-top:12px;padding:10px 15px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
       <div style="font-weight:600;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Contact Admin</div>
-      ${adminContacts.map(a => `<span style="margin-right:20px;font-size:11px;color:#e2e8f0;">${a.name}: <span style="color:#22d3ee;">${a.email}</span></span>`).join('')}
+      ${adminContacts.map(a => `<span style="margin-right:20px;font-size:11px;color:#334155;">${a.name}: <span style="color:#0369a1;">${a.email}</span></span>`).join('')}
     </div>
   ` : '';
 
@@ -437,30 +437,30 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
   <title>Rainbow Schedule - Week ${weekNum1} & ${weekNum2}</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    @media print { 
+    @media print {
       body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       @page { margin: 0.3in; size: landscape; }
     }
-    body { font-family: 'Inter', Arial, sans-serif; padding: 20px; margin: 0 auto; max-width: 1100px; background: #0a0a12; }
+    body { font-family: 'Inter', Arial, sans-serif; padding: 20px; margin: 0 auto; max-width: 1100px; background: #ffffff; }
   </style>
 </head>
-<body style="background:#0a0a12;">
+<body style="background:#ffffff;">
   <div style="text-align:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid #3b82f6;">
     <div style="font-family:'Josefin Sans',sans-serif;margin-bottom:5px;">
-      <span style="color:#94a3b8;font-size:10px;letter-spacing:3px;">OVER THE</span><br>
-      <span style="color:#fff;font-size:24px;letter-spacing:4px;font-weight:600;">RAINBOW</span>
+      <span style="color:#64748b;font-size:10px;letter-spacing:3px;">OVER THE</span><br>
+      <span style="color:#0f172a;font-size:24px;letter-spacing:4px;font-weight:600;">RAINBOW</span>
     </div>
     <p style="margin:8px 0 0;font-size:12px;"><span style="background:linear-gradient(135deg, #3b82f6, #8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:600;">Staff Schedule</span></p>
-    <p style="margin:5px 0 0;color:#64748b;font-size:11px;">Week ${weekNum1} & ${weekNum2} • ${formatMonthWord(periodInfo.startDate)} ${periodInfo.startDate.getDate()} — ${formatMonthWord(periodInfo.endDate)} ${periodInfo.endDate.getDate()}, ${periodInfo.startDate.getFullYear()}</p>
+    <p style="margin:5px 0 0;color:#475569;font-size:11px;">Week ${weekNum1} & ${weekNum2} • ${formatMonthWord(periodInfo.startDate)} ${periodInfo.startDate.getDate()} — ${formatMonthWord(periodInfo.endDate)} ${periodInfo.endDate.getDate()}, ${periodInfo.startDate.getFullYear()}</p>
   </div>
   
   ${announcementHtml}
   ${makeWeekTable(week1, weekNum1)}
   ${makeWeekTable(week2, weekNum2)}
   
-  <div style="margin-top:20px;padding:12px 15px;background:#1a1a2e;border-radius:8px;border:1px solid #2d2d6b;">
+  <div style="margin-top:20px;padding:12px 15px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
     <div style="margin-bottom:6px;font-weight:600;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Legend</div>
-    <div>${legendItems}<span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;"><span style="color:#fbbf24;">★</span><span style="color:#e2e8f0;">Has Task</span></span></div>
+    <div>${legendItems}<span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;"><span style="color:#d97706;">★</span><span style="color:#334155;">Has Task</span></span></div>
   </div>
   ${adminContactsHtml}
 </body>
@@ -749,13 +749,15 @@ const InactiveEmployeesPanel = ({ isOpen, onClose, employees, onReactivate, onDe
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPLOYEE FORM - Very Compact
 // ═══════════════════════════════════════════════════════════════════════════════
-const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null, currentUser = null, showToast }) => {
+const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null, currentUser = null, showToast, suggestedPassword = '' }) => {
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   const defaultAvail = days.reduce((a, d) => ({ ...a, [d]: { available: true, start: STORE_HOURS[d].open, end: STORE_HOURS[d].close } }), {});
   const [formData, setFormData] = useState(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', availability: defaultAvail });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [password, setPassword] = useState(suggestedPassword);
+  const [errors, setErrors] = useState({});
 
-  useEffect(() => { setFormData(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', availability: defaultAvail }); setShowDeleteConfirm(false); }, [employee, isOpen]);
+  useEffect(() => { setFormData(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', availability: defaultAvail }); setShowDeleteConfirm(false); setPassword(suggestedPassword); setErrors({}); }, [employee, isOpen]);
 
   // Admin protection checks
   const isEditingSelf = employee && currentUser && employee.email === currentUser.email;
@@ -773,10 +775,16 @@ const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null,
   const canDelete = !isEditingSelf && !isEditingOwner;
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSubmit = async () => { 
-    if (!formData.name || !formData.email) return; 
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.email) return;
+    if (!formData.email.includes('@')) {
+      setErrors({ email: 'Email must include an @ symbol' });
+      return;
+    }
     setIsSaving(true);
-    const success = await onSave({ ...formData, id: formData.id || `emp-${Date.now()}` }); 
+    const saveData = { ...formData, id: formData.id || `emp-${Date.now()}` };
+    if (!employee && password) saveData.password = password;
+    const success = await onSave(saveData);
     setIsSaving(false);
     if (success !== false) onClose(); // Only close if save didn't return false
   };
@@ -809,11 +817,20 @@ const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null,
         <>
           <div className="grid grid-cols-2 gap-2">
             <Input label="Name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
-            <Input label="Email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
+            <div>
+              <Input label="Email" type="email" value={formData.email} onChange={e => { setFormData({ ...formData, email: e.target.value }); setErrors({}); }} required />
+              {errors.email && <p className="text-xs mt-0.5" style={{ color: THEME.status.error }}>{errors.email}</p>}
+            </div>
             <Input label="Phone" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
             <Input label="DOB" type="date" value={formData.dob} onChange={e => setFormData({ ...formData, dob: e.target.value })} />
           </div>
           <Input label="Address" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
+          {!employee && (
+            <div>
+              <Input label="Initial Password" value={password} onChange={e => setPassword(e.target.value)} />
+              <p className="text-xs mt-0.5" style={{ color: THEME.text.muted }}>Suggested format. Employee can change this after first login.</p>
+            </div>
+          )}
           
           {employee && (
             <>
@@ -895,7 +912,7 @@ const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null,
                         targetEmail: formData.email
                       });
                       if (result.success) {
-                        if (showToast) showToast('success', `Password reset for ${formData.name}. They'll be prompted to set a new one on next login.`);
+                        if (showToast) showToast('success', `Password for ${formData.name} reset to emp-XXX format. They'll be prompted to set a new one on next login.`);
                       } else {
                         if (showToast) showToast('error', result.error?.message || 'Failed to reset password');
                       }
@@ -6956,7 +6973,8 @@ export default function App() {
     // Stringify availability for storage
     const employeeForApi = {
       ...e,
-      availability: typeof e.availability === 'object' ? JSON.stringify(e.availability) : e.availability
+      availability: typeof e.availability === 'object' ? JSON.stringify(e.availability) : e.availability,
+      ...(e.password ? { password: e.password } : {})
     };
     
     // Call API to persist
@@ -8605,7 +8623,7 @@ export default function App() {
         </div>
       </main>
       
-      <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} />
+      <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} suggestedPassword={editingEmp ? undefined : `emp-${String(employees.length + 1).padStart(3, '0')}`} />
       {editingShift && <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} employee={editingShift.employee} date={editingShift.date} existingShift={editingShift.shift} totalPeriodHours={getEmpHours(editingShift.employee.id)} />}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <InactiveEmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
