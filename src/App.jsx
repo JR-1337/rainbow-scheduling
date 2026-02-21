@@ -1464,12 +1464,12 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
           </div>
           <p className="text-sm mt-2" style={{ color: THEME.accent.purple }}>Staff Scheduling</p>
         </div>
-        
+
         <div className="mb-4">
           <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.primary }}>Email</label>
-          <input 
-            type="email" 
-            value={email} 
+          <input
+            type="email"
+            value={email}
             onChange={e => setEmail(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && document.getElementById('password-input')?.focus()}
             placeholder="your.email@example.com"
@@ -1478,13 +1478,13 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
             style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
           />
         </div>
-        
+
         <div className="mb-4">
           <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.primary }}>Password</label>
-          <input 
+          <input
             id="password-input"
-            type="password" 
-            value={password} 
+            type="password"
+            value={password}
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
             placeholder="••••••••"
@@ -1494,17 +1494,17 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
           />
           <p className="text-xs mt-1" style={{ color: THEME.text.muted }}>First time? Use your employee ID as password</p>
         </div>
-        
+
         {error && <p className="text-xs mb-3" style={{ color: THEME.status.error }}>{error}</p>}
-        
-        <button 
+
+        <button
           onClick={handleLogin}
           disabled={loading}
           className="w-full py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2"
-          style={{ 
-            background: loading ? THEME.bg.tertiary : `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, 
+          style={{
+            background: loading ? THEME.bg.tertiary : `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
             color: '#fff',
-            opacity: loading ? 0.7 : 1 
+            opacity: loading ? 0.7 : 1
           }}>
           {loading ? <><Loader size={16} className="animate-spin" /> Signing in...</> : 'Sign In'}
         </button>
