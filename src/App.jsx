@@ -453,9 +453,9 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
   <div style="text-align:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid #3b82f6;">
     <div style="font-family:'Josefin Sans',sans-serif;margin-bottom:5px;">
       <span style="color:#64748b;font-size:10px;letter-spacing:3px;">OVER THE</span><br>
-      <span style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:24px;letter-spacing:4px;font-weight:600;">RAINBOW</span>
+      <span style="color:#7c3aed;font-size:24px;letter-spacing:4px;font-weight:600;">RAINBOW</span>
     </div>
-    <p style="margin:8px 0 0;font-size:12px;"><span style="background:linear-gradient(135deg, #3b82f6, #8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:600;">Staff Schedule</span></p>
+    <p style="margin:8px 0 0;font-size:12px;"><span style="color:#7c3aed;font-weight:600;">Staff Schedule</span></p>
     <p style="margin:5px 0 0;color:#475569;font-size:11px;">Week ${weekNum1} & ${weekNum2} • ${formatMonthWord(periodInfo.startDate)} ${periodInfo.startDate.getDate()} — ${formatMonthWord(periodInfo.endDate)} ${periodInfo.endDate.getDate()}, ${periodInfo.startDate.getFullYear()}</p>
   </div>
   
@@ -767,7 +767,7 @@ const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null,
 
   // Admin protection checks
   const isEditingSelf = employee && currentUser && employee.email === currentUser.email;
-  const isEditingOwner = employee?.isOwner;
+  const isEditingOwner = employee?.isOwner === true;
   const currentUserIsOwner = currentUser?.isOwner;
   
   // Can only toggle admin status if:
@@ -1439,10 +1439,7 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
   
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@300;400;600&display=swap');
-        #login-email::placeholder, #login-password::placeholder { color: #64748B; opacity: 1; }
-      `}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@300;400;600&display=swap');`}</style>
       <div className="w-full max-w-sm p-6 rounded-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
         <div className="text-center mb-6">
           <div style={{ fontFamily: "'Josefin Sans', sans-serif" }}>
@@ -1453,7 +1450,7 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
         </div>
 
         <div className="mb-4">
-          <label className="block text-xs font-medium mb-1" style={{ color: '#FFFFFF' }}>Email</label>
+          <label className="login-label block text-xs font-medium mb-1">Email</label>
           <input
             id="login-email"
             type="email"
@@ -1468,7 +1465,7 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
         </div>
 
         <div className="mb-4">
-          <label className="block text-xs font-medium mb-1" style={{ color: '#FFFFFF' }}>Password</label>
+          <label className="login-label block text-xs font-medium mb-1">Password</label>
           <input
             id="login-password"
             type="password"
@@ -1480,7 +1477,7 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
             className="w-full px-3 py-2 rounded-lg outline-none text-sm"
             style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: '#FFFFFF' }}
           />
-          <p className="text-xs mt-1" style={{ color: THEME.text.secondary }}>First time? Use your employee ID as password</p>
+          <p className="login-hint text-xs mt-1">First time? Use your employee ID as password</p>
         </div>
 
         {error && <p className="text-xs mb-3" style={{ color: THEME.status.error }}>{error}</p>}

@@ -12,6 +12,21 @@ body {
   min-height: 100vh;
 }
 
+/* Login form — guaranteed to be in the compiled bundle */
+#login-email::placeholder,
+#login-password::placeholder {
+  color: #64748B !important;
+  opacity: 1 !important;
+}
+
+.login-label {
+  color: #CBD5E1 !important;
+}
+
+.login-hint {
+  color: #94A3B8 !important;
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
