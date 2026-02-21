@@ -1457,44 +1457,48 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
   
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@300;400;600&display=swap');`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@300;400;600&display=swap');
+        #login-email::placeholder, #login-password::placeholder { color: #64748B; opacity: 1; }
+      `}</style>
       <div className="w-full max-w-sm p-6 rounded-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
         <div className="text-center mb-6">
           <div style={{ fontFamily: "'Josefin Sans', sans-serif" }}>
             <p className="text-xs tracking-widest" style={{ color: THEME.text.muted }}>OVER THE</p>
-            <h1 className="text-2xl font-semibold tracking-wider" style={{ color: THEME.text.primary }}>RAINBOW</h1>
+            <h1 className="text-2xl font-semibold tracking-wider" style={{ color: '#FFFFFF' }}>RAINBOW</h1>
           </div>
           <p className="text-sm mt-2" style={{ color: THEME.accent.purple }}>Staff Scheduling</p>
         </div>
 
         <div className="mb-4">
-          <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.primary }}>Email</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: '#FFFFFF' }}>Email</label>
           <input
+            id="login-email"
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && document.getElementById('password-input')?.focus()}
+            onKeyDown={e => e.key === 'Enter' && document.getElementById('login-password')?.focus()}
             placeholder="your.email@example.com"
             disabled={loading}
-            className="w-full px-3 py-2 rounded-lg outline-none text-sm placeholder:text-slate-500"
-            style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
+            className="w-full px-3 py-2 rounded-lg outline-none text-sm"
+            style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: '#FFFFFF' }}
           />
         </div>
 
         <div className="mb-4">
-          <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.primary }}>Password</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: '#FFFFFF' }}>Password</label>
           <input
-            id="password-input"
+            id="login-password"
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
             placeholder="••••••••"
             disabled={loading}
-            className="w-full px-3 py-2 rounded-lg outline-none text-sm placeholder:text-slate-500"
-            style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
+            className="w-full px-3 py-2 rounded-lg outline-none text-sm"
+            style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: '#FFFFFF' }}
           />
-          <p className="text-xs mt-1" style={{ color: THEME.text.muted }}>First time? Use your employee ID as password</p>
+          <p className="text-xs mt-1" style={{ color: THEME.text.secondary }}>First time? Use your employee ID as password</p>
         </div>
 
         {error && <p className="text-xs mb-3" style={{ color: THEME.status.error }}>{error}</p>}
