@@ -6073,11 +6073,6 @@ const ChangePasswordModal = ({ isOpen, onClose, currentUser, isFirstLogin = fals
               <p className="text-xs" style={{ color: THEME.accent.blue }}>
                 Welcome! Please set a personal password before continuing.
               </p>
-              {defaultPassword && (
-                <p className="text-xs mt-1.5 font-mono font-semibold" style={{ color: THEME.accent.blue }}>
-                  Temporary password: {defaultPassword}
-                </p>
-              )}
             </div>
           )}
           
