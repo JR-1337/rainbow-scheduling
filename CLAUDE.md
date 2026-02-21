@@ -191,6 +191,8 @@ All three request types follow a similar pattern:
 ### Frontend (Vercel)
 Push to GitHub triggers auto-deploy. No build configuration files in repo — Vercel handles build.
 
+**If auto-deploy breaks:** The Vercel GitHub App can lose access to repos (shows "no active branches" in Vercel dashboard). Fix: GitHub.com → Settings → Applications → Installed GitHub Apps → Vercel → Configure → ensure repo is not hidden. Then reconnect in Vercel project Settings → Git. Manual fallback: `vercel link --scope johnrichmonds-projects-7f62ccc5 --project rainbow-scheduling --yes` then `vercel --prod --yes` from project root.
+
 ### Backend (Google Apps Script)
 1. Update `Code.gs` in the Apps Script editor
 2. Deploy > Manage deployments > Edit active deployment
@@ -208,6 +210,7 @@ Push to GitHub triggers auto-deploy. No build configuration files in repo — Ve
 These caused real production bugs — do not reintroduce:
 
 1. **Password type coercion:** Google Sheets stores `"emp-1"` as a string but `"12345"` as a number. All password comparisons in Code.gs MUST use `String()` on both sides.
+2. **Boolean columns from Sheets are strings:** `isOwner`, `isAdmin`, `active`, `deleted` etc. are stored as `"TRUE"`/`"FALSE"` strings in Sheets. ALWAYS compare with `=== true` or `=== false`, never use truthy/falsy checks. Example: `employee?.isOwner === true` not `employee?.isOwner`.
 2. **Date objects from Sheets:** `getSheetData()` normalizes Date objects — times (1899 epoch) to `HH:mm`, dates to `YYYY-MM-DD`. Without this, frontend date matching silently fails.
 3. **GET URL length limit:** Batch saving 80+ shifts exceeds ~8KB URL limit. The chunked save system splits into groups of 15. Don't bypass this.
 4. **Time helper null safety:** `formatTimeDisplay`, `parseTime`, `formatTimeShort` must handle undefined/null — shifts can have empty times during creation.

@@ -1,9 +1,9 @@
 # Rainbow Scheduling App - Development Plan
 
 ## Current Status: Phase 6 (Polish & Infrastructure) 🔄 IN PROGRESS
-**Last Updated:** 2026-02-20
+**Last Updated:** 2026-02-21
 **Current Version:** Code.gs v2.12, App.jsx ~8,600 lines + MobileEmployeeView.jsx ~440 lines + MobileAdminView.jsx ~430 lines
-**Chat:** RS-24-P6-PDFPasswordPolish
+**Chat:** RS-25-P6-DeployFix
 
 ---
 
@@ -190,6 +190,17 @@
 | 17 | Unified Requests History | ✅ DONE | Replaced 5 separate panels with one sortable list — filter pills (All/Time Off/Offers/Swaps), date sort toggle, type badges, cancel buttons on pending items |
 | 18 | Staff user testing | 🔄 IN PROGRESS | JR's GF to test with a few staff members — awaiting feedback |
 
+#### RS-25 Session (2026-02-21):
+
+| # | Feature | Status | Description |
+|---|---------|--------|-------------|
+| 43 | Login label/placeholder contrast | ✅ DONE | `.login-label` (#CBD5E1), placeholder #64748B, `.login-hint` #94A3B8 — in index.css with !important (Tailwind JIT unreliable for pseudo-elements in component style tags) |
+| 44 | Employee edit pencil always visible | ✅ DONE | Removed `showEdit` hover-gate from EmployeeRow; pencil renders unconditionally |
+| 45 | PDF logo solid color | ✅ DONE | Replaced gradient+transparent text (invisible in print) with solid `#7c3aed` |
+| 46 | Admin password visibility fix | ✅ DONE | `isEditingOwner === true` strict check (Sheets stores false as string "FALSE" — truthy bug hid passwords for all employees); two-row plaintext layout |
+| 47 | Lighter dark theme | ✅ DONE | Shifted all `THEME.bg` tokens ~8 lightness points: primary `#0D0D1A→#1A1A2E`, secondary `#13132B→#22223A`, tertiary `#1A1A3E→#2C2C50`, elevated `#242452→#383868`, hover `#2D2D6B→#444480` |
+| 48 | Vercel auto-deploy restored | ✅ DONE | GitHub App repo access was hidden (all projects broke); unhid repo in GitHub App settings, reconnected; `vercel link` + `vercel --prod --yes` as CLI fallback |
+
 #### RS-24 Session (2026-02-20):
 
 | # | Feature | Status | Description |
@@ -234,6 +245,7 @@
 
 ## Future Items / Phase 6+ Candidates
 
+- [x] **PDF logo invisible in print view** — Fixed RS-25: replaced gradient+transparent with solid `#7c3aed`
 - [ ] **Email upgrade** — backend-sent schedule publish email with PDF auto-attached via Code.gs MailApp (blocked: JR needs to provide new sender email address first)
 - [ ] Staff user testing feedback and fixes
 - [ ] Shared utils refactor (extract THEME, ROLES, helpers, BaseComponents into separate files)
@@ -280,6 +292,10 @@
 | 2026-02-20 | Admin sees password in employee modal | Eye/EyeOff toggle on read-only field; reset reveals new value immediately |
 | 2026-02-20 | webkit-line-clamp avoided in PDF | Caused task text to be invisible in print popup; use simple word-break instead |
 | 2026-02-20 | PDF uses white background, brand gradient on RAINBOW | Light theme for print; keep blue-purple gradient on week headers and RAINBOW wordmark |
+| 2026-02-21 | isOwner/isAdmin must use === true | Sheets stores false as string "FALSE" — truthy check hides all conditional UI gated on these fields |
+| 2026-02-21 | Login CSS in index.css not component style tag | Tailwind JIT placeholder: variant unreliable in runtime style tags; index.css with !important guaranteed in compiled bundle |
+| 2026-02-21 | Vercel fallback: vercel link + vercel --prod --yes | If GitHub App webhook breaks, link project then deploy from CLI; root cause is GitHub App repo access getting hidden |
+| 2026-02-21 | Lighter dark theme — charcoal navy | THEME.bg tokens shifted ~8 lightness points; all bg values in single THEME constant at top of App.jsx |
 
 ---
 
@@ -330,3 +346,4 @@
 | RS-22-P6-PhoneTesting | 2026-02-07 | Real device testing, cell height fix, tab spacing fix, unified Requests History, staff user testing prep |
 | RS-23-P6-RequestPolish | 2026-02-10 | Rejection modals, sort toggles, uniform tabs/empty states, mobile auto-populate, per-week auto-fill, feature parity (settings on mobile, notification badge on desktop) |
 | RS-24-P6-PDFPasswordPolish | 2026-02-20 | Printer-friendly PDF (white bg), employee initial password, email validation, lighter text, GO EDIT rename, PDF task text, admin password visibility, first-login fix, backend/Code.gs tracked in repo |
+| RS-25-P6-DeployFix | 2026-02-21 | Fixed Vercel auto-deploy (GitHub App repo access was hidden — 19 commits undeployed for 10 days), login label contrast, pencil always visible, PDF logo solid color, admin password plaintext display fix (=== true), lighter dark theme |
