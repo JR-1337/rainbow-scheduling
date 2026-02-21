@@ -2,7 +2,13 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.11 (RS-24 — emp-XXX password format)
+ * Version: 2.12 (RS-24 — password visibility & first-login fixes)
+ *
+ * Changes in v2.12:
+ * - login:         includes defaultPassword in response when usingDefaultPassword
+ * - changePassword: accepts employee ID as valid current password for default-format
+ *                  accounts — fixes first-login bug with emp-XXX passwords
+ * - resetPassword: returns newPassword in response data so admin UI can display it
  *
  * Changes in v2.11:
  * - resetPassword: now resets to emp-XXX format (row-based) instead of employee ID
