@@ -317,13 +317,16 @@ function login(payload) {
 
   const { password: _, _rowIndex, ...safeEmployee } = employee;
 
+  const usingDefaultPassword = String(employee.password) === String(employee.id) ||
+                               /^emp-\d{3}$/.test(String(employee.password));
+
   return {
     success: true,
     data: {
       employee: safeEmployee,
-      // ★ RS-24: detect both old ID-based passwords AND new emp-XXX format passwords
-      usingDefaultPassword: String(employee.password) === String(employee.id) ||
-                            /^emp-\d{3}$/.test(String(employee.password))
+      usingDefaultPassword,
+      // Include the actual default password so the first-login modal can show it to the employee
+      ...(usingDefaultPassword ? { defaultPassword: String(employee.password) } : {})
     }
   };
 }
@@ -347,7 +350,13 @@ function changePassword(payload) {
   }
 
   if (emailToChange === callerEmail) {
-    if (String(employee.password) !== String(currentPassword)) {
+    // For accounts using a default password (emp-XXX or old ID format), also accept the employee's
+    // ID as a valid current password — covers the first-login flow where the frontend may send the ID
+    const storedIsDefault = String(employee.password) === String(employee.id) ||
+                            /^emp-\d{3}$/.test(String(employee.password));
+    const validCurrent = String(employee.password) === String(currentPassword) ||
+                         (storedIsDefault && String(employee.id) === String(currentPassword));
+    if (!validCurrent) {
       return { success: false, error: { code: 'AUTH_FAILED', message: 'Current password is incorrect' } };
     }
   } else {
@@ -385,7 +394,7 @@ function resetPassword(payload) {
 
   updateCell(CONFIG.TABS.EMPLOYEES, employee._rowIndex, 'password', newPassword);
 
-  return { success: true, data: { message: `Password reset to ${newPassword} for ${employee.name}` } };
+  return { success: true, data: { message: `Password reset to ${newPassword} for ${employee.name}`, newPassword } };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
