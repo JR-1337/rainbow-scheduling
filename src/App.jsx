@@ -10,8 +10,8 @@ import {
 // THEME - FlutterFlow inspired dark theme
 // ═══════════════════════════════════════════════════════════════════════════════
 export const THEME = {
-  bg: { primary: '#0D0D1A', secondary: '#13132B', tertiary: '#1A1A3E', elevated: '#242452', hover: '#2D2D6B' },
-  tooltip: { bg: '#050508', border: '#1a1a2e' },
+  bg: { primary: '#1A1A2E', secondary: '#22223A', tertiary: '#2C2C50', elevated: '#383868', hover: '#444480' },
+  tooltip: { bg: '#12121E', border: '#2a2a48' },
   accent: { blue: '#4F46E5', purple: '#7C3AED', cyan: '#06B6D4', pink: '#EC4899' },
   text: { primary: '#F8FAFC', secondary: '#CBD5E1', muted: '#94A3B8' },
   roles: { cashier: '#8B5CF6', backupCashier: '#A78BFA', mens: '#3B82F6', womens: '#F472B6', floorMonitor: '#F59E0B', none: '#475569' },
