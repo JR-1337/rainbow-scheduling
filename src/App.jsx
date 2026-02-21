@@ -1442,7 +1442,7 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
         </div>
         
         <div className="mb-4">
-          <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Email</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.primary }}>Email</label>
           <input 
             type="email" 
             value={email} 
@@ -1456,7 +1456,7 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
         </div>
         
         <div className="mb-4">
-          <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Password</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.primary }}>Password</label>
           <input 
             id="password-input"
             type="password" 
