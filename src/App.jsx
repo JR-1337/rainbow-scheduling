@@ -386,7 +386,7 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
           <div style="font-size:10px;font-weight:700;color:${role?.color};margin-bottom:2px;">${role?.name}</div>
           <div style="font-size:9px;color:#475569;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
           <div style="font-size:8px;color:#64748b;">${shift.hours}h</div>
-          ${shift.task ? '<div style="font-size:8px;color:#d97706;margin-top:2px;">★</div>' : ''}
+          ${shift.task ? `<div style="font-size:7px;color:#d97706;margin-top:2px;line-height:1.3;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">★ ${shift.task}</div>` : ''}
         </td>`;
       }).join('');
       
