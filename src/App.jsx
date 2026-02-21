@@ -761,10 +761,9 @@ const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null,
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [password, setPassword] = useState(suggestedPassword);
   const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
   const [displayedPassword, setDisplayedPassword] = useState(employee?.password || '');
 
-  useEffect(() => { setFormData(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', availability: defaultAvail }); setShowDeleteConfirm(false); setPassword(suggestedPassword); setErrors({}); setShowPassword(false); setDisplayedPassword(employee?.password || ''); }, [employee, isOpen]);
+  useEffect(() => { setFormData(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', availability: defaultAvail }); setShowDeleteConfirm(false); setPassword(suggestedPassword); setErrors({}); setDisplayedPassword(employee?.password || ''); }, [employee, isOpen]);
 
   // Admin protection checks
   const isEditingSelf = employee && currentUser && employee.email === currentUser.email;
@@ -907,47 +906,30 @@ const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null,
               
               {/* Password - Admin only, not for self or owner */}
               {!isEditingSelf && !isEditingOwner && (
-                <div className="mt-2 p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs flex items-center gap-1" style={{ color: THEME.text.secondary }}>
-                      <Key size={12} />
-                      Password
-                    </span>
-                    <button
-                      onClick={async () => {
-                        const result = await apiCall('resetPassword', {
-                          callerEmail: currentUser.email,
-                          targetEmail: formData.email
-                        });
-                        if (result.success) {
-                          const newPwd = result.data?.newPassword || 'emp-XXX';
-                          setDisplayedPassword(newPwd);
-                          setShowPassword(true);
-                          if (showToast) showToast('success', `Password for ${formData.name} reset to ${newPwd}. Share this with them.`);
-                        } else {
-                          if (showToast) showToast('error', result.error?.message || 'Failed to reset password');
-                        }
-                      }}
-                      className="px-2 py-0.5 rounded text-xs"
-                      style={{ backgroundColor: THEME.status.warning + '20', color: THEME.status.warning }}>
-                      Reset to Default
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={displayedPassword}
-                      readOnly
-                      className="flex-1 px-2 py-1 rounded text-xs outline-none"
-                      style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
-                    />
-                    <button
-                      onClick={() => setShowPassword(s => !s)}
-                      className="p-1 rounded hover:opacity-70"
-                      style={{ color: THEME.text.muted }}>
-                      {showPassword ? <EyeOff size={12} /> : <Eye size={12} />}
-                    </button>
-                  </div>
+                <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between gap-2" style={{ backgroundColor: THEME.bg.tertiary }}>
+                  <span className="text-xs flex items-center gap-1.5 min-w-0" style={{ color: THEME.text.secondary }}>
+                    <Key size={12} style={{ flexShrink: 0 }} />
+                    <span style={{ flexShrink: 0 }}>Password:</span>
+                    <span className="font-mono truncate" style={{ color: THEME.text.primary }}>{displayedPassword || '—'}</span>
+                  </span>
+                  <button
+                    onClick={async () => {
+                      const result = await apiCall('resetPassword', {
+                        callerEmail: currentUser.email,
+                        targetEmail: formData.email
+                      });
+                      if (result.success) {
+                        const newPwd = result.data?.newPassword || 'emp-XXX';
+                        setDisplayedPassword(newPwd);
+                        if (showToast) showToast('success', `Password reset to ${newPwd}. Share this with ${formData.name}.`);
+                      } else {
+                        if (showToast) showToast('error', result.error?.message || 'Failed to reset password');
+                      }
+                    }}
+                    className="px-2 py-0.5 rounded text-xs flex-shrink-0"
+                    style={{ backgroundColor: THEME.status.warning + '20', color: THEME.status.warning }}>
+                    Reset to Default
+                  </button>
                 </div>
               )}
             </>
