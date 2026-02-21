@@ -1339,19 +1339,16 @@ const ScheduleCell = ({ shift, date, onClick, availability, storeHours, isDelete
 // EMPLOYEE ROW
 // ═══════════════════════════════════════════════════════════════════════════════
 const EmployeeRow = ({ employee, dates, shifts, onCellClick, getEmployeeHours, onEdit, isDeleted = false, onShowTooltip, onHideTooltip, timeOffRequests = [], isLocked = false }) => {
-  const [showEdit, setShowEdit] = useState(false);
   const rowRef = useRef(null);
   const hours = getEmployeeHours(employee.id);
 
   const handleMouseEnter = () => {
-    setShowEdit(true);
     if (rowRef.current && onShowTooltip) {
       onShowTooltip(employee, hours, rowRef, isDeleted);
     }
   };
   
   const handleMouseLeave = () => {
-    setShowEdit(false);
     if (onHideTooltip) onHideTooltip();
   };
 
