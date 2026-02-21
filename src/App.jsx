@@ -8174,10 +8174,10 @@ export default function App() {
                   color: THEME.status.warning,
                   border: `1px solid ${THEME.status.warning}50`
                 }}
-                title="Enter edit mode (employees won't see changes)"
+                title="Go to edit mode (employees won't see changes)"
               >
                 <Edit3 size={12} />
-                <span>EDIT MODE</span>
+                <span>GO EDIT</span>
               </button>
             )}
           </div>
@@ -8263,7 +8263,7 @@ export default function App() {
                 <div className="mb-2 px-3 py-2 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.status.success + '15', border: `1px solid ${THEME.status.success}30` }}>
                   <Eye size={14} style={{ color: THEME.status.success }} />
                   <span className="text-xs font-medium" style={{ color: THEME.status.success }}>Schedule is LIVE</span>
-                  <span className="text-xs" style={{ color: THEME.text.secondary }}>— Click "EDIT MODE" to make changes</span>
+                  <span className="text-xs" style={{ color: THEME.text.secondary }}>— Click "GO EDIT" to make changes</span>
                 </div>
               )}
               
