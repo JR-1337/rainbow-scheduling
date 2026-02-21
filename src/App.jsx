@@ -1474,7 +1474,7 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
             onKeyDown={e => e.key === 'Enter' && document.getElementById('password-input')?.focus()}
             placeholder="your.email@example.com"
             disabled={loading}
-            className="w-full px-3 py-2 rounded-lg outline-none text-sm"
+            className="w-full px-3 py-2 rounded-lg outline-none text-sm placeholder:text-slate-500"
             style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
           />
         </div>
@@ -1489,7 +1489,7 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
             placeholder="••••••••"
             disabled={loading}
-            className="w-full px-3 py-2 rounded-lg outline-none text-sm"
+            className="w-full px-3 py-2 rounded-lg outline-none text-sm placeholder:text-slate-500"
             style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
           />
           <p className="text-xs mt-1" style={{ color: THEME.text.muted }}>First time? Use your employee ID as password</p>
