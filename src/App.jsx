@@ -906,30 +906,34 @@ const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null,
               
               {/* Password - Admin only, not for self or owner */}
               {!isEditingSelf && !isEditingOwner && (
-                <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between gap-2" style={{ backgroundColor: THEME.bg.tertiary }}>
-                  <span className="text-xs flex items-center gap-1.5 min-w-0" style={{ color: THEME.text.secondary }}>
-                    <Key size={12} style={{ flexShrink: 0 }} />
-                    <span style={{ flexShrink: 0 }}>Password:</span>
-                    <span className="font-mono truncate" style={{ color: THEME.text.primary }}>{displayedPassword || '—'}</span>
-                  </span>
-                  <button
-                    onClick={async () => {
-                      const result = await apiCall('resetPassword', {
-                        callerEmail: currentUser.email,
-                        targetEmail: formData.email
-                      });
-                      if (result.success) {
-                        const newPwd = result.data?.newPassword || 'emp-XXX';
-                        setDisplayedPassword(newPwd);
-                        if (showToast) showToast('success', `Password reset to ${newPwd}. Share this with ${formData.name}.`);
-                      } else {
-                        if (showToast) showToast('error', result.error?.message || 'Failed to reset password');
-                      }
-                    }}
-                    className="px-2 py-0.5 rounded text-xs flex-shrink-0"
-                    style={{ backgroundColor: THEME.status.warning + '20', color: THEME.status.warning }}>
-                    Reset to Default
-                  </button>
+                <div className="mt-2 p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs flex items-center gap-1" style={{ color: THEME.text.secondary }}>
+                      <Key size={11} />
+                      Password
+                    </span>
+                    <button
+                      onClick={async () => {
+                        const result = await apiCall('resetPassword', {
+                          callerEmail: currentUser.email,
+                          targetEmail: formData.email
+                        });
+                        if (result.success) {
+                          const newPwd = result.data?.newPassword || 'emp-XXX';
+                          setDisplayedPassword(newPwd);
+                          if (showToast) showToast('success', `Password reset to ${newPwd}. Share this with ${formData.name}.`);
+                        } else {
+                          if (showToast) showToast('error', result.error?.message || 'Failed to reset password');
+                        }
+                      }}
+                      className="px-2 py-0.5 rounded text-xs"
+                      style={{ backgroundColor: THEME.status.warning + '20', color: THEME.status.warning }}>
+                      Reset to Default
+                    </button>
+                  </div>
+                  <p className="text-sm font-mono font-semibold" style={{ color: THEME.text.primary }}>
+                    {displayedPassword ? String(displayedPassword) : <span style={{ color: THEME.text.muted, fontStyle: 'italic', fontFamily: 'inherit' }}>not set — click Reset to Default</span>}
+                  </p>
                 </div>
               )}
             </>
