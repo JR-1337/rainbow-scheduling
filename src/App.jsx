@@ -189,6 +189,11 @@ export const ROLES = [
 ];
 
 const PAY_PERIOD_START = new Date(2026, 0, 26); // January 26, 2026 (Monday) - using local timezone
+const CURRENT_PERIOD_INDEX = (() => {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = new Date(PAY_PERIOD_START.getFullYear(), PAY_PERIOD_START.getMonth(), PAY_PERIOD_START.getDate());
+  return Math.max(0, Math.floor((today - start) / (14 * 24 * 60 * 60 * 1000)));
+})();
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIME OFF REQUEST - Status constants and sample data
@@ -1359,7 +1364,7 @@ const EmployeeRow = ({ employee, dates, shifts, onCellClick, getEmployeeHours, o
             <p className="font-medium text-xs truncate" style={{ color: isDeleted ? THEME.text.muted : THEME.text.primary }}>{employee.name}</p>
             <p className="text-xs font-semibold" style={{ color: isDeleted ? THEME.text.muted : hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan }}>{hours.toFixed(1)}h</p>
           </div>
-          {showEdit && !isDeleted && <button onClick={e => { e.stopPropagation(); onEdit(employee); }} className="p-0.5 rounded hover:scale-110 flex-shrink-0" style={{ backgroundColor: THEME.bg.elevated }}><Edit3 size={10} style={{ color: THEME.accent.purple }} /></button>}
+          {!isDeleted && <button onClick={e => { e.stopPropagation(); onEdit(employee); }} className="p-0.5 rounded hover:scale-110 flex-shrink-0" style={{ backgroundColor: THEME.bg.elevated }}><Edit3 size={10} style={{ color: THEME.accent.purple }} /></button>}
         </div>
       </div>
       
@@ -5019,9 +5024,9 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                 <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '13px' }}>
                   {formatDate(periodInfo.startDate)} – {formatDate(periodInfo.endDate)}
                 </p>
-                {periodIndex === 0 && <p className="font-medium" style={{ color: THEME.accent.cyan, fontSize: '10px', marginTop: 1 }}>Current Period</p>}
-                {periodIndex > 0 && <p className="font-medium" style={{ color: THEME.accent.purple, fontSize: '10px', marginTop: 1 }}>Future</p>}
-                {periodIndex < 0 && <p className="font-medium" style={{ color: THEME.text.muted, fontSize: '10px', marginTop: 1 }}>Past</p>}
+                {periodIndex === CURRENT_PERIOD_INDEX && <p className="font-medium" style={{ color: THEME.accent.cyan, fontSize: '10px', marginTop: 1 }}>Current Period</p>}
+                {periodIndex > CURRENT_PERIOD_INDEX && <p className="font-medium" style={{ color: THEME.accent.purple, fontSize: '10px', marginTop: 1 }}>Future</p>}
+                {periodIndex < CURRENT_PERIOD_INDEX && <p className="font-medium" style={{ color: THEME.text.muted, fontSize: '10px', marginTop: 1 }}>Past</p>}
               </div>
               <button
                 onClick={() => onPeriodChange && onPeriodChange(periodIndex + 1)}
@@ -5243,9 +5248,9 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
               </button>
               <div className="text-center min-w-[140px]">
                 <p className="font-medium text-xs" style={{ color: THEME.text.primary }}>{formatDate(periodInfo.startDate)} – {formatDate(periodInfo.endDate)}</p>
-                {periodIndex === 0 && <p className="text-xs" style={{ color: THEME.accent.cyan }}>Current Period</p>}
-                {periodIndex > 0 && <p className="text-xs" style={{ color: THEME.accent.purple }}>Future Period</p>}
-                {periodIndex < 0 && <p className="text-xs" style={{ color: THEME.text.muted }}>Past Period</p>}
+                {periodIndex === CURRENT_PERIOD_INDEX && <p className="text-xs" style={{ color: THEME.accent.cyan }}>Current Period</p>}
+                {periodIndex > CURRENT_PERIOD_INDEX && <p className="text-xs" style={{ color: THEME.accent.purple }}>Future Period</p>}
+                {periodIndex < CURRENT_PERIOD_INDEX && <p className="text-xs" style={{ color: THEME.text.muted }}>Past Period</p>}
               </div>
               <button 
                 onClick={() => onPeriodChange && onPeriodChange(periodIndex + 1)}
@@ -6250,7 +6255,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const isMobileAdmin = useIsMobile();
   const [employees, setEmployees] = useState([]);
-  const [periodIndex, setPeriodIndex] = useState(0);
+  const [periodIndex, setPeriodIndex] = useState(CURRENT_PERIOD_INDEX);
   const [shifts, setShifts] = useState({});
   const [empFormOpen, setEmpFormOpen] = useState(false);
   const [editingEmp, setEditingEmp] = useState(null);
@@ -7764,9 +7769,9 @@ export default function App() {
               </button>
               <div className="text-center">
                 <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '13px' }}>{formatDate(startDate)} – {formatDate(endDate)}</p>
-                {periodIndex === 0 && <p className="font-medium" style={{ color: THEME.accent.cyan, fontSize: '10px', marginTop: 1 }}>Current Period</p>}
-                {periodIndex > 0 && <p className="font-medium" style={{ color: THEME.accent.purple, fontSize: '10px', marginTop: 1 }}>Future</p>}
-                {periodIndex < 0 && <p className="font-medium" style={{ color: THEME.text.muted, fontSize: '10px', marginTop: 1 }}>Past</p>}
+                {periodIndex === CURRENT_PERIOD_INDEX && <p className="font-medium" style={{ color: THEME.accent.cyan, fontSize: '10px', marginTop: 1 }}>Current Period</p>}
+                {periodIndex > CURRENT_PERIOD_INDEX && <p className="font-medium" style={{ color: THEME.accent.purple, fontSize: '10px', marginTop: 1 }}>Future</p>}
+                {periodIndex < CURRENT_PERIOD_INDEX && <p className="font-medium" style={{ color: THEME.text.muted, fontSize: '10px', marginTop: 1 }}>Past</p>}
               </div>
               <button onClick={() => setPeriodIndex(periodIndex + 1)} className="p-1 rounded" style={{ color: THEME.text.secondary }}>
                 <ChevronRight size={16} />
