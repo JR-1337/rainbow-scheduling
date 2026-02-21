@@ -6064,7 +6064,12 @@ const ChangePasswordModal = ({ isOpen, onClose, currentUser, isFirstLogin = fals
             <Check size={20} style={{ color: THEME.status.success }} />
           </div>
           <h3 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Password Updated!</h3>
-          {isFirstLogin && <p className="text-xs mt-1" style={{ color: THEME.text.secondary }}>Logging you in...</p>}
+          {isFirstLogin && (
+            <>
+              <p className="text-xs mt-1.5 font-mono font-semibold" style={{ color: THEME.text.primary }}>{newPassword}</p>
+              <p className="text-xs mt-1" style={{ color: THEME.text.secondary }}>Remember this — logging you in...</p>
+            </>
+          )}
         </div>
       ) : (
         <>
