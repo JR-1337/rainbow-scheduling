@@ -448,7 +448,7 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
   <div style="text-align:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid #3b82f6;">
     <div style="font-family:'Josefin Sans',sans-serif;margin-bottom:5px;">
       <span style="color:#64748b;font-size:10px;letter-spacing:3px;">OVER THE</span><br>
-      <span style="color:#0f172a;font-size:24px;letter-spacing:4px;font-weight:600;">RAINBOW</span>
+      <span style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:24px;letter-spacing:4px;font-weight:600;">RAINBOW</span>
     </div>
     <p style="margin:8px 0 0;font-size:12px;"><span style="background:linear-gradient(135deg, #3b82f6, #8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:600;">Staff Schedule</span></p>
     <p style="margin:5px 0 0;color:#475569;font-size:11px;">Week ${weekNum1} & ${weekNum2} • ${formatMonthWord(periodInfo.startDate)} ${periodInfo.startDate.getDate()} — ${formatMonthWord(periodInfo.endDate)} ${periodInfo.endDate.getDate()}, ${periodInfo.startDate.getFullYear()}</p>
