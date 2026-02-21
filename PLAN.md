@@ -1,9 +1,9 @@
 # Rainbow Scheduling App - Development Plan
 
 ## Current Status: Phase 6 (Polish & Infrastructure) 🔄 IN PROGRESS
-**Last Updated:** 2026-02-10
-**Current Version:** Code.gs v2.10, App.jsx ~8500 lines + MobileEmployeeView.jsx ~450 lines + MobileAdminView.jsx ~430 lines
-**Chat:** RS-21-P6-UIPolish
+**Last Updated:** 2026-02-20
+**Current Version:** Code.gs v2.12, App.jsx ~8,600 lines + MobileEmployeeView.jsx ~440 lines + MobileAdminView.jsx ~430 lines
+**Chat:** RS-24-P6-PDFPasswordPolish
 
 ---
 
@@ -190,6 +190,23 @@
 | 17 | Unified Requests History | ✅ DONE | Replaced 5 separate panels with one sortable list — filter pills (All/Time Off/Offers/Swaps), date sort toggle, type badges, cancel buttons on pending items |
 | 18 | Staff user testing | 🔄 IN PROGRESS | JR's GF to test with a few staff members — awaiting feedback |
 
+#### RS-24 Session (2026-02-20):
+
+| # | Feature | Status | Description |
+|---|---------|--------|-------------|
+| 31 | Printer-friendly PDF | ✅ DONE | White/light background, dark text, role colors preserved, brand gradient header bars kept |
+| 32 | PDF RAINBOW logo | ✅ DONE | Blue-to-purple gradient (was white → invisible on white bg) |
+| 33 | PDF task text | ✅ DONE | Shows actual task text in shift cells (was ★ star only); uses simple word-break CSS |
+| 34 | Employee initial password | ✅ DONE | Add Employee modal shows suggestedPassword pre-filled (emp-001 etc.), editable |
+| 35 | Email validation | ✅ DONE | @ symbol required in email field; inline error shown |
+| 36 | Lighter text colors | ✅ DONE | secondary: #94A3B8→#CBD5E1, muted: #64748B→#94A3B8; login labels use primary |
+| 37 | GO EDIT button | ✅ DONE | Renamed from "EDIT MODE" to "GO EDIT" — matches "GO LIVE" action pattern |
+| 38 | Admin password visibility | ✅ DONE | Edit employee modal shows password field (masked) with Eye/EyeOff toggle; reset reveals actual emp-XXX |
+| 39 | First-login changePassword fix | ✅ DONE | Backend accepts employee ID as valid current password for default-format accounts (backward compat) |
+| 40 | First-login success shows new password | ✅ DONE | After setting password, success screen displays the new password for 1.2s before logging in |
+| 41 | backend/ folder | ✅ DONE | Code.gs tracked in repo at backend/Code.gs (v2.12), copy-paste to Apps Script to deploy |
+| 42 | Code.gs v2.12 | ✅ DONE | resetPassword returns newPassword; login includes defaultPassword when usingDefaultPassword; changePassword backward compat |
+
 #### RS-23 Session (2026-02-10):
 
 | # | Feature | Status | Description |
@@ -217,6 +234,7 @@
 
 ## Future Items / Phase 6+ Candidates
 
+- [ ] **Email upgrade** — backend-sent schedule publish email with PDF auto-attached via Code.gs MailApp (blocked: JR needs to provide new sender email address first)
 - [ ] Staff user testing feedback and fixes
 - [ ] Shared utils refactor (extract THEME, ROLES, helpers, BaseComponents into separate files)
 - [ ] Professional sender email (dedicated Google Workspace account)
@@ -257,13 +275,18 @@
 | 2026-02-07 | Gap between tabs, subtle inactive borders | Tabs bled into each other (especially Requests/Comms) due to negative margin overlap |
 | 2026-02-07 | Unified Requests History in employee drawer | 5 separate collapsible panels replaced with one sortable/filterable list — cleaner UX, less scrolling |
 | 2026-02-05 | Chunked batch save for large shift payloads | GET URL has ~8KB limit; 80 shifts = ~15KB encoded, so split into chunks of 15 |
+| 2026-02-20 | backend/ folder for Code.gs | Track Code.gs in repo for easy update/paste; user copies to Apps Script editor manually to deploy |
+| 2026-02-20 | emp-XXX password format for new employees | Row-based sequential (row 2 = emp-001); monotonically increasing since deleted employees stay in array |
+| 2026-02-20 | Admin sees password in employee modal | Eye/EyeOff toggle on read-only field; reset reveals new value immediately |
+| 2026-02-20 | webkit-line-clamp avoided in PDF | Caused task text to be invisible in print popup; use simple word-break instead |
+| 2026-02-20 | PDF uses white background, brand gradient on RAINBOW | Light theme for print; keep blue-purple gradient on week headers and RAINBOW wordmark |
 
 ---
 
 ## Deployment Info
 
 - **Live URL:** https://rainbow-scheduling.vercel.app
-- **Backend API:** Google Apps Script Web App (v2.10)
+- **Backend API:** Google Apps Script Web App (v2.12 — JR deploys as v2.21)
 - **GitHub:** Auto-deploys to Vercel on commit
 
 ---
@@ -306,3 +329,4 @@
 | RS-21-P6-UIPolish | 2026-02-07 | Git/GitHub setup, verified mobile features, header redesign, stacked names, tab colors |
 | RS-22-P6-PhoneTesting | 2026-02-07 | Real device testing, cell height fix, tab spacing fix, unified Requests History, staff user testing prep |
 | RS-23-P6-RequestPolish | 2026-02-10 | Rejection modals, sort toggles, uniform tabs/empty states, mobile auto-populate, per-week auto-fill, feature parity (settings on mobile, notification badge on desktop) |
+| RS-24-P6-PDFPasswordPolish | 2026-02-20 | Printer-friendly PDF (white bg), employee initial password, email validation, lighter text, GO EDIT rename, PDF task text, admin password visibility, first-login fix, backend/Code.gs tracked in repo |

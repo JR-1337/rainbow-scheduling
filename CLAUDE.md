@@ -11,7 +11,7 @@ RAINBOW Scheduling App — a two-sided retail scheduling platform for OTR/Rainbo
 ## Tech Stack
 
 - **Frontend:** React 18+ (functional components, hooks), Tailwind CSS, Lucide React icons
-- **Backend:** Google Apps Script (Code.gs v2.10), Google Sheets as database (5 tabs)
+- **Backend:** Google Apps Script (Code.gs v2.12), Google Sheets as database (5 tabs)
 - **Deployment:** Vercel (frontend, auto-deploys on GitHub commit), Google Apps Script Web App (backend, manual deploy)
 - **Email:** Apps Script MailApp, sender name "OTR Scheduling"
 - **Compliance:** Ontario Employment Standards Act (44hr/week overtime threshold)
@@ -20,9 +20,9 @@ RAINBOW Scheduling App — a two-sided retail scheduling platform for OTR/Rainbo
 
 **Start here:** Read `PLAN.md` (repo root) for current roadmap, session history, and what's in progress. It complements this file — CLAUDE.md covers architecture/conventions, PLAN.md covers project direction and progress.
 
-**Git workflow:** Code lives in `src/`. Claude edits files in `src/`, commits, and pushes. Vercel auto-deploys from GitHub on push to `main`. `Code.gs` is maintained separately (copy into Google Apps Script editor manually).
+**Git workflow:** Code lives in `src/`. Claude edits files in `src/` and `backend/`, commits, and pushes. Vercel auto-deploys from GitHub on push to `main`. `Code.gs` is tracked in `backend/` — copy the full file into the Google Apps Script editor and redeploy manually after changes.
 
-All active code lives in `src/`:
+All active code:
 
 | File | Lines | Purpose |
 |------|-------|---------|
@@ -31,6 +31,14 @@ All active code lives in `src/`:
 | `src/MobileAdminView.jsx` | ~430 | Mobile admin components: schedule grid, request review panels, announcement panel, employee quick-view |
 | `src/main.jsx` | — | Vite entry point |
 | `src/index.css` | — | Tailwind CSS imports |
+| `backend/Code.gs` | ~1,840 | Google Apps Script backend — edit here, paste into Apps Script editor to deploy |
+
+## Session Workflow
+- 3-file system: `CLAUDE.md` (permanent rules, auto-read), `PLAN.md` (progress tracker), `handoff.md` (session bridge)
+- `CLAUDE.md` owns: rules, patterns, constraints, directory structure, tech stack
+- `PLAN.md` owns: progress checklists, decisions log, task inventory
+- `handoff.md` owns: ephemeral state only — build status, in-flight work, next tasks
+- JR uses his own deployment version numbering (v2.2, v2.21, etc.) independent of Code.gs internal version comments
 
 ## Architecture
 
