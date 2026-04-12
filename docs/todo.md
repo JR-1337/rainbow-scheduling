@@ -53,6 +53,7 @@ Existing up-next preserved:
 
 ### Done
 
+- [2026-04-12] S39.3l Extract `OfferShiftModal` → `src/modals/OfferShiftModal.jsx`. Consumes `THEME`/`TYPE`, `ROLES_BY_ID`, `parseLocalDate`, and `toDateKey`/`formatDate`/`formatDateLong`/`formatTimeDisplay`/`getDayNameShort` from `../App`. App.jsx 5535 → 5216 (-319). Build PASS, preview 200.
 - [2026-04-12] S39.3k Extract `RequestDaysOffModal` → `src/modals/RequestDaysOffModal.jsx`. Self-contained: consumes `THEME`/`TYPE` from `../theme`, `parseLocalDate` from `../utils/format`, `toDateKey` from `../App`. App.jsx 5824 → 5535 (-289). Build PASS, preview 200.
 - [2026-04-12] S39.3j Extract `EmployeeFormModal` → `src/modals/EmployeeFormModal.jsx`. Exported `Input` + `STORE_HOURS` from App.jsx (circular-safe, function-body refs only). App.jsx 6058 → 5824 (-234). Build PASS, preview 200.
 - [2026-04-12] S39.3i Extract `AdminSettingsModal` + `ChangePasswordModal` → `src/modals/`. Exported `apiCall` from App.jsx (circular-safe, used inside function bodies). App.jsx 6400 → 6058 (-342). Build PASS, preview 200. Lands at plan's ~6000 stop target.
