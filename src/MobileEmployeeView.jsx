@@ -13,7 +13,7 @@ import {
 
 import {
   THEME, TYPE, ROLES, ROLES_BY_ID, toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber,
-  getStoreHoursForDate, isStatHoliday, GradientBackground, haptic
+  getStoreHoursForDate, isStatHoliday, GradientBackground, haptic, useFocusTrap
 } from './App';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -529,9 +529,15 @@ export const MobileBottomNav = ({ activeTab, onTabChange, hasNotifications = fal
 // MOBILE BOTTOM SHEET (Phase 4 / Phase 10)
 // ═══════════════════════════════════════════════════════════════════════════════
 export const MobileBottomSheet = ({ isOpen, onClose, title, children }) => {
+  // S38: focus trap + Escape-to-close. useFocusTrap already handles both
+  // (Tab cycle + Escape triggers `[data-close]`). The hook + ref must be
+  // declared before the early return so hook order stays stable.
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef, isOpen);
   if (!isOpen) return null;
   return (
     <div
+      ref={dialogRef}
       className={`fixed inset-0 z-[150] bottom-sheet-backdrop ${isOpen ? 'active' : ''}`}
       onClick={onClose}
       role="dialog"

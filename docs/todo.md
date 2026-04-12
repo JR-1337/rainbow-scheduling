@@ -13,10 +13,12 @@ Pre-demo (before 2026-04-14):
 - S33.5 repo hygiene (.gitignore dist/, commit package-lock.json, Photos/ decision) — deferred, JR requested S34 first
 - S35 browser verify live + demo polish
 
-Post-demo:
-- S36 HMAC auth backend + SHA-256 password hashing (Code.gs) — non-breaking migration
-- S37 frontend auth wiring: token in localStorage, auto-attach in apiCall, remove 35 callerEmail sites
-- S38 mobile bottom sheet focus trap + Escape
+Manual deploy steps (required before post-demo security code runs in prod):
+- Add `passwordHash` + `passwordSalt` columns (R + S) to Employees sheet
+- Set `HMAC_SECRET` (32 random bytes base64) in Apps Script > Project Settings > Script Properties
+- Paste backend/Code.gs v2.13 into Apps Script editor + Deploy > New Deployment (replace current active URL or keep URL via "Manage Deployments > Edit")
+
+Post-demo (code landed; awaits manual deploy above):
 - S39 opportunistic extractions (THEME/constants → own files, AdminRequestModal → own file, mobile admin branch → own file)
 - S40 persistence-file sweep + forward handoff
 
@@ -28,6 +30,9 @@ Existing up-next preserved:
 
 ### Done
 
+- [2026-04-12] S38 mobile bottom sheet a11y: `MobileBottomSheet` now wires `useFocusTrap(dialogRef, isOpen)` so Tab cycles inside the sheet and Escape fires `[data-close]` → onClose. Ref + hook declared before the early-return so hook order stays stable across open/close toggles. `useFocusTrap` imported from `./App` (no new module needed — existing hook already handled both cases).
+- [2026-04-12] S37 frontend auth wiring (post-demo track): new `src/auth.js` owns the module-level session token + cached user + auth-failure callback. `apiCall` auto-attaches `token` on every request and wipes state on `AUTH_EXPIRED`/`AUTH_INVALID`. Login stores `{ token, employee }` in localStorage; App mounts restored-signed-in if both survived the refresh (first protected call re-validates). 34 `callerEmail: currentUser.email,` sites removed from App.jsx; `loadDataFromBackend` now calls `apiCall('getAllData', {})`. All 3 logout sites call `clearAuth()`. `chunkedBatchSave` reads `token` from payload (apiCall already injected it) and conditionally forwards legacy `callerEmail` for back-compat.
+- [2026-04-12] S36 HMAC auth rebuild backend (post-demo track, BLOCKED on JR deploy + `HMAC_SECRET` provisioning): Code.gs v2.13 adds `createToken_`/`verifyToken_` using `Utilities.computeHmacSignature(HMAC_SHA_256)` with 12h TTL + constant-time comparison; adds `hashPassword_`/`generateSalt_` for per-user salted SHA-256. `verifyAuth` now accepts the full payload (prefers `token`, falls back to `callerEmail` during S37 rollout). `login` dual-checks hash → plaintext, migrates plaintext → hash on successful login, returns token. `changePassword` writes hash + clears plaintext column. `resetPassword` keeps plaintext fallback (admin UI displays it) and clears hash so next login re-migrates. Sheet schema gains `passwordHash` + `passwordSalt` columns (R + S) — JR must add to live sheet before deploy.
 - [2026-04-12] S34 demo-critical bugs (single commit): `parseLocalDate(str)` helper eliminates Ontario TZ shift (fix @ App.jsx:2265, 42 other `+ 'T12:00:00'` sites swept to the helper). `escapeHtml` applied at 5 PDF HTML interpolation sites (announcement subject/message, shift.task, emp.name, admin contacts). PDF + email builders extracted to `src/pdf/generate.js` + `src/email/build.js`; shared helpers to `src/utils/format.js` (App.jsx -262 lines). `chunkedBatchSave` now returns `success:false` with `{savedCount, totalChunks, failedChunks}` when any chunk fails; both callers surface "X of Y batches saved" toast and retain unsaved flag. Email body kept unescaped (plaintext via `MailApp.sendEmail({body})` — not an HTML XSS vector).
 - [2026-04-12] PDF demo-critical six: "Printed on" timestamp footer + live-app URL pointer. Removed auto-print; added sticky Print button in preview. `OFF — approved` marker on PTO cells (new timeOffRequests param + `hasApprovedTimeOffForDate` check). OT thresholds shifted to Ontario ESA (amber ≥40h, red ≥44h). Daily headcount row per week. `page-break-inside:avoid` on rows + `thead` repeats on page break. Role/color fallbacks for deleted role IDs. Hides "0.0h" for unscheduled employees. Legend gains PTO swatch.
 - [2026-04-12] Mobile admin toolbar hides on non-schedule destinations: Row-3 action buttons (Edit/Save/Go Live/Publish) + Row-4 status banner (Edit Mode + Fill/Clear Wk) gated on `mobileAdminTab === 'schedule' || 'mine'`. Requests/Comms destinations show just logo + period nav. Matches existing filing-tab gating pattern.
