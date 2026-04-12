@@ -30,6 +30,17 @@ Post-demo consecutive-days warning (Sarvi request):
 - UI: cell border warning on 6th+ day + top-of-schedule banner listing offenders (same pattern as OT banner)
 - Pending Sarvi answers: does PTO break streak? single day off resets? warning or hard block? (defaults: yes / yes / warning only)
 
+Post-demo Meetings + PK shift types (Sarvi request, post-demo):
+- Data model: shift entries gain `type: 'work' | 'meeting' | 'pk'` field (shape A). A day can have multiple entries. PK-only or Meeting-only days are allowed.
+- Default duration: 2 hours for Meeting + PK. Sarvi sets the start time (same flow as other similar features).
+- PK assignment: bulk-assign to all active employees, then Sarvi opts individuals out per event.
+- Meeting assignment: individual, targeted per employee.
+- Same day allowed: one employee can have work + meeting + pk on the same day.
+- Hours counting: Meeting + PK hours count toward weekly total + ESA 40/44hr OT flags. If a PK/Meeting time range overlaps a work shift, only count the union (no double-count on overlap).
+- Consecutive-days streak: PK + Meeting do NOT count as a worked day for the 5-day streak. Only `type='work'` entries count.
+- Visuals: neutral palette (grey/white, NOT role colors). When employee has both a work shift + event the same day → designation marker on the work-shift card. When event-only day → standalone card with neutral border in the grid.
+- UI parity: must match existing shift-editor and card patterns (PDF/email builders, mobile + desktop grids).
+
 Post-demo payroll aggregator (path 1, pending demo go-ahead):
 - Discovery (JR emailing Sarvi): Counterpoint export format? ADP upload format? Employee ID consistency across 3 systems? Bonus logic (formulaic vs ad-hoc)?
 - Feature: pay-period reconciliation view (scheduled vs actual, PTO lines, OT flags at ESA 40/44hr)
