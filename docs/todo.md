@@ -53,6 +53,7 @@ Existing up-next preserved:
 
 ### Done
 
+- [2026-04-12] S39.3m Extract `EmailModal` → `src/modals/EmailModal.jsx`. Exported `Checkbox` from App.jsx (circular-safe). Consumes `THEME`, `buildEmailContent` from `../email/build`, and `Modal`/`GradientButton`/`Checkbox`/`toDateKey`/`getWeekNumber`/`formatMonthWord` from `../App`. App.jsx 5216 → 5031 (-185). Build PASS, preview 200.
 - [2026-04-12] S39.3l Extract `OfferShiftModal` → `src/modals/OfferShiftModal.jsx`. Consumes `THEME`/`TYPE`, `ROLES_BY_ID`, `parseLocalDate`, and `toDateKey`/`formatDate`/`formatDateLong`/`formatTimeDisplay`/`getDayNameShort` from `../App`. App.jsx 5535 → 5216 (-319). Build PASS, preview 200.
 - [2026-04-12] S39.3k Extract `RequestDaysOffModal` → `src/modals/RequestDaysOffModal.jsx`. Self-contained: consumes `THEME`/`TYPE` from `../theme`, `parseLocalDate` from `../utils/format`, `toDateKey` from `../App`. App.jsx 5824 → 5535 (-289). Build PASS, preview 200.
 - [2026-04-12] S39.3j Extract `EmployeeFormModal` → `src/modals/EmployeeFormModal.jsx`. Exported `Input` + `STORE_HOURS` from App.jsx (circular-safe, function-body refs only). App.jsx 6058 → 5824 (-234). Build PASS, preview 200.
