@@ -33,10 +33,10 @@ export const MobileAdminDrawer = ({
   
   return (
     <div className="fixed inset-0 z-[200]" onClick={onClose}>
-      <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} />
+      <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} />
       
       <div 
-        className="absolute top-0 left-0 h-full w-72 overflow-y-auto"
+        className="absolute top-0 left-0 h-full w-64 sm:w-72 overflow-y-auto"
         style={{ backgroundColor: THEME.bg.secondary, borderRight: `1px solid ${THEME.border.default}` }}
         onClick={e => e.stopPropagation()}
       >
@@ -44,7 +44,7 @@ export const MobileAdminDrawer = ({
         <div className="p-4" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" 
-              style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: '#fff' }}>
+              style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}>
               {currentUser.name.split(' ').map(n => n[0]).join('')}
             </div>
             <div>
@@ -65,7 +65,7 @@ export const MobileAdminDrawer = ({
           <button
             onClick={() => { onOpenOwnRequests(); onClose(); }}
             className="w-full px-4 py-3 text-sm font-medium rounded-lg flex items-center gap-3 hover:opacity-90"
-            style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: 'white' }}
+            style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}
           >
             <Calendar size={16} />
             My Shift Changes
@@ -289,7 +289,7 @@ export const MobileAdminScheduleGrid = ({
                         }}>
                         <div className="h-full rounded-md relative overflow-hidden" style={{ 
                           backgroundColor: approvedTimeOff ? THEME.text.muted + '15' 
-                            : isUnavailable && !shift ? THEME.bg.primary 
+                            : isUnavailable && !shift ? THEME.bg.tertiary 
                             : shift ? role?.color + '25' : THEME.bg.tertiary,
                           border: `1px solid ${approvedTimeOff ? THEME.text.muted + '30' 
                             : isUnavailable && !shift ? THEME.border.subtle 
@@ -424,7 +424,7 @@ export const MobileAnnouncementPanel = ({
           onClick={() => { onAnnouncementChange(localAnn); onSave(localAnn); }}
           disabled={!hasChanges || isSaving}
           className="text-xs px-3 py-1 rounded-lg font-medium flex items-center gap-1 disabled:opacity-50"
-          style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: 'white' }}
+          style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}
         >
           {isSaving ? <><Loader size={10} className="animate-spin" /> Saving...</> : <><Save size={10} /> Save</>}
         </button>
@@ -450,7 +450,7 @@ export const MobileEmployeeQuickView = ({ isOpen, onClose, employee }) => {
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs" 
-              style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: '#fff' }}>
+              style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}>
               {employee.name.charAt(0)}
             </div>
             <div>
@@ -460,7 +460,7 @@ export const MobileEmployeeQuickView = ({ isOpen, onClose, employee }) => {
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg" style={{ color: THEME.text.muted }}><X size={16} /></button>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: THEME.text.muted }}><X size={16} /></button>
         </div>
         
         <div className="p-4 space-y-1.5">

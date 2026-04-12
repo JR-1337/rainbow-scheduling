@@ -7,17 +7,44 @@ import {
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// THEME - FlutterFlow inspired dark theme
+// OTR BRAND COLORS - Over the Rainbow identity with rotating accent
 // ═══════════════════════════════════════════════════════════════════════════════
+const OTR = {
+  white: '#FDFEFC',
+  navy: '#0D0E22',
+  accents: [
+    { primary: '#EC3228', dark: '#BD2820' },  // Red
+    { primary: '#0453A3', dark: '#034282' },  // Blue
+    { primary: '#F57F20', dark: '#C4661A' },  // Orange
+    { primary: '#00A84D', dark: '#00863E' },  // Green
+    { primary: '#932378', dark: '#761C60' },  // Purple
+  ],
+};
+
+// Cycle accent on each app load
+const _prevAccent = parseInt(localStorage.getItem('otr-accent') || '-1', 10);
+const _accentIdx = (_prevAccent + 1) % OTR.accents.length;
+try { localStorage.setItem('otr-accent', _accentIdx); } catch {}
+const OTR_ACCENT = OTR.accents[_accentIdx];
+
+// Luminance check - white text on dark accents, navy text on bright accents (orange)
+const _lum = (hex) => { const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16); return (0.299*r + 0.587*g + 0.114*b) / 255; };
+const _accentText = _lum(OTR_ACCENT.primary) < 0.55 ? '#FFFFFF' : OTR.navy;
+const _ar = parseInt(OTR_ACCENT.primary.slice(1,3),16), _ag = parseInt(OTR_ACCENT.primary.slice(3,5),16), _ab = parseInt(OTR_ACCENT.primary.slice(5,7),16);
+
 export const THEME = {
-  bg: { primary: '#1A1A2E', secondary: '#22223A', tertiary: '#2C2C50', elevated: '#383868', hover: '#444480' },
-  tooltip: { bg: '#12121E', border: '#2a2a48' },
-  accent: { blue: '#4F46E5', purple: '#7C3AED', cyan: '#06B6D4', pink: '#EC4899' },
-  text: { primary: '#F8FAFC', secondary: '#CBD5E1', muted: '#94A3B8' },
-  roles: { cashier: '#8B5CF6', backupCashier: '#A78BFA', mens: '#3B82F6', womens: '#F472B6', floorMonitor: '#F59E0B', none: '#475569' },
-  border: { subtle: 'rgba(148, 163, 184, 0.1)', default: 'rgba(148, 163, 184, 0.2)', bright: 'rgba(79, 70, 229, 0.5)' },
-  status: { success: '#10B981', warning: '#F59E0B', error: '#EF4444' },
-  task: '#FBBF24',
+  bg: { primary: OTR.navy, secondary: '#FFFFFF', tertiary: '#F5F3F0', elevated: '#FFFFFF', hover: '#EDECEA' },
+  tooltip: { bg: '#FFFFFF', border: OTR_ACCENT.primary + '60' },
+  accent: { blue: OTR_ACCENT.primary, purple: OTR_ACCENT.dark, cyan: '#09728C', pink: OTR_ACCENT.primary, text: _accentText },
+  text: { primary: OTR.navy, secondary: '#5C5C5C', muted: '#8B8580' },
+  roles: { cashier: '#932378', backupCashier: '#B44D9A', mens: '#0453A3', womens: '#EC3228', floorMonitor: '#F57F20', none: '#64748B' },
+  border: { subtle: `rgba(${_ar}, ${_ag}, ${_ab}, 0.15)`, default: OTR_ACCENT.primary + '80', bright: OTR_ACCENT.primary },
+  status: { success: '#059669', warning: '#D97706', error: '#DC2626' },
+  task: '#D97706',
+  shadow: {
+    card: `0 6px 20px -4px rgba(0,0,0,0.6), 0 0 40px -4px rgba(${_ar},${_ag},${_ab},0.45)`,
+    cardSm: `0 3px 12px -2px rgba(0,0,0,0.5), 0 0 24px -4px rgba(${_ar},${_ag},${_ab},0.35)`,
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -35,8 +62,6 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxSDWA1uOnemfu2N33y3za7
 const apiCall = async (action, payload = {}, onProgress) => {
   try {
     const payloadJson = JSON.stringify(payload);
-    console.log('API Call:', action, payload);
-    
     // Encode payload as JSON in URL parameter
     const params = new URLSearchParams({ action, payload: payloadJson });
     const url = `${API_URL}?${params.toString()}`;
@@ -44,7 +69,6 @@ const apiCall = async (action, payload = {}, onProgress) => {
     // Check URL length - browsers/servers typically limit to ~8000 chars
     // If too long, try POST first, fall back to chunked GET
     if (url.length > 6000) {
-      console.log(`Large payload (${url.length} chars), using POST`);
       try {
         // Apps Script POST: use text/plain to avoid CORS preflight
         const postResponse = await fetch(API_URL, {
@@ -54,14 +78,11 @@ const apiCall = async (action, payload = {}, onProgress) => {
           body: JSON.stringify({ action, payload })
         });
         const postText = await postResponse.text();
-        console.log('POST Response:', postText.substring(0, 200));
         try {
           const result = JSON.parse(postText);
           if (result.success !== undefined) return result;
         } catch (e) { /* POST failed or returned HTML redirect, fall through */ }
-      } catch (e) {
-        console.log('POST failed, falling back to chunked approach');
-      }
+      } catch (e) { /* POST failed, fall through to chunked GET */ }
       
       // Fallback: chunk the shifts array into smaller batches
       if (action === 'batchSaveShifts' && payload.shifts?.length > 10) {
@@ -75,19 +96,16 @@ const apiCall = async (action, payload = {}, onProgress) => {
     });
     
     const text = await response.text();
-    console.log('API Response:', text.substring(0, 200));
-    
+
     try {
       return JSON.parse(text);
     } catch (parseError) {
-      console.error('Failed to parse response:', text);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: { code: 'PARSE_ERROR', message: 'Invalid response from server' }
       };
     }
   } catch (error) {
-    console.error('API Error:', error);
     return { 
       success: false, 
       error: { code: 'NETWORK_ERROR', message: 'Unable to connect to server. Please try again.' }
@@ -113,8 +131,6 @@ const chunkedBatchSave = async (payload, onProgress) => {
     
     // Report progress
     if (onProgress) onProgress(i + chunk.length, shifts.length, chunkNum, totalChunks);
-    
-    console.log(`Saving chunk ${chunkNum}/${totalChunks} (${chunk.length} shifts)`);
     
     const chunkPayload = {
       callerEmail,
@@ -142,11 +158,9 @@ const chunkedBatchSave = async (payload, onProgress) => {
         totalSaved += result.data?.savedCount || chunk.length;
       } else {
         lastError = result.error;
-        console.error(`Chunk ${chunkNum} failed:`, result.error);
       }
     } catch (err) {
       lastError = { code: 'NETWORK_ERROR', message: err.message };
-      console.error(`Chunk ${chunkNum} network error:`, err);
     }
   }
   
@@ -569,7 +583,7 @@ const GradientButton = ({ children, onClick, variant = 'primary', disabled = fal
     style={{ 
       background: danger ? THEME.status.error : variant === 'primary' ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated, 
       border: variant === 'secondary' ? `1px solid ${THEME.border.default}` : 'none', 
-      color: THEME.text.primary 
+      color: (variant === 'primary' || danger) ? THEME.accent.text : THEME.text.primary
     }}>
     {children}
   </button>
@@ -579,11 +593,11 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   if (!isOpen) return null;
   const sizes = { sm: 'max-w-xs', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl' };
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
       <div className={`${sizes[size]} w-full rounded-xl overflow-hidden shadow-2xl max-h-[80vh] flex flex-col`} style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         <div className="px-3 py-2 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
           <h2 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>{title}</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
         </div>
         <div className="p-3 overflow-y-auto">{children}</div>
       </div>
@@ -673,7 +687,7 @@ const TooltipButton = ({ children, onClick, variant = 'secondary', disabled = fa
           backgroundColor: THEME.tooltip.bg, 
           border: `1px solid ${THEME.tooltip.border}`, 
           color: THEME.text.primary,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
           zIndex: 99999
         }}>
           {tooltip}
@@ -1231,7 +1245,7 @@ www.rainbowjeans.com`;
           </p>
           <div className="text-left p-2 rounded-lg mb-3 max-h-28 overflow-y-auto" style={{ backgroundColor: THEME.bg.tertiary }}>
             {results.map((r, i) => (
-              <div key={i} className="flex items-center justify-between py-0.5 text-xs">
+              <div key={r.emp.email || i} className="flex items-center justify-between py-0.5 text-xs">
                 <span style={{ color: THEME.text.primary }}>{r.emp.name}</span>
                 <span style={{ color: r.status === 'skipped' ? THEME.text.muted : THEME.status.success }}>
                   {r.status === 'skipped' ? r.reason : '✓'}
@@ -1287,11 +1301,11 @@ const ScheduleCell = ({ shift, date, onClick, availability, storeHours, isDelete
         )}
         
         {hasPartial && shading.top > 5 && !shift && !isDeleted && (
-          <div className="absolute top-0 left-0 right-0" style={{ height: `${shading.top}%`, background: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(45,45,107,0.7) 2px, rgba(45,45,107,0.7) 4px)` }} />
+          <div className="absolute top-0 left-0 right-0" style={{ height: `${shading.top}%`, background: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px)` }} />
         )}
         
         {hasPartial && shading.bottom > 5 && !shift && !isDeleted && (
-          <div className="absolute bottom-0 left-0 right-0" style={{ height: `${shading.bottom}%`, background: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(45,45,107,0.7) 2px, rgba(45,45,107,0.7) 4px)` }} />
+          <div className="absolute bottom-0 left-0 right-0" style={{ height: `${shading.bottom}%`, background: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px)` }} />
         )}
         
         {shift ? (
@@ -1359,7 +1373,7 @@ const EmployeeRow = ({ employee, dates, shifts, onCellClick, getEmployeeHours, o
         const dateStr = date.toISOString().split('T')[0];
         const approvedTimeOff = hasApprovedTimeOffForDate(employee.email, dateStr, timeOffRequests);
         return (
-          <div key={i} className="p-0.5" style={{ backgroundColor: THEME.bg.secondary }}>
+          <div key={dateStr} className="p-0.5" style={{ backgroundColor: THEME.bg.secondary }}>
             <ScheduleCell shift={shift} date={date} availability={av} storeHours={storeHrs} onClick={() => !isDeleted && !isLocked && onCellClick(employee, date, shift)} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} />
           </div>
         );
@@ -1372,12 +1386,7 @@ const EmployeeRow = ({ employee, dates, shifts, onCellClick, getEmployeeHours, o
 // GRADIENT BACKGROUND - FlutterFlow style (static)
 // ═══════════════════════════════════════════════════════════════════════════════
 export const GradientBackground = () => (
-  <div className="fixed inset-0 -z-10" style={{ 
-    background: `linear-gradient(135deg, ${THEME.bg.primary} 0%, #080810 40%, #0a0a18 60%, ${THEME.bg.primary} 100%)`
-  }}>
-    <div className="absolute top-0 left-0 w-96 h-96 opacity-20 blur-3xl" style={{ background: `radial-gradient(circle, ${THEME.accent.purple} 0%, transparent 70%)` }} />
-    <div className="absolute bottom-0 right-0 w-80 h-80 opacity-15 blur-3xl" style={{ background: `radial-gradient(circle, ${THEME.accent.blue} 0%, transparent 70%)` }} />
-  </div>
+  <div className="fixed inset-0 -z-10" style={{ backgroundColor: THEME.bg.primary }} />
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1444,11 +1453,11 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@300;400;600&display=swap');`}</style>
-      <div className="w-full max-w-sm p-6 rounded-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
+      <div className="w-full max-w-sm p-6 rounded-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, boxShadow: THEME.shadow.card }}>
         <div className="text-center mb-6">
           <div style={{ fontFamily: "'Josefin Sans', sans-serif" }}>
             <p className="text-xs tracking-widest" style={{ color: THEME.text.muted }}>OVER THE</p>
-            <h1 className="text-2xl font-semibold tracking-wider" style={{ color: '#FFFFFF' }}>RAINBOW</h1>
+            <h1 className="text-2xl font-semibold tracking-wider" style={{ color: THEME.text.primary }}>RAINBOW</h1>
           </div>
           <p className="text-sm mt-2" style={{ color: THEME.accent.purple }}>Staff Scheduling</p>
         </div>
@@ -1464,7 +1473,7 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
             placeholder="your.email@example.com"
             disabled={loading}
             className="w-full px-3 py-2 rounded-lg outline-none text-sm"
-            style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: '#FFFFFF' }}
+            style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
           />
         </div>
 
@@ -1479,7 +1488,7 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
             placeholder="••••••••"
             disabled={loading}
             className="w-full px-3 py-2 rounded-lg outline-none text-sm"
-            style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: '#FFFFFF' }}
+            style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
           />
           <p className="login-hint text-xs mt-1">First time? Use your employee ID as password</p>
         </div>
@@ -1492,10 +1501,10 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
           className="w-full py-2 rounded-lg font-medium text-sm flex items-center justify-center gap-2"
           style={{
             background: loading ? THEME.bg.tertiary : `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
-            color: '#fff',
+            color: loading ? THEME.text.muted : THEME.accent.text,
             opacity: loading ? 0.7 : 1
           }}>
-          {loading ? <><Loader size={16} className="animate-spin" /> Signing in...</> : 'Sign In'}
+          {loading ? <><div className="rainbow-spinner" /> Signing in...</> : 'Sign In'}
         </button>
       </div>
       
@@ -1556,14 +1565,14 @@ const RequestTimeOffModal = ({ isOpen, onClose, onSelectType, currentUser }) => 
   ];
   
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
       <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
           <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: THEME.text.primary }}>
             <Calendar size={16} style={{ color: THEME.accent.cyan }} />
             Shift Changes
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
         </div>
         <div className="p-4 space-y-2">
           <p className="text-xs mb-3" style={{ color: THEME.text.muted }}>What type of request would you like to make?</p>
@@ -1740,14 +1749,14 @@ const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRe
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
       <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
           <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: THEME.text.primary }}>
             <Calendar size={16} style={{ color: THEME.accent.cyan }} />
             Request Days Off
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
         </div>
         
         <div className="p-4">
@@ -1764,7 +1773,7 @@ const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRe
           <div className="flex items-center justify-between mb-3">
             <button 
               onClick={() => setViewMonth(new Date(year, month - 1, 1))}
-              className="p-1 rounded hover:bg-white/10"
+              className="p-1 rounded hover:bg-black/5"
               style={{ color: THEME.text.secondary }}
             >
               <ChevronLeft size={16} />
@@ -1774,7 +1783,7 @@ const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRe
             </span>
             <button 
               onClick={() => setViewMonth(new Date(year, month + 1, 1))}
-              className="p-1 rounded hover:bg-white/10"
+              className="p-1 rounded hover:bg-black/5"
               style={{ color: THEME.text.secondary }}
             >
               <ChevronRight size={16} />
@@ -1796,10 +1805,10 @@ const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRe
               const dateStr = date ? date.toISOString().split('T')[0] : '';
               const scheduled = date && isScheduledToWork(dateStr);
               const isDisabled = !date || isPast(date) || scheduled;
-              
+
               return (
                 <button
-                  key={i}
+                  key={dateStr || `pad-${i}`}
                   onClick={() => !scheduled && toggleDate(date)}
                   disabled={isDisabled}
                   className="aspect-square rounded-lg text-xs font-medium transition-all flex items-center justify-center relative"
@@ -2049,7 +2058,7 @@ const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, sh
   };
   
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
       <div className="max-w-md w-full rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="px-4 py-3 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.accent.pink}20, ${THEME.bg.secondary})` }}>
@@ -2057,7 +2066,7 @@ const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, sh
             <User size={16} style={{ color: THEME.accent.pink }} />
             Take My Shift
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
         </div>
         
         <div className="p-4 space-y-4 overflow-y-auto flex-1">
@@ -2392,7 +2401,7 @@ const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shi
   };
   
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
       <div className="max-w-md w-full rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="px-4 py-3 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.accent.purple}20, ${THEME.bg.secondary})` }}>
@@ -2400,7 +2409,7 @@ const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shi
             <ArrowRightLeft size={16} style={{ color: THEME.accent.purple }} />
             Swap Shifts
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
         </div>
         
         <div className="p-4 space-y-4 overflow-y-auto flex-1">
@@ -2952,11 +2961,11 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
       
       {/* Deny Modal */}
       {denyModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={() => setDenyModalOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setDenyModalOpen(false)}>
           <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
             <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
               <h2 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Deny Request</h2>
-              <button onClick={() => setDenyModalOpen(false)} className="p-1 rounded-lg hover:bg-white/10" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+              <button onClick={() => setDenyModalOpen(false)} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
             </div>
             <div className="p-3">
               <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
@@ -2980,11 +2989,11 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
       
       {/* Revoke Modal */}
       {revokeModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={() => setRevokeModalOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setRevokeModalOpen(false)}>
           <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
             <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
               <h2 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Revoke Approved Time Off</h2>
-              <button onClick={() => setRevokeModalOpen(false)} className="p-1 rounded-lg hover:bg-white/10" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+              <button onClick={() => setRevokeModalOpen(false)} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
             </div>
             <div className="p-3">
               <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
@@ -3499,11 +3508,11 @@ const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentA
 
       {/* Reject Offer Modal */}
       {rejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={() => setRejectModalOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setRejectModalOpen(false)}>
           <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
             <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
               <h2 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Reject Shift Offer</h2>
-              <button onClick={() => setRejectModalOpen(false)} className="p-1 rounded-lg hover:bg-white/10" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+              <button onClick={() => setRejectModalOpen(false)} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
             </div>
             <div className="p-3">
               <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
@@ -3699,7 +3708,7 @@ const IncomingOffersPanel = ({ offers, currentUserEmail, onAccept, onReject }) =
       
       {/* Reject Note Modal */}
       {rejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={() => setRejectModalOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setRejectModalOpen(false)}>
           <div className="max-w-sm w-full rounded-xl overflow-hidden" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
             <div className="px-4 py-3" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, backgroundColor: THEME.bg.tertiary }}>
               <h3 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Decline Take My Shift Request</h3>
@@ -3920,7 +3929,7 @@ const IncomingSwapsPanel = ({ swaps, currentUserEmail, onAccept, onReject }) => 
       
       {/* Reject Note Modal */}
       {rejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={() => setRejectModalOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setRejectModalOpen(false)}>
           <div className="max-w-sm w-full rounded-xl overflow-hidden" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
             <div className="px-4 py-3" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, backgroundColor: THEME.bg.tertiary }}>
               <h3 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Decline Swap Request</h3>
@@ -4669,11 +4678,11 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
 
       {/* Reject Swap Modal */}
       {rejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.9)' }} onClick={() => setRejectModalOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setRejectModalOpen(false)}>
           <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
             <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
               <h2 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Reject Swap Request</h2>
-              <button onClick={() => setRejectModalOpen(false)} className="p-1 rounded-lg hover:bg-white/10" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+              <button onClick={() => setRejectModalOpen(false)} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
             </div>
             <div className="p-3">
               <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
@@ -4713,7 +4722,7 @@ const EmployeeScheduleCell = ({ shift, date, loggedInEmpId, storeHours, isTimeOf
     <>
       <div className="h-14 rounded-lg relative overflow-hidden"
         style={{ 
-          backgroundColor: isTimeOff ? THEME.text.muted + '15' : isUnavailable && !shift ? THEME.bg.primary : (shift ? role?.color + '25' : THEME.bg.tertiary), 
+          backgroundColor: isTimeOff ? THEME.text.muted + '15' : isUnavailable && !shift ? THEME.bg.tertiary : (shift ? role?.color + '25' : THEME.bg.tertiary),
           border: `1px solid ${isTimeOff ? THEME.text.muted + '30' : isUnavailable && !shift ? THEME.border.subtle : (shift ? role?.color + '50' : THEME.border.default)}`,
           opacity: isTimeOff ? 0.7 : isUnavailable && !shift ? 0.5 : 1
         }}>
@@ -4785,7 +4794,7 @@ const EmployeeViewRow = ({ employee, dates, shifts, loggedInEmpId, getEmployeeHo
         const avail = employee.availability?.[dayName];
         const isUnavailable = avail && !avail.available;
         return (
-          <div key={i} className="p-0.5" style={{ backgroundColor: isMe ? THEME.accent.purple + '10' : THEME.bg.secondary }}>
+          <div key={dateStr} className="p-0.5" style={{ backgroundColor: isMe ? THEME.accent.purple + '10' : THEME.bg.secondary }}>
             <EmployeeScheduleCell shift={shift ? { ...shift, employeeId: employee.id } : null} date={date} loggedInEmpId={loggedInEmpId} storeHours={storeHrs} isTimeOff={isTimeOff} isUnavailable={isUnavailable} />
           </div>
         );
@@ -5051,7 +5060,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                   onClick={() => setMobileActiveTab(tab.id)}
                   className="px-4 py-2 text-xs relative flex items-center justify-center gap-1"
                   style={{
-                    backgroundColor: isActive ? THEME.bg.primary : THEME.bg.tertiary,
+                    backgroundColor: isActive ? THEME.bg.secondary : THEME.bg.tertiary,
                     color: isActive ? tab.color : THEME.text.muted,
                     borderRadius: '8px 8px 0 0',
                     borderTop: `2px solid ${isActive ? tab.color : THEME.border.subtle}`,
@@ -5215,7 +5224,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
       <GradientBackground />
       
       {/* Header */}
-      <header className="px-4 py-2 sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: `1px solid ${THEME.border.subtle}`, zIndex: 100 }}>
+      <header className="px-4 py-2 sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: `1px solid ${THEME.border.default}`, zIndex: 100, boxShadow: THEME.shadow.cardSm }}>
         <div className="max-w-[1400px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Logo />
@@ -5225,7 +5234,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => onPeriodChange && onPeriodChange(periodIndex - 1)}
-                className="p-1 rounded hover:bg-white/10"
+                className="p-1 rounded hover:bg-black/5"
                 style={{ color: THEME.text.secondary }}
               >
                 <ChevronLeft size={16} />
@@ -5238,7 +5247,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
               </div>
               <button 
                 onClick={() => onPeriodChange && onPeriodChange(periodIndex + 1)}
-                className="p-1 rounded hover:bg-white/10"
+                className="p-1 rounded hover:bg-black/5"
                 style={{ color: THEME.text.secondary }}
               >
                 <ChevronRight size={16} />
@@ -5317,12 +5326,12 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
           
           {/* Schedule grid */}
           {isEditMode && (
-            <div className="mb-2 px-3 py-2 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.status.warning + '15', border: `1px solid ${THEME.status.warning}30` }}>
+            <div className="mb-2 px-3 py-2 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderLeft: `3px solid ${THEME.status.warning}`, boxShadow: THEME.shadow.cardSm }}>
               <Loader size={12} className="animate-pulse" style={{ color: THEME.status.warning }} />
               <p className="text-xs" style={{ color: THEME.status.warning }}>Shift assignments for this period haven't been published yet. Availability and time off are shown below.</p>
             </div>
           )}
-          <div className="rounded-b-xl rounded-tr-xl overflow-visible relative" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderTop: 'none', zIndex: 1 }}>
+          <div className="rounded-b-xl rounded-tr-xl overflow-visible relative" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderTop: 'none', zIndex: 1, boxShadow: THEME.shadow.card }}>
             <div className="grid gap-px" style={{ gridTemplateColumns: '140px repeat(7, 1fr)', backgroundColor: THEME.border.subtle }}>
               <div className="p-1.5" style={{ backgroundColor: THEME.bg.tertiary }}><span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>Employee</span></div>
               {currentDates.map((date, i) => {
@@ -5330,7 +5339,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                 const today = date.toDateString() === new Date().toDateString();
                 const hol = isStatHoliday(date);
                 return (
-                  <div key={i} className="p-1 text-center" style={{ backgroundColor: today ? THEME.accent.purple + '20' : hol ? THEME.status.warning + '15' : THEME.bg.tertiary, borderBottom: today ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : 'none' }}>
+                  <div key={date.toISOString().split('T')[0]} className="p-1 text-center" style={{ backgroundColor: today ? THEME.accent.purple + '20' : hol ? THEME.status.warning + '15' : THEME.bg.tertiary, borderBottom: today ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : 'none' }}>
                     <p className="font-semibold text-xs" style={{ color: today ? THEME.accent.purple : hol ? THEME.status.warning : THEME.text.primary }}>{getDayName(date).slice(0, 3)}</p>
                     <p className="text-sm font-bold" style={{ color: THEME.text.primary }}>{date.getDate()}</p>
                     <p className="text-xs" style={{ color: THEME.text.muted }}>{formatTimeShort(sh.open)}-{formatTimeShort(sh.close)}</p>
@@ -5365,9 +5374,11 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
           
           {/* Period Announcement - Only show when period is LIVE and has content */}
           {!isEditMode && announcement?.message && (
-            <div className="mt-3 p-4 rounded-xl" style={{ 
-              backgroundColor: THEME.accent.blue + '10', 
-              border: `1px solid ${THEME.accent.blue}40`
+            <div className="mt-3 p-4 rounded-xl" style={{
+              backgroundColor: THEME.bg.secondary,
+              border: `1px solid ${THEME.border.default}`,
+              borderLeft: `3px solid ${THEME.accent.blue}`,
+              boxShadow: THEME.shadow.cardSm
             }}>
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg" style={{ backgroundColor: THEME.accent.blue + '20' }}>
@@ -5386,7 +5397,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
           )}
           
           {/* My Schedule Summary */}
-          <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
+          <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, boxShadow: THEME.shadow.cardSm }}>
             <h3 className="text-sm font-semibold mb-2" style={{ color: THEME.text.primary }}>Your Schedule This Period</h3>
             <div className="space-y-1">
               {dates.map((date, i) => {
@@ -5395,7 +5406,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                 const role = ROLES.find(r => r.id === shift.role);
                 const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
                 return (
-                  <div key={i} className="flex items-center gap-3 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, borderLeft: `3px solid ${role?.color}` }}>
+                  <div key={date.toISOString().split('T')[0]} className="flex items-center gap-3 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, borderLeft: `3px solid ${role?.color}` }}>
                     <div className="w-16">
                       <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>{dayName} {date.getDate()}</p>
                     </div>
@@ -5421,7 +5432,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
           
           {/* Admin Contacts */}
           {adminContacts.length > 0 && (
-            <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
+            <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, boxShadow: THEME.shadow.cardSm }}>
               <p className="text-xs font-semibold mb-2" style={{ color: THEME.text.muted }}>CONTACT ADMIN</p>
               <div className="space-y-1">
                 {adminContacts.map(admin => (
@@ -5610,7 +5621,6 @@ const CommunicationsPanel = ({ employees, shifts, dates, periodInfo, adminContac
   };
   
   const handleSave = () => {
-    console.log('CommunicationsPanel handleSave called with:', localAnnouncement);
     onAnnouncementChange(localAnnouncement); // Update parent state
     onSave(localAnnouncement); // Save to backend (or delete if empty)
   };
@@ -5618,7 +5628,6 @@ const CommunicationsPanel = ({ employees, shifts, dates, periodInfo, adminContac
   // Clear button: only clears the UI fields (like clearing a form)
   // Actual deletion happens when you Save with empty fields
   const handleClear = () => {
-    console.log('CommunicationsPanel handleClear - clearing UI only');
     setLocalAnnouncement({ subject: '', message: '' });
     // Don't call onClear - that deletes from backend
     // User needs to click Save to persist the deletion
@@ -5865,7 +5874,7 @@ const AdminSettingsModal = ({ isOpen, onClose, currentUser, staffingTargets, onS
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Admin Settings" size="sm">
       {/* Tab bar */}
-      <div className="flex gap-1 mb-3 p-0.5 rounded-lg" style={{ backgroundColor: THEME.bg.primary }}>
+      <div className="flex gap-1 mb-3 p-0.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
         {[
           { id: 'targets', label: 'Staffing Targets', icon: <Users size={12} /> },
           { id: 'password', label: 'Password', icon: <Key size={12} /> }
@@ -6186,13 +6195,13 @@ const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrides, sta
                 <input 
                   type="time" value={openTime} onChange={e => setOpenTime(e.target.value)}
                   className="flex-1 px-1.5 py-1 rounded-lg outline-none text-xs"
-                  style={{ backgroundColor: THEME.bg.primary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
+                  style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
                 />
                 <span className="text-xs" style={{ color: THEME.text.muted }}>to</span>
                 <input 
                   type="time" value={closeTime} onChange={e => setCloseTime(e.target.value)}
                   className="flex-1 px-1.5 py-1 rounded-lg outline-none text-xs"
-                  style={{ backgroundColor: THEME.bg.primary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
+                  style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
                 />
               </div>
             </div>
@@ -6206,7 +6215,7 @@ const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrides, sta
               <input 
                 type="number" min="0" max="99" value={editTarget} onChange={e => setEditTarget(parseInt(e.target.value, 10) || 0)}
                 className="w-20 px-1.5 py-1 rounded-lg outline-none text-xs text-center"
-                style={{ backgroundColor: THEME.bg.primary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
+                style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
               />
             </div>
             
@@ -6299,11 +6308,8 @@ export default function App() {
     if (!currentUser?.email) return;
     
     const periodStartDate = getCurrentPeriodStartDate();
-    console.log('saveAnnouncement called with:', announcement, 'for periodStartDate:', periodStartDate);
-    
     // If both subject and message are empty, delete instead of save
     if (!announcement.subject && !announcement.message) {
-      console.log('Empty announcement - calling clearAnnouncement instead');
       await clearAnnouncement();
       return;
     }
@@ -6317,14 +6323,12 @@ export default function App() {
     });
     
     if (result.success) {
-      console.log('Announcement saved:', result.data);
       // Update local state with the saved announcement (includes id and updatedAt)
       setAnnouncements(prev => ({
         ...prev,
         [periodStartDate]: result.data.announcement
       }));
     } else {
-      console.error('Failed to save announcement:', result.error);
       alert('Failed to save announcement: ' + (result.error?.message || 'Unknown error'));
     }
     setSavingAnnouncement(false);
@@ -6335,8 +6339,6 @@ export default function App() {
     if (!currentUser?.email) return;
     
     const periodStartDate = getCurrentPeriodStartDate();
-    console.log('clearAnnouncement called for periodStartDate:', periodStartDate);
-    
     // Always try to delete - backend will handle if not found
     setSavingAnnouncement(true);
     const result = await apiCall('deleteAnnouncement', {
@@ -6344,10 +6346,7 @@ export default function App() {
       periodStartDate: periodStartDate
     });
     
-    if (result.success) {
-      console.log('Announcement deleted from backend');
-    } else {
-      console.log('Delete result:', result.error?.code, result.error?.message);
+    if (!result.success) {
       // NOT_FOUND is fine - means there was nothing to delete
     }
     setSavingAnnouncement(false);
@@ -6401,8 +6400,8 @@ export default function App() {
       // Set employees - parse availability JSON string to object
       const parsedEmployees = (empData || []).map(emp => ({
         ...emp,
-        availability: typeof emp.availability === 'string' 
-          ? JSON.parse(emp.availability) 
+        availability: typeof emp.availability === 'string'
+          ? (() => { try { return JSON.parse(emp.availability); } catch { return {}; } })()
           : emp.availability || {
               sunday: { available: true, start: '11:00', end: '18:00' },
               monday: { available: true, start: '11:00', end: '18:00' },
@@ -6418,7 +6417,6 @@ export default function App() {
       // Convert shifts array to keyed object { "empId-date": shiftData }
       // Also fix date/time formats from Google Sheets
       const shiftsObj = {};
-      console.log('Raw shifts from API:', shiftData);
       (shiftData || []).forEach(shift => {
         // Fix date format - Sheets returns ISO timestamp, we need YYYY-MM-DD
         let dateStr = shift.date;
@@ -6455,10 +6453,8 @@ export default function App() {
         };
         
         const key = `${fixedShift.employeeId}-${dateStr}`;
-        console.log('Processing shift:', key, fixedShift);
         shiftsObj[key] = fixedShift;
       });
-      console.log('Final shiftsObj:', shiftsObj);
       setShifts(shiftsObj);
       
       // Load live periods from backend BEFORE filtering published shifts
@@ -6469,7 +6465,6 @@ export default function App() {
           editModeObj[pIndex] = false; // LIVE = not in edit mode
         });
         setEditModeByPeriod(editModeObj);
-        console.log('Loaded live periods:', loadedLivePeriods, 'editModeByPeriod:', editModeObj);
       }
       
       // Build publishedShifts: ONLY include shifts from LIVE periods
@@ -6496,7 +6491,6 @@ export default function App() {
         });
       }
       setPublishedShifts(publishedObj);
-      console.log('Published shifts:', Object.keys(publishedObj).length, 'of', Object.keys(shiftsObj).length, 'total');
       
       // Process requests into the 3 types with field mapping
       // Backend uses employeeName/employeeEmail/requestId, frontend uses different names
@@ -6519,8 +6513,6 @@ export default function App() {
         initiatorName: s.employeeName || s.initiatorName,
         initiatorEmail: s.employeeEmail || s.initiatorEmail
       }));
-      
-      console.log('Loaded requests - timeOff:', timeOff.length, 'offers:', offers.length, 'swaps:', swaps.length);
       
       setTimeOffRequests(timeOff);
       setShiftOffers(offers);
@@ -6545,22 +6537,18 @@ export default function App() {
           }
         });
         setAnnouncements(announcementsObj);
-        console.log('Loaded announcements:', loadedAnnouncements, 'announcementsObj:', announcementsObj);
       }
       
       // Load staffing targets from backend (falls back to DEFAULT_STAFFING_TARGETS)
       const { staffingTargets: loadedTargets, storeHoursOverrides: loadedHoursOverrides, staffingTargetOverrides: loadedTargetOverrides } = result.data;
       if (loadedTargets && typeof loadedTargets === 'object') {
         setStaffingTargets({ ...DEFAULT_STAFFING_TARGETS, ...loadedTargets });
-        console.log('Loaded staffing targets:', loadedTargets);
       }
       if (loadedHoursOverrides && typeof loadedHoursOverrides === 'object') {
         setStoreHoursOverrides(loadedHoursOverrides);
-        console.log('Loaded store hours overrides:', loadedHoursOverrides);
       }
       if (loadedTargetOverrides && typeof loadedTargetOverrides === 'object') {
         setStaffingTargetOverrides(loadedTargetOverrides);
-        console.log('Loaded staffing target overrides:', loadedTargetOverrides);
       }
       
       setIsLoadingData(false);
@@ -6572,9 +6560,8 @@ export default function App() {
     }
   };
   
-  // Handle login - set user and load data
+  // Handle login - set user and load data (min 1s loading sphere display)
   const handleLogin = async (user) => {
-    // Parse availability if it's a string
     const parsedUser = {
       ...user,
       availability: typeof user.availability === 'string'
@@ -6582,7 +6569,9 @@ export default function App() {
         : user.availability
     };
     setCurrentUser(parsedUser);
-    await loadDataFromBackend(parsedUser.email);
+    const minDelay = new Promise(r => setTimeout(r, 1000));
+    const dataLoad = loadDataFromBackend(parsedUser.email);
+    await Promise.all([minDelay, dataLoad]);
   };
   
   const { startDate, endDate, dates } = useMemo(() => getPayPeriodDates(periodIndex), [periodIndex]);
@@ -6598,6 +6587,7 @@ export default function App() {
     const currentlyEditing = editModeByPeriod[periodIndex] ?? true;
     
     if (currentlyEditing) {
+      if (!window.confirm('Publish this schedule? Employees will see the published shifts.')) return;
       setScheduleSaving(true);
       // Going from Edit Mode → LIVE: batch save shifts and mark as LIVE
       
@@ -6666,11 +6656,16 @@ export default function App() {
         .filter(([_, isEditing]) => !isEditing)
         .map(([idx, _]) => parseInt(idx, 10));
       
-      await apiCall('saveLivePeriods', {
+      const liveResult = await apiCall('saveLivePeriods', {
         callerEmail: currentUser.email,
         livePeriods: livePeriodIndexes
       });
-      
+      if (!liveResult.success) {
+        showToast('error', 'Failed to publish schedule. Please try again.');
+        setScheduleSaving(false);
+        return;
+      }
+
       showToast('success', `Schedule is now LIVE! Saved ${saveResult.data?.savedCount || 0} shifts.`);
       setScheduleSaving(false);
       setUnsaved(false);
@@ -6685,11 +6680,15 @@ export default function App() {
         .filter(([_, isEditing]) => !isEditing)
         .map(([idx, _]) => parseInt(idx, 10));
       
-      await apiCall('saveLivePeriods', {
+      const editResult = await apiCall('saveLivePeriods', {
         callerEmail: currentUser.email,
         livePeriods: livePeriodIndexes
       });
-      
+      if (!editResult.success) {
+        showToast('error', 'Failed to update schedule mode. Please try again.');
+        return;
+      }
+
       showToast('success', 'Switched to Edit Mode');
     }
   };
@@ -7007,7 +7006,6 @@ export default function App() {
       return true; // Return true to indicate success
     } else {
       showToast('error', result.error?.message || 'Failed to save employee');
-      console.error('Employee save failed:', result.error);
       return true; // Still return true since optimistic update happened
     }
   };
@@ -7057,7 +7055,6 @@ export default function App() {
       return true;
     } else {
       showToast('error', result.error?.message || 'Failed to remove employee');
-      console.error('Employee delete failed:', result.error);
       return true; // Still return true since optimistic update happened
     }
   };
@@ -7088,14 +7085,11 @@ export default function App() {
       showToast('success', `${emp.name} reactivated`);
     } else {
       showToast('error', result.error?.message || 'Failed to reactivate employee');
-      console.error('Employee reactivate failed:', result.error);
     }
   };
   
   const saveShift = (s) => {
     const k = `${s.employeeId}-${s.date}`;
-    console.log('saveShift called (local only):', { key: k, shift: s, deleted: s.deleted });
-    
     // Update local state only - shifts are batch saved when going LIVE
     if (s.deleted) { 
       const n = { ...shifts }; 
@@ -7153,7 +7147,6 @@ export default function App() {
       showToast('success', 'Time off request submitted');
     } else {
       showToast('error', result.error?.message || 'Failed to submit request');
-      console.error('Submit time off failed:', result.error);
     }
   };
   
@@ -7386,7 +7379,6 @@ export default function App() {
       showToast('success', 'Swap request sent to ' + swap.partnerName);
     } else {
       showToast('error', result.error?.message || 'Failed to submit swap request');
-      console.error('Submit swap failed:', result.error);
     }
   };
   
@@ -7679,13 +7671,13 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} />;
   }
   
-  // Show loading screen while fetching data
+  // Show loading screen while fetching data (rainbow sphere, min 1s display)
   if (isLoadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: THEME.bg.primary }}>
         <div className="text-center">
-          <Loader size={32} className="animate-spin mx-auto mb-4" style={{ color: THEME.accent.purple }} />
-          <p style={{ color: THEME.text.secondary }}>Loading your schedule...</p>
+          <div className="rainbow-sphere mx-auto mb-4" />
+          <p style={{ color: '#FFFFFF' }}>Loading your schedule...</p>
         </div>
       </div>
     );
@@ -7697,7 +7689,7 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: THEME.bg.primary }}>
         <div className="text-center max-w-md">
           <AlertCircle size={32} className="mx-auto mb-4" style={{ color: THEME.status.error }} />
-          <p className="mb-4" style={{ color: THEME.text.primary }}>{loadError}</p>
+          <p className="mb-4" style={{ color: '#FFFFFF' }}>{loadError}</p>
           <button 
             onClick={() => loadDataFromBackend(currentUser.email)}
             className="px-4 py-2 rounded-lg text-sm"
@@ -7891,7 +7883,7 @@ export default function App() {
                   }}
                   className="flex-1 py-1.5 text-xs font-medium relative flex items-center justify-center gap-1"
                   style={{
-                    backgroundColor: isActive ? THEME.bg.primary : THEME.bg.tertiary,
+                    backgroundColor: isActive ? THEME.bg.secondary : THEME.bg.tertiary,
                     color: isActive ? t.color : THEME.text.muted,
                     borderRadius: '8px 8px 0 0',
                     borderTop: `2px solid ${isActive ? t.color : THEME.border.subtle}`,
@@ -8116,8 +8108,10 @@ export default function App() {
         {toast && (
           <div className="fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-xl flex items-center gap-2"
             style={{
-              backgroundColor: toast.type === 'success' ? THEME.status.success : toast.type === 'warning' ? THEME.status.warning : toast.type === 'saving' ? THEME.accent.blue : THEME.status.error,
-              color: '#fff', minWidth: 200, textAlign: 'center', zIndex: 100001
+              backgroundColor: toast.type === 'success' ? THEME.status.success : toast.type === 'warning' ? THEME.status.warning : toast.type === 'saving' ? '#FFFFFF' : THEME.status.error,
+              color: toast.type === 'saving' ? THEME.accent.blue : '#fff', minWidth: 200, textAlign: 'center', zIndex: 100001,
+              border: toast.type === 'saving' ? `2px solid ${THEME.accent.blue}` : 'none',
+              boxShadow: THEME.shadow.cardSm
             }}>
             {toast.type === 'saving' ? <Loader size={16} className="animate-spin" /> : toast.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
             <span className="text-sm font-medium">{toast.message}</span>
@@ -8137,7 +8131,7 @@ export default function App() {
       `}</style>
       
       {/* Header */}
-      <header className="px-4 py-2 sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: `1px solid ${THEME.border.subtle}`, zIndex: 100 }}>
+      <header className="px-4 py-2 sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: `1px solid ${THEME.border.default}`, zIndex: 100, boxShadow: THEME.shadow.cardSm }}>
         <div className="max-w-[1400px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Logo />
@@ -8159,12 +8153,12 @@ export default function App() {
                   className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   style={{
                     background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
-                    color: '#fff',
+                    color: THEME.accent.text,
                     boxShadow: `0 0 12px ${THEME.accent.blue}50`
                   }}
                   title="Save changes (schedule stays hidden from employees)"
                 >
-                  {scheduleSaving ? <><Loader size={12} className="animate-spin" /><span>SAVING...</span></> : <><Save size={12} /><span>SAVE</span></>}
+                  {scheduleSaving ? <><div className="rainbow-spinner" style={{width:12,height:12,borderWidth:2}} /><span>SAVING...</span></> : <><Save size={12} /><span>SAVE</span></>}
                 </button>
               ) : (
                 /* Saved / clean → Go Live button */
@@ -8279,7 +8273,7 @@ export default function App() {
             <>
               {/* Locked schedule indicator */}
               {!isCurrentPeriodEditMode && (
-                <div className="mb-2 px-3 py-2 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.status.success + '15', border: `1px solid ${THEME.status.success}30` }}>
+                <div className="mb-2 px-3 py-2 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderLeft: `3px solid ${THEME.status.success}`, boxShadow: THEME.shadow.cardSm }}>
                   <Eye size={14} style={{ color: THEME.status.success }} />
                   <span className="text-xs font-medium" style={{ color: THEME.status.success }}>Schedule is LIVE</span>
                   <span className="text-xs" style={{ color: THEME.text.secondary }}>— Click "GO EDIT" to make changes</span>
@@ -8288,7 +8282,7 @@ export default function App() {
               
               {/* Auto-populate toolbar - only in Edit Mode */}
               {isCurrentPeriodEditMode && fullTimeEmployees.length > 0 && (
-                <div className="mb-2 px-3 py-2 rounded-lg flex items-center gap-2 flex-wrap" style={{ backgroundColor: THEME.accent.blue + '10', border: `1px solid ${THEME.accent.blue}30` }}>
+                <div className="mb-2 px-3 py-2 rounded-lg flex items-center gap-2 flex-wrap" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderLeft: `3px solid ${THEME.accent.blue}`, boxShadow: THEME.shadow.cardSm }}>
                   <div className="flex items-center gap-2">
                     <Clock size={14} style={{ color: THEME.accent.blue }} />
                     <span className="text-xs font-medium" style={{ color: THEME.accent.blue }}>Full-Time ({fullTimeEmployees.length})</span>
@@ -8377,7 +8371,7 @@ export default function App() {
               
               {/* Period Announcement - show if exists */}
               {currentAnnouncement?.message && (
-                <div className="mb-2 p-3 rounded-lg flex items-start gap-3" style={{ backgroundColor: THEME.accent.blue + '10', border: `1px solid ${THEME.accent.blue}30` }}>
+                <div className="mb-2 p-3 rounded-lg flex items-start gap-3" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderLeft: `3px solid ${THEME.accent.blue}`, boxShadow: THEME.shadow.cardSm }}>
                   <Bell size={16} style={{ color: THEME.accent.blue, marginTop: 2 }} />
                   <div className="flex-1">
                     <p className="text-xs font-semibold" style={{ color: THEME.accent.blue }}>
@@ -8396,7 +8390,7 @@ export default function App() {
               )}
               
               {/* Schedule grid */}
-              <div className="rounded-b-xl rounded-tr-xl overflow-visible relative" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderTop: 'none', zIndex: 1 }}>
+              <div className="rounded-b-xl rounded-tr-xl overflow-visible relative" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderTop: 'none', zIndex: 1, boxShadow: THEME.shadow.card }}>
                 <div className="grid gap-px" style={{ gridTemplateColumns: '140px repeat(7, 1fr)', backgroundColor: THEME.border.subtle }}>
                   <div className="p-1.5" style={{ backgroundColor: THEME.bg.tertiary }}><span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>Employee</span></div>
                   {currentDates.map((date, i) => {
@@ -8413,7 +8407,7 @@ export default function App() {
                     const canEdit = isCurrentPeriodEditMode && !isPast;
                     return (
                       <div 
-                        key={i} 
+                        key={dateStr}
                         className={`p-1 text-center ${canEdit ? 'cursor-pointer hover:opacity-80' : ''}`}
                         style={{ backgroundColor: today ? THEME.accent.purple + '20' : hol ? THEME.status.warning + '15' : THEME.bg.tertiary, borderBottom: today ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : 'none' }}
                         onClick={() => canEdit && setEditingColumnDate(date)}
@@ -8450,7 +8444,7 @@ export default function App() {
                 {/* Deleted employees with historical shifts */}
                 {deletedWithShifts.length > 0 && (
                   <>
-                    <div className="px-2 py-1 flex items-center gap-2" style={{ backgroundColor: THEME.bg.primary }}>
+                    <div className="px-2 py-1 flex items-center gap-2" style={{ backgroundColor: THEME.bg.tertiary }}>
                       <div className="flex-1 h-px" style={{ backgroundColor: THEME.border.default }} />
                       <span className="text-xs" style={{ color: THEME.text.muted }}>Former Staff (History)</span>
                       <div className="flex-1 h-px" style={{ backgroundColor: THEME.border.default }} />
@@ -8464,7 +8458,7 @@ export default function App() {
               <div className="mt-2 p-1.5 rounded-lg flex items-center gap-2 flex-wrap text-xs" style={{ backgroundColor: THEME.bg.secondary, zIndex: 1 }}>
                 {ROLES.filter(r => r.id !== 'none').map(r => <div key={r.id} className="flex items-center gap-1"><div className="w-2 h-2 rounded" style={{ backgroundColor: r.color }} /><span style={{ color: THEME.text.secondary }}>{r.fullName}</span></div>)}
                 <div className="flex items-center gap-1 ml-auto"><Star size={10} fill={THEME.task} color={THEME.task} /><span style={{ color: THEME.text.secondary }}>Task</span></div>
-                <div className="flex items-center gap-1"><div className="w-3 h-2 rounded-sm" style={{ background: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(45,45,107,0.7) 2px, rgba(45,45,107,0.7) 4px)` }} /><span style={{ color: THEME.text.secondary }}>Unavailable</span></div>
+                <div className="flex items-center gap-1"><div className="w-3 h-2 rounded-sm" style={{ background: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px)` }} /><span style={{ color: THEME.text.secondary }}>Unavailable</span></div>
                 <div className="flex items-center gap-1"><div className="w-3 h-2 rounded-sm" style={{ background: `repeating-linear-gradient(-45deg, transparent, transparent 2px, ${THEME.accent.cyan}40 2px, ${THEME.accent.cyan}40 4px)` }} /><span style={{ color: THEME.text.secondary }}>Time Off</span></div>
                 {adminContacts.length > 0 && (
                   <>
@@ -8724,14 +8718,16 @@ export default function App() {
         <div 
           className="fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-xl flex items-center gap-2"
           style={{ 
-            backgroundColor: toast.type === 'success' ? THEME.status.success 
+            backgroundColor: toast.type === 'success' ? THEME.status.success
               : toast.type === 'warning' ? THEME.status.warning
-              : toast.type === 'saving' ? THEME.accent.blue
+              : toast.type === 'saving' ? '#FFFFFF'
               : THEME.status.error,
-            color: '#fff',
+            color: toast.type === 'saving' ? THEME.accent.blue : '#fff',
+            border: toast.type === 'saving' ? `2px solid ${THEME.accent.blue}` : 'none',
             minWidth: 200,
             textAlign: 'center',
-            zIndex: 100001  // Above modal's z-[100] and tooltips
+            zIndex: 100001,
+            boxShadow: THEME.shadow.cardSm
           }}
         >
           {toast.type === 'saving' ? <Loader size={16} className="animate-spin" /> 
@@ -8751,7 +8747,7 @@ export default function App() {
       
       {/* Employee Tooltip - rendered at top level to escape stacking contexts */}
       {tooltipData && (
-        <div className="fixed p-2.5 rounded-lg shadow-2xl" style={{ top: tooltipData.pos.top, left: tooltipData.pos.left, width: 240, backgroundColor: THEME.tooltip.bg, border: `1px solid ${THEME.tooltip.border}`, boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)', zIndex: 99999 }}>
+        <div className="fixed p-2.5 rounded-lg shadow-2xl" style={{ top: tooltipData.pos.top, left: tooltipData.pos.left, width: 240, backgroundColor: THEME.tooltip.bg, border: `1px solid ${THEME.tooltip.border}`, boxShadow: '0 20px 50px rgba(0, 0, 0, 0.25)', zIndex: 99999 }}>
           <div className="flex items-center gap-2 mb-2 pb-2" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
             <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: tooltipData.isDeleted ? THEME.bg.elevated : `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: tooltipData.isDeleted ? THEME.text.muted : 'white' }}>{tooltipData.employee.name.charAt(0)}</div>
             <div className="flex-1">

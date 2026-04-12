@@ -774,6 +774,7 @@ function approveShiftOffer(payload) {
 
   if (shiftRow) {
     const recipient = getEmployeeByEmail(request.recipientEmail);
+    if (!recipient) return { success: false, error: { code: 'NOT_FOUND', message: 'Recipient employee not found' } };
     updateRow(CONFIG.TABS.SHIFTS, shiftRow._rowIndex, {
       employeeId: recipient.id,
       employeeName: recipient.name,
@@ -840,6 +841,7 @@ function revokeShiftOffer(payload) {
 
   if (shiftRow) {
     const offerer = getEmployeeByEmail(request.employeeEmail);
+    if (!offerer) return { success: false, error: { code: 'NOT_FOUND', message: 'Original employee not found' } };
     updateRow(CONFIG.TABS.SHIFTS, shiftRow._rowIndex, {
       employeeId: offerer.id,
       employeeName: offerer.name,
@@ -1513,8 +1515,10 @@ function sendEmail(to, subject, body) {
   try {
     MailApp.sendEmail({ to, subject, body, name: 'OTR Scheduling' });
     Logger.log(`Email sent to ${to}: ${subject}`);
+    return { success: true };
   } catch (error) {
     Logger.log(`Failed to send email to ${to}: ${error.toString()}`);
+    return { success: false, error: error.toString() };
   }
 }
 

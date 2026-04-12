@@ -44,11 +44,11 @@ export const MobileMenuDrawer = ({ isOpen, onClose, currentUser, onLogout, onOpe
   return (
     <div className="fixed inset-0 z-[200]" onClick={onClose}>
       {/* Backdrop */}
-      <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} />
+      <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} />
       
       {/* Drawer */}
       <div 
-        className="absolute top-0 left-0 h-full w-72 overflow-y-auto"
+        className="absolute top-0 left-0 h-full w-64 sm:w-72 overflow-y-auto"
         style={{ backgroundColor: THEME.bg.secondary, borderRight: `1px solid ${THEME.border.default}` }}
         onClick={e => e.stopPropagation()}
       >
@@ -56,7 +56,7 @@ export const MobileMenuDrawer = ({ isOpen, onClose, currentUser, onLogout, onOpe
         <div className="p-4" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" 
-              style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: '#fff' }}>
+              style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}>
               {currentUser.name.split(' ').map(n => n[0]).join('')}
             </div>
             <div>
@@ -71,7 +71,7 @@ export const MobileMenuDrawer = ({ isOpen, onClose, currentUser, onLogout, onOpe
           <button
             onClick={() => { onOpenShiftChanges(); onClose(); }}
             className="w-full px-4 py-3 text-sm font-medium rounded-lg flex items-center gap-3 hover:opacity-90"
-            style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: 'white' }}
+            style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}
           >
             <Calendar size={16} />
             Shift Changes
@@ -141,9 +141,9 @@ export const MobileAnnouncementPopup = ({ isOpen, onClose, announcement }) => {
           <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: THEME.accent.blue }}>
             📢 {announcement.subject || 'Announcement'}
           </h3>
-          <button onClick={onClose} className="p-1 rounded-lg" style={{ color: THEME.text.muted }}><X size={16} /></button>
+          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: THEME.text.muted }}><X size={16} /></button>
         </div>
-        <div className="p-4">
+        <div className="p-4 max-h-[60vh] overflow-y-auto">
           <div className="text-sm whitespace-pre-wrap" style={{ color: THEME.text.primary, lineHeight: 1.6 }}>
             {announcement.message}
           </div>
@@ -280,19 +280,19 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                   }}>
                     <p className="font-medium truncate" style={{
                       color: THEME.text.primary,
-                      fontSize: '10px', lineHeight: 1.2
+                      fontSize: '12px', lineHeight: 1.2
                     }}>
                       {emp.name.split(' ')[0]}
                     </p>
                     <p className="truncate" style={{
                       color: THEME.text.muted,
-                      fontSize: '9px', lineHeight: 1.2
+                      fontSize: '10px', lineHeight: 1.2
                     }}>
                       {emp.name.split(' ').slice(1).join(' ')}
                     </p>
                     <p className="font-semibold" style={{
                       color: hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan,
-                      fontSize: '9px', lineHeight: 1.2
+                      fontSize: '10px', lineHeight: 1.2
                     }}>{hours.toFixed(1)}h</p>
                   </td>
                   
@@ -316,7 +316,7 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                       }}>
                         <div className="h-full rounded-md relative overflow-hidden" style={{ 
                           backgroundColor: isTimeOff ? THEME.text.muted + '15' 
-                            : isUnavailable && !shift ? THEME.bg.primary 
+                            : isUnavailable && !shift ? THEME.bg.tertiary 
                             : shift ? role?.color + '25' : THEME.bg.tertiary,
                           border: `1px solid ${isTimeOff ? THEME.text.muted + '30' 
                             : isUnavailable && !shift ? THEME.border.subtle 
