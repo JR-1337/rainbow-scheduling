@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Bell, Calendar, Eye, Key, Loader, LogOut, Shield, Star, User, ArrowRight, ArrowRightLeft } from 'lucide-react';
 import {
-  THEME, ROLES_BY_ID,
+  THEME, ROLES, ROLES_BY_ID,
   toDateKey, getWeekNumber, formatDate,
   formatTimeDisplay, formatTimeShort, isStatHoliday, getStoreHoursForDate, getDayName,
   GradientBackground,
