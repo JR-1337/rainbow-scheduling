@@ -2,16 +2,18 @@
 
 CRITICAL: These column headers are exact. Do not rename, reorder, or omit fields.
 
-## Employees Tab (17 columns, A-Q)
+## Employees Tab (19 columns, A-S)
 
 ```
-id | name | email | password | phone | address | dob | active | isAdmin | isOwner | showOnSchedule | deleted | availability | counterPointId | adpNumber | rateOfPay | employmentType
+id | name | email | password | phone | address | dob | active | isAdmin | isOwner | showOnSchedule | deleted | availability | counterPointId | adpNumber | rateOfPay | employmentType | passwordHash | passwordSalt
 ```
 
 - `availability`: JSON string - `{ "sunday": { "available": true, "start": "11:00", "end": "18:00" }, ... }`
 - `employmentType`: `"full-time"` | `"part-time"` | `""`
 - `counterPointId`, `adpNumber`: Reserved for future POS/payroll integration - exist in schema, HIDDEN from UI, do not remove
-- `password`: Default = employee ID. Sheets may store as number - always use `String()` for comparisons
+- `password`: Legacy plaintext column. Sheets may store as number - always use `String()` for comparisons. After S36, populated only for accounts that haven't logged in since the migration OR for admin-reset accounts (so admin UI can display the default). Cleared on any user-initiated password change.
+- `passwordHash`: base64url-encoded SHA-256 of `salt + password`. Empty until first post-S36 login or password change.
+- `passwordSalt`: per-user UUID salt used with `passwordHash`. Empty until first post-S36 login or password change.
 
 ## Shifts Tab (9 columns, A-I)
 

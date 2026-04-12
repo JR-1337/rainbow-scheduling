@@ -2,6 +2,13 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-12 - S36 HMAC Session Tokens + SHA-256 Password Hashing (Stateless)
+
+**Decided:** Login issues `base64url(payload).base64url(HMAC_SHA_256(payload, HMAC_SECRET))` tokens with 12h TTL. Payload = `{e: email, exp: ms, a: isAdmin, o: isOwner}`. `verifyToken_` uses constant-time comparison. Passwords stored as `base64url(SHA_256(uuidSalt + password))` in new `passwordHash`/`passwordSalt` columns. Dual-check on login: hash first, plaintext fallback, migrate plaintext → hash on successful fallback. Admin `resetPassword` writes plaintext so admin UI can display the default; next login re-migrates. `verifyAuth(authArg)` accepts payload object (prefers token, falls back to `callerEmail`) or bare string for legacy callers — unblocks S37 migration without breaking deployed frontend.
+**Alternatives:** Stateful session table with rotation + revocation (rejected for pre-demo window — larger sheet surface + extra round trip; revisit after owner meeting). Bcrypt (rejected — no native Apps Script primitive, polyfill overhead). Clear plaintext column immediately on migration (rejected — plan defers removal to S40 after monitoring window confirms migration completion).
+**Rationale:** HMAC tokens eliminate trust-the-client. Stateless means no sheet write per request. SHA-256 with per-user salt is native to Apps Script (`Utilities.computeDigest`). Dual-check is non-breaking for users who haven't logged in since deploy. Rotating `HMAC_SECRET` = force-logout-all (documented as the ops path).
+**Revisit if:** Owner meeting surfaces a need for revocation/rotation (then add stateful token table). MFA becomes a requirement. Or if S40 confirms migration complete and plaintext fallback can be removed.
+
 ## 2026-04-12 - Email Body Not HTML-Escaped (Plaintext Via MailApp)
 
 **Decided:** `buildEmailContent` returns a plaintext body. `MailApp.sendEmail({ to, subject, body, name })` in `backend/Code.gs:1516` sends as plaintext (no `htmlBody`). S34.2 XSS escape applied to the 5 PDF HTML interpolation sites only, not the email builder's 7 candidate sites.

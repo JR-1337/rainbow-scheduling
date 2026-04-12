@@ -2,7 +2,16 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.12 (RS-24 — password visibility & first-login fixes)
+ * Version: 2.13 (S36 — HMAC session tokens + SHA-256 password hashing)
+ *
+ * Changes in v2.13:
+ * - verifyAuth:     now accepts the full payload (preferring payload.token, falling back to payload.callerEmail)
+ *                   so we can roll out HMAC tokens without breaking the legacy trust-the-client path
+ * - login:          issues a signed token (12h TTL) and migrates plaintext passwords to salted SHA-256 on use
+ * - changePassword: writes salted SHA-256 hash and clears the plaintext column
+ * - resetPassword:  keeps plaintext fallback (admin UI shows it) and clears any hash so next login re-migrates
+ * - New Script Property REQUIRED: HMAC_SECRET (32 random bytes, base64). App throws on first token op without it.
+ * - New Employees columns: passwordHash, passwordSalt (append to end; getSheetData picks them up from headers)
  *
  * Changes in v2.12:
  * - login:         includes defaultPassword in response when usingDefaultPassword
@@ -278,12 +287,32 @@ function isAdminUser(email) {
   return employee && (employee.isAdmin || employee.isOwner);
 }
 
-function verifyAuth(callerEmail, requiredAdmin = false) {
-  if (!callerEmail) {
+// S36: verifyAuth accepts either a payload object (preferred — will read `token` first,
+// then legacy `callerEmail`) OR a bare email string (during frontend migration).
+// Once S37 removes all `callerEmail` sites and auto-attaches `token`, the string-arg
+// and payload.callerEmail branches become dead code and can be deleted.
+function verifyAuth(authArg, requiredAdmin = false) {
+  let email = null;
+  let viaToken = false;
+
+  if (typeof authArg === 'object' && authArg !== null) {
+    if (authArg.token) {
+      const decoded = verifyToken_(authArg.token);
+      if (!decoded.valid) return { authorized: false, error: decoded.error };
+      email = decoded.email;
+      viaToken = true;
+    } else if (authArg.callerEmail) {
+      email = authArg.callerEmail;
+    }
+  } else if (typeof authArg === 'string' && authArg) {
+    email = authArg;
+  }
+
+  if (!email) {
     return { authorized: false, error: { code: 'AUTH_REQUIRED', message: 'Please log in to continue' } };
   }
 
-  const employee = getEmployeeByEmail(callerEmail);
+  const employee = getEmployeeByEmail(email);
   if (!employee) {
     return { authorized: false, error: { code: 'AUTH_REQUIRED', message: 'Employee not found or inactive' } };
   }
@@ -292,7 +321,97 @@ function verifyAuth(callerEmail, requiredAdmin = false) {
     return { authorized: false, error: { code: 'AUTH_FORBIDDEN', message: "You don't have permission for this action" } };
   }
 
-  return { authorized: true, employee };
+  return { authorized: true, employee, viaToken };
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+// S36 — Crypto helpers (HMAC tokens + SHA-256 password hashing)
+// ───────────────────────────────────────────────────────────────────────────────
+
+const TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+function getHmacSecret_() {
+  const secret = PropertiesService.getScriptProperties().getProperty('HMAC_SECRET');
+  if (!secret) {
+    throw new Error('HMAC_SECRET not configured. Apps Script > Project Settings > Script Properties; set HMAC_SECRET to 32 random bytes base64.');
+  }
+  return secret;
+}
+
+function base64UrlEncodeBytes_(bytes) {
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/, '');
+}
+
+function base64UrlEncodeString_(str) {
+  return base64UrlEncodeBytes_(Utilities.newBlob(str).getBytes());
+}
+
+function base64UrlDecodeToString_(s) {
+  const pad = s.length % 4 === 0 ? '' : '='.repeat(4 - (s.length % 4));
+  return Utilities.newBlob(Utilities.base64DecodeWebSafe(s + pad)).getDataAsString();
+}
+
+function hmacSign_(message) {
+  const secret = getHmacSecret_();
+  const sigBytes = Utilities.computeHmacSignature(
+    Utilities.MacAlgorithm.HMAC_SHA_256, message, secret
+  );
+  return base64UrlEncodeBytes_(sigBytes);
+}
+
+function constantTimeEq_(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function createToken_(employee) {
+  const payload = {
+    e: employee.email,
+    exp: Date.now() + TOKEN_TTL_MS,
+    a: employee.isAdmin === true,
+    o: employee.isOwner === true
+  };
+  const payloadB64 = base64UrlEncodeString_(JSON.stringify(payload));
+  const sig = hmacSign_(payloadB64);
+  return payloadB64 + '.' + sig;
+}
+
+function verifyToken_(token) {
+  if (!token || typeof token !== 'string' || token.indexOf('.') < 0) {
+    return { valid: false, error: { code: 'AUTH_INVALID', message: 'Invalid session token' } };
+  }
+  const parts = token.split('.');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return { valid: false, error: { code: 'AUTH_INVALID', message: 'Invalid session token' } };
+  }
+  const [payloadB64, sig] = parts;
+  const expectedSig = hmacSign_(payloadB64);
+  if (!constantTimeEq_(sig, expectedSig)) {
+    return { valid: false, error: { code: 'AUTH_INVALID', message: 'Session signature mismatch' } };
+  }
+  let payload;
+  try {
+    payload = JSON.parse(base64UrlDecodeToString_(payloadB64));
+  } catch (err) {
+    return { valid: false, error: { code: 'AUTH_INVALID', message: 'Malformed session token' } };
+  }
+  if (!payload.exp || payload.exp < Date.now()) {
+    return { valid: false, error: { code: 'AUTH_EXPIRED', message: 'Session expired, please log in again' } };
+  }
+  return { valid: true, email: payload.e, isAdmin: payload.a === true, isOwner: payload.o === true };
+}
+
+function generateSalt_() {
+  return Utilities.getUuid();
+}
+
+function hashPassword_(salt, password) {
+  const bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256, String(salt) + String(password)
+  );
+  return base64UrlEncodeBytes_(bytes);
 }
 
 /**
@@ -317,22 +436,54 @@ function login(payload) {
     return { success: false, error: { code: 'AUTH_FAILED', message: 'Account is inactive. Please contact your administrator.' } };
   }
 
-  if (String(employee.password) !== String(password)) {
+  // S36 dual-check: hash first (post-migration), fall back to plaintext (pre-migration)
+  // and migrate on successful plaintext login.
+  const pwStr = String(password);
+  let authOk = false;
+  let migrateNow = false;
+
+  if (employee.passwordHash && employee.passwordSalt) {
+    authOk = constantTimeEq_(
+      hashPassword_(String(employee.passwordSalt), pwStr),
+      String(employee.passwordHash)
+    );
+  }
+
+  if (!authOk && employee.password !== undefined && employee.password !== '' && String(employee.password) === pwStr) {
+    authOk = true;
+    migrateNow = true;
+  }
+
+  if (!authOk) {
     return { success: false, error: { code: 'AUTH_FAILED', message: 'Invalid email or password' } };
   }
 
-  const { password: _, _rowIndex, ...safeEmployee } = employee;
+  if (migrateNow) {
+    const salt = generateSalt_();
+    const hash = hashPassword_(salt, pwStr);
+    updateRow(CONFIG.TABS.EMPLOYEES, employee._rowIndex, {
+      passwordHash: hash,
+      passwordSalt: salt
+    });
+    employee.passwordHash = hash;
+    employee.passwordSalt = salt;
+  }
 
-  const usingDefaultPassword = String(employee.password) === String(employee.id) ||
-                               /^emp-\d{3}$/.test(String(employee.password));
+  const token = createToken_(employee);
+
+  const { password: _pw, passwordHash: _ph, passwordSalt: _ps, _rowIndex, ...safeEmployee } = employee;
+
+  const usingDefaultPassword = String(employee.id) === pwStr || /^emp-\d{3}$/.test(pwStr);
 
   return {
     success: true,
     data: {
       employee: safeEmployee,
+      token,
+      expiresAt: Date.now() + TOKEN_TTL_MS,
       usingDefaultPassword,
       // Include the actual default password so the first-login modal can show it to the employee
-      ...(usingDefaultPassword ? { defaultPassword: String(employee.password) } : {})
+      ...(usingDefaultPassword ? { defaultPassword: pwStr } : {})
     }
   };
 }
@@ -356,13 +507,30 @@ function changePassword(payload) {
   }
 
   if (emailToChange === callerEmail) {
-    // For accounts using a default password (emp-XXX or old ID format), also accept the employee's
-    // ID as a valid current password — covers the first-login flow where the frontend may send the ID
-    const storedIsDefault = String(employee.password) === String(employee.id) ||
-                            /^emp-\d{3}$/.test(String(employee.password));
-    const validCurrent = String(employee.password) === String(currentPassword) ||
-                         (storedIsDefault && String(employee.id) === String(currentPassword));
-    if (!validCurrent) {
+    // Dual-check current password: hash first, then plaintext, then ID-as-default fallback.
+    const currentStr = String(currentPassword);
+    let currentOk = false;
+
+    if (employee.passwordHash && employee.passwordSalt) {
+      currentOk = constantTimeEq_(
+        hashPassword_(String(employee.passwordSalt), currentStr),
+        String(employee.passwordHash)
+      );
+    }
+    if (!currentOk && employee.password !== undefined && employee.password !== '' &&
+        String(employee.password) === currentStr) {
+      currentOk = true;
+    }
+    if (!currentOk) {
+      const storedIsDefault = employee.password !== '' && (
+        String(employee.password) === String(employee.id) ||
+        /^emp-\d{3}$/.test(String(employee.password))
+      );
+      if (storedIsDefault && String(employee.id) === currentStr) {
+        currentOk = true;
+      }
+    }
+    if (!currentOk) {
       return { success: false, error: { code: 'AUTH_FAILED', message: 'Current password is incorrect' } };
     }
   } else {
@@ -372,7 +540,14 @@ function changePassword(payload) {
     }
   }
 
-  updateCell(CONFIG.TABS.EMPLOYEES, employee._rowIndex, 'password', String(newPassword));
+  // S36: store hash + salt for the new password and clear the plaintext column.
+  const salt = generateSalt_();
+  const hash = hashPassword_(salt, String(newPassword));
+  updateRow(CONFIG.TABS.EMPLOYEES, employee._rowIndex, {
+    password: '',
+    passwordHash: hash,
+    passwordSalt: salt
+  });
 
   return { success: true, data: { message: 'Password changed successfully' } };
 }
@@ -384,7 +559,7 @@ function changePassword(payload) {
 function resetPassword(payload) {
   const { callerEmail, targetEmail } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
@@ -398,7 +573,13 @@ function resetPassword(payload) {
   const sequenceNum = employee._rowIndex - 1;
   const newPassword = `emp-${String(sequenceNum).padStart(3, '0')}`;
 
-  updateCell(CONFIG.TABS.EMPLOYEES, employee._rowIndex, 'password', newPassword);
+  // S36: admin reset writes plaintext (so admin UI can display it) and clears any
+  // existing hash/salt — next login will re-migrate to hash via the dual-check path.
+  updateRow(CONFIG.TABS.EMPLOYEES, employee._rowIndex, {
+    password: newPassword,
+    passwordHash: '',
+    passwordSalt: ''
+  });
 
   return { success: true, data: { message: `Password reset to ${newPassword} for ${employee.name}`, newPassword } };
 }
@@ -464,7 +645,7 @@ function formatTimeDisplay(timeStr) {
 function submitTimeOffRequest(payload) {
   const { callerEmail, dates, reason } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   if (dates.some(d => isDateInPast(d))) {
@@ -503,7 +684,7 @@ function submitTimeOffRequest(payload) {
 function cancelTimeOffRequest(payload) {
   const { callerEmail, requestId } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -534,7 +715,7 @@ function cancelTimeOffRequest(payload) {
 function approveTimeOffRequest(payload) {
   const { callerEmail, requestId } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -558,7 +739,7 @@ function approveTimeOffRequest(payload) {
 function denyTimeOffRequest(payload) {
   const { callerEmail, requestId, reason } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -583,7 +764,7 @@ function denyTimeOffRequest(payload) {
 function revokeTimeOffRequest(payload) {
   const { callerEmail, requestId, reason } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -617,7 +798,7 @@ function revokeTimeOffRequest(payload) {
 function submitShiftOffer(payload) {
   const { callerEmail, recipientEmail, shiftDate, shiftStart, shiftEnd, shiftRole } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   if (callerEmail === recipientEmail) {
@@ -670,7 +851,7 @@ function submitShiftOffer(payload) {
 function acceptShiftOffer(payload) {
   const { callerEmail, requestId, note } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -695,7 +876,7 @@ function acceptShiftOffer(payload) {
 function declineShiftOffer(payload) {
   const { callerEmail, requestId, note } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -720,7 +901,7 @@ function declineShiftOffer(payload) {
 function cancelShiftOffer(payload) {
   const { callerEmail, requestId } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -752,7 +933,7 @@ function cancelShiftOffer(payload) {
 function approveShiftOffer(payload) {
   const { callerEmail, requestId, note } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -790,7 +971,7 @@ function approveShiftOffer(payload) {
 function rejectShiftOffer(payload) {
   const { callerEmail, requestId, note } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -815,7 +996,7 @@ function rejectShiftOffer(payload) {
 function revokeShiftOffer(payload) {
   const { callerEmail, requestId, note } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -861,7 +1042,7 @@ function revokeShiftOffer(payload) {
 function submitSwapRequest(payload) {
   const { callerEmail, partnerEmail, initiatorShift, partnerShift } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   if (callerEmail === partnerEmail) {
@@ -912,7 +1093,7 @@ function submitSwapRequest(payload) {
 function acceptSwapRequest(payload) {
   const { callerEmail, requestId, note } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -937,7 +1118,7 @@ function acceptSwapRequest(payload) {
 function declineSwapRequest(payload) {
   const { callerEmail, requestId, note } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -962,7 +1143,7 @@ function declineSwapRequest(payload) {
 function cancelSwapRequest(payload) {
   const { callerEmail, requestId } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -992,7 +1173,7 @@ function cancelSwapRequest(payload) {
 function approveSwapRequest(payload) {
   const { callerEmail, requestId, note } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -1032,7 +1213,7 @@ function approveSwapRequest(payload) {
 function rejectSwapRequest(payload) {
   const { callerEmail, requestId, note } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -1057,7 +1238,7 @@ function rejectSwapRequest(payload) {
 function revokeSwapRequest(payload) {
   const { callerEmail, requestId, note } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -1105,7 +1286,7 @@ function revokeSwapRequest(payload) {
 function getEmployeeRequests(payload) {
   const { callerEmail } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const allRequests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -1121,7 +1302,7 @@ function getEmployeeRequests(payload) {
 function getAdminQueue(payload) {
   const { callerEmail } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const allRequests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
@@ -1139,7 +1320,7 @@ function getAdminQueue(payload) {
 function getIncomingOffers(payload) {
   const { callerEmail } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const offers = getSheetData(CONFIG.TABS.SHIFT_CHANGES).filter(r =>
@@ -1154,7 +1335,7 @@ function getIncomingOffers(payload) {
 function getIncomingSwaps(payload) {
   const { callerEmail } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const swaps = getSheetData(CONFIG.TABS.SHIFT_CHANGES).filter(r =>
@@ -1169,7 +1350,7 @@ function getIncomingSwaps(payload) {
 function getAllData(payload) {
   const { callerEmail } = payload;
 
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
@@ -1223,14 +1404,14 @@ function getAllData(payload) {
 
 function getEmployees(payload) {
   const { callerEmail } = payload;
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
   return { success: true, data: { employees: getSheetData(CONFIG.TABS.EMPLOYEES) } };
 }
 
 function getShifts(payload) {
   const { callerEmail } = payload;
-  const auth = verifyAuth(callerEmail);
+  const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
   return { success: true, data: { shifts: getSheetData(CONFIG.TABS.SHIFTS) } };
 }
@@ -1238,7 +1419,7 @@ function getShifts(payload) {
 function saveShift(payload) {
   const { callerEmail, shift } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const normalizeDate = (d) => {
@@ -1279,7 +1460,7 @@ function saveShift(payload) {
 function saveEmployee(payload) {
   const { callerEmail, employee } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
@@ -1304,7 +1485,7 @@ function saveEmployee(payload) {
 function saveLivePeriods(payload) {
   const { callerEmail, livePeriods } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const livePeriodsStr = Array.isArray(livePeriods) ? livePeriods.join(',') : String(livePeriods);
@@ -1323,7 +1504,7 @@ function saveLivePeriods(payload) {
 function saveStaffingTargets(payload) {
   const { callerEmail, staffingTargets } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   if (!staffingTargets || typeof staffingTargets !== 'object') {
@@ -1346,7 +1527,7 @@ function saveStaffingTargets(payload) {
 function saveSetting(payload) {
   const { callerEmail, key, value } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   if (!key) return { success: false, error: { code: 'VALIDATION_ERROR', message: 'key is required' } };
@@ -1367,7 +1548,7 @@ function saveSetting(payload) {
 function batchSaveShifts(payload) {
   const { callerEmail, shifts, periodDates, allShiftKeys } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const normalizeDate = (d) => {
@@ -1429,7 +1610,7 @@ function batchSaveShifts(payload) {
 function saveAnnouncement(payload) {
   const { callerEmail, periodStartDate, subject, message } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   if (!periodStartDate) {
@@ -1456,7 +1637,7 @@ function saveAnnouncement(payload) {
 function deleteAnnouncement(payload) {
   const { callerEmail, periodStartDate } = payload;
 
-  const auth = verifyAuth(callerEmail, true);
+  const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
   if (!periodStartDate) {
