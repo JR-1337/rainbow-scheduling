@@ -2,6 +2,13 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-12 - Payroll Aggregator = Path 1 (Rainbow as Bridge, Not Replacement)
+
+**Decided:** Post-demo, build Rainbow into the aggregator between Counterpoint (clock-in actuals) and ADP (payroll). Rainbow ingests Counterpoint actuals, shows scheduled-vs-actual reconciliation + PTO + OT flags, admin enters bonuses in-app, Rainbow emits an ADP-ready export file. Counterpoint + ADP stay as-is. Pending demo go-ahead + discovery answers from Sarvi (Counterpoint export format, ADP upload format, employee ID consistency, bonus logic).
+**Alternatives:** Replace Counterpoint clock with Rainbow punch-in/out (rejected for v1 — fights Counterpoint's POS-register tie-in, higher risk). Full API↔API orchestration with Rainbow middle (rejected for v1 — depends on both vendors' APIs existing and being usable; discover later).
+**Rationale:** Owner's pain is re-typing between 3 systems every 2 weeks plus separate bonus workflow. Path 1 is additive (nothing existing breaks), reuses what Rainbow already knows (employees, schedule, PTO, ESA OT), and the bonus-entry UI is a small standalone feature. Full replacement or full API is a v2 conversation after the aggregator proves value.
+**Revisit if:** Discovery reveals Counterpoint has no usable export (printed PDF only) — then path 1 is blocked and path 2 becomes cheaper by comparison. Or if owner prefers a full replacement after seeing the aggregator working.
+
 ## 2026-04-12 - S39.4 Mobile Admin Extraction Deferred (Honors Prior Decision)
 
 **Decided:** The `if (isMobileAdmin) { return (...) }` branch in App.jsx stays inline. Plan file `lovely-launching-marble.md` listed S39.4 as "extract to `src/MobileAdminView/index.jsx`" but that directly conflicts with the 2026-02-10 "Mobile Admin as If-Branch" decision below. No architectural precondition (state context provider or state library) has been met, so the original rationale still holds. S39.3b/c/d (remaining admin panels) are also deferred post-demo to keep the demo window safe — those extractions are low-risk and can land in a future session.

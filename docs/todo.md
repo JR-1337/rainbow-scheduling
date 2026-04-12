@@ -24,6 +24,13 @@ Post-demo (code landed; awaits manual deploy above):
 - S39.4 DEFERRED: mobile admin branch extraction conflicts with decisions.md 2026-02-10. Unblocks only after admin state moves to a Context provider. See 2026-04-12 decision entry.
 - S40 persistence-file sweep + forward handoff
 
+Post-demo payroll aggregator (path 1, pending demo go-ahead):
+- Discovery (JR emailing Sarvi): Counterpoint export format? ADP upload format? Employee ID consistency across 3 systems? Bonus logic (formulaic vs ad-hoc)?
+- Feature: pay-period reconciliation view (scheduled vs actual, PTO lines, OT flags at ESA 40/44hr)
+- Feature: bonus entry UI per employee per period
+- Feature: ADP-ready export (format TBD from discovery)
+- Counterpoint actuals ingestion (format TBD from discovery)
+
 Existing up-next preserved:
 - Post-demo: revisit density toggle CSS scope — broad `.density-compact .grid` selector may catch unintended grids
 - Post-demo: evaluate mobile bottom nav active states on deep-linked URLs if introduced
