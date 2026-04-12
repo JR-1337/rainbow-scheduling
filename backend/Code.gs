@@ -2,7 +2,13 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.13 (S36 — HMAC session tokens + SHA-256 password hashing)
+ * Version: 2.15 (post-setup cleanup — setupAuth stripped; rotate-secret stays)
+ *
+ * Changes in v2.15:
+ * - Removed setupAuth() and the "Run Auth Setup" menu item (setup is done; keeping
+ *   them around would risk an accidental re-run).
+ * - onOpen() still installs a "Rainbow Admin" menu, but it only exposes the emergency
+ *   "Rotate HMAC Secret" action now.
  *
  * Changes in v2.13:
  * - verifyAuth:     now accepts the full payload (preferring payload.token, falling back to payload.callerEmail)
@@ -412,6 +418,36 @@ function hashPassword_(salt, password) {
     Utilities.DigestAlgorithm.SHA_256, String(salt) + String(password)
   );
   return base64UrlEncodeBytes_(bytes);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHEET MENU
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Installs a "Rainbow Admin" menu in the spreadsheet on open.
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Rainbow Admin')
+    .addItem('Rotate HMAC Secret (force log out all users)', 'rotateHmacSecret')
+    .addToUi();
+}
+
+// Emergency-use: change the signing secret so every token out in the wild becomes invalid.
+// Every currently-signed-in user is bounced to the login screen on their next action.
+function rotateHmacSecret() {
+  const ui = SpreadsheetApp.getUi();
+  const confirm = ui.alert(
+    'Rotate HMAC Secret?',
+    'Every logged-in user (including you) will be bounced to the login screen on their next action. Continue?',
+    ui.ButtonSet.YES_NO
+  );
+  if (confirm !== ui.Button.YES) return;
+
+  const raw = Utilities.getUuid() + Utilities.getUuid() + Utilities.getUuid();
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw);
+  PropertiesService.getScriptProperties().setProperty('HMAC_SECRET', Utilities.base64Encode(bytes));
+
+  ui.alert('Done. All active sessions have been invalidated.');
 }
 
 /**
