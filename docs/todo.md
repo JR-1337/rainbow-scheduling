@@ -10,8 +10,7 @@
 **Active plan:** `~/.claude/plans/lovely-launching-marble.md` — audit-driven security + bugfix + refactor chunked into S33.5 → S40.
 
 Pre-demo (before 2026-04-14):
-- S33.5 repo hygiene (.gitignore dist/, commit package-lock.json, Photos/ decision)
-- S34 demo-critical bugs: timezone fix @ App.jsx:2265, XSS escape (7 sites PDF+email), chunked-save partial-failure surfacing, extract PDF + email builders
+- S33.5 repo hygiene (.gitignore dist/, commit package-lock.json, Photos/ decision) — deferred, JR requested S34 first
 - S35 browser verify live + demo polish
 
 Post-demo:
@@ -29,6 +28,7 @@ Existing up-next preserved:
 
 ### Done
 
+- [2026-04-12] S34 demo-critical bugs (single commit): `parseLocalDate(str)` helper eliminates Ontario TZ shift (fix @ App.jsx:2265, 42 other `+ 'T12:00:00'` sites swept to the helper). `escapeHtml` applied at 5 PDF HTML interpolation sites (announcement subject/message, shift.task, emp.name, admin contacts). PDF + email builders extracted to `src/pdf/generate.js` + `src/email/build.js`; shared helpers to `src/utils/format.js` (App.jsx -262 lines). `chunkedBatchSave` now returns `success:false` with `{savedCount, totalChunks, failedChunks}` when any chunk fails; both callers surface "X of Y batches saved" toast and retain unsaved flag. Email body kept unescaped (plaintext via `MailApp.sendEmail({body})` — not an HTML XSS vector).
 - [2026-04-12] PDF demo-critical six: "Printed on" timestamp footer + live-app URL pointer. Removed auto-print; added sticky Print button in preview. `OFF — approved` marker on PTO cells (new timeOffRequests param + `hasApprovedTimeOffForDate` check). OT thresholds shifted to Ontario ESA (amber ≥40h, red ≥44h). Daily headcount row per week. `page-break-inside:avoid` on rows + `thead` repeats on page break. Role/color fallbacks for deleted role IDs. Hides "0.0h" for unscheduled employees. Legend gains PTO swatch.
 - [2026-04-12] Mobile admin toolbar hides on non-schedule destinations: Row-3 action buttons (Edit/Save/Go Live/Publish) + Row-4 status banner (Edit Mode + Fill/Clear Wk) gated on `mobileAdminTab === 'schedule' || 'mine'`. Requests/Comms destinations show just logo + period nav. Matches existing filing-tab gating pattern.
 - [2026-04-12] PDF export printer-friendly pass: scheduled cells now render as 2.5px role-colored outlines on white (was filled tint), thicker than 1px grid for distinctiveness. Header gradient → solid OTR navy. Title border + announcement accent → OTR purple #932378. Hours color under-35h cyan → slate (prints cleaner).

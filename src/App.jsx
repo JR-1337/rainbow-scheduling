@@ -1,6 +1,10 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet } from './MobileEmployeeView';
 import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, MobileEmployeeQuickView, MobileAdminBottomNav } from './MobileAdminView';
+import { parseLocalDate, escapeHtml } from './utils/format';
+import { generateSchedulePDF } from './pdf/generate';
+import { buildEmailContent } from './email/build';
+export { parseLocalDate, escapeHtml };
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
   User, Users, Phone, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, EyeOff, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu
@@ -235,6 +239,7 @@ const chunkedBatchSave = async (payload, onProgress) => {
   const CHUNK_SIZE = 15; // 15 shifts per request stays under URL limits (~4500 chars)
   let totalSaved = 0;
   let lastError = null;
+  let failedChunks = 0;
   const totalChunks = Math.ceil(shifts.length / CHUNK_SIZE);
   
   // Build all shift keys for the full period (needed for delete logic on last chunk)
@@ -274,20 +279,26 @@ const chunkedBatchSave = async (payload, onProgress) => {
         totalSaved += result.data?.savedCount || chunk.length;
       } else {
         lastError = result.error;
+        failedChunks += 1;
       }
     } catch (err) {
       lastError = { code: 'NETWORK_ERROR', message: err.message };
+      failedChunks += 1;
     }
   }
-  
-  if (lastError && totalSaved === 0) {
-    return { success: false, error: lastError };
+
+  if (lastError) {
+    // Any chunk failure = partial/total save failure. Callers must retain unsaved state.
+    return {
+      success: false,
+      error: lastError,
+      data: { savedCount: totalSaved, totalChunks, failedChunks }
+    };
   }
-  
-  return { 
-    success: true, 
-    data: { savedCount: totalSaved },
-    ...(lastError ? { warning: `Some chunks failed: ${lastError.message}` } : {})
+
+  return {
+    success: true,
+    data: { savedCount: totalSaved, totalChunks, failedChunks: 0 }
   };
 };
 
@@ -430,10 +441,10 @@ const SWAP_STATUS_LABELS = {
 // UTILS
 // ═══════════════════════════════════════════════════════════════════════════════
 export const getDayName = (date) => date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-const getDayNameShort = (date) => date.toLocaleDateString('en-US', { weekday: 'short' });
+export const getDayNameShort = (date) => date.toLocaleDateString('en-US', { weekday: 'short' });
 export const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-const formatDateLong = (date) => date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-const formatMonthWord = (date) => date.toLocaleDateString('en-US', { month: 'long' });
+export const formatDateLong = (date) => date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+export const formatMonthWord = (date) => date.toLocaleDateString('en-US', { month: 'long' });
 export const getWeekNumber = (date) => {
   const start = new Date(date.getFullYear(), 0, 1);
   const diff = date - start + (start.getTimezoneOffset() - date.getTimezoneOffset()) * 60 * 1000;
@@ -466,7 +477,7 @@ const getPayPeriodDates = (periodIndex) => {
   return { startDate, endDate, dates };
 };
 const parseTime = (t) => { if (!t) return 0; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-const formatTimeDisplay = (t) => { if (!t) return '--:--'; const [h, m] = t.split(':').map(Number); return `${h > 12 ? h - 12 : h || 12}:${m.toString().padStart(2, '0')}${h >= 12 ? 'PM' : 'AM'}`; };
+export const formatTimeDisplay = (t) => { if (!t) return '--:--'; const [h, m] = t.split(':').map(Number); return `${h > 12 ? h - 12 : h || 12}:${m.toString().padStart(2, '0')}${h >= 12 ? 'PM' : 'AM'}`; };
 export const formatTimeShort = (t) => { if (!t) return '--'; const h = parseInt(t.split(':')[0]); return `${h > 12 ? h - 12 : h || 12}${h >= 12 ? 'p' : 'a'}`; };
 const calculateHours = (s, e) => (parseTime(e) - parseTime(s)) / 60;
 
@@ -481,265 +492,6 @@ const getAvailabilityShading = (avail, storeHours) => {
   };
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PDF GENERATION - Printer-friendly light theme
-// ═══════════════════════════════════════════════════════════════════════════════
-const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = []) => {
-  const week1 = dates.slice(0, 7);
-  const week2 = dates.slice(7, 14);
-  const weekNum1 = getWeekNumber(week1[0]);
-  const weekNum2 = getWeekNumber(week2[0]);
-  
-  // Filter schedulable employees (exclude owner, exclude admins unless showOnSchedule)
-  const schedulable = employees
-    .filter(e => e.active && !e.deleted && !e.isOwner)
-    .filter(e => !e.isAdmin || e.showOnSchedule);
-  
-  // Admin contacts
-  const adminContacts = employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
-  
-  // Calculate hours for specific week only
-  const calcWeekHours = (empId, weekDates) => {
-    let t = 0;
-    weekDates.forEach(d => { const s = shifts[`${empId}-${toDateKey(d)}`]; if (s) t += s.hours || 0; });
-    return t;
-  };
-  
-  // Announcement HTML (goes at top after header)
-  const announcementHtml = (announcement && announcement.message) ? `
-    <div style="margin:15px 0;padding:15px;background:#faf7fb;border-radius:8px;border-left:4px solid #932378;">
-      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;letter-spacing:0.5px;">📢 ${announcement.subject}</h3>` : '<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;">📢 Announcement</h3>'}
-      <div style="color:#0D0E22;font-size:11px;line-height:1.6;white-space:pre-wrap;">${announcement.message}</div>
-    </div>
-  ` : '';
-  
-  const makeWeekTable = (weekDates, weekNum) => {
-    const headers = weekDates.map(d => {
-      const hol = isStatHoliday(d);
-      return `<th style="padding:8px 4px;border:1px solid #cbd5e1;background:${hol ? '#fef3c7' : '#f1f5f9'};font-size:11px;text-align:center;width:11%;">
-        <div style="font-weight:600;color:${hol ? '#92400e' : '#334155'};text-transform:uppercase;font-size:9px;">${getDayNameShort(d)}</div>
-        <div style="font-size:16px;font-weight:700;color:#0f172a;">${d.getDate()}</div>
-      </th>`;
-    }).join('');
-    
-    const rows = schedulable.map(emp => {
-      const cells = weekDates.map(date => {
-        const dateStr = toDateKey(date);
-        const shift = shifts[`${emp.id}-${dateStr}`];
-        if (!shift) {
-          // Approved time-off: mark the cell so staff reading the printout know it's PTO, not "forgot to schedule"
-          if (hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests)) {
-            return `<td style="padding:6px;border:1px dashed #94a3b8;background:#ffffff;text-align:center;">
-              <div style="font-size:9px;font-weight:700;color:#475569;letter-spacing:1px;">OFF</div>
-              <div style="font-size:7px;color:#64748b;">approved</div>
-            </td>`;
-          }
-          return '<td style="padding:6px;border:1px solid #cbd5e1;background:#ffffff;"></td>';
-        }
-        const role = ROLES_BY_ID[shift.role];
-        // Fallback for deleted/renamed role IDs — print a neutral outline rather than "undefined"
-        const roleName = role?.name || 'Shift';
-        const roleColor = role?.color || '#64748b';
-        // Printer-friendly: role-colored outline (2.5px, thicker than 1px grid) on white — no fill, saves ink
-        return `<td style="padding:5px;border:2.5px solid ${roleColor};background:#ffffff;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:${roleColor};margin-bottom:2px;">${roleName}</div>
-          <div style="font-size:9px;color:#0D0E22;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
-          <div style="font-size:8px;color:#475569;">${shift.hours}h</div>
-          ${shift.task ? `<div style="font-size:7px;color:#d97706;margin-top:2px;line-height:1.3;word-break:break-word;">★ ${shift.task}</div>` : ''}
-        </td>`;
-      }).join('');
-
-      const hours = calcWeekHours(emp.id, weekDates);
-      // Ontario ESA: overtime kicks in at 44h. Amber warns approaching, red flags at/over threshold.
-      const hoursColor = hours >= 44 ? '#ef4444' : hours >= 40 ? '#d97706' : '#475569';
-      const hoursDisplay = hours > 0 ? `${hours.toFixed(1)}h` : '—';
-
-      return `<tr style="page-break-inside:avoid;">
-        <td style="padding:8px;border:1px solid #cbd5e1;background:#ffffff;">
-          <div style="font-weight:600;font-size:11px;color:#0D0E22;">${emp.name}</div>
-          <div style="font-size:10px;color:${hoursColor};font-weight:600;">${hoursDisplay}</div>
-        </td>
-        ${cells}
-      </tr>`;
-    }).join('');
-
-    // Daily headcount row — owner eyeballs coverage per day
-    const headcountCells = weekDates.map(date => {
-      const dateStr = toDateKey(date);
-      const count = schedulable.reduce((n, emp) => n + (shifts[`${emp.id}-${dateStr}`] ? 1 : 0), 0);
-      return `<td style="padding:6px;border:1px solid #cbd5e1;background:#f8fafc;text-align:center;font-size:13px;font-weight:700;color:#0D0E22;">${count}</td>`;
-    }).join('');
-    const headcountRow = `<tr style="page-break-inside:avoid;">
-      <td style="padding:8px;border:1px solid #cbd5e1;background:#f1f5f9;font-size:9px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:1px;">Scheduled</td>
-      ${headcountCells}
-    </tr>`;
-    
-    return `
-      <div class="wk-block" style="margin-bottom:25px;">
-        <div style="background:#0D0E22;padding:10px 15px;border-radius:8px 8px 0 0;">
-          <h3 style="margin:0;color:#ffffff;font-size:14px;font-weight:600;">Week ${weekNum}</h3>
-          <p style="margin:2px 0 0;color:rgba(255,255,255,0.8);font-size:11px;">${formatDate(weekDates[0])} — ${formatDate(weekDates[6])}</p>
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
-          <thead style="display:table-header-group;"><tr><th style="padding:8px;border:1px solid #cbd5e1;background:#f1f5f9;width:15%;font-size:10px;text-align:left;color:#475569;text-transform:uppercase;">Employee</th>${headers}</tr></thead>
-          <tbody>${rows}${headcountRow}</tbody>
-        </table>
-      </div>
-    `;
-  };
-  
-  const legendItems = ROLES.filter(r => r.id !== 'none').map(r =>
-    `<span style="margin-right:15px;font-size:10px;display:inline-flex;align-items:center;gap:5px;">
-      <span style="display:inline-block;width:12px;height:12px;background:${r.color};border-radius:3px;"></span>
-      <span style="color:#334155;">${r.fullName}</span>
-    </span>`
-  ).join('');
-  
-  // Admin contacts HTML
-  const adminContactsHtml = adminContacts.length > 0 ? `
-    <div style="margin-top:12px;padding:10px 15px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-      <div style="font-weight:600;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Contact Admin</div>
-      ${adminContacts.map(a => `<span style="margin-right:20px;font-size:11px;color:#334155;">${a.name}: <span style="color:#0369a1;">${a.email}</span></span>`).join('')}
-    </div>
-  ` : '';
-
-  const printedAt = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
-
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-  <title>Rainbow Schedule - Week ${weekNum1} & ${weekNum2}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    @media print {
-      body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      @page { margin: 0.3in; size: landscape; }
-      .no-print { display: none !important; }
-      tr { page-break-inside: avoid; }
-      thead { display: table-header-group; }
-    }
-    body { font-family: 'Inter', Arial, sans-serif; padding: 20px; margin: 0 auto; max-width: 1100px; background: #ffffff; }
-    .print-btn { background: #0D0E22; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
-    .print-btn:hover { background: #1a1c3d; }
-  </style>
-</head>
-<body style="background:#ffffff;">
-  <div class="no-print" style="position:sticky;top:0;background:#ffffff;padding:10px 0;margin-bottom:10px;border-bottom:1px solid #e2e8f0;text-align:right;z-index:10;">
-    <button class="print-btn" onclick="window.print()">🖨 Print Schedule</button>
-    <span style="margin-left:15px;color:#64748b;font-size:11px;">Review the preview below, then click Print.</span>
-  </div>
-  <div style="text-align:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid #0D0E22;">
-    <div style="font-family:'Josefin Sans',sans-serif;margin-bottom:5px;">
-      <span style="color:#475569;font-size:10px;letter-spacing:3px;">OVER THE</span><br>
-      <span style="color:#932378;font-size:24px;letter-spacing:4px;font-weight:600;">RAINBOW</span>
-    </div>
-    <p style="margin:8px 0 0;font-size:12px;"><span style="color:#0D0E22;font-weight:600;">Staff Schedule</span></p>
-    <p style="margin:5px 0 0;color:#475569;font-size:11px;">Week ${weekNum1} & ${weekNum2} • ${formatMonthWord(periodInfo.startDate)} ${periodInfo.startDate.getDate()} — ${formatMonthWord(periodInfo.endDate)} ${periodInfo.endDate.getDate()}, ${periodInfo.startDate.getFullYear()}</p>
-  </div>
-
-  ${announcementHtml}
-  ${makeWeekTable(week1, weekNum1)}
-  ${makeWeekTable(week2, weekNum2)}
-
-  <div style="margin-top:20px;padding:12px 15px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-    <div style="margin-bottom:6px;font-weight:600;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Legend</div>
-    <div>${legendItems}<span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="color:#d97706;">★</span><span style="color:#334155;">Has Task</span></span><span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;"><span style="display:inline-block;padding:1px 6px;border:1px dashed #94a3b8;font-weight:700;color:#475569;font-size:8px;letter-spacing:1px;">OFF</span><span style="color:#334155;">Approved Time Off</span></span></div>
-  </div>
-  ${adminContactsHtml}
-  <div style="margin-top:20px;padding-top:12px;border-top:1px solid #e2e8f0;text-align:center;font-size:9px;color:#94a3b8;">
-    Printed ${printedAt} • This is a snapshot — live schedule at rainbow-scheduling.vercel.app
-  </div>
-</body>
-</html>`;
-
-  const blob = new Blob([html], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const printWindow = window.open(url, '_blank', 'width=1100,height=750');
-  if (printWindow) {
-    // No auto-print: user reviews preview, clicks Print button. Auto-print was firing the dialog before the PDF finished laying out.
-  } else {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Rainbow-Schedule-Week${weekNum1}-${weekNum2}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// EMAIL BUILDER - Individual employee emails
-// ═══════════════════════════════════════════════════════════════════════════════
-const buildEmailContent = (emp, shifts, dates, periodInfo, adminContacts = [], announcement = null) => {
-  const weekNum1 = getWeekNumber(dates[0]);
-  const weekNum2 = getWeekNumber(dates[7]);
-  const year = periodInfo.startDate.getFullYear();
-  
-  const startMonth = formatMonthWord(periodInfo.startDate);
-  const startDayNum = periodInfo.startDate.getDate();
-  const endMonth = formatMonthWord(periodInfo.endDate);
-  const endDayNum = periodInfo.endDate.getDate();
-  
-  const subject = `New Schedule Published 🌈 Wk ${weekNum1}, ${weekNum2} | ${startMonth} ${startDayNum} - ${endMonth} ${endDayNum}`;
-  
-  const scheduleLines = [];
-  let totalHours = 0;
-  
-  dates.forEach(date => {
-    const shift = shifts[`${emp.id}-${toDateKey(date)}`];
-    if (shift) {
-      const role = ROLES_BY_ID[shift.role];
-      const dayStr = formatDateLong(date);
-      const timeStr = `${formatTimeDisplay(shift.startTime)} - ${formatTimeDisplay(shift.endTime)}`;
-      
-      let line = `  ${dayStr}`;
-      line += `\n  ${timeStr} • ${shift.hours}h • ${role?.fullName || 'No Role'}`;
-      if (shift.task) line += `\n  ⭐ Task: ${shift.task}`;
-      scheduleLines.push(line);
-      totalHours += shift.hours || 0;
-    }
-  });
-  
-  if (scheduleLines.length === 0) return { subject, body: '', hasShifts: false };
-  
-  const adminLine = adminContacts.length > 0 
-    ? `Contact: ${adminContacts.map(a => `${a.name} (${a.email})`).join(', ')}`
-    : '';
-  
-  // Announcement section
-  const announcementSection = (announcement && announcement.message) ? `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📢 ${announcement.subject || 'ANNOUNCEMENT'}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-${announcement.message}
-
-` : '';
-  
-  const body = `Hi ${emp.name.split(' ')[0]}! 🌈
-
-OVER THE RAINBOW - Staff Schedule
-Week ${weekNum1} & ${weekNum2} | ${startMonth} ${startDayNum} - ${endMonth} ${endDayNum}, ${year}
-${announcementSection}
-YOUR SHIFTS
-───────────────────────────────────
-
-${scheduleLines.join('\n\n')}
-
-───────────────────────────────────
-Total Hours: ${totalHours.toFixed(1)}h
-───────────────────────────────────
-
-📎 Full schedule PDF attached
-
-${adminLine}
-
-Over the Rainbow 🌈
-www.rainbowjeans.com`;
-
-  return { subject, body, hasShifts: true };
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // UI COMPONENTS - Smaller/Compact
@@ -1433,7 +1185,7 @@ www.rainbowjeans.com`;
 // SCHEDULE CELL
 // ═══════════════════════════════════════════════════════════════════════════════
 // Check if employee has approved time off for a specific date
-const hasApprovedTimeOffForDate = (employeeEmail, dateStr, timeOffRequests) => {
+export const hasApprovedTimeOffForDate = (employeeEmail, dateStr, timeOffRequests) => {
   if (!timeOffRequests || !employeeEmail) return false;
   return timeOffRequests.some(req => 
     req.email === employeeEmail && 
@@ -1893,21 +1645,21 @@ const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRe
   const formatSelectedSummary = () => {
     if (selectedDates.length === 0) return 'No dates selected';
     if (selectedDates.length === 1) {
-      const d = new Date(selectedDates[0] + 'T12:00:00');
+      const d = parseLocalDate(selectedDates[0]);
       return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     }
     const dates = [...selectedDates].sort();
     const groups = [];
     let start = dates[0], end = dates[0];
     for (let i = 1; i < dates.length; i++) {
-      const prev = new Date(end + 'T12:00:00');
-      const curr = new Date(dates[i] + 'T12:00:00');
+      const prev = parseLocalDate(end);
+      const curr = parseLocalDate(dates[i]);
       if ((curr - prev) / 86400000 === 1) { end = dates[i]; }
       else { groups.push({ start, end }); start = dates[i]; end = dates[i]; }
     }
     groups.push({ start, end });
     const fmt = (g) => {
-      const s = new Date(g.start + 'T12:00:00'), e = new Date(g.end + 'T12:00:00');
+      const s = parseLocalDate(g.start), e = parseLocalDate(g.end);
       if (g.start === g.end) return s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       if (s.getMonth() === e.getMonth()) return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${e.getDate()}`;
       return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
@@ -2132,8 +1884,7 @@ const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, sh
       const dateStr = key.slice(-10);
       const empId = key.slice(0, -11); // Everything before the last dash and date
       if (empId !== currentUser?.id) return false;
-      // Parse date properly - add T12:00:00 to avoid timezone issues
-      const shiftDate = new Date(dateStr + 'T12:00:00');
+      const shiftDate = parseLocalDate(dateStr);
       const tomorrowNoon = new Date(tomorrow);
       tomorrowNoon.setHours(12, 0, 0, 0);
       return shiftDate >= tomorrowNoon; // Must be at least tomorrow
@@ -2262,7 +2013,7 @@ const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, sh
                 {myFutureShifts.map(shift => {
                   const isOffered = isShiftAlreadyOffered(shift.dateStr);
                   const isSelected = selectedShift?.key === shift.key;
-                  const shiftDate = new Date(shift.dateStr);
+                  const shiftDate = parseLocalDate(shift.dateStr);
                   
                   return (
                     <button
@@ -2459,7 +2210,7 @@ const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shi
         const dateStr = key.slice(-10);
         const keyEmpId = key.slice(0, -11);
         if (keyEmpId !== empId) return false;
-        const shiftDate = new Date(dateStr + 'T12:00:00');
+        const shiftDate = parseLocalDate(dateStr);
         const tomorrowNoon = new Date(tomorrow);
         tomorrowNoon.setHours(12, 0, 0, 0);
         return shiftDate >= tomorrowNoon;
@@ -2627,7 +2378,7 @@ const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shi
                 <div className="space-y-1 max-h-60 overflow-y-auto">
                   {myFutureShifts.map(shift => {
                     const isSelected = selectedMyShift?.key === shift.key;
-                    const shiftDate = new Date(shift.dateStr + 'T12:00:00');
+                    const shiftDate = parseLocalDate(shift.dateStr);
                     
                     return (
                       <button
@@ -2671,7 +2422,7 @@ const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shi
                 <div className="mb-3 p-2 rounded-lg" style={{ backgroundColor: THEME.accent.purple + '10', border: `1px solid ${THEME.accent.purple}30` }}>
                   <p className="text-xs" style={{ color: THEME.text.muted }}>Your shift:</p>
                   <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>
-                    {getDayNameShort(new Date(selectedMyShift.dateStr + 'T12:00:00'))}, {formatDate(new Date(selectedMyShift.dateStr + 'T12:00:00'))} • {formatTimeDisplay(selectedMyShift.startTime)} – {formatTimeDisplay(selectedMyShift.endTime)}
+                    {getDayNameShort(parseLocalDate(selectedMyShift.dateStr))}, {formatDate(parseLocalDate(selectedMyShift.dateStr))} • {formatTimeDisplay(selectedMyShift.startTime)} – {formatTimeDisplay(selectedMyShift.endTime)}
                   </p>
                 </div>
               )}
@@ -2739,7 +2490,7 @@ const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shi
                 <div className="mb-3 p-2 rounded-lg" style={{ backgroundColor: THEME.accent.purple + '10', border: `1px solid ${THEME.accent.purple}30` }}>
                   <p className="text-xs" style={{ color: THEME.text.muted }}>Your shift:</p>
                   <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>
-                    {getDayNameShort(new Date(selectedMyShift.dateStr + 'T12:00:00'))}, {formatDate(new Date(selectedMyShift.dateStr + 'T12:00:00'))} • {formatTimeDisplay(selectedMyShift.startTime)} – {formatTimeDisplay(selectedMyShift.endTime)}
+                    {getDayNameShort(parseLocalDate(selectedMyShift.dateStr))}, {formatDate(parseLocalDate(selectedMyShift.dateStr))} • {formatTimeDisplay(selectedMyShift.startTime)} – {formatTimeDisplay(selectedMyShift.endTime)}
                   </p>
                 </div>
               )}
@@ -2756,7 +2507,7 @@ const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shi
               <div className="space-y-1 max-h-48 overflow-y-auto">
                 {partnerFutureShifts.map(shift => {
                   const isSelected = selectedTheirShift?.key === shift.key;
-                  const shiftDate = new Date(shift.dateStr + 'T12:00:00');
+                  const shiftDate = parseLocalDate(shift.dateStr);
                   
                   return (
                     <button
@@ -2931,20 +2682,20 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
   const formatRequestDates = (datesStr) => {
     const dates = datesStr.split(',').sort();
     if (dates.length === 1) {
-      const d = new Date(dates[0] + 'T12:00:00');
+      const d = parseLocalDate(dates[0]);
       return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     }
     const groups = [];
     let start = dates[0], end = dates[0];
     for (let i = 1; i < dates.length; i++) {
-      const prev = new Date(end + 'T12:00:00');
-      const curr = new Date(dates[i] + 'T12:00:00');
+      const prev = parseLocalDate(end);
+      const curr = parseLocalDate(dates[i]);
       if ((curr - prev) / 86400000 === 1) { end = dates[i]; }
       else { groups.push({ start, end }); start = dates[i]; end = dates[i]; }
     }
     groups.push({ start, end });
     const fmt = (g) => {
-      const s = new Date(g.start + 'T12:00:00'), e = new Date(g.end + 'T12:00:00');
+      const s = parseLocalDate(g.start), e = parseLocalDate(g.end);
       if (g.start === g.end) return s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       if (s.getMonth() === e.getMonth()) return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${e.getDate()}`;
       return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
@@ -2968,7 +2719,7 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dates = datesStr.split(',');
-    return dates.some(d => new Date(d + 'T12:00:00') >= today);
+    return dates.some(d => parseLocalDate(d) >= today);
   };
   
   const handleApprove = (request) => {
@@ -3211,20 +2962,20 @@ const MyRequestsPanel = ({ requests, currentUserEmail, onCancel, notificationCou
   const formatRequestDates = (datesStr) => {
     const dates = datesStr.split(',').sort();
     if (dates.length === 1) {
-      const d = new Date(dates[0] + 'T12:00:00');
+      const d = parseLocalDate(dates[0]);
       return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     }
     const groups = [];
     let start = dates[0], end = dates[0];
     for (let i = 1; i < dates.length; i++) {
-      const prev = new Date(end + 'T12:00:00');
-      const curr = new Date(dates[i] + 'T12:00:00');
+      const prev = parseLocalDate(end);
+      const curr = parseLocalDate(dates[i]);
       if ((curr - prev) / 86400000 === 1) { end = dates[i]; }
       else { groups.push({ start, end }); start = dates[i]; end = dates[i]; }
     }
     groups.push({ start, end });
     const fmt = (g) => {
-      const s = new Date(g.start + 'T12:00:00'), e = new Date(g.end + 'T12:00:00');
+      const s = parseLocalDate(g.start), e = parseLocalDate(g.end);
       if (g.start === g.end) return s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       if (s.getMonth() === e.getMonth()) return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${e.getDate()}`;
       return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
@@ -3355,20 +3106,20 @@ const AdminMyTimeOffPanel = ({ requests, currentUserEmail, onCancel }) => {
   const formatRequestDates = (datesStr) => {
     const dates = datesStr.split(',').sort();
     if (dates.length === 1) {
-      const d = new Date(dates[0] + 'T12:00:00');
+      const d = parseLocalDate(dates[0]);
       return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     }
     const groups = [];
     let start = dates[0], end = dates[0];
     for (let i = 1; i < dates.length; i++) {
-      const prev = new Date(end + 'T12:00:00');
-      const curr = new Date(dates[i] + 'T12:00:00');
+      const prev = parseLocalDate(end);
+      const curr = parseLocalDate(dates[i]);
       if ((curr - prev) / 86400000 === 1) { end = dates[i]; }
       else { groups.push({ start, end }); start = dates[i]; end = dates[i]; }
     }
     groups.push({ start, end });
     const fmt = (g) => {
-      const s = new Date(g.start + 'T12:00:00'), e = new Date(g.end + 'T12:00:00');
+      const s = parseLocalDate(g.start), e = parseLocalDate(g.end);
       if (g.start === g.end) return s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       if (s.getMonth() === e.getMonth()) return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${e.getDate()}`;
       return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
@@ -3595,7 +3346,7 @@ const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentA
       ) : (
         <div className="space-y-2">
           {sortedOffers.map(offer => {
-            const shiftDate = new Date(offer.shiftDate + 'T12:00:00');
+            const shiftDate = parseLocalDate(offer.shiftDate);
             const canApprove = offer.status === 'awaiting_admin';
             const canRevoke = offer.status === 'approved' && shiftDate >= today;
             
@@ -3744,7 +3495,7 @@ const MyShiftOffersPanel = ({ offers, currentUserEmail, onCancel }) => {
       </div>
       <div className="space-y-2">
         {sortedOffers.map(offer => {
-          const shiftDate = new Date(offer.shiftDate + 'T12:00:00');
+          const shiftDate = parseLocalDate(offer.shiftDate);
           const canCancel = ['awaiting_recipient', 'awaiting_admin'].includes(offer.status);
 
           return (
@@ -3830,7 +3581,7 @@ const IncomingOffersPanel = ({ offers, currentUserEmail, onAccept, onReject }) =
       >
         <div className="space-y-2">
           {incomingOffers.map(offer => {
-            const shiftDate = new Date(offer.shiftDate + 'T12:00:00');
+            const shiftDate = parseLocalDate(offer.shiftDate);
             
             return (
               <div key={offer.offerId} className="p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
@@ -3945,7 +3696,7 @@ const ReceivedOffersHistoryPanel = ({ offers, currentUserEmail, notificationCoun
         </div>
         <div className="space-y-2">
           {sortedOffers.map(offer => {
-            const shiftDate = new Date(offer.shiftDate + 'T12:00:00');
+            const shiftDate = parseLocalDate(offer.shiftDate);
             const isActive = offer.status === 'awaiting_admin';
 
             return (
@@ -4029,8 +3780,8 @@ const IncomingSwapsPanel = ({ swaps, currentUserEmail, onAccept, onReject }) => 
       >
         <div className="space-y-2">
           {incomingSwaps.map(swap => {
-            const theirShiftDate = new Date(swap.initiatorShiftDate + 'T12:00:00');
-            const myShiftDate = new Date(swap.partnerShiftDate + 'T12:00:00');
+            const theirShiftDate = parseLocalDate(swap.initiatorShiftDate);
+            const myShiftDate = parseLocalDate(swap.partnerShiftDate);
             
             return (
               <div key={swap.swapId} className="p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
@@ -4151,8 +3902,8 @@ const MySwapsPanel = ({ swaps, currentUserEmail, onCancel }) => {
       </div>
       <div className="space-y-2">
         {sortedSwaps.map(swap => {
-          const myShiftDate = new Date(swap.initiatorShiftDate + 'T12:00:00');
-          const theirShiftDate = new Date(swap.partnerShiftDate + 'T12:00:00');
+          const myShiftDate = parseLocalDate(swap.initiatorShiftDate);
+          const theirShiftDate = parseLocalDate(swap.partnerShiftDate);
           const canCancel = ['awaiting_partner', 'awaiting_admin'].includes(swap.status);
 
           return (
@@ -4266,8 +4017,8 @@ const ReceivedSwapsHistoryPanel = ({ swaps, currentUserEmail, notificationCount,
         </div>
         <div className="space-y-2">
           {sortedSwaps.map(swap => {
-            const theirShiftDate = new Date(swap.initiatorShiftDate + 'T12:00:00');
-            const myShiftDate = new Date(swap.partnerShiftDate + 'T12:00:00');
+            const theirShiftDate = parseLocalDate(swap.initiatorShiftDate);
+            const myShiftDate = parseLocalDate(swap.partnerShiftDate);
             const isActive = swap.status === 'awaiting_admin';
 
             return (
@@ -4335,7 +4086,7 @@ const UnifiedRequestHistory = ({
   };
 
   const formatShortDate = (dateStr) => {
-    const d = new Date(dateStr + 'T12:00:00');
+    const d = parseLocalDate(dateStr);
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
@@ -4714,8 +4465,8 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
       ) : (
         <div className="space-y-2">
           {sortedSwaps.map(swap => {
-            const initiatorShiftDate = new Date(swap.initiatorShiftDate + 'T12:00:00');
-            const partnerShiftDate = new Date(swap.partnerShiftDate + 'T12:00:00');
+            const initiatorShiftDate = parseLocalDate(swap.initiatorShiftDate);
+            const partnerShiftDate = parseLocalDate(swap.partnerShiftDate);
             const canApprove = swap.status === 'awaiting_admin';
 
             // Check if BOTH shifts are in the future for revoke eligibility
@@ -6822,7 +6573,11 @@ export default function App() {
       });
       
       if (!saveResult.success) {
-        showToast('error', saveResult.error?.message || 'Failed to save schedule');
+        const d = saveResult.data;
+        const msg = (d && d.totalChunks > 1 && d.failedChunks < d.totalChunks)
+          ? `Schedule save incomplete: ${d.totalChunks - d.failedChunks} of ${d.totalChunks} batches saved. Please retry.`
+          : (saveResult.error?.message || 'Failed to save schedule');
+        showToast('error', msg);
         setScheduleSaving(false);
         return;
       }
@@ -6930,7 +6685,12 @@ export default function App() {
       setUnsaved(false);
       showToast('success', `Saved ${saveResult.data?.savedCount || 0} shifts`);
     } else {
-      showToast('error', saveResult.error?.message || 'Failed to save');
+      const d = saveResult.data;
+      const msg = (d && d.totalChunks > 1 && d.failedChunks < d.totalChunks)
+        ? `Schedule save incomplete: ${d.totalChunks - d.failedChunks} of ${d.totalChunks} batches saved. Please retry.`
+        : (saveResult.error?.message || 'Failed to save');
+      showToast('error', msg);
+      // unsaved flag intentionally NOT cleared — user can retry
     }
     setScheduleSaving(false);
   };
@@ -7180,7 +6940,7 @@ export default function App() {
       if (futureShifts.length > 0) {
         const sortedDates = futureShifts.sort();
         const formattedDates = sortedDates.slice(0, 5).map(d => {
-          const date = new Date(d + 'T12:00:00');
+          const date = parseLocalDate(d);
           return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         }).join(', ');
         const moreText = sortedDates.length > 5 ? ` and ${sortedDates.length - 5} more` : '';
@@ -7231,7 +6991,7 @@ export default function App() {
     if (futureShifts.length > 0) {
       const sortedDates = futureShifts.sort();
       const formattedDates = sortedDates.slice(0, 5).map(d => {
-        const date = new Date(d + 'T12:00:00');
+        const date = parseLocalDate(d);
         return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       }).join(', ');
       const moreText = sortedDates.length > 5 ? ` and ${sortedDates.length - 5} more` : '';
@@ -7509,7 +7269,7 @@ export default function App() {
     const offer = shiftOffers.find(o => (o.offerId === offerId || o.requestId === offerId) && o.status === 'approved');
     if (!offer) return;
     
-    const shiftDate = new Date(offer.shiftDate + 'T12:00:00');
+    const shiftDate = parseLocalDate(offer.shiftDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (shiftDate < today) {
@@ -7722,8 +7482,8 @@ export default function App() {
     const swap = shiftSwaps.find(s => (s.swapId === swapId || s.requestId === swapId) && s.status === 'approved');
     if (!swap) return;
     
-    const initiatorDate = new Date(swap.initiatorShiftDate + 'T12:00:00');
-    const partnerDate = new Date(swap.partnerShiftDate + 'T12:00:00');
+    const initiatorDate = parseLocalDate(swap.initiatorShiftDate);
+    const partnerDate = parseLocalDate(swap.partnerShiftDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -7824,7 +7584,7 @@ export default function App() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dates = request.datesRequested.split(',');
-    const hasFutureDates = dates.some(d => new Date(d + 'T12:00:00') >= today);
+    const hasFutureDates = dates.some(d => parseLocalDate(d) >= today);
     
     if (!hasFutureDates) {
       showToast('error', 'Cannot revoke time off for dates that are all in the past.');

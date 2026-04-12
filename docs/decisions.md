@@ -2,6 +2,27 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-12 - Email Body Not HTML-Escaped (Plaintext Via MailApp)
+
+**Decided:** `buildEmailContent` returns a plaintext body. `MailApp.sendEmail({ to, subject, body, name })` in `backend/Code.gs:1516` sends as plaintext (no `htmlBody`). S34.2 XSS escape applied to the 5 PDF HTML interpolation sites only, not the email builder's 7 candidate sites.
+**Alternatives:** Escape email body anyway for defence-in-depth (rejected — would render `&amp;` as literal characters to recipients, breaking legible content). Upgrade email to HTML with `htmlBody` then escape (rejected — out of S34 scope, pre-existing "professional sender email" blocker would also need resolution first).
+**Rationale:** HTML escaping only protects HTML contexts. Plaintext email is not an HTML XSS vector. Escaping user-controlled strings there actively harms readability.
+**Revisit if:** Email delivery is upgraded to `htmlBody` (then every interpolation in `src/email/build.js` needs `escapeHtml` applied in the same pass).
+
+## 2026-04-12 - PDF + Email Builders Extracted, Circular ESM Imports
+
+**Decided:** `generateSchedulePDF` → `src/pdf/generate.js`, `buildEmailContent` → `src/email/build.js`, `parseLocalDate` + `escapeHtml` → `src/utils/format.js`. New modules import constants (`ROLES`, `ROLES_BY_ID`, `isStatHoliday`, `formatTimeShort`, etc.) directly from `../App`, while `App.jsx` imports the functions back. Relies on ESM live bindings — references inside function bodies resolve at call-time, not at module-eval.
+**Alternatives:** Move all shared constants to `src/theme.js` + `src/constants.js` first to break the circle (rejected — much larger diff, pre-demo). Pass constants as function arguments (rejected — noisy call sites, defeats the point of extraction).
+**Rationale:** App.jsx shrank -262 lines with surgical risk. Build + smoke-served clean. Circular imports between App.jsx and these extracted modules work because every use of imported symbols happens inside function bodies invoked after module-graph evaluation completes.
+**Revisit if:** Module-eval-time use of these constants is ever introduced in the new files (would break circle). Or if S39 extraction moves constants out of App.jsx and eliminates the cycle naturally.
+
+## 2026-04-12 - Chunked-Save Partial Failure = Hard Failure
+
+**Decided:** `chunkedBatchSave` returns `{ success: false, error, data: { savedCount, totalChunks, failedChunks } }` whenever any chunk fails (even if others succeeded). Previously returned `success: true` with a `warning` field, which callers never read.
+**Alternatives:** Keep `success: true` with stronger warning plumbing (rejected — two success tiers is a footgun; every caller needs per-caller reasoning about when warning matters). Succeed only if every chunk saved (same behavior, different framing).
+**Rationale:** The only safe default is "any lost write = retry required." Callers retain unsaved flag so the user can hit Save again. Matches how users actually understand save operations.
+**Revisit if:** A specific caller legitimately wants partial-success semantics (then define an explicit second API, don't overload `chunkedBatchSave`).
+
 ## 2026-04-12 - Schedule-Context Toolbar Hides on Non-Schedule Destinations
 
 **Decided:** Mobile admin Row-3 action buttons (Edit/Save/Go Live/Publish) and Row-4 status banner (Edit Mode + Fill/Clear Wk) only render when `mobileAdminTab === 'schedule' || 'mine'`. Hidden entirely on requests/comms.
