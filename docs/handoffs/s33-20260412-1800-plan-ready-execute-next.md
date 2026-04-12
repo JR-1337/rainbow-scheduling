@@ -52,11 +52,10 @@ S33 shipped a hotfix + PDF pass + mobile toolbar gating, then pivoted into a ful
 
 ## Anti-Patterns (Don't Retry)
 
-- **"Too many colors" complaints for Rainbow brand** (since S29) — brand IS multiple colors
-- **Stopping mid-execution to ask direction** (since S30) — plan approved + build green = keep going
-- **Inline `fixed inset-0 z-[100] modal-backdrop` for admin request modals** (since S32) — use `AdminRequestModal` helper
-- **Bulk search/replace without smoke-load** (since S33) — Vite won't catch undefined refs; run `vite preview` after any mechanical rename
-- **Trusting `result.success` from `chunkedBatchSave`** (since S33 audit) — S34.4 fixes it; until then, partial saves look successful
+- **Inline `fixed inset-0 z-[100] modal-backdrop` for admin request modals** (since S32) — use `AdminRequestModal` helper at App.jsx:2843
+- **Trusting `result.success` from `chunkedBatchSave`** (since S33) — partial saves currently return success. S34.4 fixes it; until landed, chunked-save callers cannot rely on success flag.
+
+Graduated this session: "Rainbow brand = multiple colors" → `docs/lessons.md:18`. "No permission asks mid-execution" → auto-memory. "Bulk search/replace without smoke-load" → `docs/lessons.md:23`.
 
 ## Blocked
 
