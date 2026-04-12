@@ -78,3 +78,121 @@ body {
   border-radius: 50%;
   animation: spin 0.8s linear infinite, rainbow-ring 2.5s ease-in-out infinite;
 }
+
+/* === UX OVERHAUL - Phase 1: CSS Foundation === */
+
+/* Fix 5 - Focus Rings (keyboard-only) */
+*:focus-visible {
+  outline: 2px solid var(--accent-color, #0453A3);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.outline-none:focus-visible {
+  outline: 2px solid var(--accent-color, #0453A3);
+  outline-offset: 2px;
+}
+
+/* Fix 7 + P4.4 - Modal Transitions + Glassmorphism */
+.modal-backdrop {
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.modal-backdrop.active { opacity: 1; }
+.modal-content {
+  opacity: 0;
+  transform: translateY(12px) scale(0.98);
+  transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+.modal-content.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Fix 8 (partial) - Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .rainbow-sphere { animation: none; }
+  .rainbow-spinner { animation: spin 0.8s linear infinite; }
+}
+
+/* Fix 6 - Skeleton Shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-pulse {
+  background: linear-gradient(90deg, #E5E7EB 25%, #F3F4F6 50%, #E5E7EB 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* P2.5 - Mobile Scroll Indicator */
+.scroll-fade-right {
+  position: relative;
+}
+.scroll-fade-right::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 24px;
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.8));
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* P4.2 - Ambient Notification Glow */
+@keyframes ambient-glow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 1px 8px 0 var(--accent-color-40, rgba(4,83,163,0.4)); }
+}
+.ambient-pending {
+  animation: ambient-glow 4s ease-in-out infinite;
+}
+
+/* P5.4 - Scroll-Driven Row Animations */
+@supports (animation-timeline: view()) {
+  .schedule-row-animate {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: fade-in-row linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 100%;
+  }
+  @keyframes fade-in-row {
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* P3.2 - Bottom Sheet */
+.bottom-sheet-backdrop {
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+  background: rgba(0,0,0,0.3);
+}
+.bottom-sheet-backdrop.active { opacity: 1; }
+.bottom-sheet {
+  transform: translateY(100%);
+  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  border-radius: 16px 16px 0 0;
+  max-height: 85vh;
+}
+.bottom-sheet.active { transform: translateY(0); }
+
+/* Fix 8c - Screen Reader Only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}

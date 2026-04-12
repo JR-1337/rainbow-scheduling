@@ -27,25 +27,137 @@ const _accentIdx = (_prevAccent + 1) % OTR.accents.length;
 try { localStorage.setItem('otr-accent', _accentIdx); } catch {}
 const OTR_ACCENT = OTR.accents[_accentIdx];
 
-// Luminance check - white text on dark accents, navy text on bright accents (orange)
-const _lum = (hex) => { const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16); return (0.299*r + 0.587*g + 0.114*b) / 255; };
-const _accentText = _lum(OTR_ACCENT.primary) < 0.55 ? '#FFFFFF' : OTR.navy;
+// WCAG contrast calculation - pick text color (white vs navy) with higher contrast ratio against accent
+const _srgbToLinear = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+const _relLum = (hex) => {
+  const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+  return 0.2126*_srgbToLinear(r) + 0.7152*_srgbToLinear(g) + 0.0722*_srgbToLinear(b);
+};
+const _contrast = (hex1, hex2) => {
+  const l1 = _relLum(hex1), l2 = _relLum(hex2);
+  const lighter = Math.max(l1, l2), darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+};
+const _accentText = _contrast('#FFFFFF', OTR_ACCENT.primary) >= _contrast(OTR.navy, OTR_ACCENT.primary) ? '#FFFFFF' : OTR.navy;
 const _ar = parseInt(OTR_ACCENT.primary.slice(1,3),16), _ag = parseInt(OTR_ACCENT.primary.slice(3,5),16), _ab = parseInt(OTR_ACCENT.primary.slice(5,7),16);
 
+// P4.1 - Contextual color temperature: slightly warmer navy after 6PM
+const _hour = new Date().getHours();
+const _navyBase = (_hour >= 18 || _hour < 6) ? '#111326' : OTR.navy;
+
 export const THEME = {
-  bg: { primary: OTR.navy, secondary: '#FFFFFF', tertiary: '#F5F3F0', elevated: '#FFFFFF', hover: '#EDECEA' },
+  bg: { primary: _navyBase, secondary: '#FFFFFF', tertiary: '#F5F3F0', elevated: '#FFFFFF', hover: '#EDECEA' },
   tooltip: { bg: '#FFFFFF', border: OTR_ACCENT.primary + '60' },
   accent: { blue: OTR_ACCENT.primary, purple: OTR_ACCENT.dark, cyan: '#09728C', pink: OTR_ACCENT.primary, text: _accentText },
   text: { primary: OTR.navy, secondary: '#5C5C5C', muted: '#8B8580' },
   roles: { cashier: '#932378', backupCashier: '#B44D9A', mens: '#0453A3', womens: '#EC3228', floorMonitor: '#F57F20', none: '#64748B' },
   border: { subtle: `rgba(${_ar}, ${_ag}, ${_ab}, 0.15)`, default: OTR_ACCENT.primary + '80', bright: OTR_ACCENT.primary },
-  status: { success: '#059669', warning: '#D97706', error: '#DC2626' },
+  // Fix 2b - Desaturated status colors (gentler on dark backgrounds, retain meaning)
+  status: { success: '#34D399', warning: '#FBBF24', error: '#F87171' },
   task: '#D97706',
   shadow: {
     card: `0 6px 20px -4px rgba(0,0,0,0.6), 0 0 40px -4px rgba(${_ar},${_ag},${_ab},0.45)`,
     cardSm: `0 3px 12px -2px rgba(0,0,0,0.5), 0 0 24px -4px rgba(${_ar},${_ag},${_ab},0.35)`,
   },
 };
+
+// Set CSS variables for focus rings + ambient glow (used in index.css)
+if (typeof document !== 'undefined') {
+  document.documentElement.style.setProperty('--accent-color', OTR_ACCENT.primary);
+  document.documentElement.style.setProperty('--accent-color-40', OTR_ACCENT.primary + '66');
+}
+
+// Typography scale - fluid sizing with clamp() for Phase 3 sweep
+export const TYPE = {
+  caption: 'clamp(11px, 0.8vw + 8px, 12px)',
+  body: 'clamp(13px, 1vw + 9px, 14px)',
+  subtitle: 'clamp(14px, 1.1vw + 10px, 16px)',
+  title: 'clamp(16px, 1.2vw + 11px, 18px)',
+  heading: 'clamp(18px, 1.3vw + 12px, 20px)',
+  display: 'clamp(20px, 1.5vw + 14px, 24px)',
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// UX UTILITIES - Phase 3 (focus trap, haptic, kinetic numbers, staffing bar, skeleton)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Fix 8b - Focus trap hook for modals
+export const useFocusTrap = (ref, isActive) => {
+  useEffect(() => {
+    if (!isActive || !ref.current) return;
+    const el = ref.current;
+    const focusable = el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    const prevFocused = document.activeElement;
+    first?.focus();
+    const trap = (e) => {
+      if (e.key === 'Tab') {
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+      }
+      if (e.key === 'Escape') el.querySelector('[data-close]')?.click();
+    };
+    el.addEventListener('keydown', trap);
+    return () => { el.removeEventListener('keydown', trap); prevFocused?.focus?.(); };
+  }, [isActive, ref]);
+};
+
+// P4.5 - Haptic feedback (progressive enhancement - no-op on desktop)
+export const haptic = (ms = 10) => { try { navigator?.vibrate?.(ms); } catch {} };
+
+// P4.3 - Kinetic animated number (counts up/down smoothly, highlights overtime)
+export const AnimatedNumber = ({ value, className, style }) => {
+  const [display, setDisplay] = useState(value);
+  const prevRef = useRef(value);
+  useEffect(() => {
+    if (prevRef.current === value) return;
+    const start = prevRef.current, diff = value - start;
+    const duration = 400;
+    let startTime;
+    const animate = (time) => {
+      if (!startTime) startTime = time;
+      const progress = Math.min((time - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(start + diff * eased));
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+    prevRef.current = value;
+  }, [value]);
+  const isOvertime = typeof value === 'number' && value >= 44;
+  return (
+    <span
+      className={className}
+      style={{ ...style, ...(isOvertime ? { color: '#FBBF24', textShadow: '0 0 8px rgba(251,191,36,0.4)' } : {}) }}
+    >{display}</span>
+  );
+};
+
+// P3.4 - Staffing progress bar (visual complement to "3/5" text)
+export const StaffingBar = ({ scheduled, target }) => {
+  if (!target) return null;
+  const pct = Math.min((scheduled / target) * 100, 100);
+  const color = pct >= 100 ? '#34D399' : pct >= 75 ? '#FBBF24' : '#F87171';
+  return (
+    <div style={{ width: '100%', height: 4, borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.1)', marginTop: 2 }}>
+      <div style={{ width: `${pct}%`, height: '100%', borderRadius: 2, backgroundColor: color, transition: 'width 300ms ease-out' }} />
+    </div>
+  );
+};
+
+// Fix 6 - Skeleton loading grid (replaces rainbow sphere for main app loading)
+export const ScheduleSkeleton = () => (
+  <div className="p-4" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="flex gap-2 mb-4">
+      {[...Array(3)].map((_, i) => <div key={i} className="skeleton-pulse h-8 flex-1" />)}
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(7, 1fr)', gap: '2px' }}>
+      <div className="skeleton-pulse h-10" />
+      {[...Array(7)].map((_, i) => <div key={`h-${i}`} className="skeleton-pulse h-10" />)}
+      {[...Array(56)].map((_, i) => <div key={`c-${i}`} className="skeleton-pulse h-14" />)}
+    </div>
+  </div>
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // API CONFIGURATION
@@ -590,14 +702,16 @@ const GradientButton = ({ children, onClick, variant = 'primary', disabled = fal
 );
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef, isOpen);
   if (!isOpen) return null;
   const sizes = { sm: 'max-w-xs', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl' };
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
-      <div className={`${sizes[size]} w-full rounded-xl overflow-hidden shadow-2xl max-h-[80vh] flex flex-col`} style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label={title || 'Dialog'} onClick={onClose}>
+      <div ref={dialogRef} className={`${sizes[size]} w-full rounded-xl overflow-hidden shadow-2xl max-h-[80vh] flex flex-col modal-content active`} style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         <div className="px-3 py-2 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
-          <h2 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>{title}</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+          <h2 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>{title}</h2>
+          <button onClick={onClose} data-close aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
         </div>
         <div className="p-3 overflow-y-auto">{children}</div>
       </div>
@@ -1565,14 +1679,14 @@ const RequestTimeOffModal = ({ isOpen, onClose, onSelectType, currentUser }) => 
   ];
   
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
-      <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Shift Changes" onClick={onClose}>
+      <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
-          <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: THEME.text.primary }}>
+          <h2 className="font-semibold flex items-center gap-2" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>
             <Calendar size={16} style={{ color: THEME.accent.cyan }} />
             Shift Changes
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+          <button onClick={onClose} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
         </div>
         <div className="p-4 space-y-2">
           <p className="text-xs mb-3" style={{ color: THEME.text.muted }}>What type of request would you like to make?</p>
@@ -1749,14 +1863,14 @@ const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRe
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
-      <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Request Days Off" onClick={onClose}>
+      <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
-          <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: THEME.text.primary }}>
+          <h2 className="font-semibold flex items-center gap-2" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>
             <Calendar size={16} style={{ color: THEME.accent.cyan }} />
             Request Days Off
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+          <button onClick={onClose} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
         </div>
         
         <div className="p-4">
@@ -1771,19 +1885,21 @@ const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRe
           <>
           {/* Month navigation */}
           <div className="flex items-center justify-between mb-3">
-            <button 
+            <button
               onClick={() => setViewMonth(new Date(year, month - 1, 1))}
-              className="p-1 rounded hover:bg-black/5"
+              aria-label="Previous month"
+              className="p-2 rounded hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center"
               style={{ color: THEME.text.secondary }}
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-sm font-semibold" style={{ color: THEME.text.primary }}>
+            <span className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.subtitle }}>
               {monthNames[month]} {year}
             </span>
-            <button 
+            <button
               onClick={() => setViewMonth(new Date(year, month + 1, 1))}
-              className="p-1 rounded hover:bg-black/5"
+              aria-label="Next month"
+              className="p-2 rounded hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center"
               style={{ color: THEME.text.secondary }}
             >
               <ChevronRight size={16} />
@@ -2058,15 +2174,15 @@ const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, sh
   };
   
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
-      <div className="max-w-md w-full rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Take My Shift" onClick={onClose}>
+      <div className="max-w-md w-full rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="px-4 py-3 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.accent.pink}20, ${THEME.bg.secondary})` }}>
-          <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: THEME.text.primary }}>
+          <h2 className="font-semibold flex items-center gap-2" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>
             <User size={16} style={{ color: THEME.accent.pink }} />
             Take My Shift
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+          <button onClick={onClose} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
         </div>
         
         <div className="p-4 space-y-4 overflow-y-auto flex-1">
@@ -2401,15 +2517,15 @@ const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shi
   };
   
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
-      <div className="max-w-md w-full rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Swap Shifts" onClick={onClose}>
+      <div className="max-w-md w-full rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="px-4 py-3 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.accent.purple}20, ${THEME.bg.secondary})` }}>
-          <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: THEME.text.primary }}>
+          <h2 className="font-semibold flex items-center gap-2" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>
             <ArrowRightLeft size={16} style={{ color: THEME.accent.purple }} />
             Swap Shifts
           </h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+          <button onClick={onClose} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
         </div>
         
         <div className="p-4 space-y-4 overflow-y-auto flex-1">
@@ -2961,11 +3077,11 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
       
       {/* Deny Modal */}
       {denyModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setDenyModalOpen(false)}>
-          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Deny Request" onClick={() => setDenyModalOpen(false)}>
+          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
             <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
-              <h2 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Deny Request</h2>
-              <button onClick={() => setDenyModalOpen(false)} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+              <h2 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>Deny Request</h2>
+              <button onClick={() => setDenyModalOpen(false)} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
             </div>
             <div className="p-3">
               <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
@@ -2989,11 +3105,11 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
       
       {/* Revoke Modal */}
       {revokeModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setRevokeModalOpen(false)}>
-          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Revoke Approved Time Off" onClick={() => setRevokeModalOpen(false)}>
+          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
             <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
-              <h2 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Revoke Approved Time Off</h2>
-              <button onClick={() => setRevokeModalOpen(false)} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+              <h2 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>Revoke Approved Time Off</h2>
+              <button onClick={() => setRevokeModalOpen(false)} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
             </div>
             <div className="p-3">
               <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
@@ -3508,11 +3624,11 @@ const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentA
 
       {/* Reject Offer Modal */}
       {rejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setRejectModalOpen(false)}>
-          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Reject Shift Offer" onClick={() => setRejectModalOpen(false)}>
+          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
             <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
-              <h2 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Reject Shift Offer</h2>
-              <button onClick={() => setRejectModalOpen(false)} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+              <h2 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>Reject Shift Offer</h2>
+              <button onClick={() => setRejectModalOpen(false)} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
             </div>
             <div className="p-3">
               <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
@@ -3708,10 +3824,10 @@ const IncomingOffersPanel = ({ offers, currentUserEmail, onAccept, onReject }) =
       
       {/* Reject Note Modal */}
       {rejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setRejectModalOpen(false)}>
-          <div className="max-w-sm w-full rounded-xl overflow-hidden" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Decline Take My Shift Request" onClick={() => setRejectModalOpen(false)}>
+          <div className="max-w-sm w-full rounded-xl overflow-hidden modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
             <div className="px-4 py-3" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, backgroundColor: THEME.bg.tertiary }}>
-              <h3 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Decline Take My Shift Request</h3>
+              <h3 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>Decline Take My Shift Request</h3>
             </div>
             <div className="p-4">
               <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>Add a note (optional):</p>
@@ -3929,10 +4045,10 @@ const IncomingSwapsPanel = ({ swaps, currentUserEmail, onAccept, onReject }) => 
       
       {/* Reject Note Modal */}
       {rejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setRejectModalOpen(false)}>
-          <div className="max-w-sm w-full rounded-xl overflow-hidden" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Decline Swap Request" onClick={() => setRejectModalOpen(false)}>
+          <div className="max-w-sm w-full rounded-xl overflow-hidden modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
             <div className="px-4 py-3" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, backgroundColor: THEME.bg.tertiary }}>
-              <h3 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Decline Swap Request</h3>
+              <h3 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>Decline Swap Request</h3>
             </div>
             <div className="p-4">
               <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>Add a note (optional):</p>
@@ -4678,11 +4794,11 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
 
       {/* Reject Swap Modal */}
       {rejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setRejectModalOpen(false)}>
-          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Reject Swap Request" onClick={() => setRejectModalOpen(false)}>
+          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
             <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
-              <h2 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>Reject Swap Request</h2>
-              <button onClick={() => setRejectModalOpen(false)} className="p-1 rounded-lg hover:bg-black/5" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+              <h2 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>Reject Swap Request</h2>
+              <button onClick={() => setRejectModalOpen(false)} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
             </div>
             <div className="p-3">
               <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
@@ -7671,13 +7787,12 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} />;
   }
   
-  // Show loading screen while fetching data (rainbow sphere, min 1s display)
+  // Show loading screen while fetching data (skeleton - feels faster than spinner)
   if (isLoadingData) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: THEME.bg.primary }}>
-        <div className="text-center">
-          <div className="rainbow-sphere mx-auto mb-4" />
-          <p style={{ color: '#FFFFFF' }}>Loading your schedule...</p>
+      <div className="min-h-screen" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }} role="status" aria-live="polite" aria-label="Loading schedule">
+        <div className="pt-8" style={{ backgroundColor: THEME.bg.secondary }}>
+          <ScheduleSkeleton />
         </div>
       </div>
     );
@@ -8060,8 +8175,8 @@ export default function App() {
         
         {/* Auto-populate confirmation modal */}
         {autoPopulateConfirm && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={() => setAutoPopulateConfirm(null)}>
-            <div className="max-w-xs w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: THEME.bg.secondary }} onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} role="dialog" aria-modal="true" aria-label="Confirm Auto-Populate" onClick={() => setAutoPopulateConfirm(null)}>
+            <div className="max-w-xs w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary }} onClick={e => e.stopPropagation()}>
               <div className="text-center p-4">
                 <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
                   style={{ backgroundColor: autoPopulateConfirm.type.includes('clear') ? THEME.status.error + '20' : THEME.accent.blue + '20' }}>
@@ -8129,17 +8244,24 @@ export default function App() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@300;400;600&display=swap');
       `}</style>
-      
+
+      {/* Skip to content for keyboard users */}
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:px-4 focus:py-2 focus:bg-white focus:rounded-lg focus:shadow-lg" style={{ color: THEME.text.primary }}>
+        Skip to schedule
+      </a>
+      {/* aria-live region for status announcements */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only" id="status-announcer" />
+
       {/* Header */}
-      <header className="px-4 py-2 sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: `1px solid ${THEME.border.default}`, zIndex: 100, boxShadow: THEME.shadow.cardSm }}>
+      <header className={`px-4 py-2 sticky top-0 ${pendingRequestCount > 0 ? 'ambient-pending' : ''}`} style={{ backgroundColor: THEME.bg.secondary, borderBottom: `1px solid ${THEME.border.default}`, zIndex: 100, boxShadow: THEME.shadow.cardSm }}>
         <div className="max-w-[1400px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Logo />
             <div className="h-8 w-px" style={{ backgroundColor: THEME.border.default }} />
             <div className="flex items-center gap-2">
-              <button onClick={() => setPeriodIndex(periodIndex - 1)} className="p-1 rounded-lg hover:scale-105" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary }}><ChevronLeft size={14} /></button>
-              <div className="text-center min-w-[100px]"><p className="font-medium text-xs" style={{ color: THEME.text.primary }}>{formatDate(startDate)} – {formatDate(endDate)}</p></div>
-              <button onClick={() => setPeriodIndex(periodIndex + 1)} className="p-1 rounded-lg hover:scale-105" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary }}><ChevronRight size={14} /></button>
+              <button onClick={() => setPeriodIndex(periodIndex - 1)} aria-label="Previous pay period" className="p-2 rounded-lg hover:scale-105 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary }}><ChevronLeft size={14} /></button>
+              <div className="text-center min-w-[100px]"><p className="font-medium" style={{ color: THEME.text.primary, fontSize: TYPE.body }}>{formatDate(startDate)} – {formatDate(endDate)}</p></div>
+              <button onClick={() => setPeriodIndex(periodIndex + 1)} aria-label="Next pay period" className="p-2 rounded-lg hover:scale-105 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary }}><ChevronRight size={14} /></button>
             </div>
             
             {/* Save / Go Live / Edit - Three-state button */}

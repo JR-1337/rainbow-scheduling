@@ -2,6 +2,27 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-12 - UX Overhaul: 10-Phase Plan
+
+**Decided:** 9 fix categories + 12 improvement proposals executed across 10 phases. CSS foundation first, then THEME, then App.jsx sweep, then mobile views, then integration phases. 4 proposals deferred (smart defaults, container queries, view transitions, OKLCH).
+**Alternatives:** Cherry-pick only the quick wins before demo (rejected - JR wants the full overhaul). Separate sessions per phase (rejected - plan is detailed enough to execute sequentially).
+**Rationale:** Tuesday demo needs polish. The plan has specific line numbers and code snippets for every change. Execution is mostly mechanical with this level of detail.
+**Revisit if:** Demo feedback contradicts any changes (especially bottom nav, glassmorphism, or density toggle). Deferred proposals revisit after demo.
+
+## 2026-04-12 - OTR Accent Colors Are Immutable
+
+**Decided:** The 5 OTR accent colors (Red #EC3228, Blue #0453A3, Orange #F57F20, Green #00A84D, Purple #932378) cannot be changed. Other colors (status indicators, text colors, backgrounds) can adapt around them.
+**Alternatives:** Darkening green for contrast (rejected - brand color). Shifting cashier purple (rejected - mapped to brand purple intentionally). Desaturating role colors (rejected - Rainbow brand IS vibrant colors).
+**Rationale:** These are literal brand colors from OTR's bags/tags/store signage. The app embodies the brand, not the other way around.
+**Revisit if:** OTR rebrands or adds new brand colors.
+
+## 2026-04-12 - WCAG Contrast via Proper Calculation (Not Simple Luminance)
+
+**Decided:** Replace simple luminance formula (`0.299*r + 0.587*g + 0.114*b`) with proper WCAG relative luminance + contrast ratio calculation. Compare white vs navy contrast against each accent, pick higher.
+**Alternatives:** Lower luminance threshold (rejected - Red 0.410 and Green 0.421 too close, threshold can't split them). Per-color override map (rejected - fragile, breaks if new colors added).
+**Rationale:** Green accent gets navy text (6.1:1) instead of white (3.1:1 - fails WCAG AA). All other accents unchanged. Mathematically correct, adapts automatically to any future accent colors.
+**Revisit if:** New accent colors added to rotation.
+
 ## 2026-04-11 - OTR Dark Navy + Rotating Rainbow Accents
 
 **Decided:** Dark navy `#0D0E22` page background with white `#FFFFFF` content cards. 5 OTR brand colors (red/blue/orange/green/purple) cycle as accent on each app load via localStorage index. Role colors mapped to OTR palette permanently (not rotating).
