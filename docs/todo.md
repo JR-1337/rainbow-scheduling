@@ -24,6 +24,12 @@ Post-demo (code landed; awaits manual deploy above):
 - S39.4 DEFERRED: mobile admin branch extraction conflicts with decisions.md 2026-02-10. Unblocks only after admin state moves to a Context provider. See 2026-04-12 decision entry.
 - S40 persistence-file sweep + forward handoff
 
+Post-demo consecutive-days warning (Sarvi request):
+- Flag any employee scheduled 6+ consecutive days (ESA-adjacent retail rule; Sarvi has gotten in trouble over this)
+- Detection must cross week + pay-period boundaries (run spanning Sat→Sun of next period still counts)
+- UI: cell border warning on 6th+ day + top-of-schedule banner listing offenders (same pattern as OT banner)
+- Pending Sarvi answers: does PTO break streak? single day off resets? warning or hard block? (defaults: yes / yes / warning only)
+
 Post-demo payroll aggregator (path 1, pending demo go-ahead):
 - Discovery (JR emailing Sarvi): Counterpoint export format? ADP upload format? Employee ID consistency across 3 systems? Bonus logic (formulaic vs ad-hoc)?
 - Feature: pay-period reconciliation view (scheduled vs actual, PTO lines, OT flags at ESA 40/44hr)
