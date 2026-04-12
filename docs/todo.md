@@ -19,7 +19,6 @@ Manual deploy steps (required before post-demo security code runs in prod):
 - Paste backend/Code.gs v2.13 into Apps Script editor + Deploy > New Deployment (replace current active URL or keep URL via "Manage Deployments > Edit")
 
 Post-demo (code landed; awaits manual deploy above):
-- S39.3b AdminMyTimeOffPanel → `src/panels/` (requires exporting CollapsibleSection from App.jsx)
 - S39.3c AdminShiftOffersPanel → `src/panels/` (carries 2 reject-flow modals)
 - S39.3d AdminShiftSwapsPanel → `src/panels/` (carries 2 reject-flow modals)
 - S39.4 DEFERRED: mobile admin branch extraction conflicts with decisions.md 2026-02-10. Unblocks only after admin state moves to a Context provider. See 2026-04-12 decision entry.
@@ -33,6 +32,7 @@ Existing up-next preserved:
 
 ### Done
 
+- [2026-04-12] S39.3b Extract `AdminMyTimeOffPanel` → `src/panels/AdminMyTimeOffPanel.jsx`. Exported `CollapsibleSection` from App.jsx so panel can import it (circular-safe: referenced inside function body only). App.jsx 8436 → 8282 (-154). Build PASS, preview 200.
 - [2026-04-12] S39.3a Extract `AdminTimeOffPanel` → `src/panels/AdminTimeOffPanel.jsx` (carries Deny + Revoke reject modals). `REQUEST_STATUS_COLORS` moved to `src/constants.js` (imports THEME). App.jsx 8736 → 8436 (-300). Build PASS.
 - [2026-04-12] S39.2 Extract `AdminRequestModal` → `src/modals/AdminRequestModal.jsx`. Thin wrapper: `MobileBottomSheet` on mobile, centered modal on desktop. 6 reject-flow modals still inline inside their panels (move with S39.3). App.jsx 8757 → 8736 (-21). Build PASS.
 - [2026-04-12] S39.1 Extract THEME + TYPE + OTR to `src/theme.js`, ROLES + ROLES_BY_ID to `src/constants.js`. App.jsx 8839 → 8757 (-82). App.jsx re-exports THEME/TYPE/ROLES/ROLES_BY_ID for backward compat with consumers that import from `./App` (mobile views, pdf/generate, email/build). Module-init side effects (localStorage accent rotation, CSS var writes on `<html>`) preserved in theme.js. Build PASS, `vite preview` 200.
