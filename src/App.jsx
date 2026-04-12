@@ -9,6 +9,7 @@ import { OTR, OTR_ACCENT, THEME, TYPE } from './theme';
 import { ROLES, ROLES_BY_ID, REQUEST_STATUS_COLORS } from './constants';
 import { AdminRequestModal } from './modals/AdminRequestModal';
 import { AdminTimeOffPanel } from './panels/AdminTimeOffPanel';
+import { AdminMyTimeOffPanel } from './panels/AdminMyTimeOffPanel';
 export { parseLocalDate, escapeHtml, THEME, TYPE, ROLES, ROLES_BY_ID };
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
@@ -2517,7 +2518,7 @@ const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shi
 // ═══════════════════════════════════════════════════════════════════════════════
 // COLLAPSIBLE SECTION - Reusable wrapper for collapsible content
 // ═══════════════════════════════════════════════════════════════════════════════
-const CollapsibleSection = ({ title, icon: Icon, iconColor, badge, badgeColor, children, defaultOpen = true, notificationCount, onOpen }) => {
+export const CollapsibleSection = ({ title, icon: Icon, iconColor, badge, badgeColor, children, defaultOpen = true, notificationCount, onOpen }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const ChevronIcon = isOpen ? ChevronDown : ChevronRight;
   
@@ -2704,162 +2705,6 @@ const MyRequestsPanel = ({ requests, currentUserEmail, onCancel, notificationCou
           </div>
         ))}
       </div>
-    </CollapsibleSection>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ADMIN MY TIME OFF PANEL - Admin's personal time off requests (shown below schedule)
-// ═══════════════════════════════════════════════════════════════════════════════
-const AdminMyTimeOffPanel = ({ requests, currentUserEmail, onCancel }) => {
-  const [sortDir, setSortDir] = useState('desc');
-  // Filter to show only this admin's requests
-  const myRequests = requests.filter(r => r.email === currentUserEmail);
-
-  // Sort: pending first, then by date
-  const sortedRequests = [...myRequests].sort((a, b) => {
-    if (a.status === 'pending' && b.status !== 'pending') return -1;
-    if (b.status === 'pending' && a.status !== 'pending') return 1;
-    const da = new Date(a.createdTimestamp), db = new Date(b.createdTimestamp);
-    return sortDir === 'desc' ? db - da : da - db;
-  });
-  
-  const formatRequestDates = (datesStr) => {
-    const dates = datesStr.split(',').sort();
-    if (dates.length === 1) {
-      const d = parseLocalDate(dates[0]);
-      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    }
-    const groups = [];
-    let start = dates[0], end = dates[0];
-    for (let i = 1; i < dates.length; i++) {
-      const prev = parseLocalDate(end);
-      const curr = parseLocalDate(dates[i]);
-      if ((curr - prev) / 86400000 === 1) { end = dates[i]; }
-      else { groups.push({ start, end }); start = dates[i]; end = dates[i]; }
-    }
-    groups.push({ start, end });
-    const fmt = (g) => {
-      const s = parseLocalDate(g.start), e = parseLocalDate(g.end);
-      if (g.start === g.end) return s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      if (s.getMonth() === e.getMonth()) return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${e.getDate()}`;
-      return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-    };
-    return `${groups.map(fmt).join(', ')} (${dates.length} days)`;
-  };
-  
-  const formatTimestamp = (ts) => {
-    if (!ts) return '';
-    const d = new Date(ts);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  };
-  
-  const getStatusLabel = (status) => {
-    const labels = {
-      pending: 'Pending',
-      approved: 'Approved',
-      denied: 'Denied',
-      cancelled: 'Cancelled',
-      revoked: 'Revoked'
-    };
-    return labels[status] || status;
-  };
-  
-  const pendingCount = myRequests.filter(r => r.status === 'pending').length;
-  
-  // Always show for admins, even if empty (so they know they can request time off)
-  return (
-    <CollapsibleSection
-      title="My Time Off Requests"
-      icon={Calendar}
-      iconColor={THEME.accent.cyan}
-      badge={pendingCount || undefined}
-      badgeColor={THEME.status.warning}
-      defaultOpen={false}
-    >
-      {myRequests.length === 0 ? (
-        <div className="text-center py-3">
-          <Calendar size={20} style={{ color: THEME.text.muted, margin: '0 auto 8px' }} />
-          <p className="text-xs" style={{ color: THEME.text.muted }}>No time off requests yet</p>
-          <p className="text-xs mt-1" style={{ color: THEME.text.muted }}>Use "Shift Changes" button to request time off</p>
-        </div>
-      ) : (
-        <>
-        <div className="flex justify-end mb-2">
-          <button
-            onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
-            className="px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
-            style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
-            title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
-          >
-            <Clock size={9} />
-            {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
-          </button>
-        </div>
-        <div className="space-y-2">
-          {sortedRequests.map(request => (
-            <div key={request.requestId} className="p-2 rounded-lg" style={{ 
-              backgroundColor: request.status === 'pending' ? THEME.status.warning + '10' : THEME.bg.tertiary, 
-              border: `1px solid ${request.status === 'pending' ? THEME.status.warning + '30' : THEME.border.subtle}` 
-            }}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  {/* Dates */}
-                  <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>
-                    {formatRequestDates(request.datesRequested)}
-                  </p>
-                  
-                  {/* Submitted date */}
-                  <p className="text-xs mt-0.5" style={{ color: THEME.text.muted }}>
-                    Submitted {formatTimestamp(request.createdTimestamp)}
-                  </p>
-                  
-                  {/* Who approved/denied */}
-                  {request.status !== 'pending' && request.decidedBy && (
-                    <p className="text-xs mt-0.5" style={{ color: THEME.text.muted }}>
-                      {request.status === 'approved' ? 'Approved' : request.status === 'denied' ? 'Denied' : 'Decided'} by {request.decidedBy === currentUserEmail ? 'you' : request.decidedBy.split('@')[0]}
-                    </p>
-                  )}
-                  
-                  {/* Admin reason/note if present */}
-                  {request.reason && request.status !== 'pending' && (
-                    <div className="mt-1 p-1.5 rounded text-xs" style={{ backgroundColor: THEME.bg.elevated }}>
-                      <span style={{ color: THEME.text.muted }}>Note: </span>
-                      <span style={{ color: THEME.text.secondary }}>{request.reason}</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex flex-col items-end gap-1">
-                  {/* Status badge */}
-                  <span 
-                    className="text-xs font-medium px-1.5 py-0.5 rounded"
-                    style={{ 
-                      backgroundColor: REQUEST_STATUS_COLORS[request.status] + '20',
-                      color: REQUEST_STATUS_COLORS[request.status]
-                    }}
-                  >
-                    {getStatusLabel(request.status)}
-                  </span>
-                  
-                  {/* Cancel button for pending requests */}
-                  {request.status === 'pending' && (
-                    <button
-                      onClick={() => onCancel(request.requestId)}
-                      className="text-xs px-1.5 py-0.5 rounded flex items-center gap-1 hover:opacity-80"
-                      style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}
-                    >
-                      <X size={8} />
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        </>
-      )}
     </CollapsibleSection>
   );
 };
