@@ -2,7 +2,18 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.15 (post-setup cleanup — setupAuth stripped; rotate-secret stays)
+ * Version: 2.16 (S41: handlers derive callerEmail from verifyAuth, not payload)
+ *
+ * Changes in v2.16:
+ * - All protected handlers: dropped `callerEmail` from payload destructure and
+ *   derive it from `auth.employee.email` after verifyAuth succeeds. Fixes the
+ *   S37 regression where frontend stripped payload.callerEmail, leaving handlers
+ *   with undefined ownership/filter fields (broke request submit/approve/deny/
+ *   revoke/cancel across time-off, offers, swaps + getMyRequests/incoming*).
+ * - changePassword: now calls verifyAuth(payload) up front (previously relied
+ *   on manual caller-email derivation). Same behaviour, gated on a valid token.
+ * - verifyAuth's payload.callerEmail fallback kept for the legacy test harness
+ *   at the bottom of this file; can be removed once that test is deleted.
  *
  * Changes in v2.15:
  * - Removed setupAuth() and the "Run Auth Setup" menu item (setup is done; keeping
@@ -528,7 +539,11 @@ function login(payload) {
  * Change password
  */
 function changePassword(payload) {
-  const { callerEmail, targetEmail, currentPassword, newPassword } = payload;
+  const { targetEmail, currentPassword, newPassword } = payload;
+
+  const auth = verifyAuth(payload);
+  if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   if (!newPassword || newPassword.length < 4) {
     return { success: false, error: { code: 'VALIDATION_ERROR', message: 'New password must be at least 4 characters' } };
@@ -593,7 +608,7 @@ function changePassword(payload) {
  * Row 2 = emp-001, Row 3 = emp-002, etc.
  */
 function resetPassword(payload) {
-  const { callerEmail, targetEmail } = payload;
+  const { targetEmail } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
@@ -679,10 +694,11 @@ function formatTimeDisplay(timeStr) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function submitTimeOffRequest(payload) {
-  const { callerEmail, dates, reason } = payload;
+  const { dates, reason } = payload;
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   if (dates.some(d => isDateInPast(d))) {
     return { success: false, error: { code: 'PAST_DATE', message: 'Cannot request time off for dates that have already passed' } };
@@ -718,10 +734,11 @@ function submitTimeOffRequest(payload) {
 }
 
 function cancelTimeOffRequest(payload) {
-  const { callerEmail, requestId } = payload;
+  const { requestId } = payload;
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -749,10 +766,11 @@ function cancelTimeOffRequest(payload) {
 }
 
 function approveTimeOffRequest(payload) {
-  const { callerEmail, requestId } = payload;
+  const { requestId } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -773,10 +791,11 @@ function approveTimeOffRequest(payload) {
 }
 
 function denyTimeOffRequest(payload) {
-  const { callerEmail, requestId, reason } = payload;
+  const { requestId, reason } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -798,10 +817,11 @@ function denyTimeOffRequest(payload) {
 }
 
 function revokeTimeOffRequest(payload) {
-  const { callerEmail, requestId, reason } = payload;
+  const { requestId, reason } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -832,10 +852,11 @@ function revokeTimeOffRequest(payload) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function submitShiftOffer(payload) {
-  const { callerEmail, recipientEmail, shiftDate, shiftStart, shiftEnd, shiftRole } = payload;
+  const { recipientEmail, shiftDate, shiftStart, shiftEnd, shiftRole } = payload;
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   if (callerEmail === recipientEmail) {
     return { success: false, error: { code: 'SELF_REQUEST', message: 'Cannot offer a shift to yourself' } };
@@ -885,10 +906,11 @@ function submitShiftOffer(payload) {
 }
 
 function acceptShiftOffer(payload) {
-  const { callerEmail, requestId, note } = payload;
+  const { requestId, note } = payload;
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -910,10 +932,11 @@ function acceptShiftOffer(payload) {
 }
 
 function declineShiftOffer(payload) {
-  const { callerEmail, requestId, note } = payload;
+  const { requestId, note } = payload;
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -935,10 +958,11 @@ function declineShiftOffer(payload) {
 }
 
 function cancelShiftOffer(payload) {
-  const { callerEmail, requestId } = payload;
+  const { requestId } = payload;
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -967,10 +991,11 @@ function cancelShiftOffer(payload) {
 }
 
 function approveShiftOffer(payload) {
-  const { callerEmail, requestId, note } = payload;
+  const { requestId, note } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -1005,10 +1030,11 @@ function approveShiftOffer(payload) {
 }
 
 function rejectShiftOffer(payload) {
-  const { callerEmail, requestId, note } = payload;
+  const { requestId, note } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -1030,10 +1056,11 @@ function rejectShiftOffer(payload) {
 }
 
 function revokeShiftOffer(payload) {
-  const { callerEmail, requestId, note } = payload;
+  const { requestId, note } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -1076,10 +1103,11 @@ function revokeShiftOffer(payload) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function submitSwapRequest(payload) {
-  const { callerEmail, partnerEmail, initiatorShift, partnerShift } = payload;
+  const { partnerEmail, initiatorShift, partnerShift } = payload;
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   if (callerEmail === partnerEmail) {
     return { success: false, error: { code: 'SELF_REQUEST', message: 'Cannot swap shifts with yourself' } };
@@ -1127,10 +1155,11 @@ function submitSwapRequest(payload) {
 }
 
 function acceptSwapRequest(payload) {
-  const { callerEmail, requestId, note } = payload;
+  const { requestId, note } = payload;
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -1152,10 +1181,11 @@ function acceptSwapRequest(payload) {
 }
 
 function declineSwapRequest(payload) {
-  const { callerEmail, requestId, note } = payload;
+  const { requestId, note } = payload;
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -1177,10 +1207,11 @@ function declineSwapRequest(payload) {
 }
 
 function cancelSwapRequest(payload) {
-  const { callerEmail, requestId } = payload;
+  const { requestId } = payload;
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -1207,10 +1238,11 @@ function cancelSwapRequest(payload) {
 }
 
 function approveSwapRequest(payload) {
-  const { callerEmail, requestId, note } = payload;
+  const { requestId, note } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -1247,10 +1279,11 @@ function approveSwapRequest(payload) {
 }
 
 function rejectSwapRequest(payload) {
-  const { callerEmail, requestId, note } = payload;
+  const { requestId, note } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -1272,10 +1305,11 @@ function rejectSwapRequest(payload) {
 }
 
 function revokeSwapRequest(payload) {
-  const { callerEmail, requestId, note } = payload;
+  const { requestId, note } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const request = requests.find(r => r.requestId === requestId);
@@ -1320,10 +1354,9 @@ function revokeSwapRequest(payload) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function getEmployeeRequests(payload) {
-  const { callerEmail } = payload;
-
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const allRequests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
   const myRequests = allRequests.filter(r =>
@@ -1336,8 +1369,6 @@ function getEmployeeRequests(payload) {
 }
 
 function getAdminQueue(payload) {
-  const { callerEmail } = payload;
-
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
 
@@ -1354,10 +1385,9 @@ function getAdminQueue(payload) {
 }
 
 function getIncomingOffers(payload) {
-  const { callerEmail } = payload;
-
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const offers = getSheetData(CONFIG.TABS.SHIFT_CHANGES).filter(r =>
     r.requestType === 'shift_offer' &&
@@ -1369,10 +1399,9 @@ function getIncomingOffers(payload) {
 }
 
 function getIncomingSwaps(payload) {
-  const { callerEmail } = payload;
-
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
+  const callerEmail = auth.employee.email;
 
   const swaps = getSheetData(CONFIG.TABS.SHIFT_CHANGES).filter(r =>
     r.requestType === 'shift_swap' &&
@@ -1384,8 +1413,6 @@ function getIncomingSwaps(payload) {
 }
 
 function getAllData(payload) {
-  const { callerEmail } = payload;
-
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
@@ -1439,21 +1466,19 @@ function getAllData(payload) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function getEmployees(payload) {
-  const { callerEmail } = payload;
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
   return { success: true, data: { employees: getSheetData(CONFIG.TABS.EMPLOYEES) } };
 }
 
 function getShifts(payload) {
-  const { callerEmail } = payload;
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
   return { success: true, data: { shifts: getSheetData(CONFIG.TABS.SHIFTS) } };
 }
 
 function saveShift(payload) {
-  const { callerEmail, shift } = payload;
+  const { shift } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
@@ -1494,7 +1519,7 @@ function saveShift(payload) {
  * - Existing employees: NEVER overwrite the password column
  */
 function saveEmployee(payload) {
-  const { callerEmail, employee } = payload;
+  const { employee } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
@@ -1519,7 +1544,7 @@ function saveEmployee(payload) {
 }
 
 function saveLivePeriods(payload) {
-  const { callerEmail, livePeriods } = payload;
+  const { livePeriods } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
@@ -1538,7 +1563,7 @@ function saveLivePeriods(payload) {
 }
 
 function saveStaffingTargets(payload) {
-  const { callerEmail, staffingTargets } = payload;
+  const { staffingTargets } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
@@ -1561,7 +1586,7 @@ function saveStaffingTargets(payload) {
 }
 
 function saveSetting(payload) {
-  const { callerEmail, key, value } = payload;
+  const { key, value } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
@@ -1582,7 +1607,7 @@ function saveSetting(payload) {
 }
 
 function batchSaveShifts(payload) {
-  const { callerEmail, shifts, periodDates, allShiftKeys } = payload;
+  const { shifts, periodDates, allShiftKeys } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
@@ -1644,7 +1669,7 @@ function batchSaveShifts(payload) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function saveAnnouncement(payload) {
-  const { callerEmail, periodStartDate, subject, message } = payload;
+  const { periodStartDate, subject, message } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
@@ -1671,7 +1696,7 @@ function saveAnnouncement(payload) {
 }
 
 function deleteAnnouncement(payload) {
-  const { callerEmail, periodStartDate } = payload;
+  const { periodStartDate } = payload;
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };

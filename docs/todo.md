@@ -15,7 +15,7 @@ Pre-demo (before 2026-04-14):
 Manual deploy steps (required before post-demo security code runs in prod):
 - Add `passwordHash` + `passwordSalt` columns (R + S) to Employees sheet
 - Set `HMAC_SECRET` (32 random bytes base64) in Apps Script > Project Settings > Script Properties
-- Paste backend/Code.gs v2.13 into Apps Script editor + Deploy > New Deployment (replace current active URL or keep URL via "Manage Deployments > Edit")
+- Paste backend/Code.gs **v2.16** into Apps Script editor + Deploy > New Deployment (replace current active URL or keep URL via "Manage Deployments > Edit"). **BLOCKS DEMO: v2.14 in prod has the S37 callerEmail bug; every request action is broken until v2.16 ships.**
 
 Post-demo (code landed; awaits manual deploy above):
 - S39.4 DEFERRED: mobile admin branch extraction conflicts with decisions.md 2026-02-10. Unblocks only after admin state moves to a Context provider. See 2026-04-12 decision entry.
@@ -53,6 +53,7 @@ Existing up-next preserved:
 
 ### Done
 
+- [2026-04-12] S41.1 Backend `callerEmail` audit + fix (Code.gs v2.16). Every protected handler previously destructured `callerEmail` from payload for business logic (ownership checks, filters, sheet writes). S37 stripped it frontend-side and `apiCall` only auto-injects `token` — so these reads returned `undefined` in prod, silently breaking request submit/approve/deny/revoke/cancel across time-off, offers, swaps + `getMyRequests`/`getIncoming*`. Fix: drop `callerEmail` from payload destructure, add `const callerEmail = auth.employee.email;` after the verifyAuth guard. `changePassword` now also runs verifyAuth (previously relied on derived payload callerEmail). Build PASS. REQUIRES Apps Script manual deploy before 2026-04-14 demo — live is v2.14 and has the bug.
 - [2026-04-12] S40.2 Restore `callerEmail` in `ChangePasswordModal` + `AdminSettingsModal` payloads. S37 dropped it, but backend `changePassword` in Code.gs never got the `verifyAuth(token)` wrapper during S36 — so self-change returned "Employee not found." Back-compat shim identical to the `chunkedBatchSave` case. Caught during S40.1 browser verify.
 - [2026-04-12] S40.3 Hotfix: restore `ROLES` import in `src/views/EmployeeView.jsx`. Trimmed during unused-symbol cleanup but IS used at L414/L730 in function bodies (request-type modal). Vite didn't catch it (lessons.md #30). Prod white-screened ~10 min between `9a052c0` and `2f27662`. Lesson added: don't trust hand-typed "unused" lists.
 - [2026-04-12] S40.1 Extract `EmployeeView` → `src/views/EmployeeView.jsx` (carries `EmployeeViewRow` + `EmployeeScheduleCell`). New App.jsx exports: `CURRENT_PERIOD_INDEX`, `Logo`, `TaskStarTooltip`. App.jsx 4597 → 3664 (-933). Build PASS, preview 200, browser-verified on branch before merge. Final inline extractable view out of App.jsx.

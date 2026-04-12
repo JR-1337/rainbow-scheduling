@@ -2,6 +2,13 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-12 - callerEmail Regression Fixed Backend-Side (Not Frontend Shim)
+
+**Decided:** S41.1 rewrites every protected Code.gs handler to derive `callerEmail` from `auth.employee.email` after `verifyAuth(payload)` instead of destructuring from the payload. Code.gs bumped to v2.16. Frontend unchanged.
+**Alternatives:** Frontend shim auto-injecting `callerEmail: getCachedUser()?.email` in `apiCall` (rejected — perpetuates trust-the-client, and the token is already the authoritative identity; shim would paper over the real S37 gap). Keep S40.2's per-site back-compat pattern (rejected — ~30 sites, fragile, next regression would hit the same class again).
+**Rationale:** Token is authoritative. Handlers that read `callerEmail` off the payload were reading attacker-controlled data post-S37 anyway (payload could be spoofed; the token can't). Deriving from `auth.employee.email` aligns with the S36 token-first model and closes the whole class. Requires one Apps Script deploy; no frontend ship needed.
+**Revisit if:** A future handler needs to act on behalf of a different user (e.g. admin impersonation flow) — then `targetEmail` stays in the payload explicitly, but `callerEmail` (the actor) always comes from auth.
+
 ## 2026-04-12 - Payroll Aggregator = Path 1 (Rainbow as Bridge, Not Replacement)
 
 **Decided:** Post-demo, build Rainbow into the aggregator between Counterpoint (clock-in actuals) and ADP (payroll). Rainbow ingests Counterpoint actuals, shows scheduled-vs-actual reconciliation + PTO + OT flags, admin enters bonuses in-app, Rainbow emits an ADP-ready export file. Counterpoint + ADP stay as-is. Pending demo go-ahead + discovery answers from Sarvi (Counterpoint export format, ADP upload format, employee ID consistency, bonus logic).
