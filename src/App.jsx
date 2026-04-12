@@ -19,6 +19,9 @@ import { IncomingOffersPanel } from './panels/IncomingOffersPanel';
 import { ReceivedOffersHistoryPanel } from './panels/ReceivedOffersHistoryPanel';
 import { IncomingSwapsPanel } from './panels/IncomingSwapsPanel';
 import { ReceivedSwapsHistoryPanel } from './panels/ReceivedSwapsHistoryPanel';
+import { UnifiedRequestHistory } from './panels/UnifiedRequestHistory';
+import { InactiveEmployeesPanel } from './panels/InactiveEmployeesPanel';
+import { ShiftEditorModal } from './modals/ShiftEditorModal';
 export { parseLocalDate, escapeHtml, THEME, TYPE, ROLES, ROLES_BY_ID };
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
@@ -422,7 +425,7 @@ const getPayPeriodDates = (periodIndex) => {
 const parseTime = (t) => { if (!t) return 0; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 export const formatTimeDisplay = (t) => { if (!t) return '--:--'; const [h, m] = t.split(':').map(Number); return `${h > 12 ? h - 12 : h || 12}:${m.toString().padStart(2, '0')}${h >= 12 ? 'PM' : 'AM'}`; };
 export const formatTimeShort = (t) => { if (!t) return '--'; const h = parseInt(t.split(':')[0]); return `${h > 12 ? h - 12 : h || 12}${h >= 12 ? 'p' : 'a'}`; };
-const calculateHours = (s, e) => (parseTime(e) - parseTime(s)) / 60;
+export const calculateHours = (s, e) => (parseTime(e) - parseTime(s)) / 60;
 
 const getAvailabilityShading = (avail, storeHours) => {
   if (!avail.available) return { top: 100, bottom: 0 };
@@ -439,7 +442,7 @@ const getAvailabilityShading = (avail, storeHours) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // UI COMPONENTS - Smaller/Compact
 // ═══════════════════════════════════════════════════════════════════════════════
-const GradientButton = ({ children, onClick, variant = 'primary', disabled = false, small = false, danger = false }) => (
+export const GradientButton = ({ children, onClick, variant = 'primary', disabled = false, small = false, danger = false }) => (
   <button onClick={onClick} disabled={disabled}
     className={`${small ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'} rounded-lg font-medium transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90`}
     style={{ 
@@ -451,7 +454,7 @@ const GradientButton = ({ children, onClick, variant = 'primary', disabled = fal
   </button>
 );
 
-const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+export const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   const dialogRef = useRef(null);
   useFocusTrap(dialogRef, isOpen);
   if (!isOpen) return null;
@@ -485,7 +488,7 @@ const Checkbox = ({ checked, onChange, label }) => (
   </label>
 );
 
-const TimePicker = ({ value, onChange, label }) => {
+export const TimePicker = ({ value, onChange, label }) => {
   const hours = Array.from({ length: 18 }, (_, i) => (i + 6).toString().padStart(2, '0'));
   const [h, m] = (value || '11:00').split(':');
   return (
@@ -561,73 +564,6 @@ const TooltipButton = ({ children, onClick, variant = 'secondary', disabled = fa
   );
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// INACTIVE EMPLOYEES PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
-const InactiveEmployeesPanel = ({ isOpen, onClose, employees, onReactivate, onDelete }) => {
-  const inactiveEmps = employees.filter(e => !e.active && !e.deleted && !e.isOwner);
-  const deletedEmps = employees.filter(e => e.deleted && !e.isOwner);
-  
-  if (!isOpen) return null;
-  
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Manage Staff" size="md">
-      {inactiveEmps.length === 0 && deletedEmps.length === 0 ? (
-        <div className="text-center py-6">
-          <UserCheck size={32} style={{ color: THEME.text.muted }} className="mx-auto mb-2" />
-          <p className="text-sm" style={{ color: THEME.text.secondary }}>All employees are active!</p>
-        </div>
-      ) : (
-        <>
-          {inactiveEmps.length > 0 && (
-            <div className="mb-4">
-              <h3 className="text-xs font-semibold mb-2 flex items-center gap-1" style={{ color: THEME.status.warning }}>
-                <UserX size={12} /> Inactive ({inactiveEmps.length})
-              </h3>
-              <div className="space-y-1">
-                {inactiveEmps.map(emp => (
-                  <div key={emp.id} className="p-2 rounded-lg flex items-center justify-between" style={{ backgroundColor: THEME.bg.tertiary }}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}>{emp.name.charAt(0)}</div>
-                      <div>
-                        <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>{emp.name}</p>
-                        <p className="text-xs" style={{ color: THEME.text.muted }}>{emp.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      <button onClick={() => onReactivate(emp.id)} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: THEME.status.success + '20', color: THEME.status.success }}>Reactivate</button>
-                      <button onClick={() => onDelete(emp.id)} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: THEME.status.error + '20', color: THEME.status.error }}>Remove</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {deletedEmps.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold mb-2 flex items-center gap-1" style={{ color: THEME.text.muted }}>
-                <Trash2 size={12} /> Removed - History Only ({deletedEmps.length})
-              </h3>
-              <p className="text-xs mb-2" style={{ color: THEME.text.muted }}>These employees' past shifts are preserved on the schedule.</p>
-              <div className="space-y-1">
-                {deletedEmps.map(emp => (
-                  <div key={emp.id} className="p-2 rounded-lg flex items-center justify-between opacity-60" style={{ backgroundColor: THEME.bg.tertiary }}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}>{emp.name.charAt(0)}</div>
-                      <p className="text-xs" style={{ color: THEME.text.muted }}>{emp.name}</p>
-                    </div>
-                    <button onClick={() => onReactivate(emp.id)} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary }}>Restore</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </Modal>
-  );
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPLOYEE FORM - Very Compact
@@ -865,76 +801,6 @@ const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null,
   );
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SHIFT EDITOR - Very Compact
-// ═══════════════════════════════════════════════════════════════════════════════
-// Default booking times - uses store hours for that day
-const getDefaultBookingTimes = (date) => {
-  const storeHours = getStoreHoursForDate(date);
-  return { start: storeHours.open, end: storeHours.close };
-};
-
-const ShiftEditorModal = ({ isOpen, onClose, onSave, employee, date, existingShift, totalPeriodHours }) => {
-  const storeHours = getStoreHoursForDate(date);
-  const isHoliday = isStatHoliday(date);
-  const defaultTimes = getDefaultBookingTimes(date);
-  const [shiftData, setShiftData] = useState({ startTime: existingShift?.startTime || defaultTimes.start, endTime: existingShift?.endTime || defaultTimes.end, role: existingShift?.role || 'none', task: existingShift?.task || '' });
-
-  useEffect(() => { 
-    const dt = getDefaultBookingTimes(date);
-    setShiftData({ startTime: existingShift?.startTime || dt.start, endTime: existingShift?.endTime || dt.end, role: existingShift?.role || 'none', task: existingShift?.task || '' }); 
-  }, [existingShift, date]);
-
-  const shiftHours = calculateHours(shiftData.startTime, shiftData.endTime);
-  const projectedTotal = totalPeriodHours - (existingShift?.hours || 0) + shiftHours;
-
-  const handleSave = () => { onSave({ employeeId: employee.id, employeeName: employee.name, date: toDateKey(date), ...shiftData, hours: shiftHours }); onClose(); };
-  const handleDelete = () => { onSave({ employeeId: employee.id, date: toDateKey(date), deleted: true }); onClose(); };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Shift" size="sm">
-      <div className="p-2 rounded-lg mb-2" style={{ backgroundColor: THEME.bg.tertiary }}>
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: 'white' }}>{employee.name.charAt(0)}</div>
-          <div>
-            <p className="font-medium text-xs" style={{ color: THEME.text.primary }}>{employee.name}</p>
-            <p className="text-xs" style={{ color: THEME.text.secondary }}>{formatDateLong(date)} {isHoliday && <span style={{ color: THEME.status.warning }}>• Hol</span>}</p>
-          </div>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-2">
-        <TimePicker label="Start" value={shiftData.startTime} onChange={t => setShiftData({ ...shiftData, startTime: t })} />
-        <TimePicker label="End" value={shiftData.endTime} onChange={t => setShiftData({ ...shiftData, endTime: t })} />
-      </div>
-      
-      <div className="mb-2">
-        <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Role</label>
-        <div className="grid grid-cols-3 gap-1">
-          {ROLES.map(r => <button key={r.id} onClick={() => setShiftData({ ...shiftData, role: r.id })} className="px-1.5 py-1 rounded text-xs font-medium" style={{ backgroundColor: shiftData.role === r.id ? r.color : THEME.bg.elevated, color: shiftData.role === r.id ? 'white' : THEME.text.primary, border: `1px solid ${shiftData.role === r.id ? r.color : THEME.border.default}` }}>{r.name}</button>)}
-        </div>
-      </div>
-      
-      <div className="mb-2">
-        <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Task <Star size={8} fill={THEME.task} color={THEME.task} className="inline" /></label>
-        <input value={shiftData.task} onChange={e => setShiftData({ ...shiftData, task: e.target.value })} placeholder="Optional..." className="w-full px-2 py-1.5 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
-      </div>
-      
-      <div className="p-2 rounded-lg mb-3 grid grid-cols-2 gap-2 text-center" style={{ backgroundColor: THEME.bg.tertiary }}>
-        <div><span className="text-xs" style={{ color: THEME.text.muted }}>SHIFT</span><p className="text-lg font-bold" style={{ color: THEME.accent.cyan }}><AnimatedNumber value={shiftHours} decimals={1} suffix="h" /></p></div>
-        <div><span className="text-xs" style={{ color: THEME.text.muted }}>PERIOD</span><p className="text-lg font-bold" style={{ color: projectedTotal >= 44 ? THEME.status.error : projectedTotal >= 40 ? THEME.status.warning : THEME.accent.cyan }}><AnimatedNumber value={projectedTotal} decimals={1} suffix="h" /></p></div>
-      </div>
-      
-      <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
-        {existingShift && <GradientButton danger small onClick={handleDelete}><Trash2 size={10} /></GradientButton>}
-        <div className="flex gap-2 ml-auto">
-          <GradientButton variant="secondary" small onClick={onClose}>Cancel</GradientButton>
-          <GradientButton small onClick={handleSave}><Check size={12} />Save</GradientButton>
-        </div>
-      </div>
-    </Modal>
-  );
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMAIL MODAL - Compact
@@ -2582,297 +2448,6 @@ export const CollapsibleSection = ({ title, icon: Icon, iconColor, badge, badgeC
 
 
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// UNIFIED REQUESTS HISTORY - All employee request types in one sortable list
-// ═══════════════════════════════════════════════════════════════════════════════
-const UnifiedRequestHistory = ({
-  timeOffRequests, shiftOffers, shiftSwaps, currentUserEmail,
-  onCancelTimeOff, onCancelOffer, onCancelSwap,
-  onOpen
-}) => {
-  const [sortDir, setSortDir] = useState('desc');
-  const [typeFilter, setTypeFilter] = useState('all');
-
-  const getRoleName = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.name : '—';
-  };
-
-  const getRoleColor = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.color : THEME.text.muted;
-  };
-
-  const formatShortDate = (dateStr) => {
-    const d = parseLocalDate(dateStr);
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  };
-
-  // Normalize all requests into unified items
-  const items = useMemo(() => {
-    const unified = [];
-
-    // Time off requests (mine)
-    timeOffRequests
-      .filter(r => r.email === currentUserEmail)
-      .forEach(r => {
-        unified.push({
-          id: 'to-' + r.requestId,
-          type: 'timeOff',
-          direction: 'sent',
-          timestamp: r.createdTimestamp,
-          status: r.status,
-          statusColor: r.status === 'pending' ? THEME.status.warning : r.status === 'approved' ? THEME.status.success : r.status === 'denied' ? THEME.status.error : THEME.text.muted,
-          statusLabel: { pending: 'Pending', approved: 'Approved', denied: 'Denied', cancelled: 'Cancelled', revoked: 'Revoked' }[r.status] || r.status,
-          canCancel: r.status === 'pending',
-          onCancel: () => onCancelTimeOff(r.requestId),
-          data: r
-        });
-      });
-
-    // Offers I sent
-    shiftOffers
-      .filter(o => o.offererEmail === currentUserEmail)
-      .forEach(o => {
-        unified.push({
-          id: 'os-' + o.offerId,
-          type: 'offer',
-          direction: 'sent',
-          timestamp: o.createdTimestamp,
-          status: o.status,
-          statusColor: OFFER_STATUS_COLORS[o.status],
-          statusLabel: OFFER_STATUS_LABELS[o.status],
-          canCancel: ['awaiting_recipient', 'awaiting_admin'].includes(o.status),
-          onCancel: () => onCancelOffer(o.offerId),
-          data: o
-        });
-      });
-
-    // Offers I received (already responded — active ones stay in IncomingOffersPanel)
-    shiftOffers
-      .filter(o => o.recipientEmail === currentUserEmail && o.status !== 'awaiting_recipient')
-      .forEach(o => {
-        unified.push({
-          id: 'or-' + o.offerId,
-          type: 'offer',
-          direction: 'received',
-          timestamp: o.createdTimestamp,
-          status: o.status,
-          statusColor: OFFER_STATUS_COLORS[o.status],
-          statusLabel: OFFER_STATUS_LABELS[o.status],
-          canCancel: false,
-          data: o
-        });
-      });
-
-    // Swaps I sent
-    shiftSwaps
-      .filter(s => s.initiatorEmail === currentUserEmail)
-      .forEach(s => {
-        unified.push({
-          id: 'ss-' + s.swapId,
-          type: 'swap',
-          direction: 'sent',
-          timestamp: s.createdTimestamp,
-          status: s.status,
-          statusColor: SWAP_STATUS_COLORS[s.status],
-          statusLabel: SWAP_STATUS_LABELS[s.status],
-          canCancel: ['awaiting_partner', 'awaiting_admin'].includes(s.status),
-          onCancel: () => onCancelSwap(s.swapId),
-          data: s
-        });
-      });
-
-    // Swaps I received (already responded)
-    shiftSwaps
-      .filter(s => s.partnerEmail === currentUserEmail && s.status !== 'awaiting_partner')
-      .forEach(s => {
-        unified.push({
-          id: 'sr-' + s.swapId,
-          type: 'swap',
-          direction: 'received',
-          timestamp: s.createdTimestamp,
-          status: s.status,
-          statusColor: SWAP_STATUS_COLORS[s.status],
-          statusLabel: SWAP_STATUS_LABELS[s.status],
-          canCancel: false,
-          data: s
-        });
-      });
-
-    return unified;
-  }, [timeOffRequests, shiftOffers, shiftSwaps, currentUserEmail]);
-
-  const filtered = typeFilter === 'all' ? items : items.filter(i => i.type === typeFilter);
-
-  const sorted = [...filtered].sort((a, b) => {
-    // Active/cancellable items always first
-    if (a.canCancel && !b.canCancel) return -1;
-    if (!a.canCancel && b.canCancel) return 1;
-    const da = new Date(a.timestamp), db = new Date(b.timestamp);
-    return sortDir === 'desc' ? db - da : da - db;
-  });
-
-  const typeCounts = {
-    all: items.length,
-    timeOff: items.filter(i => i.type === 'timeOff').length,
-    offer: items.filter(i => i.type === 'offer').length,
-    swap: items.filter(i => i.type === 'swap').length,
-  };
-
-  const activeCount = items.filter(i => i.canCancel).length;
-
-  const TYPE_CONFIG = {
-    timeOff: { label: 'Time Off', shortLabel: 'Off', color: THEME.accent.cyan, icon: <Calendar size={9} /> },
-    offer: { label: 'Offer', shortLabel: 'Offer', color: THEME.accent.pink, icon: <ArrowRight size={9} /> },
-    swap: { label: 'Swap', shortLabel: 'Swap', color: THEME.accent.purple, icon: <ArrowRightLeft size={9} /> },
-  };
-
-  if (items.length === 0) return null;
-
-  return (
-    <CollapsibleSection
-      title="Requests History"
-      icon={ClipboardList}
-      iconColor={THEME.accent.cyan}
-      badge={activeCount || undefined}
-      badgeColor={THEME.status.warning}
-      defaultOpen={false}
-      onOpen={onOpen}
-    >
-      {/* Filter pills + sort toggle */}
-      <div className="flex items-center gap-1 mb-2 flex-wrap">
-        {[
-          { key: 'all', label: 'All', color: THEME.text.secondary },
-          { key: 'timeOff', label: 'Time Off', color: THEME.accent.cyan },
-          { key: 'offer', label: 'Offers', color: THEME.accent.pink },
-          { key: 'swap', label: 'Swaps', color: THEME.accent.purple },
-        ].map(f => (
-          <button
-            key={f.key}
-            onClick={() => setTypeFilter(f.key)}
-            className="px-2 py-0.5 rounded-full text-xs flex items-center gap-1"
-            style={{
-              backgroundColor: typeFilter === f.key ? f.color + '25' : THEME.bg.tertiary,
-              color: typeFilter === f.key ? f.color : THEME.text.muted,
-              border: `1px solid ${typeFilter === f.key ? f.color + '50' : THEME.border.subtle}`,
-              fontWeight: typeFilter === f.key ? 600 : 400,
-              fontSize: '10px'
-            }}
-          >
-            {f.label}
-            {typeCounts[f.key] > 0 && <span style={{ opacity: 0.7 }}>{typeCounts[f.key]}</span>}
-          </button>
-        ))}
-        <button
-          onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
-          className="ml-auto px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
-          style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
-          title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
-        >
-          <Clock size={9} />
-          {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
-        </button>
-      </div>
-
-      {/* Items */}
-      <div className="space-y-1.5">
-        {sorted.length === 0 ? (
-          <p className="text-xs text-center py-2" style={{ color: THEME.text.muted }}>No {typeFilter === 'all' ? '' : TYPE_CONFIG[typeFilter]?.label.toLowerCase() + ' '}requests</p>
-        ) : sorted.map(item => {
-          const tc = TYPE_CONFIG[item.type];
-          const isActive = item.canCancel;
-          return (
-            <div key={item.id} className="p-2 rounded-lg" style={{
-              backgroundColor: isActive ? THEME.status.warning + '08' : THEME.bg.tertiary,
-              border: `1px solid ${isActive ? THEME.status.warning + '25' : THEME.border.subtle}`
-            }}>
-              {/* Header row: type badge + direction + status */}
-              <div className="flex items-center justify-between gap-1 mb-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5" style={{
-                    backgroundColor: tc.color + '20', color: tc.color, fontSize: '9px', fontWeight: 600
-                  }}>
-                    {tc.icon} {tc.shortLabel}
-                  </span>
-                  {item.direction === 'received' && (
-                    <span className="text-xs" style={{ color: THEME.text.muted, fontSize: '9px' }}>received</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs px-1.5 py-0.5 rounded" style={{
-                    backgroundColor: item.statusColor + '20', color: item.statusColor, fontSize: '9px'
-                  }}>
-                    {item.statusLabel}
-                  </span>
-                  {item.canCancel && (
-                    <button
-                      onClick={item.onCancel}
-                      className="text-xs px-1 py-0.5 rounded flex items-center gap-0.5"
-                      style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted, fontSize: '9px' }}
-                    >
-                      <X size={8} /> Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Details by type */}
-              {item.type === 'timeOff' && (
-                <div>
-                  <p className="text-xs" style={{ color: THEME.text.primary }}>
-                    {item.data.datesRequested?.split(',').map(d => formatShortDate(d)).join(', ')}
-                  </p>
-                  {item.data.reason && <p className="text-xs mt-0.5" style={{ color: THEME.text.muted }}>"{item.data.reason}"</p>}
-                </div>
-              )}
-
-              {item.type === 'offer' && (
-                <div>
-                  <p className="text-xs" style={{ color: THEME.text.primary }}>
-                    {item.direction === 'sent' ? `To ${item.data.recipientName}` : `From ${item.data.offererName}`}
-                  </p>
-                  <p className="text-xs" style={{ color: THEME.text.secondary }}>
-                    {formatShortDate(item.data.shiftDate)} • {formatTimeDisplay(item.data.shiftStart)}–{formatTimeDisplay(item.data.shiftEnd)}
-                  </p>
-                </div>
-              )}
-
-              {item.type === 'swap' && (
-                <div>
-                  <p className="text-xs" style={{ color: THEME.text.primary }}>
-                    {item.direction === 'sent' ? `With ${item.data.partnerName}` : `From ${item.data.initiatorName}`}
-                  </p>
-                  <div className="text-xs space-y-0.5 mt-0.5">
-                    <div style={{ color: THEME.text.secondary }}>
-                      <span style={{ color: THEME.text.muted }}>{item.direction === 'sent' ? 'You: ' : 'Their: '}</span>
-                      {formatShortDate(item.direction === 'sent' ? item.data.initiatorShiftDate : item.data.initiatorShiftDate)}
-                      <span className="ml-1 px-1 py-0.5 rounded" style={{ backgroundColor: getRoleColor(item.direction === 'sent' ? item.data.initiatorShiftRole : item.data.initiatorShiftRole) + '20', color: getRoleColor(item.direction === 'sent' ? item.data.initiatorShiftRole : item.data.initiatorShiftRole), fontSize: '9px' }}>
-                        {getRoleName(item.direction === 'sent' ? item.data.initiatorShiftRole : item.data.initiatorShiftRole)}
-                      </span>
-                    </div>
-                    <div style={{ color: THEME.text.secondary }}>
-                      <span style={{ color: THEME.text.muted }}>{item.direction === 'sent' ? 'Them: ' : 'Your: '}</span>
-                      {formatShortDate(item.direction === 'sent' ? item.data.partnerShiftDate : item.data.partnerShiftDate)}
-                      <span className="ml-1 px-1 py-0.5 rounded" style={{ backgroundColor: getRoleColor(item.direction === 'sent' ? item.data.partnerShiftRole : item.data.partnerShiftRole) + '20', color: getRoleColor(item.direction === 'sent' ? item.data.partnerShiftRole : item.data.partnerShiftRole), fontSize: '9px' }}>
-                        {getRoleName(item.direction === 'sent' ? item.data.partnerShiftRole : item.data.partnerShiftRole)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Timestamp */}
-              <p className="text-xs mt-1" style={{ color: THEME.text.muted, fontSize: '8px' }}>
-                {new Date(item.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-    </CollapsibleSection>
-  );
-};
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
