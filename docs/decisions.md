@@ -2,6 +2,13 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-12 - S39.4 Mobile Admin Extraction Deferred (Honors Prior Decision)
+
+**Decided:** The `if (isMobileAdmin) { return (...) }` branch in App.jsx stays inline. Plan file `lovely-launching-marble.md` listed S39.4 as "extract to `src/MobileAdminView/index.jsx`" but that directly conflicts with the 2026-02-10 "Mobile Admin as If-Branch" decision below. No architectural precondition (state context provider or state library) has been met, so the original rationale still holds. S39.3b/c/d (remaining admin panels) are also deferred post-demo to keep the demo window safe — those extractions are low-risk and can land in a future session.
+**Alternatives:** Execute S39.4 anyway via prop drilling (rejected — revives the exact pattern 2026-02-10 rejected, introduces a 30+ prop maintenance burden). Refactor admin state into a context provider first, then extract (rejected for this window — days of work, well outside S39 scope, 2 days from demo).
+**Rationale:** Plan was written without cross-checking decisions.md. Following the plan verbatim would have silently overridden a prior decision. Flagging + deferring is the correct move per global rule "Hits something immutable → flag conflict with stakes."
+**Revisit if:** Admin state is refactored into a React Context or state library (same revisit condition as the 2026-02-10 decision). At that point S39.4 becomes cheap.
+
 ## 2026-04-12 - S36 HMAC Session Tokens + SHA-256 Password Hashing (Stateless)
 
 **Decided:** Login issues `base64url(payload).base64url(HMAC_SHA_256(payload, HMAC_SECRET))` tokens with 12h TTL. Payload = `{e: email, exp: ms, a: isAdmin, o: isOwner}`. `verifyToken_` uses constant-time comparison. Passwords stored as `base64url(SHA_256(uuidSalt + password))` in new `passwordHash`/`passwordSalt` columns. Dual-check on login: hash first, plaintext fallback, migrate plaintext → hash on successful fallback. Admin `resetPassword` writes plaintext so admin UI can display the default; next login re-migrates. `verifyAuth(authArg)` accepts payload object (prefers token, falls back to `callerEmail`) or bare string for legacy callers — unblocks S37 migration without breaking deployed frontend.

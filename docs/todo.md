@@ -19,7 +19,10 @@ Manual deploy steps (required before post-demo security code runs in prod):
 - Paste backend/Code.gs v2.13 into Apps Script editor + Deploy > New Deployment (replace current active URL or keep URL via "Manage Deployments > Edit")
 
 Post-demo (code landed; awaits manual deploy above):
-- S39 opportunistic extractions (THEME/constants → own files, AdminRequestModal → own file, mobile admin branch → own file)
+- S39.3b AdminMyTimeOffPanel → `src/panels/` (requires exporting CollapsibleSection from App.jsx)
+- S39.3c AdminShiftOffersPanel → `src/panels/` (carries 2 reject-flow modals)
+- S39.3d AdminShiftSwapsPanel → `src/panels/` (carries 2 reject-flow modals)
+- S39.4 DEFERRED: mobile admin branch extraction conflicts with decisions.md 2026-02-10. Unblocks only after admin state moves to a Context provider. See 2026-04-12 decision entry.
 - S40 persistence-file sweep + forward handoff
 
 Existing up-next preserved:
