@@ -30,6 +30,7 @@ Existing up-next preserved:
 
 ### Done
 
+- [2026-04-12] S39.3a Extract `AdminTimeOffPanel` → `src/panels/AdminTimeOffPanel.jsx` (carries Deny + Revoke reject modals). `REQUEST_STATUS_COLORS` moved to `src/constants.js` (imports THEME). App.jsx 8736 → 8436 (-300). Build PASS.
 - [2026-04-12] S39.2 Extract `AdminRequestModal` → `src/modals/AdminRequestModal.jsx`. Thin wrapper: `MobileBottomSheet` on mobile, centered modal on desktop. 6 reject-flow modals still inline inside their panels (move with S39.3). App.jsx 8757 → 8736 (-21). Build PASS.
 - [2026-04-12] S39.1 Extract THEME + TYPE + OTR to `src/theme.js`, ROLES + ROLES_BY_ID to `src/constants.js`. App.jsx 8839 → 8757 (-82). App.jsx re-exports THEME/TYPE/ROLES/ROLES_BY_ID for backward compat with consumers that import from `./App` (mobile views, pdf/generate, email/build). Module-init side effects (localStorage accent rotation, CSS var writes on `<html>`) preserved in theme.js. Build PASS, `vite preview` 200.
 - [2026-04-12] S38 mobile bottom sheet a11y: `MobileBottomSheet` now wires `useFocusTrap(dialogRef, isOpen)` so Tab cycles inside the sheet and Escape fires `[data-close]` → onClose. Ref + hook declared before the early-return so hook order stays stable across open/close toggles. `useFocusTrap` imported from `./App` (no new module needed — existing hook already handled both cases).

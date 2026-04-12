@@ -10,3 +10,11 @@ export const ROLES = [
 ];
 
 export const ROLES_BY_ID = Object.fromEntries(ROLES.map(r => [r.id, r]));
+
+export const REQUEST_STATUS_COLORS = {
+  pending: THEME.status.warning,
+  approved: THEME.status.success,
+  denied: THEME.status.error,
+  cancelled: THEME.text.muted,
+  revoked: '#F97316',
+};
