@@ -63,7 +63,9 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         }
         const role = ROLES_BY_ID[shift.role];
         const roleName = role?.name || 'Shift';
-        const roleColor = role?.color || '#64748b';
+        // Whitelist color to hex-only so CSS injection is impossible even if a role color is ever sourced from user input.
+        const rawColor = role?.color || '#64748b';
+        const roleColor = /^#[0-9a-fA-F]{3,8}$/.test(rawColor) ? rawColor : '#64748b';
         return `<td style="padding:5px;border:2.5px solid ${roleColor};background:#ffffff;text-align:center;">
           <div style="font-size:10px;font-weight:700;color:${roleColor};margin-bottom:2px;">${roleName}</div>
           <div style="font-size:9px;color:#0D0E22;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
@@ -110,12 +112,13 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     `;
   };
 
-  const legendItems = ROLES.filter(r => r.id !== 'none').map(r =>
-    `<span style="margin-right:15px;font-size:10px;display:inline-flex;align-items:center;gap:5px;">
-      <span style="display:inline-block;width:12px;height:12px;background:${r.color};border-radius:3px;"></span>
-      <span style="color:#334155;">${r.fullName}</span>
-    </span>`
-  ).join('');
+  const legendItems = ROLES.filter(r => r.id !== 'none').map(r => {
+    const c = /^#[0-9a-fA-F]{3,8}$/.test(r.color) ? r.color : '#64748b';
+    return `<span style="margin-right:15px;font-size:10px;display:inline-flex;align-items:center;gap:5px;">
+      <span style="display:inline-block;width:12px;height:12px;background:${c};border-radius:3px;"></span>
+      <span style="color:#334155;">${escapeHtml(r.fullName)}</span>
+    </span>`;
+  }).join('');
 
   const adminContactsHtml = adminContacts.length > 0 ? `
     <div style="margin-top:12px;padding:10px 15px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">

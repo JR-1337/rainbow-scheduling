@@ -41,7 +41,7 @@ export const buildEmailContent = (emp, shifts, dates, periodInfo, adminContacts 
   if (scheduleLines.length === 0) return { subject, body: '', hasShifts: false };
 
   const adminLine = adminContacts.length > 0
-    ? `Contact: ${adminContacts.map(a => `${a.name} (${a.email})`).join(', ')}`
+    ? `Contact: ${adminContacts.map(a => `${a.name || 'Admin'} (${a.email || ''})`).join(', ')}`
     : '';
 
   const announcementSection = (announcement && announcement.message) ? `
@@ -53,7 +53,8 @@ ${announcement.message}
 
 ` : '';
 
-  const body = `Hi ${emp.name.split(' ')[0]}! 🌈
+  const firstName = (emp.name || 'Team').split(' ')[0];
+  const body = `Hi ${firstName}! 🌈
 
 OVER THE RAINBOW - Staff Schedule
 Week ${weekNum1} & ${weekNum2} | ${startMonth} ${startDayNum} - ${endMonth} ${endDayNum}, ${year}

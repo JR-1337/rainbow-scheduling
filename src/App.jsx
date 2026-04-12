@@ -6574,9 +6574,10 @@ export default function App() {
       
       if (!saveResult.success) {
         const d = saveResult.data;
-        const msg = (d && d.totalChunks > 1 && d.failedChunks < d.totalChunks)
-          ? `Schedule save incomplete: ${d.totalChunks - d.failedChunks} of ${d.totalChunks} batches saved. Please retry.`
-          : (saveResult.error?.message || 'Failed to save schedule');
+        const partial = d && d.totalChunks > 1 && d.failedChunks < d.totalChunks;
+        const msg = partial
+          ? `NOT PUBLISHED — ${d.totalChunks - d.failedChunks} of ${d.totalChunks} batches saved. Click Publish again to retry.`
+          : (saveResult.error?.message || 'Failed to save schedule — schedule is NOT published');
         showToast('error', msg);
         setScheduleSaving(false);
         return;
