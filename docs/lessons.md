@@ -20,3 +20,4 @@
 - Inline arrow functions as props on memoized grid rows -> use existing useCallback handlers (`handleCellClick` etc.) - inline arrows create new refs each render, defeating React.memo
 - `.toISOString().split('T')[0]` in hot render paths -> use `toDateKey(date)` (~10x faster, no ISO alloc/regex split)
 - Duplicate mobile entry points for same destination (hamburger + bell + bottom nav all go to same place) -> one canonical path per destination; bottom nav owns drawer/requests/alerts on mobile
+- Bulk search/replace across ~40 hot-path call sites silently mangled one line (`sd.toISOString().split('T')[0]` -> `stoDateKey(d)`) and Vite build didn't catch the ReferenceError -> after large mechanical renames, grep for the exact new identifier AND do a smoke-load of the built bundle before committing

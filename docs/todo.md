@@ -14,6 +14,8 @@
 
 ### Done
 
+- [2026-04-12] PDF export printer-friendly pass: scheduled cells now render as 2.5px role-colored outlines on white (was filled tint), thicker than 1px grid for distinctiveness. Header gradient → solid OTR navy. Title border + announcement accent → OTR purple #932378. Hours color under-35h cyan → slate (prints cleaner).
+- [2026-04-12] S33 hotfix: `stoDateKey(d)` typo at App.jsx:6451 was white-screening prod. Fixed to `toDateKey(sd)`.
 - [2026-04-12] Phase 10 extension: Admin quick approve/deny bottom sheets. `AdminRequestModal` helper renders `MobileBottomSheet` on mobile and centered modal on desktop. All 6 admin/recipient reject-flow modals migrated (time-off deny/revoke, offer reject, take-my-shift decline, swap decline, swap reject). Bundle -4.3KB from dedup.
 - [2026-04-12] Perf pass: `ROLES_BY_ID` O(1) lookup map + `toDateKey(date)` helper replace `.toISOString().split('T')[0]` in ~40 hot-path call sites; `React.memo` on `ScheduleCell`, `EmployeeRow`, `EmployeeViewRow`, `EmployeeScheduleCell`; `useCallback` on `handleCellClick`, `handleEditEmployee`, `handleShowTooltip`, `handleHideTooltip`, `getEmpHours`, `getPeriodHours`, `getScheduledCount`; `useMemo` for `currentDateStrs`, `allDateStrs`, `todayStr`; dropped `JSON.stringify` equality check in `handleTargetChange`. Build still passes.
 - [2026-04-12] UX Phase 10 (minimal): Employee shift detail bottom sheet. Tapping a shift in MobileScheduleGrid opens `MobileBottomSheet` with role, time, hours, task. Admin-side quick approve/deny sheets deferred post-demo.

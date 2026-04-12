@@ -507,9 +507,9 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
   
   // Announcement HTML (goes at top after header)
   const announcementHtml = (announcement && announcement.message) ? `
-    <div style="margin:15px 0;padding:15px;background:#eff6ff;border-radius:8px;border-left:4px solid #3b82f6;">
-      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:#1d4ed8;font-size:13px;font-weight:700;letter-spacing:0.5px;">📢 ${announcement.subject}</h3>` : '<h3 style="margin:0 0 10px;color:#1d4ed8;font-size:13px;font-weight:700;">📢 Announcement</h3>'}
-      <div style="color:#1e3a5f;font-size:11px;line-height:1.6;white-space:pre-wrap;">${announcement.message}</div>
+    <div style="margin:15px 0;padding:15px;background:#faf7fb;border-radius:8px;border-left:4px solid #932378;">
+      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;letter-spacing:0.5px;">📢 ${announcement.subject}</h3>` : '<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;">📢 Announcement</h3>'}
+      <div style="color:#0D0E22;font-size:11px;line-height:1.6;white-space:pre-wrap;">${announcement.message}</div>
     </div>
   ` : '';
   
@@ -525,22 +525,23 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
     const rows = schedulable.map(emp => {
       const cells = weekDates.map(date => {
         const shift = shifts[`${emp.id}-${toDateKey(date)}`];
-        if (!shift) return '<td style="padding:6px;border:1px solid #cbd5e1;background:#f8fafc;"></td>';
+        if (!shift) return '<td style="padding:6px;border:1px solid #cbd5e1;background:#ffffff;"></td>';
         const role = ROLES_BY_ID[shift.role];
-        return `<td style="padding:6px;border:1px solid #cbd5e1;background:${role?.color}15;text-align:center;">
+        // Printer-friendly: role-colored outline (2.5px, thicker than 1px grid) on white — no fill, saves ink
+        return `<td style="padding:5px;border:2.5px solid ${role?.color};background:#ffffff;text-align:center;">
           <div style="font-size:10px;font-weight:700;color:${role?.color};margin-bottom:2px;">${role?.name}</div>
-          <div style="font-size:9px;color:#475569;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
-          <div style="font-size:8px;color:#64748b;">${shift.hours}h</div>
+          <div style="font-size:9px;color:#0D0E22;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
+          <div style="font-size:8px;color:#475569;">${shift.hours}h</div>
           ${shift.task ? `<div style="font-size:7px;color:#d97706;margin-top:2px;line-height:1.3;word-break:break-word;">★ ${shift.task}</div>` : ''}
         </td>`;
       }).join('');
-      
+
       const hours = calcWeekHours(emp.id, weekDates);
-      const hoursColor = hours >= 40 ? '#ef4444' : hours >= 35 ? '#fbbf24' : '#22d3ee';
-      
+      const hoursColor = hours >= 40 ? '#ef4444' : hours >= 35 ? '#d97706' : '#475569';
+
       return `<tr>
-        <td style="padding:8px;border:1px solid #cbd5e1;background:#f1f5f9;">
-          <div style="font-weight:600;font-size:11px;color:#0f172a;">${emp.name}</div>
+        <td style="padding:8px;border:1px solid #cbd5e1;background:#ffffff;">
+          <div style="font-weight:600;font-size:11px;color:#0D0E22;">${emp.name}</div>
           <div style="font-size:10px;color:${hoursColor};font-weight:600;">${hours.toFixed(1)}h</div>
         </td>
         ${cells}
@@ -549,8 +550,8 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
     
     return `
       <div style="margin-bottom:25px;">
-        <div style="background:linear-gradient(135deg, #3b82f6, #8b5cf6);padding:10px 15px;border-radius:8px 8px 0 0;">
-          <h3 style="margin:0;color:#fff;font-size:14px;font-weight:600;">Week ${weekNum}</h3>
+        <div style="background:#0D0E22;padding:10px 15px;border-radius:8px 8px 0 0;">
+          <h3 style="margin:0;color:#ffffff;font-size:14px;font-weight:600;">Week ${weekNum}</h3>
           <p style="margin:2px 0 0;color:rgba(255,255,255,0.8);font-size:11px;">${formatDate(weekDates[0])} — ${formatDate(weekDates[6])}</p>
         </div>
         <table style="width:100%;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
@@ -590,12 +591,12 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
   </style>
 </head>
 <body style="background:#ffffff;">
-  <div style="text-align:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid #3b82f6;">
+  <div style="text-align:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid #0D0E22;">
     <div style="font-family:'Josefin Sans',sans-serif;margin-bottom:5px;">
-      <span style="color:#64748b;font-size:10px;letter-spacing:3px;">OVER THE</span><br>
-      <span style="color:#7c3aed;font-size:24px;letter-spacing:4px;font-weight:600;">RAINBOW</span>
+      <span style="color:#475569;font-size:10px;letter-spacing:3px;">OVER THE</span><br>
+      <span style="color:#932378;font-size:24px;letter-spacing:4px;font-weight:600;">RAINBOW</span>
     </div>
-    <p style="margin:8px 0 0;font-size:12px;"><span style="color:#7c3aed;font-weight:600;">Staff Schedule</span></p>
+    <p style="margin:8px 0 0;font-size:12px;"><span style="color:#0D0E22;font-weight:600;">Staff Schedule</span></p>
     <p style="margin:5px 0 0;color:#475569;font-size:11px;">Week ${weekNum1} & ${weekNum2} • ${formatMonthWord(periodInfo.startDate)} ${periodInfo.startDate.getDate()} — ${formatMonthWord(periodInfo.endDate)} ${periodInfo.endDate.getDate()}, ${periodInfo.startDate.getFullYear()}</p>
   </div>
   
