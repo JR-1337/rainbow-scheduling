@@ -10,7 +10,6 @@
 **Active plan:** `~/.claude/plans/lovely-launching-marble.md` — audit-driven security + bugfix + refactor chunked into S33.5 → S40.
 
 Pre-demo (before 2026-04-14):
-- S33.5 repo hygiene (.gitignore dist/, commit package-lock.json, Photos/ decision) — deferred, JR requested S34 first
 - S35 browser verify live + demo polish
 
 Manual deploy steps (required before post-demo security code runs in prod):
@@ -54,6 +53,11 @@ Existing up-next preserved:
 
 ### Done
 
+- [2026-04-12] S39.3h Extract `RequestTimeOffModal` → `src/modals/RequestTimeOffModal.jsx` + `CommunicationsPanel` → `src/panels/CommunicationsPanel.jsx`. App.jsx 6676 → 6400 (-276). Build PASS, preview 200.
+- [2026-04-12] S33.5 Repo hygiene: `dist/` + `Photos/` added to `.gitignore`; `package-lock.json` committed (2637 lines). `git status` now clean on main. Photos/ disposition revisit post-demo (2 files in there: old `code.gs.docx` + mis-saved 1.2MB `favicon.svg`).
+- [2026-04-12] S39.3g Extract `UnifiedRequestHistory` + `InactiveEmployeesPanel` → `src/panels/`, `ShiftEditorModal` → `src/modals/` (also carries the `getDefaultBookingTimes` helper, only used there). `Modal`, `TimePicker`, `GradientButton`, `calculateHours` exported from App.jsx for panel/modal consumption (circular-safe). App.jsx 7104 → 6676 (-428). Build PASS, preview 200. (Recovered from mid-session crash: the 3 blocks were deleted but imports never added; session-start protocol caught the runtime-would-ReferenceError before any deploy.)
+- [2026-04-12] S39.3f Extract 5 employee panels: `MyRequestsPanel`, `IncomingOffersPanel`, `ReceivedOffersHistoryPanel`, `IncomingSwapsPanel`, `ReceivedSwapsHistoryPanel` → `src/panels/`. Incoming* panels carry their own decline-note AdminRequestModal (recipient reject flow). App.jsx 7662 → 7104 (-558). Build PASS, preview 200.
+- [2026-04-12] S39.3e Extract `MyShiftOffersPanel` + `MySwapsPanel` → `src/panels/` (employee-side siblings of S39.3c/d admin panels; modal-free, read-only, cancel is a callback). App.jsx 7850 → 7662 (-188). Build PASS, preview 200.
 - [2026-04-12] S39.3d Extract `AdminShiftSwapsPanel` → `src/panels/AdminShiftSwapsPanel.jsx` (carries reject-flow AdminRequestModal). `SWAP_STATUS_COLORS` + `SWAP_STATUS_LABELS` exported from App.jsx (circular-safe, referenced inside function body). App.jsx 8078 → 7850 (-228). Build PASS, preview 200.
 - [2026-04-12] S39.3c Extract `AdminShiftOffersPanel` → `src/panels/AdminShiftOffersPanel.jsx` (carries reject-flow AdminRequestModal). `OFFER_STATUS_COLORS` + `OFFER_STATUS_LABELS` exported from App.jsx (circular-safe, referenced inside function body). App.jsx 8282 → 8078 (-204). Build PASS, preview 200.
 - [2026-04-12] S39.3b Extract `AdminMyTimeOffPanel` → `src/panels/AdminMyTimeOffPanel.jsx`. Exported `CollapsibleSection` from App.jsx so panel can import it (circular-safe: referenced inside function body only). App.jsx 8436 → 8282 (-154). Build PASS, preview 200.
