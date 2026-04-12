@@ -31,7 +31,8 @@ export const ChangePasswordModal = ({ isOpen, onClose, currentUser, isFirstLogin
     setError('');
 
     const payload = {
-      newPassword
+      newPassword,
+      callerEmail: currentUser.email
     };
     if (!isFirstLogin) {
       payload.currentPassword = currentPassword;

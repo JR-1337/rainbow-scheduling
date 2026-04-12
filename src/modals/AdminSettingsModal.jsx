@@ -68,7 +68,8 @@ export const AdminSettingsModal = ({ isOpen, onClose, currentUser, staffingTarge
     setLoading(true);
     const result = await apiCall('changePassword', {
       currentPassword,
-      newPassword
+      newPassword,
+      callerEmail: currentUser.email
     });
     setLoading(false);
 
