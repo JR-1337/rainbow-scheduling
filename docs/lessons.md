@@ -13,3 +13,10 @@
 - `THEME.bg.primary` is page-level background only → inner UI elements (inputs, tab bars, cells inside cards) must use `bg.tertiary` or `bg.secondary`. Switching bg.primary to dark broke ~10 inner elements that assumed it was light.
 - Transparent accent-tinted card backgrounds (`THEME.accent.blue + '10'`) invisible on dark backgrounds → use solid `bg.secondary` with accent border/stripe instead
 - Card border opacity must be high enough to see: hex suffix `30` (~19%) invisible, `80` (~50%) visible. Use `THEME.border.default` which is accent at 50%
+- Light mode + terracotta accent for OTR -> use dark navy bg + rotating 5-color accent - Rainbow is a multi-color brand and light-mode terracotta felt off-brand
+- Gradient background blobs behind cards -> solid dark bg only - blobs made cards look pasted on
+- Muting/desaturating role colors "for consistency" -> keep role colors fully saturated; only functional status indicators (warning/error) get desaturated - Rainbow brand IS vibrant colors
+- Dark drop-shadows (`rgba(0,0,0,0.6)`) on dark bg -> use accent-color halos via `THEME.shadow.card`/`cardSm` - dark shadows nearly invisible on dark bg
+- Inline arrow functions as props on memoized grid rows -> use existing useCallback handlers (`handleCellClick` etc.) - inline arrows create new refs each render, defeating React.memo
+- `.toISOString().split('T')[0]` in hot render paths -> use `toDateKey(date)` (~10x faster, no ISO alloc/regex split)
+- Duplicate mobile entry points for same destination (hamburger + bell + bottom nav all go to same place) -> one canonical path per destination; bottom nav owns drawer/requests/alerts on mobile
