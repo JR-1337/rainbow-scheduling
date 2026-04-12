@@ -2838,6 +2838,28 @@ const CollapsibleSection = ({ title, icon: Icon, iconColor, badge, badgeColor, c
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN REQUEST MODAL - Bottom sheet on mobile, centered modal on desktop
+// ═══════════════════════════════════════════════════════════════════════════════
+const AdminRequestModal = ({ isOpen, onClose, title, children }) => {
+  const isMobile = useIsMobile();
+  if (!isOpen) return null;
+  if (isMobile) {
+    return <MobileBottomSheet isOpen={isOpen} onClose={onClose} title={title}>{children}</MobileBottomSheet>;
+  }
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
+      <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+        <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
+          <h2 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>{title}</h2>
+          <button onClick={onClose} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
+        </div>
+        <div className="p-3">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN TIME OFF PANEL - Admin view of all time off requests
 // ═══════════════════════════════════════════════════════════════════════════════
 const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdminEmail }) => {
@@ -3089,64 +3111,42 @@ const AdminTimeOffPanel = ({ requests, onApprove, onDeny, onRevoke, currentAdmin
         </div>
       )}
       
-      {/* Deny Modal */}
-      {denyModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Deny Request" onClick={() => setDenyModalOpen(false)}>
-          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
-            <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
-              <h2 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>Deny Request</h2>
-              <button onClick={() => setDenyModalOpen(false)} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
-            </div>
-            <div className="p-3">
-              <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
-                Denying time off for <strong>{selectedRequest?.name}</strong>: {selectedRequest && formatRequestDates(selectedRequest.datesRequested)}
-              </p>
-              <textarea
-                value={adminNotes}
-                onChange={e => setAdminNotes(e.target.value)}
-                placeholder="Reason for denial (optional but recommended)"
-                className="w-full px-2 py-1.5 rounded-lg outline-none text-xs resize-none"
-                style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary, minHeight: 60 }}
-              />
-              <div className="flex gap-2 mt-3">
-                <button onClick={() => setDenyModalOpen(false)} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}>Cancel</button>
-                <button onClick={handleDeny} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.status.error, color: 'white' }}>Deny Request</button>
-              </div>
-            </div>
-          </div>
+      <AdminRequestModal isOpen={denyModalOpen} onClose={() => setDenyModalOpen(false)} title="Deny Request">
+        <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
+          Denying time off for <strong>{selectedRequest?.name}</strong>: {selectedRequest && formatRequestDates(selectedRequest.datesRequested)}
+        </p>
+        <textarea
+          value={adminNotes}
+          onChange={e => setAdminNotes(e.target.value)}
+          placeholder="Reason for denial (optional but recommended)"
+          className="w-full px-2 py-1.5 rounded-lg outline-none text-xs resize-none"
+          style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary, minHeight: 60 }}
+        />
+        <div className="flex gap-2 mt-3">
+          <button onClick={() => setDenyModalOpen(false)} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}>Cancel</button>
+          <button onClick={handleDeny} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.status.error, color: 'white' }}>Deny Request</button>
         </div>
-      )}
-      
-      {/* Revoke Modal */}
-      {revokeModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Revoke Approved Time Off" onClick={() => setRevokeModalOpen(false)}>
-          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
-            <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
-              <h2 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>Revoke Approved Time Off</h2>
-              <button onClick={() => setRevokeModalOpen(false)} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
-            </div>
-            <div className="p-3">
-              <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
-                Revoking approved time off for <strong>{selectedRequest?.name}</strong>: {selectedRequest && formatRequestDates(selectedRequest.datesRequested)}
-              </p>
-              <p className="text-xs mb-2 p-2 rounded" style={{ backgroundColor: THEME.status.warning + '20', color: THEME.status.warning }}>
-                ⚠️ The employee will be notified that their approved time off has been revoked.
-              </p>
-              <textarea
-                value={adminNotes}
-                onChange={e => setAdminNotes(e.target.value)}
-                placeholder="Reason for revoking (recommended)"
-                className="w-full px-2 py-1.5 rounded-lg outline-none text-xs resize-none"
-                style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary, minHeight: 60 }}
-              />
-              <div className="flex gap-2 mt-3">
-                <button onClick={() => setRevokeModalOpen(false)} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}>Cancel</button>
-                <button onClick={handleRevoke} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: '#F97316', color: 'white' }}>Revoke Time Off</button>
-              </div>
-            </div>
-          </div>
+      </AdminRequestModal>
+
+      <AdminRequestModal isOpen={revokeModalOpen} onClose={() => setRevokeModalOpen(false)} title="Revoke Approved Time Off">
+        <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
+          Revoking approved time off for <strong>{selectedRequest?.name}</strong>: {selectedRequest && formatRequestDates(selectedRequest.datesRequested)}
+        </p>
+        <p className="text-xs mb-2 p-2 rounded" style={{ backgroundColor: THEME.status.warning + '20', color: THEME.status.warning }}>
+          ⚠️ The employee will be notified that their approved time off has been revoked.
+        </p>
+        <textarea
+          value={adminNotes}
+          onChange={e => setAdminNotes(e.target.value)}
+          placeholder="Reason for revoking (recommended)"
+          className="w-full px-2 py-1.5 rounded-lg outline-none text-xs resize-none"
+          style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary, minHeight: 60 }}
+        />
+        <div className="flex gap-2 mt-3">
+          <button onClick={() => setRevokeModalOpen(false)} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}>Cancel</button>
+          <button onClick={handleRevoke} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: '#F97316', color: 'white' }}>Revoke Time Off</button>
         </div>
-      )}
+      </AdminRequestModal>
     </div>
   );
 };
@@ -3636,33 +3636,22 @@ const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentA
         </div>
       )}
 
-      {/* Reject Offer Modal */}
-      {rejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Reject Shift Offer" onClick={() => setRejectModalOpen(false)}>
-          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
-            <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
-              <h2 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>Reject Shift Offer</h2>
-              <button onClick={() => setRejectModalOpen(false)} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
-            </div>
-            <div className="p-3">
-              <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
-                Rejecting shift offer from <strong>{selectedOffer?.offererName}</strong> to <strong>{selectedOffer?.recipientName}</strong>
-              </p>
-              <textarea
-                value={adminNotes}
-                onChange={e => setAdminNotes(e.target.value)}
-                placeholder="Reason for rejection (optional but recommended)"
-                className="w-full px-2 py-1.5 rounded-lg outline-none text-xs resize-none"
-                style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary, minHeight: 60 }}
-              />
-              <div className="flex gap-2 mt-3">
-                <button onClick={() => setRejectModalOpen(false)} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}>Cancel</button>
-                <button onClick={handleReject} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.status.error, color: 'white' }}>Reject Offer</button>
-              </div>
-            </div>
-          </div>
+      <AdminRequestModal isOpen={rejectModalOpen} onClose={() => setRejectModalOpen(false)} title="Reject Shift Offer">
+        <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
+          Rejecting shift offer from <strong>{selectedOffer?.offererName}</strong> to <strong>{selectedOffer?.recipientName}</strong>
+        </p>
+        <textarea
+          value={adminNotes}
+          onChange={e => setAdminNotes(e.target.value)}
+          placeholder="Reason for rejection (optional but recommended)"
+          className="w-full px-2 py-1.5 rounded-lg outline-none text-xs resize-none"
+          style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary, minHeight: 60 }}
+        />
+        <div className="flex gap-2 mt-3">
+          <button onClick={() => setRejectModalOpen(false)} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}>Cancel</button>
+          <button onClick={handleReject} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.status.error, color: 'white' }}>Reject Offer</button>
         </div>
-      )}
+      </AdminRequestModal>
     </div>
   );
 };
@@ -3836,35 +3825,25 @@ const IncomingOffersPanel = ({ offers, currentUserEmail, onAccept, onReject }) =
         </div>
       </CollapsibleSection>
       
-      {/* Reject Note Modal */}
-      {rejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Decline Take My Shift Request" onClick={() => setRejectModalOpen(false)}>
-          <div className="max-w-sm w-full rounded-xl overflow-hidden modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
-            <div className="px-4 py-3" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, backgroundColor: THEME.bg.tertiary }}>
-              <h3 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>Decline Take My Shift Request</h3>
-            </div>
-            <div className="p-4">
-              <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>Add a note (optional):</p>
-              <textarea
-                value={rejectNote}
-                onChange={e => setRejectNote(e.target.value)}
-                placeholder="e.g., Sorry, I have another commitment that day"
-                className="w-full px-3 py-2 rounded-lg text-xs resize-none"
-                style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
-                rows={2}
-              />
-            </div>
-            <div className="px-4 py-3 flex justify-end gap-2" style={{ borderTop: `1px solid ${THEME.border.subtle}`, backgroundColor: THEME.bg.tertiary }}>
-              <button onClick={() => setRejectModalOpen(false)} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary }}>
-                Cancel
-              </button>
-              <button onClick={handleConfirmReject} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.status.error, color: 'white' }}>
-                Decline Offer
-              </button>
-            </div>
-          </div>
+      <AdminRequestModal isOpen={rejectModalOpen} onClose={() => setRejectModalOpen(false)} title="Decline Take My Shift Request">
+        <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>Add a note (optional):</p>
+        <textarea
+          value={rejectNote}
+          onChange={e => setRejectNote(e.target.value)}
+          placeholder="e.g., Sorry, I have another commitment that day"
+          className="w-full px-3 py-2 rounded-lg text-xs resize-none"
+          style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
+          rows={2}
+        />
+        <div className="flex justify-end gap-2 mt-3">
+          <button onClick={() => setRejectModalOpen(false)} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary }}>
+            Cancel
+          </button>
+          <button onClick={handleConfirmReject} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.status.error, color: 'white' }}>
+            Decline Offer
+          </button>
         </div>
-      )}
+      </AdminRequestModal>
     </>
   );
 };
@@ -4057,35 +4036,25 @@ const IncomingSwapsPanel = ({ swaps, currentUserEmail, onAccept, onReject }) => 
         </div>
       </CollapsibleSection>
       
-      {/* Reject Note Modal */}
-      {rejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Decline Swap Request" onClick={() => setRejectModalOpen(false)}>
-          <div className="max-w-sm w-full rounded-xl overflow-hidden modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
-            <div className="px-4 py-3" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, backgroundColor: THEME.bg.tertiary }}>
-              <h3 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>Decline Swap Request</h3>
-            </div>
-            <div className="p-4">
-              <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>Add a note (optional):</p>
-              <textarea
-                value={rejectNote}
-                onChange={e => setRejectNote(e.target.value)}
-                placeholder="e.g., Sorry, that shift doesn't work for me"
-                className="w-full px-3 py-2 rounded-lg text-xs resize-none"
-                style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
-                rows={2}
-              />
-            </div>
-            <div className="px-4 py-3 flex justify-end gap-2" style={{ borderTop: `1px solid ${THEME.border.subtle}`, backgroundColor: THEME.bg.tertiary }}>
-              <button onClick={() => setRejectModalOpen(false)} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary }}>
-                Cancel
-              </button>
-              <button onClick={handleConfirmReject} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.status.error, color: 'white' }}>
-                Decline Swap
-              </button>
-            </div>
-          </div>
+      <AdminRequestModal isOpen={rejectModalOpen} onClose={() => setRejectModalOpen(false)} title="Decline Swap Request">
+        <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>Add a note (optional):</p>
+        <textarea
+          value={rejectNote}
+          onChange={e => setRejectNote(e.target.value)}
+          placeholder="e.g., Sorry, that shift doesn't work for me"
+          className="w-full px-3 py-2 rounded-lg text-xs resize-none"
+          style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
+          rows={2}
+        />
+        <div className="flex justify-end gap-2 mt-3">
+          <button onClick={() => setRejectModalOpen(false)} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary }}>
+            Cancel
+          </button>
+          <button onClick={handleConfirmReject} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.status.error, color: 'white' }}>
+            Decline Swap
+          </button>
         </div>
-      )}
+      </AdminRequestModal>
     </>
   );
 };
@@ -4806,33 +4775,22 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
         </div>
       )}
 
-      {/* Reject Swap Modal */}
-      {rejectModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Reject Swap Request" onClick={() => setRejectModalOpen(false)}>
-          <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
-            <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
-              <h2 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>Reject Swap Request</h2>
-              <button onClick={() => setRejectModalOpen(false)} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
-            </div>
-            <div className="p-3">
-              <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
-                Rejecting swap between <strong>{selectedSwap?.initiatorName}</strong> and <strong>{selectedSwap?.partnerName}</strong>
-              </p>
-              <textarea
-                value={adminNotes}
-                onChange={e => setAdminNotes(e.target.value)}
-                placeholder="Reason for rejection (optional but recommended)"
-                className="w-full px-2 py-1.5 rounded-lg outline-none text-xs resize-none"
-                style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary, minHeight: 60 }}
-              />
-              <div className="flex gap-2 mt-3">
-                <button onClick={() => setRejectModalOpen(false)} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}>Cancel</button>
-                <button onClick={handleReject} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.status.error, color: 'white' }}>Reject Swap</button>
-              </div>
-            </div>
-          </div>
+      <AdminRequestModal isOpen={rejectModalOpen} onClose={() => setRejectModalOpen(false)} title="Reject Swap Request">
+        <p className="text-xs mb-2" style={{ color: THEME.text.secondary }}>
+          Rejecting swap between <strong>{selectedSwap?.initiatorName}</strong> and <strong>{selectedSwap?.partnerName}</strong>
+        </p>
+        <textarea
+          value={adminNotes}
+          onChange={e => setAdminNotes(e.target.value)}
+          placeholder="Reason for rejection (optional but recommended)"
+          className="w-full px-2 py-1.5 rounded-lg outline-none text-xs resize-none"
+          style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary, minHeight: 60 }}
+        />
+        <div className="flex gap-2 mt-3">
+          <button onClick={() => setRejectModalOpen(false)} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}>Cancel</button>
+          <button onClick={handleReject} className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg" style={{ backgroundColor: THEME.status.error, color: 'white' }}>Reject Swap</button>
         </div>
-      )}
+      </AdminRequestModal>
     </div>
   );
 };

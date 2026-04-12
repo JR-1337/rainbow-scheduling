@@ -6,7 +6,6 @@
 - Demo prep + post-demo cleanup (Phases 1-10 core landed)
 
 ### Up Next
-- Phase 10 extensions: quick approve/deny bottom sheets for admin request panels (currently only employee shift detail is wired)
 - Post-demo: revisit density toggle CSS scope — currently broad `.density-compact .grid` selector may catch unintended grids
 - Post-demo: evaluate mobile bottom nav active states on deep-linked URLs if introduced
 - Code.gs deploy (manual - paste updated Code.gs to Apps Script)
@@ -15,6 +14,7 @@
 
 ### Done
 
+- [2026-04-12] Phase 10 extension: Admin quick approve/deny bottom sheets. `AdminRequestModal` helper renders `MobileBottomSheet` on mobile and centered modal on desktop. All 6 admin/recipient reject-flow modals migrated (time-off deny/revoke, offer reject, take-my-shift decline, swap decline, swap reject). Bundle -4.3KB from dedup.
 - [2026-04-12] Perf pass: `ROLES_BY_ID` O(1) lookup map + `toDateKey(date)` helper replace `.toISOString().split('T')[0]` in ~40 hot-path call sites; `React.memo` on `ScheduleCell`, `EmployeeRow`, `EmployeeViewRow`, `EmployeeScheduleCell`; `useCallback` on `handleCellClick`, `handleEditEmployee`, `handleShowTooltip`, `handleHideTooltip`, `getEmpHours`, `getPeriodHours`, `getScheduledCount`; `useMemo` for `currentDateStrs`, `allDateStrs`, `todayStr`; dropped `JSON.stringify` equality check in `handleTargetChange`. Build still passes.
 - [2026-04-12] UX Phase 10 (minimal): Employee shift detail bottom sheet. Tapping a shift in MobileScheduleGrid opens `MobileBottomSheet` with role, time, hours, task. Admin-side quick approve/deny sheets deferred post-demo.
 - [2026-04-12] Mobile header prune (redundancy cleanup): dropped hamburger + bell from mobile employee header; dropped hamburger + Requests/Comms filing tabs from mobile admin header. Bottom nav owns those destinations. Filing tabs (Wk1/Wk2/Mine) only render when on schedule/mine destination.
