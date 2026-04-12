@@ -4935,6 +4935,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileAnnouncementOpen, setMobileAnnouncementOpen] = useState(false);
   const [mobileActiveTab, setMobileActiveTab] = useState('week1'); // 'week1' | 'week2' | 'my-schedule'
+  const [mobileShiftDetail, setMobileShiftDetail] = useState(null); // Phase 10: shift detail bottom sheet
   
   // Change password modal
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -5191,6 +5192,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                 return t;
               }}
               timeOffRequests={timeOffRequests}
+              onShiftClick={(info) => { haptic(); setMobileShiftDetail(info); }}
             />
           )}
           
@@ -5324,6 +5326,54 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
             }
           }}
         />
+
+        {/* Shift Detail Bottom Sheet (Phase 10) */}
+        <MobileBottomSheet
+          isOpen={!!mobileShiftDetail}
+          onClose={() => setMobileShiftDetail(null)}
+          title={mobileShiftDetail ? `${mobileShiftDetail.employee.name.split(' ')[0]} — ${mobileShiftDetail.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}` : ''}
+        >
+          {mobileShiftDetail && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: mobileShiftDetail.role?.color }} />
+                <span className="font-semibold" style={{ color: mobileShiftDetail.role?.color, fontSize: '15px' }}>
+                  {mobileShiftDetail.role?.name}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
+                  <p className="text-xs font-medium mb-1" style={{ color: THEME.text.muted }}>TIME</p>
+                  <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '14px' }}>
+                    {formatTimeDisplay(mobileShiftDetail.shift.startTime)} – {formatTimeDisplay(mobileShiftDetail.shift.endTime)}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
+                  <p className="text-xs font-medium mb-1" style={{ color: THEME.text.muted }}>HOURS</p>
+                  <p className="font-bold" style={{ color: THEME.accent.cyan, fontSize: '16px' }}>
+                    {mobileShiftDetail.shift.hours}h
+                  </p>
+                </div>
+              </div>
+              {mobileShiftDetail.shift.task && (
+                <div className="p-3 rounded-lg flex items-start gap-2" style={{ backgroundColor: THEME.task + '15', border: `1px solid ${THEME.task}40` }}>
+                  <Star size={14} fill={THEME.task} color={THEME.task} style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div>
+                    <p className="text-xs font-medium" style={{ color: THEME.task }}>TASK</p>
+                    <p style={{ color: THEME.text.primary, fontSize: '13px' }}>{mobileShiftDetail.shift.task}</p>
+                  </div>
+                </div>
+              )}
+              {mobileShiftDetail.employee.id === currentUser.id && (
+                <div className="pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
+                  <p className="text-xs text-center" style={{ color: THEME.text.muted }}>
+                    Need to swap or offer this shift? Tap Requests in the bottom bar.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </MobileBottomSheet>
       </div>
     );
   }

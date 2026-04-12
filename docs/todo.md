@@ -3,19 +3,19 @@
 <!-- Protocol: ~/.claude/rules/todo.md -->
 
 ### In Progress
-- UX overhaul: Phases 9-10 + post-demo redundancy decisions
+- Demo prep + post-demo cleanup (Phases 1-10 core landed)
 
 ### Up Next
-- Phase 9: Density toggle (adminDensity state, toggle button, conditional cell heights/fonts) — deferred to after demo
-- Phase 10: Mobile bottom sheets (shift detail, quick approve/deny, time off details) — components ready (`MobileBottomSheet` exported), wiring deferred
-- Mobile header redundancy decision (after demo): drop top hamburger / bell on mobile employee + admin since bottom nav covers them, OR keep both (current state)
-- Mobile admin header filing-tabs prune: drop Requests + Comms tabs from raised filing-tabs row since bottom nav owns them; keep Wk1/Wk2/Mine as schedule sub-nav
+- Phase 10 extensions: quick approve/deny bottom sheets for admin request panels (currently only employee shift detail is wired)
+- Post-demo: revisit density toggle CSS scope — currently broad `.density-compact .grid` selector may catch unintended grids
+- Post-demo: evaluate mobile bottom nav active states on deep-linked URLs if introduced
 - Code.gs deploy (manual - paste updated Code.gs to Apps Script)
 - Shared utils refactor (extract THEME, ROLES, helpers into dedicated files)
 - Professional sender email (dedicated Google Workspace account)
 
 ### Done
 
+- [2026-04-12] UX Phase 10 (minimal): Employee shift detail bottom sheet. Tapping a shift in MobileScheduleGrid opens `MobileBottomSheet` with role, time, hours, task. Admin-side quick approve/deny sheets deferred post-demo.
 - [2026-04-12] Mobile header prune (redundancy cleanup): dropped hamburger + bell from mobile employee header; dropped hamburger + Requests/Comms filing tabs from mobile admin header. Bottom nav owns those destinations. Filing tabs (Wk1/Wk2/Mine) only render when on schedule/mine destination.
 - [2026-04-12] UX Phase 9: Density toggle (admin desktop) — `adminDensity` state with localStorage persistence, two-icon pill toggle near Settings button, CSS rules in `.density-compact` shrink cell padding + text inside `.grid`
 - [2026-04-12] UX Phase 3 deferred: aria-live wired in `showToast` (writes to `#status-announcer`); haptic on `toggleEditMode`/`saveSchedule`/Publish button; row hover via `.schedule-row::after` overlay on EmployeeRow + EmployeeViewRow; input typography text-xs→text-sm (8 input strings + 5 select strings); spacing normalization N/A (no inline gap/padding values in codebase)

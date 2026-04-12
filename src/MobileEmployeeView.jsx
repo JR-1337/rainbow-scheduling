@@ -156,7 +156,7 @@ export const MobileAnnouncementPopup = ({ isOpen, onClose, announcement }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // FROZEN SPREADSHEET GRID
 // ═══════════════════════════════════════════════════════════════════════════════
-export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, getEmployeeHours, timeOffRequests = [] }) => {
+export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, getEmployeeHours, timeOffRequests = [], onShiftClick }) => {
   const scrollContainerRef = useRef(null);
   const NAME_COL_WIDTH = 72;
   const CELL_WIDTH = 80;
@@ -308,22 +308,27 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                     const isOwnShift = emp.id === loggedInUser.id;
                     
                     return (
-                      <td key={i} style={{ 
+                      <td key={i} style={{
                         width: CELL_WIDTH, minWidth: CELL_WIDTH, height: CELL_HEIGHT,
                         backgroundColor: THEME.bg.secondary,
                         borderBottom: `1px solid ${THEME.border.subtle}`,
                         padding: '2px'
                       }}>
-                        <div className="h-full rounded-md relative overflow-hidden" style={{ 
-                          backgroundColor: isTimeOff ? THEME.text.muted + '15' 
-                            : isUnavailable && !shift ? THEME.bg.tertiary 
-                            : shift ? role?.color + '25' : THEME.bg.tertiary,
-                          border: `1px solid ${isTimeOff ? THEME.text.muted + '30' 
-                            : isUnavailable && !shift ? THEME.border.subtle 
-                            : shift ? role?.color + '50' : THEME.border.default}`,
-                          opacity: isTimeOff ? 0.7 : isUnavailable && !shift ? 0.5 : 1,
-                          height: CELL_HEIGHT - 4
-                        }}>
+                        <div
+                          className="h-full rounded-md relative overflow-hidden"
+                          onClick={shift && onShiftClick ? () => onShiftClick({ employee: emp, date, dateStr, shift, role }) : undefined}
+                          style={{
+                            cursor: shift && onShiftClick ? 'pointer' : 'default',
+                            backgroundColor: isTimeOff ? THEME.text.muted + '15'
+                              : isUnavailable && !shift ? THEME.bg.tertiary
+                              : shift ? role?.color + '25' : THEME.bg.tertiary,
+                            border: `1px solid ${isTimeOff ? THEME.text.muted + '30'
+                              : isUnavailable && !shift ? THEME.border.subtle
+                              : shift ? role?.color + '50' : THEME.border.default}`,
+                            opacity: isTimeOff ? 0.7 : isUnavailable && !shift ? 0.5 : 1,
+                            height: CELL_HEIGHT - 4
+                          }}
+                        >
                           {isTimeOff && !shift ? (
                             <div className="flex items-center justify-center h-full">
                               <span style={{ color: THEME.text.muted, fontSize: '9px' }}>Time Off</span>
