@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 import {
-  THEME, TYPE, ROLES, formatDate, formatTimeShort, getDayName, getWeekNumber,
+  THEME, TYPE, ROLES, ROLES_BY_ID, toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber,
   getStoreHoursForDate, isStatHoliday, GradientBackground, haptic
 } from './App';
 
@@ -298,13 +298,13 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                   
                   {/* Shift cells */}
                   {dates.map((date, i) => {
-                    const dateStr = date.toISOString().split('T')[0];
+                    const dateStr = toDateKey(date);
                     const shift = shifts[`${emp.id}-${dateStr}`];
                     const isTimeOff = hasApprovedTimeOff(emp, dateStr);
                     const dayName = getDayName(date);
                     const avail = emp.availability?.[dayName];
                     const isUnavailable = avail && !avail.available;
-                    const role = shift ? ROLES.find(r => r.id === shift.role) : null;
+                    const role = shift ? ROLES_BY_ID[shift.role] : null;
                     const isOwnShift = emp.id === loggedInUser.id;
                     
                     return (
@@ -377,11 +377,11 @@ export const MobileMySchedule = ({ currentUser, shifts, dates, timeOffRequests =
     let totalHours = 0;
     const shiftList = [];
     weekDates.forEach(date => {
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = toDateKey(date);
       const shift = shifts[`${currentUser.id}-${dateStr}`];
       if (shift) {
         totalHours += shift.hours || 0;
-        const role = ROLES.find(r => r.id === shift.role);
+        const role = ROLES_BY_ID[shift.role];
         shiftList.push({ date, dateStr, shift, role });
       }
     });
@@ -410,9 +410,9 @@ export const MobileMySchedule = ({ currentUser, shifts, dates, timeOffRequests =
       
       <div className="space-y-1.5">
         {weekDates.map((date, i) => {
-          const dateStr = date.toISOString().split('T')[0];
+          const dateStr = toDateKey(date);
           const shift = shifts[`${currentUser.id}-${dateStr}`];
-          const role = shift ? ROLES.find(r => r.id === shift.role) : null;
+          const role = shift ? ROLES_BY_ID[shift.role] : null;
           const isTimeOff = myTimeOffDates.has(dateStr);
           const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
           const today = date.toDateString() === new Date().toDateString();

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet } from './MobileEmployeeView';
 import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, MobileEmployeeQuickView, MobileAdminBottomNav } from './MobileAdminView';
 import { 
@@ -317,6 +317,16 @@ export const ROLES = [
   { id: 'floorMonitor', name: 'Monitor', fullName: 'Floor Monitor', color: THEME.roles.floorMonitor },
   { id: 'none', name: 'None', fullName: 'No Role', color: THEME.roles.none },
 ];
+// Perf: O(1) role lookup by id (avoids ROLES.find(...) inside 280-cell renders)
+export const ROLES_BY_ID = Object.fromEntries(ROLES.map(r => [r.id, r]));
+
+// Perf: pre-compute YYYY-MM-DD without allocating a full ISO string
+export const toDateKey = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 
 const PAY_PERIOD_START = new Date(2026, 0, 26); // January 26, 2026 (Monday) - using local timezone
 const CURRENT_PERIOD_INDEX = (() => {
@@ -429,7 +439,7 @@ export const getWeekNumber = (date) => {
   const diff = date - start + (start.getTimezoneOffset() - date.getTimezoneOffset()) * 60 * 1000;
   return Math.ceil((diff / 604800000) + 1);
 };
-export const isStatHoliday = (date) => STAT_HOLIDAYS_2026.includes(date.toISOString().split('T')[0]);
+export const isStatHoliday = (date) => STAT_HOLIDAYS_2026.includes(toDateKey(date));
 
 // Module-level override refs (synced from component state via useEffect)
 // This avoids threading overrides as props through every child component
@@ -437,7 +447,7 @@ let _storeHoursOverrides = {}; // { "2026-02-14": { open: "10:00", close: "21:00
 let _staffingTargetOverrides = {}; // { "2026-02-14": 12 }
 
 export const getStoreHoursForDate = (date) => {
-  const dateStr = date.toISOString().split('T')[0];
+  const dateStr = toDateKey(date);
   // Per-date override takes priority
   if (_storeHoursOverrides[dateStr]) return _storeHoursOverrides[dateStr];
   // Then stat holiday defaults
@@ -491,7 +501,7 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
   // Calculate hours for specific week only
   const calcWeekHours = (empId, weekDates) => {
     let t = 0;
-    weekDates.forEach(d => { const s = shifts[`${empId}-${d.toISOString().split('T')[0]}`]; if (s) t += s.hours || 0; });
+    weekDates.forEach(d => { const s = shifts[`${empId}-${toDateKey(d)}`]; if (s) t += s.hours || 0; });
     return t;
   };
   
@@ -514,9 +524,9 @@ const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement 
     
     const rows = schedulable.map(emp => {
       const cells = weekDates.map(date => {
-        const shift = shifts[`${emp.id}-${date.toISOString().split('T')[0]}`];
+        const shift = shifts[`${emp.id}-${toDateKey(date)}`];
         if (!shift) return '<td style="padding:6px;border:1px solid #cbd5e1;background:#f8fafc;"></td>';
-        const role = ROLES.find(r => r.id === shift.role);
+        const role = ROLES_BY_ID[shift.role];
         return `<td style="padding:6px;border:1px solid #cbd5e1;background:${role?.color}15;text-align:center;">
           <div style="font-size:10px;font-weight:700;color:${role?.color};margin-bottom:2px;">${role?.name}</div>
           <div style="font-size:9px;color:#475569;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
@@ -636,9 +646,9 @@ const buildEmailContent = (emp, shifts, dates, periodInfo, adminContacts = [], a
   let totalHours = 0;
   
   dates.forEach(date => {
-    const shift = shifts[`${emp.id}-${date.toISOString().split('T')[0]}`];
+    const shift = shifts[`${emp.id}-${toDateKey(date)}`];
     if (shift) {
-      const role = ROLES.find(r => r.id === shift.role);
+      const role = ROLES_BY_ID[shift.role];
       const dayStr = formatDateLong(date);
       const timeStr = `${formatTimeDisplay(shift.startTime)} - ${formatTimeDisplay(shift.endTime)}`;
       
@@ -1143,8 +1153,8 @@ const ShiftEditorModal = ({ isOpen, onClose, onSave, employee, date, existingShi
   const shiftHours = calculateHours(shiftData.startTime, shiftData.endTime);
   const projectedTotal = totalPeriodHours - (existingShift?.hours || 0) + shiftHours;
 
-  const handleSave = () => { onSave({ employeeId: employee.id, employeeName: employee.name, date: date.toISOString().split('T')[0], ...shiftData, hours: shiftHours }); onClose(); };
-  const handleDelete = () => { onSave({ employeeId: employee.id, date: date.toISOString().split('T')[0], deleted: true }); onClose(); };
+  const handleSave = () => { onSave({ employeeId: employee.id, employeeName: employee.name, date: toDateKey(date), ...shiftData, hours: shiftHours }); onClose(); };
+  const handleDelete = () => { onSave({ employeeId: employee.id, date: toDateKey(date), deleted: true }); onClose(); };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Shift" size="sm">
@@ -1331,7 +1341,7 @@ www.rainbowjeans.com`;
           <div className="mb-2"><Checkbox checked={Object.values(selected).every(Boolean)} onChange={toggleAll} label="Select All" /></div>
           <div className="space-y-1 max-h-32 overflow-y-auto p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
             {emailableEmps.map(e => {
-              const hasShifts = dates.some(d => shifts[`${e.id}-${d.toISOString().split('T')[0]}`]);
+              const hasShifts = dates.some(d => shifts[`${e.id}-${toDateKey(d)}`]);
               return (
                 <div key={e.id} className="flex items-center justify-between">
                   <Checkbox checked={selected[e.id]} onChange={() => toggle(e.id)} label={e.name} />
@@ -1391,10 +1401,10 @@ const hasApprovedTimeOffForDate = (employeeEmail, dateStr, timeOffRequests) => {
   );
 };
 
-const ScheduleCell = ({ shift, date, onClick, availability, storeHours, isDeleted = false, hasApprovedTimeOff = false, isLocked = false }) => {
+const ScheduleCell = React.memo(({ shift, date, onClick, availability, storeHours, isDeleted = false, hasApprovedTimeOff = false, isLocked = false }) => {
   const [showTask, setShowTask] = useState(false);
   const starRef = useRef(null);
-  const role = shift ? ROLES.find(r => r.id === shift.role) : null;
+  const role = shift ? ROLES_BY_ID[shift.role] : null;
   const isHoliday = isStatHoliday(date);
   const shading = getAvailabilityShading(availability, storeHours);
   const isFullyUnavailable = !availability.available;
@@ -1451,12 +1461,12 @@ const ScheduleCell = ({ shift, date, onClick, availability, storeHours, isDelete
       <TaskStarTooltip task={shift?.task} show={showTask} triggerRef={starRef} />
     </>
   );
-};
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPLOYEE ROW
 // ═══════════════════════════════════════════════════════════════════════════════
-const EmployeeRow = ({ employee, dates, shifts, onCellClick, getEmployeeHours, onEdit, isDeleted = false, onShowTooltip, onHideTooltip, timeOffRequests = [], isLocked = false }) => {
+const EmployeeRow = React.memo(({ employee, dates, shifts, onCellClick, getEmployeeHours, onEdit, isDeleted = false, onShowTooltip, onHideTooltip, timeOffRequests = [], isLocked = false }) => {
   const rowRef = useRef(null);
   const hours = getEmployeeHours(employee.id);
 
@@ -1487,8 +1497,8 @@ const EmployeeRow = ({ employee, dates, shifts, onCellClick, getEmployeeHours, o
         const dayName = getDayName(date);
         const av = employee.availability[dayName];
         const storeHrs = getStoreHoursForDate(date);
-        const shift = shifts[`${employee.id}-${date.toISOString().split('T')[0]}`];
-        const dateStr = date.toISOString().split('T')[0];
+        const shift = shifts[`${employee.id}-${toDateKey(date)}`];
+        const dateStr = toDateKey(date);
         const approvedTimeOff = hasApprovedTimeOffForDate(employee.email, dateStr, timeOffRequests);
         return (
           <div key={dateStr} className="p-0.5" style={{ backgroundColor: THEME.bg.secondary }}>
@@ -1498,7 +1508,7 @@ const EmployeeRow = ({ employee, dates, shifts, onCellClick, getEmployeeHours, o
       })}
     </div>
   );
-};
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GRADIENT BACKGROUND - FlutterFlow style (static)
@@ -1799,7 +1809,7 @@ const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRe
   
   const toggleDate = (date) => {
     if (!date || date < today) return;
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toDateKey(date);
     setSelectedDates(prev => 
       prev.includes(dateStr) 
         ? prev.filter(d => d !== dateStr)
@@ -1809,7 +1819,7 @@ const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRe
   
   const isSelected = (date) => {
     if (!date) return false;
-    return selectedDates.includes(date.toISOString().split('T')[0]);
+    return selectedDates.includes(toDateKey(date));
   };
   
   const isPast = (date) => {
@@ -1822,7 +1832,7 @@ const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRe
     setIsSubmitting(true);
     
     const request = {
-      requestId: `TOR-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+      requestId: `TOR-${toDateKey(new Date()).replace(/-/g, '')}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
       name: currentUser.name,
       email: currentUser.email,
       datesRequested: selectedDates.join(','),
@@ -1922,7 +1932,7 @@ const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRe
           {/* Calendar grid */}
           <div className="grid grid-cols-7 gap-1">
             {calendarDays.map((date, i) => {
-              const dateStr = date ? date.toISOString().split('T')[0] : '';
+              const dateStr = date ? toDateKey(date) : '';
               const scheduled = date && isScheduledToWork(dateStr);
               const isDisabled = !date || isPast(date) || scheduled;
 
@@ -2135,7 +2145,7 @@ const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, sh
     setIsSubmitting(true);
     
     // Generate offer ID: OFFER-YYYYMMDD-XXXX
-    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const dateStr = toDateKey(new Date()).replace(/-/g, '');
     const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
     const offerId = `OFFER-${dateStr}-${randomSuffix}`;
     
@@ -2168,12 +2178,12 @@ const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, sh
   };
   
   const getRoleName = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.fullName : 'No Role';
   };
   
   const getRoleColor = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.color : THEME.roles.none;
   };
   
@@ -2474,7 +2484,7 @@ const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shi
     setIsSubmitting(true);
     
     // Generate swap ID: SWAP-YYYYMMDD-XXXX
-    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const dateStr = toDateKey(new Date()).replace(/-/g, '');
     const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
     const swapId = `SWAP-${dateStr}-${randomSuffix}`;
     
@@ -2511,12 +2521,12 @@ const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shi
   };
   
   const getRoleName = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.fullName : 'No Role';
   };
   
   const getRoleColor = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.color : THEME.roles.none;
   };
   
@@ -3493,7 +3503,7 @@ const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentA
   const pendingRecipientCount = offers.filter(o => o.status === 'awaiting_recipient').length;
   
   const getRoleName = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.fullName : 'No Role';
   };
   
@@ -3666,7 +3676,7 @@ const MyShiftOffersPanel = ({ offers, currentUserEmail, onCancel }) => {
   const myOffers = offers.filter(o => o.offererEmail === currentUserEmail);
 
   const getRoleName = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.fullName : 'No Role';
   };
 
@@ -3756,7 +3766,7 @@ const IncomingOffersPanel = ({ offers, currentUserEmail, onAccept, onReject }) =
   const incomingOffers = offers.filter(o => o.recipientEmail === currentUserEmail && o.status === 'awaiting_recipient');
   
   const getRoleName = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.fullName : 'No Role';
   };
   
@@ -3871,7 +3881,7 @@ const ReceivedOffersHistoryPanel = ({ offers, currentUserEmail, notificationCoun
   );
 
   const getRoleName = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.fullName : 'No Role';
   };
 
@@ -3960,12 +3970,12 @@ const IncomingSwapsPanel = ({ swaps, currentUserEmail, onAccept, onReject }) => 
   const incomingSwaps = swaps.filter(s => s.partnerEmail === currentUserEmail && s.status === 'awaiting_partner');
   
   const getRoleName = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.name : '—';
   };
   
   const getRoleColor = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.color : THEME.text.muted;
   };
   
@@ -4088,12 +4098,12 @@ const MySwapsPanel = ({ swaps, currentUserEmail, onCancel }) => {
   const mySwaps = swaps.filter(s => s.initiatorEmail === currentUserEmail);
 
   const getRoleName = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.name : '—';
   };
 
   const getRoleColor = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.color : THEME.text.muted;
   };
 
@@ -4197,12 +4207,12 @@ const ReceivedSwapsHistoryPanel = ({ swaps, currentUserEmail, notificationCount,
   );
 
   const getRoleName = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.name : '—';
   };
 
   const getRoleColor = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.color : THEME.text.muted;
   };
 
@@ -4305,12 +4315,12 @@ const UnifiedRequestHistory = ({
   const [typeFilter, setTypeFilter] = useState('all');
 
   const getRoleName = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.name : '—';
   };
 
   const getRoleColor = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.color : THEME.text.muted;
   };
 
@@ -4637,12 +4647,12 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
   const pendingPartnerCount = swaps.filter(s => s.status === 'awaiting_partner').length;
 
   const getRoleName = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.name : '—';
   };
 
   const getRoleColor = (roleId) => {
-    const role = ROLES.find(r => r.id === roleId);
+    const role = ROLES_BY_ID[roleId];
     return role ? role.color : THEME.text.muted;
   };
 
@@ -4830,10 +4840,10 @@ const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdm
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPLOYEE VIEW - Read-only full schedule, shows only own tasks
 // ═══════════════════════════════════════════════════════════════════════════════
-const EmployeeScheduleCell = ({ shift, date, loggedInEmpId, storeHours, isTimeOff = false, isUnavailable = false }) => {
+const EmployeeScheduleCell = React.memo(({ shift, date, loggedInEmpId, storeHours, isTimeOff = false, isUnavailable = false }) => {
   const [showTask, setShowTask] = useState(false);
   const starRef = useRef(null);
-  const role = shift ? ROLES.find(r => r.id === shift.role) : null;
+  const role = shift ? ROLES_BY_ID[shift.role] : null;
   const isHoliday = isStatHoliday(date);
   const isOwnShift = shift?.employeeId === loggedInEmpId;
   const showTaskStar = shift?.task && isOwnShift;
@@ -4875,9 +4885,9 @@ const EmployeeScheduleCell = ({ shift, date, loggedInEmpId, storeHours, isTimeOf
       {showTaskStar && <TaskStarTooltip task={shift?.task} show={showTask} triggerRef={starRef} />}
     </>
   );
-};
+});
 
-const EmployeeViewRow = ({ employee, dates, shifts, loggedInEmpId, getEmployeeHours, timeOffRequests = [] }) => {
+const EmployeeViewRow = React.memo(({ employee, dates, shifts, loggedInEmpId, getEmployeeHours, timeOffRequests = [] }) => {
   const hours = getEmployeeHours(employee.id);
   const isMe = employee.id === loggedInEmpId;
   
@@ -4907,7 +4917,7 @@ const EmployeeViewRow = ({ employee, dates, shifts, loggedInEmpId, getEmployeeHo
       
       {dates.map((date, i) => {
         const storeHrs = getStoreHoursForDate(date);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = toDateKey(date);
         const shift = shifts[`${employee.id}-${dateStr}`];
         const isTimeOff = hasApprovedTimeOff(dateStr);
         const dayName = getDayName(date);
@@ -4921,7 +4931,7 @@ const EmployeeViewRow = ({ employee, dates, shifts, loggedInEmpId, getEmployeeHo
       })}
     </div>
   );
-};
+});
 
 const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLogout, timeOffRequests, onCancelRequest, onSubmitRequest, shiftOffers, onSubmitOffer, onCancelOffer, onAcceptOffer, onRejectOffer, shiftSwaps, onSubmitSwap, onCancelSwap, onAcceptSwap, onRejectSwap, periodIndex = 0, onPeriodChange, isEditMode = false, announcement }) => {
   const [activeWeek, setActiveWeek] = useState(1);
@@ -5042,24 +5052,32 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
   // Admin contacts for display
   const adminContacts = employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
   
-  const getEmpHours = (id) => { 
-    let t = 0; 
-    currentDates.forEach(d => { 
-      const s = shifts[`${id}-${d.toISOString().split('T')[0]}`]; 
-      if (s) t += s.hours || 0; 
-    }); 
-    return t; 
-  };
-  
-  // Period total for summary stats
-  const getPeriodHours = (id) => {
+  // Perf: memoize date-key arrays so inner loops are O(N) strings, not O(N) ISO allocations
+  const currentDateStrs = useMemo(() => currentDates.map(toDateKey), [currentDates]);
+  const allDateStrs = useMemo(() => dates.map(toDateKey), [dates]);
+  const todayStr = useMemo(() => toDateKey(new Date()), []);
+
+  const getEmpHours = useCallback((id) => {
     let t = 0;
-    dates.forEach(d => { const s = shifts[`${id}-${d.toISOString().split('T')[0]}`]; if (s) t += s.hours || 0; });
+    for (let i = 0; i < currentDateStrs.length; i++) {
+      const s = shifts[`${id}-${currentDateStrs[i]}`];
+      if (s) t += s.hours || 0;
+    }
     return t;
-  };
+  }, [currentDateStrs, shifts]);
+
+  // Period total for summary stats
+  const getPeriodHours = useCallback((id) => {
+    let t = 0;
+    for (let i = 0; i < allDateStrs.length; i++) {
+      const s = shifts[`${id}-${allDateStrs[i]}`];
+      if (s) t += s.hours || 0;
+    }
+    return t;
+  }, [allDateStrs, shifts]);
   
   const myTotalHours = getPeriodHours(currentUser.id);
-  const myShiftsCount = dates.filter(d => shifts[`${currentUser.id}-${d.toISOString().split('T')[0]}`]).length;
+  const myShiftsCount = dates.filter(d => shifts[`${currentUser.id}-${toDateKey(d)}`]).length;
   
   const handleSelectRequestType = (type) => {
     setRequestModalOpen(false);
@@ -5188,7 +5206,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
               loggedInUser={currentUser}
               getEmployeeHours={mobileActiveTab === 'week1' ? getEmpHours : (id) => {
                 let t = 0;
-                mobileWeek2.forEach(d => { const s = shifts[`${id}-${d.toISOString().split('T')[0]}`]; if (s) t += s.hours || 0; });
+                mobileWeek2.forEach(d => { const s = shifts[`${id}-${toDateKey(d)}`]; if (s) t += s.hours || 0; });
                 return t;
               }}
               timeOffRequests={timeOffRequests}
@@ -5502,7 +5520,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                 const today = date.toDateString() === new Date().toDateString();
                 const hol = isStatHoliday(date);
                 return (
-                  <div key={date.toISOString().split('T')[0]} className="p-1 text-center" style={{ backgroundColor: today ? THEME.accent.purple + '20' : hol ? THEME.status.warning + '15' : THEME.bg.tertiary, borderBottom: today ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : 'none' }}>
+                  <div key={toDateKey(date)} className="p-1 text-center" style={{ backgroundColor: today ? THEME.accent.purple + '20' : hol ? THEME.status.warning + '15' : THEME.bg.tertiary, borderBottom: today ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : 'none' }}>
                     <p className="font-semibold text-xs" style={{ color: today ? THEME.accent.purple : hol ? THEME.status.warning : THEME.text.primary }}>{getDayName(date).slice(0, 3)}</p>
                     <p className="text-sm font-bold" style={{ color: THEME.text.primary }}>{date.getDate()}</p>
                     <p className="text-xs" style={{ color: THEME.text.muted }}>{formatTimeShort(sh.open)}-{formatTimeShort(sh.close)}</p>
@@ -5564,12 +5582,12 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
             <h3 className="text-sm font-semibold mb-2" style={{ color: THEME.text.primary }}>Your Schedule This Period</h3>
             <div className="space-y-1">
               {dates.map((date, i) => {
-                const shift = shifts[`${currentUser.id}-${date.toISOString().split('T')[0]}`];
+                const shift = shifts[`${currentUser.id}-${toDateKey(date)}`];
                 if (!shift) return null;
-                const role = ROLES.find(r => r.id === shift.role);
+                const role = ROLES_BY_ID[shift.role];
                 const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
                 return (
-                  <div key={date.toISOString().split('T')[0]} className="flex items-center gap-3 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, borderLeft: `3px solid ${role?.color}` }}>
+                  <div key={toDateKey(date)} className="flex items-center gap-3 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, borderLeft: `3px solid ${role?.color}` }}>
                     <div className="w-16">
                       <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>{dayName} {date.getDate()}</p>
                     </div>
@@ -5587,7 +5605,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
                   </div>
                 );
               }).filter(Boolean)}
-              {dates.filter(d => shifts[`${currentUser.id}-${d.toISOString().split('T')[0]}`]).length === 0 && (
+              {dates.filter(d => shifts[`${currentUser.id}-${toDateKey(d)}`]).length === 0 && (
                 <p className="text-sm text-center py-4" style={{ color: THEME.text.muted }}>No shifts scheduled this period</p>
               )}
             </div>
@@ -5775,7 +5793,7 @@ const CommunicationsPanel = ({ employees, shifts, dates, periodInfo, adminContac
     return employees
       .filter(e => e.active && !e.deleted && !e.isOwner)
       .filter(e => !e.isAdmin || e.showOnSchedule)
-      .filter(emp => dates.some(d => shifts[`${emp.id}-${d.toISOString().split('T')[0]}`]))
+      .filter(emp => dates.some(d => shifts[`${emp.id}-${toDateKey(d)}`]))
       .length;
   }, [employees, shifts, dates]);
   
@@ -5992,7 +6010,11 @@ const AdminSettingsModal = ({ isOpen, onClose, currentUser, staffingTargets, onS
     if (isNaN(num) || num < 0) return;
     const updated = { ...editTargets, [day]: num };
     setEditTargets(updated);
-    setTargetsChanged(JSON.stringify(updated) !== JSON.stringify(staffingTargets));
+    // Perf: shallow-compare the 7 day keys instead of JSON.stringify round-trip
+    const keys = Object.keys(updated);
+    const changed = keys.length !== Object.keys(staffingTargets).length
+      || keys.some(k => updated[k] !== staffingTargets[k]);
+    setTargetsChanged(changed);
   };
   
   const handleSaveTargets = async () => {
@@ -6301,8 +6323,8 @@ const ChangePasswordModal = ({ isOpen, onClose, currentUser, isFirstLogin = fals
 // COLUMN HEADER EDITOR - Click to edit store hours and staffing target per date
 // ═══════════════════════════════════════════════════════════════════════════════
 const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrides, staffingTargetOverrides, onSave, onClose }) => {
-  const dateStr = date.toISOString().split('T')[0];
-  const today = new Date().toISOString().split('T')[0];
+  const dateStr = toDateKey(date);
+  const today = toDateKey(new Date());
   const isPast = dateStr < today;
   const dayLabel = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   
@@ -6468,7 +6490,7 @@ export default function App() {
   // Get periodStartDate string for current period (must be calculated inline since startDate isn't available yet)
   const getCurrentPeriodStartDate = () => {
     const sd = new Date(PAY_PERIOD_START.getFullYear(), PAY_PERIOD_START.getMonth(), PAY_PERIOD_START.getDate() + (periodIndex * 14));
-    return sd.toISOString().split('T')[0];
+    return stoDateKey(d);
   };
   
   // Get/set announcement for current period using startDate as key
@@ -6650,7 +6672,7 @@ export default function App() {
           const pStart = new Date(PAY_PERIOD_START.getFullYear(), PAY_PERIOD_START.getMonth(), PAY_PERIOD_START.getDate() + (pIndex * 14));
           for (let d = 0; d < 14; d++) {
             const dt = new Date(pStart.getFullYear(), pStart.getMonth(), pStart.getDate() + d);
-            liveDates.add(dt.toISOString().split('T')[0]);
+            liveDates.add(toDateKey(dt));
           }
         });
         // Only copy shifts whose date falls within a live period
@@ -6769,7 +6791,7 @@ export default function App() {
       const periodShifts = [];
       const periodDates = [];
       dates.forEach(date => {
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = toDateKey(date);
         periodDates.push(dateStr);
         employees.forEach(emp => {
           const key = `${emp.id}-${dateStr}`;
@@ -6809,7 +6831,7 @@ export default function App() {
       // Update local published shifts
       const newPublished = { ...publishedShifts };
       dates.forEach(date => {
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = toDateKey(date);
         employees.forEach(emp => {
           const key = `${emp.id}-${dateStr}`;
           if (shifts[key]) {
@@ -6876,7 +6898,7 @@ export default function App() {
     const periodShifts = [];
     const periodDates = [];
     dates.forEach(date => {
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = toDateKey(date);
       periodDates.push(dateStr);
       employees.forEach(emp => {
         const key = `${emp.id}-${dateStr}`;
@@ -6990,7 +7012,7 @@ export default function App() {
   // Deleted employees who have shifts in current period (for history display)
   const deletedWithShifts = useMemo(() => {
     return employees.filter(e => e.deleted).filter(emp => {
-      return dates.some(d => shifts[`${emp.id}-${d.toISOString().split('T')[0]}`]);
+      return dates.some(d => shifts[`${emp.id}-${toDateKey(d)}`]);
     }).sort((a, b) => a.name.localeCompare(b.name));
   }, [employees, dates, shifts]);
   
@@ -7005,17 +7027,28 @@ export default function App() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [employees]);
 
-  const getEmpHours = (id) => { let t = 0; currentDates.forEach(d => { const s = shifts[`${id}-${d.toISOString().split('T')[0]}`]; if (s) t += s.hours || 0; }); return t; };
-  
+  // Perf: pre-compute dateKey strings for the current period once per render
+  const currentDateStrs = useMemo(() => currentDates.map(toDateKey), [currentDates]);
+  const todayStr = useMemo(() => toDateKey(new Date()), []);
+
+  const getEmpHours = useCallback((id) => {
+    let t = 0;
+    for (let i = 0; i < currentDateStrs.length; i++) {
+      const s = shifts[`${id}-${currentDateStrs[i]}`];
+      if (s) t += s.hours || 0;
+    }
+    return t;
+  }, [currentDateStrs, shifts]);
+
   // Count scheduled employees for a given date
-  const getScheduledCount = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+  const getScheduledCount = useCallback((date) => {
+    const dateStr = toDateKey(date);
     return schedulableEmployees.filter(emp => shifts[`${emp.id}-${dateStr}`]).length;
-  };
+  }, [schedulableEmployees, shifts]);
   
   // Get staffing target for a given date (per-date override → weekly default → fallback)
   const getStaffingTarget = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toDateKey(date);
     if (staffingTargetOverrides[dateStr] !== undefined) return staffingTargetOverrides[dateStr];
     const dayName = getDayName(date).toLowerCase();
     return staffingTargets[dayName] || DEFAULT_STAFFING_TARGETS[dayName] || 8;
@@ -7029,7 +7062,7 @@ export default function App() {
     // If not available on this day, skip
     if (!avail || !avail.available) return null;
     
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toDateKey(date);
     return {
       employeeId: employee.id,
       employeeName: employee.name,
@@ -7045,7 +7078,7 @@ export default function App() {
   // Check if employee has shifts in a week
   const employeeHasShiftsInWeek = (employee, weekDates) => {
     return weekDates.some(date => {
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = toDateKey(date);
       return shifts[`${employee.id}-${dateStr}`];
     });
   };
@@ -7058,7 +7091,7 @@ export default function App() {
     
     emps.forEach(emp => {
       weekDates.forEach(date => {
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = toDateKey(date);
         const key = `${emp.id}-${dateStr}`;
         
         // Only add if no existing shift
@@ -7088,7 +7121,7 @@ export default function App() {
     let removedCount = 0;
     
     weekDates.forEach(date => {
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = toDateKey(date);
       empIds.forEach(empId => {
         const key = `${empId}-${dateStr}`;
         if (newShifts[key]) {
@@ -7140,7 +7173,7 @@ export default function App() {
   const saveEmployee = async (e) => { 
     // Check for future shifts if setting to inactive
     if (editingEmp && !e.active && editingEmp.active) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = toDateKey(new Date());
       const futureShifts = Object.entries(shifts)
         .filter(([key, shift]) => shift.employeeId === e.id && shift.date > today)
         .map(([key, shift]) => shift.date);
@@ -7191,7 +7224,7 @@ export default function App() {
     if (!emp) return false;
     
     // Check for future shifts
-    const today = new Date().toISOString().split('T')[0];
+    const today = toDateKey(new Date());
     const futureShifts = Object.entries(shifts)
       .filter(([key, shift]) => shift.employeeId === id && shift.date > today)
       .map(([key, shift]) => shift.date);
@@ -7824,8 +7857,8 @@ export default function App() {
   const pendingSwapsCount = shiftSwaps.filter(s => s.status === 'awaiting_admin').length;
   const pendingRequestCount = pendingTimeOffCount + pendingOffersCount + pendingSwapsCount;
   
-  // Tooltip handlers
-  const handleShowTooltip = (employee, hours, triggerRef, isDeleted) => {
+  // Tooltip handlers — useCallback so EmployeeRow memoization holds across parent re-renders
+  const handleShowTooltip = useCallback((employee, hours, triggerRef, isDeleted) => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       let left = rect.right + 8;
@@ -7835,9 +7868,20 @@ export default function App() {
       if (top + 250 > window.innerHeight) top = window.innerHeight - 260;
       setTooltipData({ employee, hours, isDeleted, pos: { top, left } });
     }
-  };
-  
-  const handleHideTooltip = () => setTooltipData(null);
+  }, []);
+
+  const handleHideTooltip = useCallback(() => setTooltipData(null), []);
+
+  // Grid cell click handler — stable ref keeps EmployeeRow memo effective
+  const handleCellClick = useCallback((emp, d, s) => {
+    setEditingShift({ employee: emp, date: d, shift: s });
+  }, []);
+
+  // Edit employee handler — stable ref keeps EmployeeRow memo effective
+  const handleEditEmployee = useCallback((emp) => {
+    setEditingEmp(emp);
+    setEmpFormOpen(true);
+  }, []);
   
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -8631,9 +8675,9 @@ export default function App() {
                     const target = getStaffingTarget(date);
                     const atTarget = scheduled >= target;
                     const overTarget = scheduled > target;
-                    const dateStr = date.toISOString().split('T')[0];
+                    const dateStr = toDateKey(date);
                     const hasOverride = !!storeHoursOverrides[dateStr] || staffingTargetOverrides[dateStr] !== undefined;
-                    const isPast = dateStr < new Date().toISOString().split('T')[0];
+                    const isPast = dateStr < toDateKey(new Date());
                     const canEdit = isCurrentPeriodEditMode && !isPast;
                     return (
                       <div 
@@ -8669,7 +8713,7 @@ export default function App() {
                   return (
                     <React.Fragment key={e.id}>
                       {isFirstPT && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
-                      <EmployeeRow employee={e} dates={currentDates} shifts={shifts} onCellClick={(emp, d, s) => setEditingShift({ employee: emp, date: d, shift: s })} getEmployeeHours={getEmpHours} onEdit={emp => { setEditingEmp(emp); setEmpFormOpen(true); }} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={!isCurrentPeriodEditMode} />
+                      <EmployeeRow employee={e} dates={currentDates} shifts={shifts} onCellClick={handleCellClick} getEmployeeHours={getEmpHours} onEdit={handleEditEmployee} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={!isCurrentPeriodEditMode} />
                     </React.Fragment>
                   );
                 })}</div>

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 import {
-  THEME, TYPE, ROLES, formatDate, formatTimeShort, getDayName, getWeekNumber,
+  THEME, TYPE, ROLES, ROLES_BY_ID, toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber,
   getStoreHoursForDate, isStatHoliday, GradientBackground, haptic
 } from './App';
 
@@ -164,7 +164,7 @@ export const MobileAdminScheduleGrid = ({
   }, [sortedEmployees]);
 
   const totalWidth = NAME_COL_WIDTH + (dates.length * CELL_WIDTH);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = toDateKey(new Date());
 
   return (
     <div className="rounded-xl overflow-hidden" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
@@ -188,7 +188,7 @@ export const MobileAdminScheduleGrid = ({
               
               {/* Day headers with staffing counters */}
               {dates.map((date, i) => {
-                const dateStr = date.toISOString().split('T')[0];
+                const dateStr = toDateKey(date);
                 const isToday = dateStr === todayStr;
                 const hol = isStatHoliday(date);
                 const sh = getStoreHoursForDate(date);
@@ -264,7 +264,7 @@ export const MobileAdminScheduleGrid = ({
                   
                   {/* Day cells */}
                   {dates.map((date, i) => {
-                    const dateStr = date.toISOString().split('T')[0];
+                    const dateStr = toDateKey(date);
                     const shift = shifts[`${emp.id}-${dateStr}`];
                     
                     const approvedTimeOff = timeOffRequests.some(r => 
@@ -275,7 +275,7 @@ export const MobileAdminScheduleGrid = ({
                     const dayName = getDayName(date).toLowerCase();
                     const avail = emp.availability?.[dayName];
                     const isUnavailable = avail && !avail.available;
-                    const role = shift ? ROLES.find(r => r.id === shift.role) : null;
+                    const role = shift ? ROLES_BY_ID[shift.role] : null;
                     
                     return (
                       <td key={i} 

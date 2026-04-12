@@ -2,6 +2,13 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-12 - Perf: ROLES_BY_ID + toDateKey + React.memo on Grid Cells
+
+**Decided:** Introduced `ROLES_BY_ID` (O(1) lookup map), `toDateKey(date)` (no ISO allocation, no regex split), `React.memo` on `ScheduleCell`/`EmployeeRow`/`EmployeeViewRow`/`EmployeeScheduleCell`, `useCallback` on all handlers passed to grid rows, and `useMemo` for `currentDateStrs`/`allDateStrs`/`todayStr`.
+**Alternatives:** Virtualize the grid with react-window (rejected - 14×20 = 280 cells is small enough that memo is sufficient; virtualization adds complexity). Move schedule state to Zustand/Redux to avoid prop drilling (rejected - larger refactor, scope not justified pre-demo).
+**Rationale:** The grid was re-rendering all 280 cells on every state change because handlers were inline arrow functions (new ref every render, memo useless). With stable refs + memo, only cells whose inputs actually change re-render. `ROLES.find()` happened in 4-5 hot paths × 280 cells = ~1400 O(n) scans per full render. Date ISO allocations happened ~700 times per render.
+**Revisit if:** Schedule grows to 40+ employees or 4+ weeks (280 cells → 1120+, virtualization may win). Or if React Compiler lands and makes manual memoization redundant.
+
 ## 2026-04-12 - Card Shadows Use Accent-Color Halos, Not Dark Drop-Shadows
 
 **Decided:** `THEME.shadow.card`/`cardSm` are pure rotating-accent halos around white cards on the dark navy page. Removed the dark `rgba(0,0,0,0.6)` drop-shadow component.
