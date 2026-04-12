@@ -6448,7 +6448,7 @@ export default function App() {
   // Get periodStartDate string for current period (must be calculated inline since startDate isn't available yet)
   const getCurrentPeriodStartDate = () => {
     const sd = new Date(PAY_PERIOD_START.getFullYear(), PAY_PERIOD_START.getMonth(), PAY_PERIOD_START.getDate() + (periodIndex * 14));
-    return stoDateKey(d);
+    return toDateKey(sd);
   };
   
   // Get/set announcement for current period using startDate as key
