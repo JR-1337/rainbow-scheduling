@@ -200,6 +200,14 @@ body {
   background-color: rgba(0,0,0,0.04);
 }
 
+/* P3.5 - Density toggle (admin desktop grid) */
+.density-compact .grid > div { padding: 2px !important; }
+.density-compact .grid .p-1\.5 { padding: 4px 6px !important; }
+.density-compact .grid p.font-medium,
+.density-compact .grid p.font-semibold { font-size: 11px !important; line-height: 1.2 !important; }
+.density-compact .grid p.text-xs,
+.density-compact .grid span.text-xs { font-size: 10px !important; }
+
 /* Fix 8c - Screen Reader Only */
 .sr-only {
   position: absolute;

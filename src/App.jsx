@@ -5089,37 +5089,11 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
         
         {/* Mobile Header - Sticky */}
         <header className="sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: 'none', zIndex: 100 }}>
-          {/* Row 1: Hamburger + centered RAINBOW logo + Bell */}
-          <div className="flex items-center px-3 pt-3 pb-2" style={{ position: 'relative' }}>
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="p-1.5 rounded-lg relative flex-shrink-0"
-              style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.primary, zIndex: 1 }}
-            >
-              <Menu size={18} />
-              {totalNotifications > 0 && (
-                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: THEME.status.error, fontSize: '9px', color: 'white', fontWeight: 700 }}>
-                  {totalNotifications > 9 ? '9+' : totalNotifications}
-                </div>
-              )}
-            </button>
-            <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', fontFamily: "'Josefin Sans', sans-serif" }}>
+          {/* Row 1: Centered RAINBOW logo (hamburger + bell removed - bottom nav owns those destinations) */}
+          <div className="flex items-center justify-center px-3 pt-3 pb-2" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>
+            <div style={{ textAlign: 'center' }}>
               <p style={{ color: THEME.text.muted, fontSize: '8px', letterSpacing: '0.2em' }}>OVER THE</p>
               <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '16px', letterSpacing: '0.12em', lineHeight: 1 }}>RAINBOW</p>
-            </div>
-            <div className="ml-auto" style={{ zIndex: 1 }}>
-              <button
-                onClick={() => hasAnnouncement && setMobileAnnouncementOpen(true)}
-                className="p-1.5 rounded-lg flex-shrink-0"
-                style={{
-                  backgroundColor: hasAnnouncement ? THEME.accent.blue + '20' : THEME.bg.tertiary,
-                  color: hasAnnouncement ? THEME.accent.blue : THEME.text.muted,
-                  border: hasAnnouncement ? `1px solid ${THEME.accent.blue}40` : 'none'
-                }}
-              >
-                <Bell size={18} fill={hasAnnouncement ? THEME.accent.blue : 'none'} />
-              </button>
             </div>
           </div>
 
@@ -6419,6 +6393,14 @@ export default function App() {
   const [editModeByPeriod, setEditModeByPeriod] = useState({});
   const [publishedShifts, setPublishedShifts] = useState({});
   const [scheduleSaving, setScheduleSaving] = useState(false); // True while batch saving shifts
+  // P3.5 - Density toggle (admin desktop) - persists across reloads
+  const [adminDensity, setAdminDensity] = useState(() => {
+    if (typeof localStorage === 'undefined') return 'comfortable';
+    return localStorage.getItem('otr-density') || 'comfortable';
+  });
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') localStorage.setItem('otr-density', adminDensity);
+  }, [adminDensity]);
   const [staffingTargets, setStaffingTargets] = useState(DEFAULT_STAFFING_TARGETS);
   const [storeHoursOverrides, setStoreHoursOverrides] = useState({}); // { "2026-02-14": { open: "10:00", close: "21:00" } }
   const [staffingTargetOverrides, setStaffingTargetOverrides] = useState({}); // { "2026-02-14": 12 }
@@ -7869,14 +7851,9 @@ export default function App() {
         
         {/* Mobile Admin Header */}
         <header className="sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: 'none', zIndex: 100 }}>
-          {/* Row 1: Hamburger + centered RAINBOW logo */}
-          <div className="flex items-center px-3 pt-3 pb-2" style={{ position: 'relative' }}>
-            <button onClick={() => setMobileAdminDrawerOpen(true)} className="p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.primary, zIndex: 1 }}>
-              <Menu size={18} />
-            </button>
-            <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', fontFamily: "'Josefin Sans', sans-serif" }}>
-              <span className="tracking-[0.2em] font-semibold" style={{ color: THEME.text.primary, fontSize: '14px' }}>RAINBOW</span>
-            </div>
+          {/* Row 1: Centered RAINBOW logo (hamburger removed - bottom nav "More" owns the drawer) */}
+          <div className="flex items-center justify-center px-3 pt-3 pb-2" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>
+            <span className="tracking-[0.2em] font-semibold" style={{ color: THEME.text.primary, fontSize: '14px' }}>RAINBOW</span>
           </div>
 
           {/* Row 2: Period nav centered */}
@@ -8004,14 +7981,13 @@ export default function App() {
             )}
           </div>
 
-          {/* Row 5: Raised Filing Tabs */}
+          {/* Row 5: Raised Filing Tabs (schedule sub-nav only - hidden when on Requests/Comms destinations) */}
+          {(mobileAdminTab === 'schedule' || mobileAdminTab === 'mine') && (
           <div className="flex items-end px-2 gap-1" style={{ marginBottom: -1 }}>
             {[
               { id: 'wk1', label: `Wk ${weekNum1}`, tab: 'schedule', week: 1, color: THEME.accent.cyan, icon: null },
               { id: 'wk2', label: `Wk ${weekNum2}`, tab: 'schedule', week: 2, color: THEME.accent.cyan, icon: null },
               { id: 'mine', label: 'Mine', tab: 'mine', color: THEME.accent.purple, icon: <User size={10} /> },
-              { id: 'requests', label: 'Requests', tab: 'requests', badge: pendingRequestCount, color: THEME.status.warning, icon: <FileText size={10} /> },
-              { id: 'comms', label: 'Comms', tab: 'comms', badge: currentAnnouncement?.message ? 1 : 0, color: THEME.accent.blue, icon: <Mail size={10} /> },
             ].map(t => {
               const isActive = t.tab === 'schedule'
                 ? mobileAdminTab === 'schedule' && activeWeek === t.week
@@ -8048,8 +8024,9 @@ export default function App() {
               );
             })}
           </div>
+          )}
         </header>
-        
+
         {/* Content */}
         <main className="p-2 pb-20">
           {mobileAdminTab === 'schedule' ? (
@@ -8375,7 +8352,47 @@ export default function App() {
             </div>
             
             <div className="w-px h-6 mx-1" style={{ backgroundColor: THEME.border.default }} />
-            
+
+            {/* Density toggle (P3.5) */}
+            <div className="flex rounded-md overflow-hidden" role="group" aria-label="Grid density" style={{ border: `1px solid ${THEME.border.default}` }}>
+              <button
+                onClick={() => { haptic(); setAdminDensity('comfortable'); }}
+                aria-label="Comfortable density"
+                aria-pressed={adminDensity === 'comfortable'}
+                title="Comfortable"
+                className="px-2 py-1 flex items-center justify-center"
+                style={{
+                  backgroundColor: adminDensity === 'comfortable' ? THEME.accent.blue + '25' : 'transparent',
+                  color: adminDensity === 'comfortable' ? THEME.accent.blue : THEME.text.muted,
+                  minWidth: 32, minHeight: 28
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div style={{ width: 12, height: 2, backgroundColor: 'currentColor', borderRadius: 1 }} />
+                  <div style={{ width: 12, height: 2, backgroundColor: 'currentColor', borderRadius: 1 }} />
+                </div>
+              </button>
+              <button
+                onClick={() => { haptic(); setAdminDensity('compact'); }}
+                aria-label="Compact density"
+                aria-pressed={adminDensity === 'compact'}
+                title="Compact"
+                className="px-2 py-1 flex items-center justify-center"
+                style={{
+                  backgroundColor: adminDensity === 'compact' ? THEME.accent.blue + '25' : 'transparent',
+                  color: adminDensity === 'compact' ? THEME.accent.blue : THEME.text.muted,
+                  minWidth: 32, minHeight: 28,
+                  borderLeft: `1px solid ${THEME.border.default}`
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <div style={{ width: 12, height: 1.5, backgroundColor: 'currentColor', borderRadius: 1 }} />
+                  <div style={{ width: 12, height: 1.5, backgroundColor: 'currentColor', borderRadius: 1 }} />
+                  <div style={{ width: 12, height: 1.5, backgroundColor: 'currentColor', borderRadius: 1 }} />
+                </div>
+              </button>
+            </div>
+
             <TooltipButton tooltip="Admin Settings" onClick={() => setSettingsOpen(true)}><Settings size={12} /></TooltipButton>
             
             {/* Admin's own time off request */}
@@ -8553,7 +8570,7 @@ export default function App() {
               )}
               
               {/* Schedule grid */}
-              <div className="rounded-b-xl rounded-tr-xl overflow-visible relative" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderTop: 'none', zIndex: 1, boxShadow: THEME.shadow.card }}>
+              <div className={`rounded-b-xl rounded-tr-xl overflow-visible relative density-${adminDensity}`} style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderTop: 'none', zIndex: 1, boxShadow: THEME.shadow.card }}>
                 <div className="grid gap-px" style={{ gridTemplateColumns: '140px repeat(7, 1fr)', backgroundColor: THEME.border.subtle }}>
                   <div className="p-1.5" style={{ backgroundColor: THEME.bg.tertiary }}><span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>Employee</span></div>
                   {currentDates.map((date, i) => {

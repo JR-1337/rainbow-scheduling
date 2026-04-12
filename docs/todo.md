@@ -16,6 +16,8 @@
 
 ### Done
 
+- [2026-04-12] Mobile header prune (redundancy cleanup): dropped hamburger + bell from mobile employee header; dropped hamburger + Requests/Comms filing tabs from mobile admin header. Bottom nav owns those destinations. Filing tabs (Wk1/Wk2/Mine) only render when on schedule/mine destination.
+- [2026-04-12] UX Phase 9: Density toggle (admin desktop) — `adminDensity` state with localStorage persistence, two-icon pill toggle near Settings button, CSS rules in `.density-compact` shrink cell padding + text inside `.grid`
 - [2026-04-12] UX Phase 3 deferred: aria-live wired in `showToast` (writes to `#status-announcer`); haptic on `toggleEditMode`/`saveSchedule`/Publish button; row hover via `.schedule-row::after` overlay on EmployeeRow + EmployeeViewRow; input typography text-xs→text-sm (8 input strings + 5 select strings); spacing normalization N/A (no inline gap/padding values in codebase)
 - [2026-04-12] UX Phase 4: `MobileBottomNav` + `MobileBottomSheet` exported from `MobileEmployeeView.jsx` (44px touch targets, env safe-area, accent-aware active state, badge dot)
 - [2026-04-12] UX Phase 5: `MobileAdminBottomNav` exported from `MobileAdminView.jsx` (4-tab Schedule|Requests|Comms|More with pendingCount badge)
