@@ -1,6 +1,8 @@
 node_modules/
 .claude/
 .vercel
+dist/
+Photos/
 
 # Claude Code local preferences
 CLAUDE.local.md
