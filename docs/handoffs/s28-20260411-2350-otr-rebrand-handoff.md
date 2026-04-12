@@ -6,10 +6,10 @@ Session 28. `CLAUDE.md` auto-loaded. Read `docs/todo.md` for tasks, `docs/decisi
 JR is reviewing the OTR rebrand visually in the morning. Expect feedback on colors, shadows, or layout. Tuesday demo (2026-04-14) with store owner + ops manager is the deadline. Ask what he thinks of the live site and what needs adjusting.
 
 ## State
-- Build: PASS (pushed to Vercel `f62e0a6`)
+- Build: PASS (pushed to Vercel `45df2e4`)
 - Tests: NONE
 - Branch: main
-- Last commit: `f62e0a6` S28: OTR rebrand + audit fixes for Tuesday demo
+- Last commit: `45df2e4` S28 handoff: tracking files + OTR rebrand handoff
 - Live: https://rainbow-scheduling.vercel.app
 
 ## This Session
