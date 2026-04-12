@@ -53,6 +53,7 @@ Existing up-next preserved:
 
 ### Done
 
+- [2026-04-12] S39.3j Extract `EmployeeFormModal` → `src/modals/EmployeeFormModal.jsx`. Exported `Input` + `STORE_HOURS` from App.jsx (circular-safe, function-body refs only). App.jsx 6058 → 5824 (-234). Build PASS, preview 200.
 - [2026-04-12] S39.3i Extract `AdminSettingsModal` + `ChangePasswordModal` → `src/modals/`. Exported `apiCall` from App.jsx (circular-safe, used inside function bodies). App.jsx 6400 → 6058 (-342). Build PASS, preview 200. Lands at plan's ~6000 stop target.
 - [2026-04-12] S39.3h Extract `RequestTimeOffModal` → `src/modals/RequestTimeOffModal.jsx` + `CommunicationsPanel` → `src/panels/CommunicationsPanel.jsx`. App.jsx 6676 → 6400 (-276). Build PASS, preview 200.
 - [2026-04-12] S33.5 Repo hygiene: `dist/` + `Photos/` added to `.gitignore`; `package-lock.json` committed (2637 lines). `git status` now clean on main. Photos/ disposition revisit post-demo (2 files in there: old `code.gs.docx` + mis-saved 1.2MB `favicon.svg`).
