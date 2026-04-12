@@ -12,6 +12,8 @@ import { AdminTimeOffPanel } from './panels/AdminTimeOffPanel';
 import { AdminMyTimeOffPanel } from './panels/AdminMyTimeOffPanel';
 import { AdminShiftOffersPanel } from './panels/AdminShiftOffersPanel';
 import { AdminShiftSwapsPanel } from './panels/AdminShiftSwapsPanel';
+import { MyShiftOffersPanel } from './panels/MyShiftOffersPanel';
+import { MySwapsPanel } from './panels/MySwapsPanel';
 export { parseLocalDate, escapeHtml, THEME, TYPE, ROLES, ROLES_BY_ID };
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
@@ -2712,92 +2714,6 @@ const MyRequestsPanel = ({ requests, currentUserEmail, onCancel, notificationCou
 };
 
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MY SHIFT OFFERS PANEL - Employee view of shift offers they have sent
-// ═══════════════════════════════════════════════════════════════════════════════
-const MyShiftOffersPanel = ({ offers, currentUserEmail, onCancel }) => {
-  const [sortDir, setSortDir] = useState('desc');
-  // Filter to only offers from this user
-  const myOffers = offers.filter(o => o.offererEmail === currentUserEmail);
-
-  const getRoleName = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.fullName : 'No Role';
-  };
-
-  // Sort: pending first, then by date
-  const sortedOffers = [...myOffers].sort((a, b) => {
-    const aActive = ['awaiting_recipient', 'awaiting_admin'].includes(a.status);
-    const bActive = ['awaiting_recipient', 'awaiting_admin'].includes(b.status);
-    if (aActive && !bActive) return -1;
-    if (!aActive && bActive) return 1;
-    const da = new Date(b.createdTimestamp);
-    const db = new Date(a.createdTimestamp);
-    return sortDir === 'desc' ? da - db : db - da;
-  });
-  
-  if (sortedOffers.length === 0) {
-    return (
-      <div className="text-center py-2">
-        <p className="text-xs" style={{ color: THEME.text.muted }}>No Take My Shift requests sent</p>
-      </div>
-    );
-  }
-  
-  return (
-    <>
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
-          className="px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
-          style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
-          title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
-        >
-          <Clock size={9} />
-          {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
-        </button>
-      </div>
-      <div className="space-y-2">
-        {sortedOffers.map(offer => {
-          const shiftDate = parseLocalDate(offer.shiftDate);
-          const canCancel = ['awaiting_recipient', 'awaiting_admin'].includes(offer.status);
-
-          return (
-            <div key={offer.offerId} className="p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium mb-0.5" style={{ color: THEME.text.primary }}>
-                    Offered to {offer.recipientName}
-                  </div>
-                  <div className="text-xs" style={{ color: THEME.text.secondary }}>
-                    {getDayNameShort(shiftDate)}, {formatDate(shiftDate)} • {formatTimeDisplay(offer.shiftStart)} – {formatTimeDisplay(offer.shiftEnd)}
-                  </div>
-                  {offer.recipientNote && (
-                    <div className="text-xs italic mt-1" style={{ color: THEME.text.muted }}>Note: "{offer.recipientNote}"</div>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: OFFER_STATUS_COLORS[offer.status] + '20', color: OFFER_STATUS_COLORS[offer.status] }}>
-                    {OFFER_STATUS_LABELS[offer.status]}
-                  </span>
-                  {canCancel && (
-                    <button
-                      onClick={() => onCancel(offer.offerId)}
-                      className="text-xs px-1.5 py-0.5 rounded flex items-center gap-1"
-                      style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}
-                    >
-                      <X size={8} /> Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // INCOMING OFFERS PANEL - Offers sent TO this employee (need response)
@@ -3115,110 +3031,6 @@ const IncomingSwapsPanel = ({ swaps, currentUserEmail, onAccept, onReject }) => 
   );
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MY SWAPS PANEL - Employee view of swap requests they have initiated
-// ═══════════════════════════════════════════════════════════════════════════════
-const MySwapsPanel = ({ swaps, currentUserEmail, onCancel }) => {
-  const [sortDir, setSortDir] = useState('desc');
-  const mySwaps = swaps.filter(s => s.initiatorEmail === currentUserEmail);
-
-  const getRoleName = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.name : '—';
-  };
-
-  const getRoleColor = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.color : THEME.text.muted;
-  };
-
-  // Sort: pending first, then by date
-  const sortedSwaps = [...mySwaps].sort((a, b) => {
-    const aActive = ['awaiting_partner', 'awaiting_admin'].includes(a.status);
-    const bActive = ['awaiting_partner', 'awaiting_admin'].includes(b.status);
-    if (aActive && !bActive) return -1;
-    if (!aActive && bActive) return 1;
-    const da = new Date(a.createdTimestamp);
-    const db = new Date(b.createdTimestamp);
-    return sortDir === 'desc' ? db - da : da - db;
-  });
-  
-  if (sortedSwaps.length === 0) {
-    return (
-      <div className="text-center py-2">
-        <p className="text-xs" style={{ color: THEME.text.muted }}>No swap requests sent</p>
-      </div>
-    );
-  }
-  
-  return (
-    <>
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
-          className="px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
-          style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
-          title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
-        >
-          <Clock size={9} />
-          {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
-        </button>
-      </div>
-      <div className="space-y-2">
-        {sortedSwaps.map(swap => {
-          const myShiftDate = parseLocalDate(swap.initiatorShiftDate);
-          const theirShiftDate = parseLocalDate(swap.partnerShiftDate);
-          const canCancel = ['awaiting_partner', 'awaiting_admin'].includes(swap.status);
-
-          return (
-            <div key={swap.swapId} className="p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium mb-0.5" style={{ color: THEME.text.primary }}>
-                    Swap with {swap.partnerName}
-                  </div>
-                  <div className="text-xs space-y-0.5">
-                    <div style={{ color: THEME.text.secondary }}>
-                      <span style={{ color: THEME.text.muted }}>You: </span>
-                      {getDayNameShort(myShiftDate)}, {formatDate(myShiftDate)}
-                      <span className="ml-1 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: getRoleColor(swap.initiatorShiftRole) + '20', color: getRoleColor(swap.initiatorShiftRole) }}>
-                        {getRoleName(swap.initiatorShiftRole)}
-                      </span>
-                    </div>
-                    <div style={{ color: THEME.text.secondary }}>
-                      <span style={{ color: THEME.text.muted }}>Them: </span>
-                      {getDayNameShort(theirShiftDate)}, {formatDate(theirShiftDate)}
-                      <span className="ml-1 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: getRoleColor(swap.partnerShiftRole) + '20', color: getRoleColor(swap.partnerShiftRole) }}>
-                        {getRoleName(swap.partnerShiftRole)}
-                      </span>
-                    </div>
-                  </div>
-                  {swap.partnerNote && (
-                    <div className="text-xs italic mt-1" style={{ color: THEME.text.muted }}>Note: "{swap.partnerNote}"</div>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: SWAP_STATUS_COLORS[swap.status] + '20', color: SWAP_STATUS_COLORS[swap.status] }}>
-                    {SWAP_STATUS_LABELS[swap.status]}
-                  </span>
-                  {canCancel && (
-                    <button
-                      onClick={() => onCancel(swap.swapId)}
-                      className="text-xs px-1.5 py-0.5 rounded flex items-center gap-1"
-                      style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}
-                    >
-                      <X size={8} /> Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // RECEIVED SWAPS HISTORY PANEL - Shows swaps user received that are beyond initial response
