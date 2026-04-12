@@ -2,6 +2,27 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-12 - Card Shadows Use Accent-Color Halos, Not Dark Drop-Shadows
+
+**Decided:** `THEME.shadow.card`/`cardSm` are pure rotating-accent halos around white cards on the dark navy page. Removed the dark `rgba(0,0,0,0.6)` drop-shadow component.
+**Alternatives:** Tonal elevation via lighter surface colors (rejected - cards are already maximum-light white). Heavier border (already at 50% accent opacity, can't push further without losing card edge cleanliness). Stronger backdrop blur on cards (rejected - blur is reserved for modals to keep visual hierarchy).
+**Rationale:** Per `docs/research/dark-mode-guidelines.md`, dark drop-shadows are nearly invisible on dark backgrounds. Accent-color halos read clearly against navy and reinforce the OTR rotating-accent identity (each session's accent color radiates from cards).
+**Revisit if:** Sarvi/owner say cards "float too much" in demo, or if a particular accent (orange/green) reads as too garish.
+
+## 2026-04-12 - Mobile Bottom Nav Active State Derived From Modal/Drawer State
+
+**Decided:** Bottom-nav `activeTab` is computed from which modal/drawer is open (e.g. `mobileMenuOpen ? 'more' : ...`) rather than its own state field.
+**Alternatives:** Separate `mobileBottomNavTab` state synced to modal opens via effects (rejected - two sources of truth, easy to drift).
+**Rationale:** No new state to keep in sync; tapping a tab just opens the relevant existing modal, and the active highlight follows naturally. Closing the modal automatically returns active to 'schedule'.
+**Revisit if:** Bottom nav grows tabs that don't map to a modal (then a real state field is justified).
+
+## 2026-04-12 - AnimatedNumber Supports Decimal Precision
+
+**Decided:** `AnimatedNumber` accepts `decimals`, `suffix`, and `overtimeThreshold` props. Hours display as `12.5h` not rounded `13`.
+**Alternatives:** Wrap the int-only version with a parent that splits whole vs fractional parts (rejected - more code, worse animation).
+**Rationale:** Hours in this app are .5-precision. Rounding broke the display. The factor-based rounding inside the rAF loop preserves smooth easing at the chosen precision.
+**Revisit if:** A consumer needs scientific notation or thousands separators (would need bigger refactor).
+
 ## 2026-04-12 - UX Overhaul: 10-Phase Plan
 
 **Decided:** 9 fix categories + 12 improvement proposals executed across 10 phases. CSS foundation first, then THEME, then App.jsx sweep, then mobile views, then integration phases. 4 proposals deferred (smart defaults, container queries, view transitions, OKLCH).

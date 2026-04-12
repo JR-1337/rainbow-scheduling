@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule } from './MobileEmployeeView';
-import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, MobileEmployeeQuickView } from './MobileAdminView';
+import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet } from './MobileEmployeeView';
+import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, MobileEmployeeQuickView, MobileAdminBottomNav } from './MobileAdminView';
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
   User, Users, Phone, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, EyeOff, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu
@@ -55,9 +55,11 @@ export const THEME = {
   // Fix 2b - Desaturated status colors (gentler on dark backgrounds, retain meaning)
   status: { success: '#34D399', warning: '#FBBF24', error: '#F87171' },
   task: '#D97706',
+  // Dark-bg elevation: dark drop-shadows are nearly invisible on navy, so use accent-color halos
+  // (research/dark-mode-guidelines.md: "Shadows are nearly invisible against dark backgrounds")
   shadow: {
-    card: `0 6px 20px -4px rgba(0,0,0,0.6), 0 0 40px -4px rgba(${_ar},${_ag},${_ab},0.45)`,
-    cardSm: `0 3px 12px -2px rgba(0,0,0,0.5), 0 0 24px -4px rgba(${_ar},${_ag},${_ab},0.35)`,
+    card: `0 8px 32px -4px rgba(${_ar},${_ag},${_ab},0.55), 0 4px 12px -2px rgba(${_ar},${_ag},${_ab},0.4)`,
+    cardSm: `0 4px 16px -2px rgba(${_ar},${_ag},${_ab},0.42)`,
   },
 };
 
@@ -106,30 +108,32 @@ export const useFocusTrap = (ref, isActive) => {
 export const haptic = (ms = 10) => { try { navigator?.vibrate?.(ms); } catch {} };
 
 // P4.3 - Kinetic animated number (counts up/down smoothly, highlights overtime)
-export const AnimatedNumber = ({ value, className, style }) => {
+export const AnimatedNumber = ({ value, decimals = 0, suffix = '', className, style, overtimeThreshold = 44 }) => {
   const [display, setDisplay] = useState(value);
   const prevRef = useRef(value);
   useEffect(() => {
     if (prevRef.current === value) return;
     const start = prevRef.current, diff = value - start;
     const duration = 400;
+    const factor = Math.pow(10, decimals);
     let startTime;
     const animate = (time) => {
       if (!startTime) startTime = time;
       const progress = Math.min((time - startTime) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(start + diff * eased));
+      setDisplay(Math.round((start + diff * eased) * factor) / factor);
       if (progress < 1) requestAnimationFrame(animate);
     };
     requestAnimationFrame(animate);
     prevRef.current = value;
-  }, [value]);
-  const isOvertime = typeof value === 'number' && value >= 44;
+  }, [value, decimals]);
+  const isOvertime = typeof value === 'number' && value >= overtimeThreshold;
+  const formatted = decimals > 0 ? Number(display).toFixed(decimals) : display;
   return (
     <span
       className={className}
       style={{ ...style, ...(isOvertime ? { color: '#FBBF24', textShadow: '0 0 8px rgba(251,191,36,0.4)' } : {}) }}
-    >{display}</span>
+    >{formatted}{suffix}</span>
   );
 };
 
@@ -722,7 +726,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 const Input = ({ label, type = 'text', value, onChange, placeholder, required }) => (
   <div className="mb-2">
     <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>{label} {required && <span style={{ color: THEME.status.error }}>*</span>}</label>
-    <input type={type} value={value} onChange={onChange} placeholder={placeholder} className="w-full px-2 py-1.5 rounded-lg outline-none text-xs" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
+    <input type={type} value={value} onChange={onChange} placeholder={placeholder} className="w-full px-2 py-1.5 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
   </div>
 );
 
@@ -742,10 +746,10 @@ const TimePicker = ({ value, onChange, label }) => {
     <div className="mb-2">
       {label && <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>{label}</label>}
       <div className="flex gap-1">
-        <select value={h} onChange={e => onChange(`${e.target.value}:${m}`)} className="flex-1 px-1.5 py-1 rounded-lg outline-none text-xs" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}>
+        <select value={h} onChange={e => onChange(`${e.target.value}:${m}`)} className="flex-1 px-1.5 py-1 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}>
           {hours.map(hr => <option key={hr} value={hr}>{parseInt(hr) > 12 ? parseInt(hr) - 12 : hr} {parseInt(hr) >= 12 ? 'PM' : 'AM'}</option>)}
         </select>
-        <select value={m} onChange={e => onChange(`${h}:${e.target.value}`)} className="w-14 px-1.5 py-1 rounded-lg outline-none text-xs" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}>
+        <select value={m} onChange={e => onChange(`${h}:${e.target.value}`)} className="w-14 px-1.5 py-1 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}>
           {['00', '15', '30', '45'].map(min => <option key={min} value={min}>:{min}</option>)}
         </select>
       </div>
@@ -1168,12 +1172,12 @@ const ShiftEditorModal = ({ isOpen, onClose, onSave, employee, date, existingShi
       
       <div className="mb-2">
         <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Task <Star size={8} fill={THEME.task} color={THEME.task} className="inline" /></label>
-        <input value={shiftData.task} onChange={e => setShiftData({ ...shiftData, task: e.target.value })} placeholder="Optional..." className="w-full px-2 py-1.5 rounded-lg outline-none text-xs" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
+        <input value={shiftData.task} onChange={e => setShiftData({ ...shiftData, task: e.target.value })} placeholder="Optional..." className="w-full px-2 py-1.5 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
       </div>
       
       <div className="p-2 rounded-lg mb-3 grid grid-cols-2 gap-2 text-center" style={{ backgroundColor: THEME.bg.tertiary }}>
-        <div><span className="text-xs" style={{ color: THEME.text.muted }}>SHIFT</span><p className="text-lg font-bold" style={{ color: THEME.accent.cyan }}>{shiftHours.toFixed(1)}h</p></div>
-        <div><span className="text-xs" style={{ color: THEME.text.muted }}>PERIOD</span><p className="text-lg font-bold" style={{ color: projectedTotal >= 44 ? THEME.status.error : projectedTotal >= 40 ? THEME.status.warning : THEME.accent.cyan }}>{projectedTotal.toFixed(1)}h</p></div>
+        <div><span className="text-xs" style={{ color: THEME.text.muted }}>SHIFT</span><p className="text-lg font-bold" style={{ color: THEME.accent.cyan }}><AnimatedNumber value={shiftHours} decimals={1} suffix="h" /></p></div>
+        <div><span className="text-xs" style={{ color: THEME.text.muted }}>PERIOD</span><p className="text-lg font-bold" style={{ color: projectedTotal >= 44 ? THEME.status.error : projectedTotal >= 40 ? THEME.status.warning : THEME.accent.cyan }}><AnimatedNumber value={projectedTotal} decimals={1} suffix="h" /></p></div>
       </div>
       
       <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
@@ -1467,13 +1471,13 @@ const EmployeeRow = ({ employee, dates, shifts, onCellClick, getEmployeeHours, o
   };
 
   return (
-    <div className="grid gap-px" style={{ gridTemplateColumns: '140px repeat(7, 1fr)', backgroundColor: THEME.border.subtle, opacity: isDeleted ? 0.5 : 1 }}>
+    <div className="grid gap-px schedule-row" style={{ gridTemplateColumns: '140px repeat(7, 1fr)', backgroundColor: THEME.border.subtle, opacity: isDeleted ? 0.5 : 1 }}>
       <div ref={rowRef} className="p-1.5" style={{ backgroundColor: THEME.bg.secondary }} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
         <div className="flex items-center gap-1.5">
           <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0" style={{ background: isDeleted ? THEME.bg.elevated : `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: isDeleted ? THEME.text.muted : 'white' }}>{employee.name.split(' ').map(n => n[0]).join('')}</div>
           <div className="min-w-0 flex-1">
             <p className="font-medium text-xs truncate" style={{ color: isDeleted ? THEME.text.muted : THEME.text.primary }}>{employee.name}</p>
-            <p className="text-xs font-semibold" style={{ color: isDeleted ? THEME.text.muted : hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan }}>{hours.toFixed(1)}h</p>
+            <p className="text-xs font-semibold" style={{ color: isDeleted ? THEME.text.muted : hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan }}><AnimatedNumber value={hours} decimals={1} suffix="h" /></p>
           </div>
           {!isDeleted && <button onClick={e => { e.stopPropagation(); onEdit(employee); }} className="p-0.5 rounded hover:scale-110 flex-shrink-0" style={{ backgroundColor: THEME.bg.elevated }}><Edit3 size={10} style={{ color: THEME.accent.purple }} /></button>}
         </div>
@@ -4887,7 +4891,7 @@ const EmployeeViewRow = ({ employee, dates, shifts, loggedInEmpId, getEmployeeHo
   };
 
   return (
-    <div className="grid gap-px" style={{ gridTemplateColumns: '140px repeat(7, 1fr)', backgroundColor: THEME.border.subtle }}>
+    <div className="grid gap-px schedule-row" style={{ gridTemplateColumns: '140px repeat(7, 1fr)', backgroundColor: THEME.border.subtle }}>
       <div className="p-1.5" style={{ backgroundColor: isMe ? THEME.accent.purple + '15' : THEME.bg.secondary }}>
         <div className="flex items-center gap-1.5">
           <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0" style={{ background: isMe ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated, color: isMe ? 'white' : THEME.text.muted }}>{employee.name.split(' ').map(n => n[0]).join('')}</div>
@@ -4896,7 +4900,7 @@ const EmployeeViewRow = ({ employee, dates, shifts, loggedInEmpId, getEmployeeHo
               {employee.name}
               {isMe && <span className="text-xs" style={{ color: THEME.accent.cyan }}>(You)</span>}
             </p>
-            <p className="text-xs font-semibold" style={{ color: hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan }}>{hours.toFixed(1)}h</p>
+            <p className="text-xs font-semibold" style={{ color: hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan }}><AnimatedNumber value={hours} decimals={1} suffix="h" /></p>
           </div>
         </div>
       </div>
@@ -5198,8 +5202,8 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
         </header>
 
         {/* Main Content */}
-        <main className="p-2">
-          
+        <main className="p-2 pb-20">
+
           {/* Week 1 / Week 2 Grid */}
           {(mobileActiveTab === 'week1' || mobileActiveTab === 'week2') && (
             <MobileScheduleGrid
@@ -5326,6 +5330,25 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
           isOpen={changePasswordOpen}
           onClose={() => setChangePasswordOpen(false)}
           currentUser={currentUser}
+        />
+
+        {/* Bottom Tab Bar (Phase 6) */}
+        <MobileBottomNav
+          activeTab={mobileMenuOpen ? 'more' : mobileAnnouncementOpen ? 'alerts' : requestModalOpen ? 'requests' : 'schedule'}
+          hasNotifications={hasAnnouncement || totalNotifications > 0}
+          onTabChange={(tab) => {
+            if (tab === 'schedule') {
+              setMobileMenuOpen(false);
+              setMobileAnnouncementOpen(false);
+              setRequestModalOpen(false);
+            } else if (tab === 'requests') {
+              setRequestModalOpen(true);
+            } else if (tab === 'alerts') {
+              if (hasAnnouncement) setMobileAnnouncementOpen(true);
+            } else if (tab === 'more') {
+              setMobileMenuOpen(true);
+            }
+          }}
         />
       </div>
     );
@@ -6061,7 +6084,7 @@ const AdminSettingsModal = ({ isOpen, onClose, currentUser, staffingTargets, onS
                     value={currentPassword} 
                     onChange={e => { setCurrentPassword(e.target.value); setError(''); }}
                     placeholder="Enter current password"
-                    className="w-full px-2 py-1.5 rounded-lg outline-none text-xs"
+                    className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
                     style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
                   />
                 </div>
@@ -6072,7 +6095,7 @@ const AdminSettingsModal = ({ isOpen, onClose, currentUser, staffingTargets, onS
                     value={newPassword} 
                     onChange={e => { setNewPassword(e.target.value); setError(''); }}
                     placeholder="Enter new password"
-                    className="w-full px-2 py-1.5 rounded-lg outline-none text-xs"
+                    className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
                     style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
                   />
                 </div>
@@ -6083,7 +6106,7 @@ const AdminSettingsModal = ({ isOpen, onClose, currentUser, staffingTargets, onS
                     value={confirmPassword} 
                     onChange={e => { setConfirmPassword(e.target.value); setError(''); }}
                     placeholder="Confirm new password"
-                    className="w-full px-2 py-1.5 rounded-lg outline-none text-xs"
+                    className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
                     style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
                   />
                 </div>
@@ -6204,7 +6227,7 @@ const ChangePasswordModal = ({ isOpen, onClose, currentUser, isFirstLogin = fals
                   value={currentPassword} 
                   onChange={e => { setCurrentPassword(e.target.value); setError(''); }}
                   placeholder="Enter current password"
-                  className="w-full px-2 py-1.5 rounded-lg outline-none text-xs"
+                  className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
                   style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
                 />
               </div>
@@ -6216,7 +6239,7 @@ const ChangePasswordModal = ({ isOpen, onClose, currentUser, isFirstLogin = fals
                 value={newPassword} 
                 onChange={e => { setNewPassword(e.target.value); setError(''); }}
                 placeholder="Enter new password (min 4 characters)"
-                className="w-full px-2 py-1.5 rounded-lg outline-none text-xs"
+                className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
                 style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
               />
             </div>
@@ -6228,7 +6251,7 @@ const ChangePasswordModal = ({ isOpen, onClose, currentUser, isFirstLogin = fals
                 onChange={e => { setConfirmPassword(e.target.value); setError(''); }}
                 placeholder="Confirm new password"
                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                className="w-full px-2 py-1.5 rounded-lg outline-none text-xs"
+                className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
                 style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
               />
             </div>
@@ -6310,13 +6333,13 @@ const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrides, sta
               <div className="flex items-center gap-1.5">
                 <input 
                   type="time" value={openTime} onChange={e => setOpenTime(e.target.value)}
-                  className="flex-1 px-1.5 py-1 rounded-lg outline-none text-xs"
+                  className="flex-1 px-1.5 py-1 rounded-lg outline-none text-sm"
                   style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
                 />
                 <span className="text-xs" style={{ color: THEME.text.muted }}>to</span>
                 <input 
                   type="time" value={closeTime} onChange={e => setCloseTime(e.target.value)}
-                  className="flex-1 px-1.5 py-1 rounded-lg outline-none text-xs"
+                  className="flex-1 px-1.5 py-1 rounded-lg outline-none text-sm"
                   style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
                 />
               </div>
@@ -6330,7 +6353,7 @@ const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrides, sta
               </label>
               <input 
                 type="number" min="0" max="99" value={editTarget} onChange={e => setEditTarget(parseInt(e.target.value, 10) || 0)}
-                className="w-20 px-1.5 py-1 rounded-lg outline-none text-xs text-center"
+                className="w-20 px-1.5 py-1 rounded-lg outline-none text-sm text-center"
                 style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
               />
             </div>
@@ -6385,6 +6408,8 @@ export default function App() {
   // Helper to show toast with auto-dismiss
   const showToast = (type, message, duration = 3000) => {
     setToast({ type, message });
+    const announcer = typeof document !== 'undefined' && document.getElementById('status-announcer');
+    if (announcer) announcer.textContent = message;
     setTimeout(() => setToast(null), duration);
   };
   
@@ -6700,6 +6725,7 @@ export default function App() {
   // MUST be defined after `dates` is available
   const toggleEditMode = async () => {
     if (scheduleSaving) return; // Prevent double-clicks during save
+    haptic();
     const currentlyEditing = editModeByPeriod[periodIndex] ?? true;
     
     if (currentlyEditing) {
@@ -6812,6 +6838,7 @@ export default function App() {
   // Save schedule without going LIVE (batch save shifts to Sheets, stay in Edit Mode)
   const saveSchedule = async () => {
     if (scheduleSaving) return;
+    haptic();
     setScheduleSaving(true);
     // Collect all shifts for this period
     const periodShifts = [];
@@ -8024,7 +8051,7 @@ export default function App() {
         </header>
         
         {/* Content */}
-        <main className="p-2">
+        <main className="p-2 pb-20">
           {mobileAdminTab === 'schedule' ? (
             <>
               {/* Schedule Grid */}
@@ -8111,6 +8138,20 @@ export default function App() {
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenOwnRequests={() => setAdminRequestModalOpen(true)}
           pendingRequestCount={pendingRequestCount}
+        />
+
+        {/* Bottom Tab Bar (Phase 6) */}
+        <MobileAdminBottomNav
+          activeTab={mobileAdminDrawerOpen ? 'more' : (mobileAdminTab === 'mine' ? 'schedule' : mobileAdminTab)}
+          pendingCount={pendingRequestCount}
+          onTabChange={(tab) => {
+            if (tab === 'more') {
+              setMobileAdminDrawerOpen(true);
+            } else {
+              setMobileAdminDrawerOpen(false);
+              setMobileAdminTab(tab);
+            }
+          }}
         />
         
         {/* Shift Editor Modal (reused from desktop) */}
@@ -8329,7 +8370,7 @@ export default function App() {
               {currentAnnouncement?.message && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full" style={{ backgroundColor: THEME.accent.blue }} />}
             </div>
             <div className="relative">
-              <TooltipButton tooltip={currentAnnouncement?.message ? "Email Schedules (includes announcement)" : "Email Schedules"} variant="primary" onClick={() => setEmailOpen(true)}><Mail size={12} />Publish</TooltipButton>
+              <TooltipButton tooltip={currentAnnouncement?.message ? "Email Schedules (includes announcement)" : "Email Schedules"} variant="primary" onClick={() => { haptic(); setEmailOpen(true); }}><Mail size={12} />Publish</TooltipButton>
               {currentAnnouncement?.message && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full" style={{ backgroundColor: THEME.accent.blue }} />}
             </div>
             
@@ -8543,11 +8584,14 @@ export default function App() {
                             <span style={{ color: THEME.text.muted }}>{scheduled}</span>
                           ) : (
                             <>
-                              <span style={{ color: overTarget ? THEME.status.error + 'AA' : atTarget ? THEME.status.success + '99' : THEME.text.muted }}>{scheduled}</span>
+                              <AnimatedNumber value={scheduled} overtimeThreshold={Infinity} style={{ color: overTarget ? THEME.status.error + 'AA' : atTarget ? THEME.status.success + '99' : THEME.text.muted }} />
                               <span style={{ color: hasOverride ? THEME.accent.cyan + '99' : THEME.text.muted }}>/{target}</span>
                             </>
                           )}
                         </p>
+                        {!isPast && target > 0 && (
+                          <div className="px-1"><StaffingBar scheduled={scheduled} target={target} /></div>
+                        )}
                       </div>
                     );
                   })}

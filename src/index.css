@@ -185,6 +185,21 @@ body {
 }
 .bottom-sheet.active { transform: translateY(0); }
 
+/* Row Hover Highlight - subtle tint over schedule rows on hover */
+.schedule-row { position: relative; }
+.schedule-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: transparent;
+  pointer-events: none;
+  transition: background-color 150ms ease-out;
+  z-index: 1;
+}
+.schedule-row:hover::after {
+  background-color: rgba(0,0,0,0.04);
+}
+
 /* Fix 8c - Screen Reader Only */
 .sr-only {
   position: absolute;

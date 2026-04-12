@@ -3,23 +3,26 @@
 <!-- Protocol: ~/.claude/rules/todo.md -->
 
 ### In Progress
-- UX overhaul: Phase 3 (deferred items) + Phases 4-10 (plan at `~/.claude/plans/unified-soaring-gray.md`)
+- UX overhaul: Phases 9-10 + post-demo redundancy decisions
 
 ### Up Next
-- Phase 3 deferred: haptic wire-up on save/GoLive/publish, row hover on EmployeeRow/EmployeeViewRow, aria-live status message handler wiring, broader typography sweep (form inputs, badges, cells), spacing normalization
-- Phase 4: MobileEmployeeView (bottom tab bar, bottom sheet, typography, touch targets)
-- Phase 5: MobileAdminView (bottom tab bar, bottom sheet, typography, touch targets)
-- Phase 6: App.jsx mobile integration (wire bottom tabs, move header tabs to bottom)
-- Phase 7: Kinetic numbers wiring (projected hours in editor, total hours in row, column counts)
-- Phase 8: Staffing progress bars wiring (admin/employee column headers, mobile grid day headers)
-- Phase 9: Density toggle (adminDensity state, toggle button, conditional cell heights/fonts)
-- Phase 10: Mobile bottom sheets (shift detail, quick approve/deny, time off details)
+- Phase 9: Density toggle (adminDensity state, toggle button, conditional cell heights/fonts) — deferred to after demo
+- Phase 10: Mobile bottom sheets (shift detail, quick approve/deny, time off details) — components ready (`MobileBottomSheet` exported), wiring deferred
+- Mobile header redundancy decision (after demo): drop top hamburger / bell on mobile employee + admin since bottom nav covers them, OR keep both (current state)
+- Mobile admin header filing-tabs prune: drop Requests + Comms tabs from raised filing-tabs row since bottom nav owns them; keep Wk1/Wk2/Mine as schedule sub-nav
 - Code.gs deploy (manual - paste updated Code.gs to Apps Script)
 - Shared utils refactor (extract THEME, ROLES, helpers into dedicated files)
 - Professional sender email (dedicated Google Workspace account)
 
 ### Done
 
+- [2026-04-12] UX Phase 3 deferred: aria-live wired in `showToast` (writes to `#status-announcer`); haptic on `toggleEditMode`/`saveSchedule`/Publish button; row hover via `.schedule-row::after` overlay on EmployeeRow + EmployeeViewRow; input typography text-xs→text-sm (8 input strings + 5 select strings); spacing normalization N/A (no inline gap/padding values in codebase)
+- [2026-04-12] UX Phase 4: `MobileBottomNav` + `MobileBottomSheet` exported from `MobileEmployeeView.jsx` (44px touch targets, env safe-area, accent-aware active state, badge dot)
+- [2026-04-12] UX Phase 5: `MobileAdminBottomNav` exported from `MobileAdminView.jsx` (4-tab Schedule|Requests|Comms|More with pendingCount badge)
+- [2026-04-12] UX Phase 6: Bottom navs wired into App.jsx mobile employee + admin views; `pb-20` clearance added to main; activeTab derived from existing modal/drawer state
+- [2026-04-12] UX Phase 7: `AnimatedNumber` rebuilt with `decimals` + `suffix` + `overtimeThreshold` props; wired into shift editor SHIFT/PERIOD displays, EmployeeRow hours, EmployeeViewRow hours, admin column scheduled count
+- [2026-04-12] UX Phase 8: `StaffingBar` wired below scheduled/target text in admin desktop column headers (4px height, color-coded by % to target)
+- [2026-04-12] Shadow rework: `THEME.shadow.card` and `THEME.shadow.cardSm` switched from dark drop-shadow to accent-color halo (research/dark-mode-guidelines.md: "Shadows are nearly invisible against dark backgrounds")
 - [2026-04-12] UX Phase 1: CSS foundation (focus rings, modal transitions + glassmorphism, reduced motion, skeleton shimmer, scroll indicator, ambient glow, bottom sheet, scroll-driven animations, sr-only)
 - [2026-04-12] UX Phase 2: THEME object (WCAG contrast calc, desaturated status colors, color temperature, --accent-color CSS var, TYPE scale with clamp)
 - [2026-04-12] UX Phase 3 core: focus trap hook, haptic util, AnimatedNumber, StaffingBar, ScheduleSkeleton components; all 12 modals get role="dialog" + aria-modal + aria-label + modal-backdrop/content transitions + 44px touch targets; period nav + month nav touch targets bumped; rainbow sphere replaced with ScheduleSkeleton on main loading; skip-to-content link added (employee + admin desktop); aria-live #status-announcer region added; ambient-pending class wired on admin header

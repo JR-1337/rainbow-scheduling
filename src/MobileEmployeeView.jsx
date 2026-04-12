@@ -11,9 +11,9 @@ import {
   Loader, ArrowRightLeft, ArrowRight, Bell, Menu, Key 
 } from 'lucide-react';
 
-import { 
-  THEME, ROLES, formatDate, formatTimeShort, getDayName, getWeekNumber, 
-  getStoreHoursForDate, isStatHoliday, GradientBackground 
+import {
+  THEME, TYPE, ROLES, formatDate, formatTimeShort, getDayName, getWeekNumber,
+  getStoreHoursForDate, isStatHoliday, GradientBackground, haptic
 } from './App';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -463,6 +463,110 @@ export const MobileMySchedule = ({ currentUser, shifts, dates, timeOffRequests =
       {w1.shiftList.length === 0 && w2.shiftList.length === 0 && (
         <p className="text-sm text-center py-6" style={{ color: THEME.text.muted }}>No shifts scheduled this period</p>
       )}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE BOTTOM TAB BAR (Phase 4)
+// ═══════════════════════════════════════════════════════════════════════════════
+export const MobileBottomNav = ({ activeTab, onTabChange, hasNotifications = false }) => {
+  const tabs = [
+    { key: 'schedule', icon: Calendar, label: 'Schedule' },
+    { key: 'requests', icon: ArrowRightLeft, label: 'Requests' },
+    { key: 'alerts', icon: Bell, label: 'Alerts', badge: hasNotifications },
+    { key: 'more', icon: Menu, label: 'More' },
+  ];
+  return (
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-[100] border-t"
+      style={{
+        backgroundColor: THEME.bg.secondary,
+        borderColor: THEME.border.subtle,
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+      aria-label="Primary"
+    >
+      <div className="flex justify-around items-stretch h-14">
+        {tabs.map(tab => {
+          const Icon = tab.icon;
+          const active = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => { haptic(); onTabChange(tab.key); }}
+              className="flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[44px]"
+              style={{ color: active ? THEME.accent.blue : THEME.text.muted }}
+              aria-label={tab.label}
+              aria-current={active ? 'page' : undefined}
+            >
+              <div className="relative">
+                <Icon size={20} />
+                {tab.badge && (
+                  <div
+                    className="absolute -top-1 -right-1 w-2 h-2 rounded-full"
+                    style={{ backgroundColor: '#F87171' }}
+                  />
+                )}
+              </div>
+              <span style={{ fontSize: '10px', fontWeight: active ? 600 : 400 }}>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE BOTTOM SHEET (Phase 4 / Phase 10)
+// ═══════════════════════════════════════════════════════════════════════════════
+export const MobileBottomSheet = ({ isOpen, onClose, title, children }) => {
+  if (!isOpen) return null;
+  return (
+    <div
+      className={`fixed inset-0 z-[150] bottom-sheet-backdrop ${isOpen ? 'active' : ''}`}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title || 'Details'}
+    >
+      <div
+        className={`fixed bottom-0 left-0 right-0 bottom-sheet ${isOpen ? 'active' : ''}`}
+        style={{
+          backgroundColor: THEME.bg.secondary,
+          paddingBottom: 'env(safe-area-inset-bottom)',
+          borderTop: `1px solid ${THEME.border.default}`,
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div
+          className="w-10 h-1 rounded-full mx-auto mt-2 mb-3"
+          style={{ backgroundColor: THEME.text.muted + '40' }}
+        />
+        {title && (
+          <div
+            className="px-4 pb-2 font-semibold flex items-center justify-between"
+            style={{ fontSize: TYPE.title, color: THEME.text.primary }}
+          >
+            <span>{title}</span>
+            <button
+              onClick={onClose}
+              data-close
+              aria-label="Close dialog"
+              className="rounded-lg flex items-center justify-center"
+              style={{ minWidth: 44, minHeight: 44, color: THEME.text.muted }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+        )}
+        <div className="px-4 pb-4 overflow-y-auto" style={{ maxHeight: '70vh' }}>
+          {children}
+        </div>
+      </div>
     </div>
   );
 };
