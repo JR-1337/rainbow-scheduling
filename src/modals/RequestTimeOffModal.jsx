@@ -38,7 +38,7 @@ export const RequestTimeOffModal = ({ isOpen, onClose, onSelectType, currentUser
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Shift Changes" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)', paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom) + 1rem)' }} role="dialog" aria-modal="true" aria-label="Shift Changes" onClick={onClose}>
       <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
           <h2 className="font-semibold flex items-center gap-2" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>

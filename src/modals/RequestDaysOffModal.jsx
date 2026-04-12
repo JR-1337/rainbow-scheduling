@@ -133,8 +133,8 @@ export const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, ti
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Request Days Off" onClick={onClose}>
-      <div className="max-w-sm w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)', paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom) + 1rem)' }} role="dialog" aria-modal="true" aria-label="Request Days Off" onClick={onClose}>
+      <div className="max-w-sm w-full rounded-xl shadow-2xl modal-content active flex flex-col" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, maxHeight: '100%' }} onClick={e => e.stopPropagation()}>
         <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
           <h2 className="font-semibold flex items-center gap-2" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>
             <Calendar size={16} style={{ color: THEME.accent.cyan }} />
@@ -143,7 +143,7 @@ export const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, ti
           <button onClick={onClose} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
         </div>
 
-        <div className="p-4">
+        <div className="p-4 overflow-y-auto">
           {hasPendingRequest ? (
             <div className="p-4 rounded-lg text-center" style={{ backgroundColor: THEME.status.warning + '15', border: `1px solid ${THEME.status.warning}30` }}>
               <AlertCircle size={24} style={{ color: THEME.status.warning, margin: '0 auto 8px' }} />

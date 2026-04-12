@@ -402,7 +402,7 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
               disabled={!selectedMyShift || !selectedPartner || !selectedTheirShift || isSubmitting}
               className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1"
               style={{
-                background: selectedMyShift && selectedPartner && selectedTheirShift ? `linear-gradient(135deg, ${THEME.accent.purple}, ${THEME.accent.blue})` : THEME.bg.elevated,
+                background: selectedMyShift && selectedPartner && selectedTheirShift ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated,
                 color: selectedMyShift && selectedPartner && selectedTheirShift ? 'white' : THEME.text.muted,
                 opacity: (!selectedMyShift || !selectedPartner || !selectedTheirShift || isSubmitting) ? 0.5 : 1
               }}

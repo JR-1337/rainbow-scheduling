@@ -1192,6 +1192,20 @@ export default function App() {
   // If the token is stale, loadDataFromBackend will surface AUTH_EXPIRED and the
   // callback above will bounce us to the login screen.
   const didBootstrapRef = useRef(false);
+  // S41.2: guard against double-submit on admin approve/deny/revoke/cancel actions.
+  // Apps Script round-trip is 2-3s; impatient users click twice, second click hits
+  // backend after status already moved and gets a misleading red error toast.
+  const actionBusyRef = useRef(false);
+  const guardedMutation = async (label, fn) => {
+    if (actionBusyRef.current) return; // silent: second click while first is in-flight
+    actionBusyRef.current = true;
+    showToast('saving', `${label}…`, 30000); // stays until fn's own showToast replaces it
+    try {
+      await fn();
+    } finally {
+      actionBusyRef.current = false;
+    }
+  };
   useEffect(() => {
     if (didBootstrapRef.current) return;
     if (currentUser?.email && getAuthToken()) {
@@ -1934,6 +1948,7 @@ export default function App() {
   
   // Cancel a time off request (employee action on their own pending request)
   const cancelTimeOffRequest = async (requestId) => {
+    await guardedMutation('Cancelling request', async () => {
     const result = await apiCall('cancelTimeOffRequest', {
       requestId: requestId
     });
@@ -1949,8 +1964,9 @@ export default function App() {
     } else {
       showToast('error', result.error?.message || 'Failed to cancel request');
     }
+    });
   };
-  
+
   // Submit a new time off request (employee or admin action)
   const submitTimeOffRequest = async (request) => {
     const result = await apiCall('submitTimeOffRequest', {
@@ -2005,10 +2021,11 @@ export default function App() {
   
   // Cancel a shift offer (offerer action)
   const cancelShiftOffer = async (offerId) => {
+    await guardedMutation('Cancelling offer', async () => {
     const result = await apiCall('cancelShiftOffer', {
       requestId: offerId
     });
-    
+
     if (result.success) {
       setShiftOffers(prev => prev.map(offer => {
         if ((offer.offerId === offerId || offer.requestId === offerId) && ['awaiting_recipient', 'awaiting_admin'].includes(offer.status)) {
@@ -2020,14 +2037,16 @@ export default function App() {
     } else {
       showToast('error', result.error?.message || 'Failed to cancel offer');
     }
+    });
   };
-  
+
   // Accept a shift offer (recipient action)
   const acceptShiftOffer = async (offerId) => {
+    await guardedMutation('Accepting offer', async () => {
     const result = await apiCall('acceptShiftOffer', {
       requestId: offerId
     });
-    
+
     if (result.success) {
       setShiftOffers(prev => prev.map(offer => {
         if ((offer.offerId === offerId || offer.requestId === offerId) && offer.status === 'awaiting_recipient') {
@@ -2039,15 +2058,17 @@ export default function App() {
     } else {
       showToast('error', result.error?.message || 'Failed to accept offer');
     }
+    });
   };
-  
+
   // Reject a shift offer (recipient action)
   const rejectShiftOffer = async (offerId, note) => {
+    await guardedMutation('Declining offer', async () => {
     const result = await apiCall('declineShiftOffer', {
       requestId: offerId,
       note: note || ''
     });
-    
+
     if (result.success) {
       setShiftOffers(prev => prev.map(offer => {
         if ((offer.offerId === offerId || offer.requestId === offerId) && offer.status === 'awaiting_recipient') {
@@ -2059,13 +2080,14 @@ export default function App() {
     } else {
       showToast('error', result.error?.message || 'Failed to decline offer');
     }
+    });
   };
-  
+
   // Approve a shift offer (admin action) - reassign the shift
   const approveShiftOffer = async (offerId) => {
     const offer = shiftOffers.find(o => (o.offerId === offerId || o.requestId === offerId) && o.status === 'awaiting_admin');
     if (!offer) return;
-    
+    await guardedMutation('Approving offer', async () => {
     const result = await apiCall('approveShiftOffer', {
       requestId: offerId
     });
@@ -2091,14 +2113,16 @@ export default function App() {
         }
         return o;
       }));
-      showToast('success', 'Shift offer approved');
+      showToast('success', 'Offer approved — moved to Settled history');
     } else {
       showToast('error', result.error?.message || 'Failed to approve offer');
     }
+    });
   };
-  
+
   // Reject a shift offer (admin action)
   const adminRejectShiftOffer = async (offerId, note) => {
+    await guardedMutation('Rejecting offer', async () => {
     const result = await apiCall('rejectShiftOffer', {
       requestId: offerId,
       note: note || ''
@@ -2111,17 +2135,18 @@ export default function App() {
         }
         return offer;
       }));
-      showToast('success', 'Shift offer rejected');
+      showToast('success', 'Offer rejected — moved to Settled history');
     } else {
       showToast('error', result.error?.message || 'Failed to reject offer');
     }
+    });
   };
-  
+
   // Revoke an approved shift offer (admin action) - reverts the shift back to original owner
   const revokeShiftOffer = async (offerId) => {
     const offer = shiftOffers.find(o => (o.offerId === offerId || o.requestId === offerId) && o.status === 'approved');
     if (!offer) return;
-    
+
     const shiftDate = parseLocalDate(offer.shiftDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -2129,7 +2154,8 @@ export default function App() {
       showToast('error', 'Cannot revoke a shift offer for a past date.');
       return;
     }
-    
+
+    await guardedMutation('Revoking offer', async () => {
     const result = await apiCall('revokeShiftOffer', {
       requestId: offerId
     });
@@ -2155,10 +2181,11 @@ export default function App() {
         }
         return o;
       }));
-      showToast('success', 'Shift offer revoked');
+      showToast('success', 'Offer approval revoked');
     } else {
       showToast('error', result.error?.message || 'Failed to revoke offer');
     }
+    });
   };
   
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -2202,10 +2229,11 @@ export default function App() {
   
   // Cancel a swap request (initiator action)
   const cancelSwapRequest = async (swapId) => {
+    await guardedMutation('Cancelling swap', async () => {
     const result = await apiCall('cancelSwapRequest', {
       requestId: swapId
     });
-    
+
     if (result.success) {
       setShiftSwaps(prev => prev.map(swap => {
         if ((swap.swapId === swapId || swap.requestId === swapId) && ['awaiting_partner', 'awaiting_admin'].includes(swap.status)) {
@@ -2217,14 +2245,16 @@ export default function App() {
     } else {
       showToast('error', result.error?.message || 'Failed to cancel swap');
     }
+    });
   };
-  
+
   // Accept a swap request (partner action)
   const acceptSwapRequest = async (swapId) => {
+    await guardedMutation('Accepting swap', async () => {
     const result = await apiCall('acceptSwapRequest', {
       requestId: swapId
     });
-    
+
     if (result.success) {
       setShiftSwaps(prev => prev.map(swap => {
         if ((swap.swapId === swapId || swap.requestId === swapId) && swap.status === 'awaiting_partner') {
@@ -2236,15 +2266,17 @@ export default function App() {
     } else {
       showToast('error', result.error?.message || 'Failed to accept swap');
     }
+    });
   };
-  
+
   // Reject a swap request (partner action)
   const rejectSwapRequest = async (swapId, note) => {
+    await guardedMutation('Declining swap', async () => {
     const result = await apiCall('declineSwapRequest', {
       requestId: swapId,
       note: note || ''
     });
-    
+
     if (result.success) {
       setShiftSwaps(prev => prev.map(swap => {
         if ((swap.swapId === swapId || swap.requestId === swapId) && swap.status === 'awaiting_partner') {
@@ -2256,13 +2288,14 @@ export default function App() {
     } else {
       showToast('error', result.error?.message || 'Failed to decline swap');
     }
+    });
   };
-  
+
   // Approve a swap request (admin action) - swap both shifts
   const approveSwapRequest = async (swapId) => {
     const swap = shiftSwaps.find(s => (s.swapId === swapId || s.requestId === swapId) && s.status === 'awaiting_admin');
     if (!swap) return;
-    
+    await guardedMutation('Approving swap', async () => {
     const result = await apiCall('approveSwapRequest', {
       requestId: swapId
     });
@@ -2297,14 +2330,16 @@ export default function App() {
         }
         return s;
       }));
-      showToast('success', 'Swap request approved');
+      showToast('success', 'Swap approved — moved to Settled history');
     } else {
       showToast('error', result.error?.message || 'Failed to approve swap');
     }
+    });
   };
-  
+
   // Reject a swap request (admin action)
   const adminRejectSwapRequest = async (swapId, note) => {
+    await guardedMutation('Rejecting swap', async () => {
     const result = await apiCall('rejectSwapRequest', {
       requestId: swapId,
       note: note || ''
@@ -2317,27 +2352,29 @@ export default function App() {
         }
         return swap;
       }));
-      showToast('success', 'Swap request rejected');
+      showToast('success', 'Swap rejected — moved to Settled history');
     } else {
       showToast('error', result.error?.message || 'Failed to reject swap');
     }
+    });
   };
-  
+
   // Revoke an approved swap request (admin action) - swap shifts back
   const revokeSwapRequest = async (swapId) => {
     const swap = shiftSwaps.find(s => (s.swapId === swapId || s.requestId === swapId) && s.status === 'approved');
     if (!swap) return;
-    
+
     const initiatorDate = parseLocalDate(swap.initiatorShiftDate);
     const partnerDate = parseLocalDate(swap.partnerShiftDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     if (initiatorDate < today || partnerDate < today) {
       showToast('error', 'Cannot revoke a swap where one or both shifts are in the past.');
       return;
     }
-    
+
+    await guardedMutation('Revoking swap', async () => {
     const result = await apiCall('revokeSwapRequest', {
       requestId: swapId
     });
@@ -2372,19 +2409,21 @@ export default function App() {
         }
         return s;
       }));
-      showToast('success', 'Swap revoked');
+      showToast('success', 'Swap approval revoked');
     } else {
       showToast('error', result.error?.message || 'Failed to revoke swap');
     }
+    });
   };
-  
+
   // Approve a time off request (admin action)
   const approveTimeOffRequest = async (requestId, notes) => {
+    await guardedMutation('Approving', async () => {
     const result = await apiCall('approveTimeOffRequest', {
       requestId: requestId,
       note: notes || ''
     });
-    
+
     if (result.success) {
       setTimeOffRequests(prev => prev.map(req => {
         if (req.requestId === requestId && req.status === 'pending') {
@@ -2392,19 +2431,21 @@ export default function App() {
         }
         return req;
       }));
-      showToast('success', 'Request approved');
+      showToast('success', 'Approved — moved to Settled history');
     } else {
       showToast('error', result.error?.message || 'Failed to approve request');
     }
+    });
   };
-  
+
   // Deny a time off request (admin action)
   const denyTimeOffRequest = async (requestId, notes) => {
+    await guardedMutation('Denying', async () => {
     const result = await apiCall('denyTimeOffRequest', {
       requestId: requestId,
       reason: notes || ''
     });
-    
+
     if (result.success) {
       setTimeOffRequests(prev => prev.map(req => {
         if (req.requestId === requestId && req.status === 'pending') {
@@ -2412,10 +2453,11 @@ export default function App() {
         }
         return req;
       }));
-      showToast('success', 'Request denied');
+      showToast('success', 'Denied — moved to Settled history');
     } else {
       showToast('error', result.error?.message || 'Failed to deny request');
     }
+    });
   };
   
   // Revoke an approved time off request (admin action, future dates only)
@@ -2434,11 +2476,12 @@ export default function App() {
       return;
     }
     
+    await guardedMutation('Revoking', async () => {
     const result = await apiCall('revokeTimeOffRequest', {
       requestId: requestId,
       note: notes || ''
     });
-    
+
     if (result.success) {
       setTimeOffRequests(prev => prev.map(req => {
         if (req.requestId === requestId && req.status === 'approved') {
@@ -2446,10 +2489,11 @@ export default function App() {
         }
         return req;
       }));
-      showToast('success', 'Request revoked');
+      showToast('success', 'Approval revoked');
     } else {
       showToast('error', result.error?.message || 'Failed to revoke request');
     }
+    });
   };
   
   // Count pending requests for badge (all three types that need admin action)

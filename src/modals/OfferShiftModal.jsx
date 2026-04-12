@@ -149,7 +149,7 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Take My Shift" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)', paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom) + 1rem)' }} role="dialog" aria-modal="true" aria-label="Take My Shift" onClick={onClose}>
       <div className="max-w-md w-full rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         <div className="px-4 py-3 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.accent.pink}20, ${THEME.bg.secondary})` }}>
           <h2 className="font-semibold flex items-center gap-2" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>
@@ -293,7 +293,7 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
             disabled={!selectedShift || !selectedRecipient || isSubmitting}
             className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1"
             style={{
-              background: selectedShift && selectedRecipient ? `linear-gradient(135deg, ${THEME.accent.pink}, ${THEME.accent.purple})` : THEME.bg.elevated,
+              background: selectedShift && selectedRecipient ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated,
               color: selectedShift && selectedRecipient ? 'white' : THEME.text.muted,
               opacity: (!selectedShift || !selectedRecipient || isSubmitting) ? 0.5 : 1
             }}
