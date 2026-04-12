@@ -4,6 +4,7 @@ import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, Mo
 import { parseLocalDate, escapeHtml } from './utils/format';
 import { generateSchedulePDF } from './pdf/generate';
 import { buildEmailContent } from './email/build';
+import { getAuthToken, setAuthToken, clearAuth, getCachedUser, setCachedUser, setOnAuthFailure, handleAuthError } from './auth';
 export { parseLocalDate, escapeHtml };
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
@@ -180,12 +181,19 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxSDWA1uOnemfu2N33y3za7
  * @returns {Promise<{success: boolean, data?: any, error?: {code: string, message: string}}>}
  */
 const apiCall = async (action, payload = {}, onProgress) => {
+  // S37: auto-attach session token (if present) to every payload so no caller
+  // has to pass `callerEmail`. Login/public endpoints are unaffected because
+  // the backend only reads `token` when verifyAuth is invoked.
+  const token = getAuthToken();
+  const authedPayload = token ? { ...payload, token } : payload;
   try {
-    const payloadJson = JSON.stringify(payload);
+    const payloadJson = JSON.stringify(authedPayload);
     // Encode payload as JSON in URL parameter
     const params = new URLSearchParams({ action, payload: payloadJson });
     const url = `${API_URL}?${params.toString()}`;
-    
+
+    let result = null;
+
     // Check URL length - browsers/servers typically limit to ~8000 chars
     // If too long, try POST first, fall back to chunked GET
     if (url.length > 6000) {
@@ -195,39 +203,47 @@ const apiCall = async (action, payload = {}, onProgress) => {
           method: 'POST',
           redirect: 'follow',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action, payload })
+          body: JSON.stringify({ action, payload: authedPayload })
         });
         const postText = await postResponse.text();
         try {
-          const result = JSON.parse(postText);
-          if (result.success !== undefined) return result;
+          const parsed = JSON.parse(postText);
+          if (parsed.success !== undefined) result = parsed;
         } catch (e) { /* POST failed or returned HTML redirect, fall through */ }
       } catch (e) { /* POST failed, fall through to chunked GET */ }
-      
+
       // Fallback: chunk the shifts array into smaller batches
-      if (action === 'batchSaveShifts' && payload.shifts?.length > 10) {
-        return await chunkedBatchSave(payload, onProgress);
+      if (!result && action === 'batchSaveShifts' && authedPayload.shifts?.length > 10) {
+        result = await chunkedBatchSave(authedPayload, onProgress);
       }
     }
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow'
-    });
-    
-    const text = await response.text();
 
-    try {
-      return JSON.parse(text);
-    } catch (parseError) {
-      return {
-        success: false,
-        error: { code: 'PARSE_ERROR', message: 'Invalid response from server' }
-      };
+    if (!result) {
+      const response = await fetch(url, {
+        method: 'GET',
+        redirect: 'follow'
+      });
+      const text = await response.text();
+      try {
+        result = JSON.parse(text);
+      } catch (parseError) {
+        result = {
+          success: false,
+          error: { code: 'PARSE_ERROR', message: 'Invalid response from server' }
+        };
+      }
     }
+
+    // S37: centralized auth-failure handling. If the backend reports expired
+    // or invalid token, wipe state and let the registered callback bounce the
+    // user back to login.
+    if (result && result.success === false && result.error?.code) {
+      handleAuthError(result.error.code);
+    }
+    return result;
   } catch (error) {
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: { code: 'NETWORK_ERROR', message: 'Unable to connect to server. Please try again.' }
     };
   }
@@ -235,7 +251,11 @@ const apiCall = async (action, payload = {}, onProgress) => {
 
 // Chunk large batchSaveShifts into multiple smaller GET requests
 const chunkedBatchSave = async (payload, onProgress) => {
-  const { shifts, periodDates, callerEmail } = payload;
+  // S37: `token` is already injected into `payload` by apiCall before it
+  // delegates here. `callerEmail` is retained for back-compat with the legacy
+  // fallback path in backend verifyAuth; it will be undefined on post-S37
+  // payloads and the backend will resolve auth from the token instead.
+  const { shifts, periodDates, callerEmail, token } = payload;
   const CHUNK_SIZE = 15; // 15 shifts per request stays under URL limits (~4500 chars)
   let totalSaved = 0;
   let lastError = null;
@@ -254,7 +274,8 @@ const chunkedBatchSave = async (payload, onProgress) => {
     if (onProgress) onProgress(i + chunk.length, shifts.length, chunkNum, totalChunks);
     
     const chunkPayload = {
-      callerEmail,
+      ...(token ? { token } : {}),
+      ...(callerEmail ? { callerEmail } : {}),
       shifts: chunk,
       // Only send periodDates on last chunk (triggers cleanup of deleted shifts)
       // Also send allShiftKeys so backend knows which shifts to keep
@@ -850,8 +871,7 @@ const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null,
                     <button
                       onClick={async () => {
                         const result = await apiCall('resetPassword', {
-                          callerEmail: currentUser.email,
-                          targetEmail: formData.email
+                                              targetEmail: formData.email
                         });
                         if (result.success) {
                           const newPwd = result.data?.newPassword || 'emp-XXX';
@@ -1358,6 +1378,9 @@ const LoginScreen = ({ onLogin, onLoadingComplete }) => {
     setLoading(false);
     
     if (result.success) {
+      // S37: persist session token + cached user before any protected call fires.
+      if (result.data.token) setAuthToken(result.data.token);
+      setCachedUser(result.data.employee);
       // Check if using default password — force password change before proceeding
       if (result.data.usingDefaultPassword) {
         setPendingUser(result.data.employee);
@@ -5770,7 +5793,6 @@ const AdminSettingsModal = ({ isOpen, onClose, currentUser, staffingTargets, onS
   const handleSaveTargets = async () => {
     setTargetsSaving(true);
     const result = await apiCall('saveStaffingTargets', {
-      callerEmail: currentUser.email,
       staffingTargets: editTargets
     });
     setTargetsSaving(false);
@@ -5792,7 +5814,6 @@ const AdminSettingsModal = ({ isOpen, onClose, currentUser, staffingTargets, onS
     
     setLoading(true);
     const result = await apiCall('changePassword', {
-      callerEmail: currentUser.email,
       currentPassword,
       newPassword
     });
@@ -5956,7 +5977,6 @@ const ChangePasswordModal = ({ isOpen, onClose, currentUser, isFirstLogin = fals
     setError('');
     
     const payload = {
-      callerEmail: currentUser.email,
       newPassword
     };
     // Self-service path: include currentPassword so backend verifies it
@@ -6180,7 +6200,11 @@ const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrides, sta
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(null);
+  // S37: if a session token + cached user survived the page refresh, start signed in.
+  // First protected apiCall will expire-bounce the user to login if the token is stale.
+  const [currentUser, setCurrentUser] = useState(() => {
+    return getAuthToken() ? getCachedUser() : null;
+  });
   const isMobileAdmin = useIsMobile();
   const [employees, setEmployees] = useState([]);
   const [periodIndex, setPeriodIndex] = useState(CURRENT_PERIOD_INDEX);
@@ -6261,7 +6285,6 @@ export default function App() {
     
     setSavingAnnouncement(true);
     const result = await apiCall('saveAnnouncement', {
-      callerEmail: currentUser.email,
       periodStartDate: periodStartDate,
       subject: announcement.subject,
       message: announcement.message
@@ -6287,7 +6310,6 @@ export default function App() {
     // Always try to delete - backend will handle if not found
     setSavingAnnouncement(true);
     const result = await apiCall('deleteAnnouncement', {
-      callerEmail: currentUser.email,
       periodStartDate: periodStartDate
     });
     
@@ -6331,13 +6353,35 @@ export default function App() {
   useEffect(() => {
     setPeriodIndex(0);
   }, [currentUser?.id]);
+
+  // S37: auto-bounce to login on AUTH_EXPIRED / AUTH_INVALID from any apiCall.
+  useEffect(() => {
+    setOnAuthFailure(() => {
+      setCurrentUser(null);
+      showToast('warning', 'Session expired. Please log in again.', 4000);
+    });
+    return () => setOnAuthFailure(null);
+  }, []);
+
+  // S37: if we restored a user from localStorage on mount, fire the normal data-load.
+  // If the token is stale, loadDataFromBackend will surface AUTH_EXPIRED and the
+  // callback above will bounce us to the login screen.
+  const didBootstrapRef = useRef(false);
+  useEffect(() => {
+    if (didBootstrapRef.current) return;
+    if (currentUser?.email && getAuthToken()) {
+      didBootstrapRef.current = true;
+      loadDataFromBackend(currentUser.email);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   // Load all data from backend after login
   const loadDataFromBackend = async (userEmail) => {
     setIsLoadingData(true);
     setLoadError(null);
     
-    const result = await apiCall('getAllData', { callerEmail: userEmail });
+    const result = await apiCall('getAllData', {});
     
     if (result.success) {
       const { employees: empData, shifts: shiftData, requests } = result.data;
@@ -6565,8 +6609,7 @@ export default function App() {
       // Batch save shifts to backend
       setToast({ type: 'saving', message: `Saving ${periodShifts.length} shifts...` });
       const saveResult = await apiCall('batchSaveShifts', {
-        callerEmail: currentUser.email,
-        shifts: periodShifts,
+          shifts: periodShifts,
         periodDates: periodDates
       }, (saved, total, chunk, totalChunks) => {
         setToast({ type: 'saving', message: `Saving shifts... ${saved}/${total}` });
@@ -6608,8 +6651,7 @@ export default function App() {
         .map(([idx, _]) => parseInt(idx, 10));
       
       const liveResult = await apiCall('saveLivePeriods', {
-        callerEmail: currentUser.email,
-        livePeriods: livePeriodIndexes
+          livePeriods: livePeriodIndexes
       });
       if (!liveResult.success) {
         showToast('error', 'Failed to publish schedule. Please try again.');
@@ -6632,8 +6674,7 @@ export default function App() {
         .map(([idx, _]) => parseInt(idx, 10));
       
       const editResult = await apiCall('saveLivePeriods', {
-        callerEmail: currentUser.email,
-        livePeriods: livePeriodIndexes
+          livePeriods: livePeriodIndexes
       });
       if (!editResult.success) {
         showToast('error', 'Failed to update schedule mode. Please try again.');
@@ -6675,7 +6716,6 @@ export default function App() {
     
     setToast({ type: 'saving', message: `Saving ${periodShifts.length} shifts...` });
     const saveResult = await apiCall('batchSaveShifts', {
-      callerEmail: currentUser.email,
       shifts: periodShifts,
       periodDates: periodDates
     }, (saved, total, chunk, totalChunks) => {
@@ -6720,13 +6760,11 @@ export default function App() {
     // Save both to backend in parallel
     const [hoursResult, targetResult] = await Promise.all([
       apiCall('saveSetting', {
-        callerEmail: currentUser.email,
-        key: 'storeHoursOverrides',
+          key: 'storeHoursOverrides',
         value: newHoursOverrides
       }),
       apiCall('saveSetting', {
-        callerEmail: currentUser.email,
-        key: 'staffingTargetOverrides',
+          key: 'staffingTargetOverrides',
         value: newTargetOverrides
       })
     ]);
@@ -6965,7 +7003,6 @@ export default function App() {
     
     // Call API to persist
     const result = await apiCall('saveEmployee', {
-      callerEmail: currentUser.email,
       employee: employeeForApi
     });
     
@@ -7014,7 +7051,6 @@ export default function App() {
     
     // Call API to persist
     const result = await apiCall('saveEmployee', {
-      callerEmail: currentUser.email,
       employee: employeeForApi
     });
     
@@ -7045,7 +7081,6 @@ export default function App() {
     
     // Call API to persist
     const result = await apiCall('saveEmployee', {
-      callerEmail: currentUser.email,
       employee: employeeForApi
     });
     
@@ -7075,7 +7110,6 @@ export default function App() {
   // Cancel a time off request (employee action on their own pending request)
   const cancelTimeOffRequest = async (requestId) => {
     const result = await apiCall('cancelTimeOffRequest', {
-      callerEmail: currentUser.email,
       requestId: requestId
     });
     
@@ -7095,7 +7129,6 @@ export default function App() {
   // Submit a new time off request (employee or admin action)
   const submitTimeOffRequest = async (request) => {
     const result = await apiCall('submitTimeOffRequest', {
-      callerEmail: currentUser.email,
       dates: request.datesRequested.split(','),
       reason: request.reason || ''
     });
@@ -7121,7 +7154,6 @@ export default function App() {
   // Submit a shift offer (employee action)
   const submitShiftOffer = async (offer) => {
     const result = await apiCall('submitShiftOffer', {
-      callerEmail: currentUser.email,
       recipientEmail: offer.recipientEmail,
       shiftDate: offer.shiftDate,
       shiftStart: offer.shiftStart,
@@ -7149,7 +7181,6 @@ export default function App() {
   // Cancel a shift offer (offerer action)
   const cancelShiftOffer = async (offerId) => {
     const result = await apiCall('cancelShiftOffer', {
-      callerEmail: currentUser.email,
       requestId: offerId
     });
     
@@ -7169,7 +7200,6 @@ export default function App() {
   // Accept a shift offer (recipient action)
   const acceptShiftOffer = async (offerId) => {
     const result = await apiCall('acceptShiftOffer', {
-      callerEmail: currentUser.email,
       requestId: offerId
     });
     
@@ -7189,7 +7219,6 @@ export default function App() {
   // Reject a shift offer (recipient action)
   const rejectShiftOffer = async (offerId, note) => {
     const result = await apiCall('declineShiftOffer', {
-      callerEmail: currentUser.email,
       requestId: offerId,
       note: note || ''
     });
@@ -7213,7 +7242,6 @@ export default function App() {
     if (!offer) return;
     
     const result = await apiCall('approveShiftOffer', {
-      callerEmail: currentUser.email,
       requestId: offerId
     });
     
@@ -7247,7 +7275,6 @@ export default function App() {
   // Reject a shift offer (admin action)
   const adminRejectShiftOffer = async (offerId, note) => {
     const result = await apiCall('rejectShiftOffer', {
-      callerEmail: currentUser.email,
       requestId: offerId,
       note: note || ''
     });
@@ -7279,7 +7306,6 @@ export default function App() {
     }
     
     const result = await apiCall('revokeShiftOffer', {
-      callerEmail: currentUser.email,
       requestId: offerId
     });
     
@@ -7317,7 +7343,6 @@ export default function App() {
   // Submit a new swap request (employee action)
   const submitSwapRequest = async (swap) => {
     const result = await apiCall('submitSwapRequest', {
-      callerEmail: currentUser.email,
       partnerEmail: swap.partnerEmail,
       initiatorShift: {
         date: swap.initiatorShiftDate,
@@ -7353,7 +7378,6 @@ export default function App() {
   // Cancel a swap request (initiator action)
   const cancelSwapRequest = async (swapId) => {
     const result = await apiCall('cancelSwapRequest', {
-      callerEmail: currentUser.email,
       requestId: swapId
     });
     
@@ -7373,7 +7397,6 @@ export default function App() {
   // Accept a swap request (partner action)
   const acceptSwapRequest = async (swapId) => {
     const result = await apiCall('acceptSwapRequest', {
-      callerEmail: currentUser.email,
       requestId: swapId
     });
     
@@ -7393,7 +7416,6 @@ export default function App() {
   // Reject a swap request (partner action)
   const rejectSwapRequest = async (swapId, note) => {
     const result = await apiCall('declineSwapRequest', {
-      callerEmail: currentUser.email,
       requestId: swapId,
       note: note || ''
     });
@@ -7417,7 +7439,6 @@ export default function App() {
     if (!swap) return;
     
     const result = await apiCall('approveSwapRequest', {
-      callerEmail: currentUser.email,
       requestId: swapId
     });
     
@@ -7460,7 +7481,6 @@ export default function App() {
   // Reject a swap request (admin action)
   const adminRejectSwapRequest = async (swapId, note) => {
     const result = await apiCall('rejectSwapRequest', {
-      callerEmail: currentUser.email,
       requestId: swapId,
       note: note || ''
     });
@@ -7494,7 +7514,6 @@ export default function App() {
     }
     
     const result = await apiCall('revokeSwapRequest', {
-      callerEmail: currentUser.email,
       requestId: swapId
     });
     
@@ -7537,7 +7556,6 @@ export default function App() {
   // Approve a time off request (admin action)
   const approveTimeOffRequest = async (requestId, notes) => {
     const result = await apiCall('approveTimeOffRequest', {
-      callerEmail: currentUser.email,
       requestId: requestId,
       note: notes || ''
     });
@@ -7558,7 +7576,6 @@ export default function App() {
   // Deny a time off request (admin action)
   const denyTimeOffRequest = async (requestId, notes) => {
     const result = await apiCall('denyTimeOffRequest', {
-      callerEmail: currentUser.email,
       requestId: requestId,
       reason: notes || ''
     });
@@ -7593,7 +7610,6 @@ export default function App() {
     }
     
     const result = await apiCall('revokeTimeOffRequest', {
-      callerEmail: currentUser.email,
       requestId: requestId,
       note: notes || ''
     });
@@ -7676,7 +7692,7 @@ export default function App() {
             Try Again
           </button>
           <button 
-            onClick={() => { setCurrentUser(null); setLoadError(null); }}
+            onClick={() => { clearAuth(); setCurrentUser(null); setLoadError(null); }}
             className="ml-2 px-4 py-2 rounded-lg text-sm"
             style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary }}
           >
@@ -7689,7 +7705,7 @@ export default function App() {
   
   // Show employee view if not admin
   if (!currentUser.isAdmin) {
-    return <EmployeeView employees={employees} shifts={publishedShifts} dates={dates} periodInfo={{ startDate, endDate }} currentUser={currentUser} onLogout={() => setCurrentUser(null)} timeOffRequests={timeOffRequests} onCancelRequest={cancelTimeOffRequest} onSubmitRequest={submitTimeOffRequest} shiftOffers={shiftOffers} onSubmitOffer={submitShiftOffer} onCancelOffer={cancelShiftOffer} onAcceptOffer={acceptShiftOffer} onRejectOffer={rejectShiftOffer} shiftSwaps={shiftSwaps} onSubmitSwap={submitSwapRequest} onCancelSwap={cancelSwapRequest} onAcceptSwap={acceptSwapRequest} onRejectSwap={rejectSwapRequest} periodIndex={periodIndex} onPeriodChange={setPeriodIndex} isEditMode={isCurrentPeriodEditMode} announcement={currentAnnouncement} />;
+    return <EmployeeView employees={employees} shifts={publishedShifts} dates={dates} periodInfo={{ startDate, endDate }} currentUser={currentUser} onLogout={() => { clearAuth(); setCurrentUser(null); }} timeOffRequests={timeOffRequests} onCancelRequest={cancelTimeOffRequest} onSubmitRequest={submitTimeOffRequest} shiftOffers={shiftOffers} onSubmitOffer={submitShiftOffer} onCancelOffer={cancelShiftOffer} onAcceptOffer={acceptShiftOffer} onRejectOffer={rejectShiftOffer} shiftSwaps={shiftSwaps} onSubmitSwap={submitSwapRequest} onCancelSwap={cancelSwapRequest} onAcceptSwap={acceptSwapRequest} onRejectSwap={rejectSwapRequest} periodIndex={periodIndex} onPeriodChange={setPeriodIndex} isEditMode={isCurrentPeriodEditMode} announcement={currentAnnouncement} />;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -7968,7 +7984,7 @@ export default function App() {
           isOpen={mobileAdminDrawerOpen}
           onClose={() => setMobileAdminDrawerOpen(false)}
           currentUser={currentUser}
-          onLogout={() => setCurrentUser(null)}
+          onLogout={() => { clearAuth(); setCurrentUser(null); }}
           onOpenChangePassword={() => setMobileAdminChangePasswordOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenOwnRequests={() => setAdminRequestModalOpen(true)}
@@ -8274,7 +8290,7 @@ export default function App() {
                   {currentUser.isOwner ? 'Owner' : 'Admin'}
                 </p>
               </div>
-              <button onClick={() => setCurrentUser(null)} className="p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }} title="Sign Out">
+              <button onClick={() => { clearAuth(); setCurrentUser(null); }} className="p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }} title="Sign Out">
                 <LogOut size={14} />
               </button>
             </div>
