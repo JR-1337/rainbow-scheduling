@@ -6,10 +6,25 @@
 - Demo prep + post-demo cleanup (Phases 1-10 core landed)
 
 ### Up Next
-- Post-demo: revisit density toggle CSS scope — currently broad `.density-compact .grid` selector may catch unintended grids
+
+**Active plan:** `~/.claude/plans/lovely-launching-marble.md` — audit-driven security + bugfix + refactor chunked into S33.5 → S40.
+
+Pre-demo (before 2026-04-14):
+- S33.5 repo hygiene (.gitignore dist/, commit package-lock.json, Photos/ decision)
+- S34 demo-critical bugs: timezone fix @ App.jsx:2265, XSS escape (7 sites PDF+email), chunked-save partial-failure surfacing, extract PDF + email builders
+- S35 browser verify live + demo polish
+
+Post-demo:
+- S36 HMAC auth backend + SHA-256 password hashing (Code.gs) — non-breaking migration
+- S37 frontend auth wiring: token in localStorage, auto-attach in apiCall, remove 35 callerEmail sites
+- S38 mobile bottom sheet focus trap + Escape
+- S39 opportunistic extractions (THEME/constants → own files, AdminRequestModal → own file, mobile admin branch → own file)
+- S40 persistence-file sweep + forward handoff
+
+Existing up-next preserved:
+- Post-demo: revisit density toggle CSS scope — broad `.density-compact .grid` selector may catch unintended grids
 - Post-demo: evaluate mobile bottom nav active states on deep-linked URLs if introduced
-- Code.gs deploy (manual - paste updated Code.gs to Apps Script)
-- Shared utils refactor (extract THEME, ROLES, helpers into dedicated files)
+- Code.gs deploy (manual - paste updated Code.gs to Apps Script) — required for S36
 - Professional sender email (dedicated Google Workspace account)
 
 ### Done
