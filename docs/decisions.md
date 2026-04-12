@@ -2,6 +2,13 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-12 - Schedule-Context Toolbar Hides on Non-Schedule Destinations
+
+**Decided:** Mobile admin Row-3 action buttons (Edit/Save/Go Live/Publish) and Row-4 status banner (Edit Mode + Fill/Clear Wk) only render when `mobileAdminTab === 'schedule' || 'mine'`. Hidden entirely on requests/comms.
+**Alternatives:** Grey them out / disable them (rejected - greying implies "unavailable right now" but the action isn't unavailable, it's irrelevant to the current destination; teaches users to ignore the toolbar). Keep visible (rejected - clutter, nonsensical context like "Clear Week 1" while reading announcements).
+**Rationale:** Same pattern already established for Wk1/Wk2/Mine filing tabs (Row 5). Toolbar items belong to their destination. Reclaims vertical space on mobile.
+**Revisit if:** User feedback wants a persistent "Edit" shortcut from any destination (unlikely — bottom nav + tap into schedule is 2 taps).
+
 ## 2026-04-12 - Perf: ROLES_BY_ID + toDateKey + React.memo on Grid Cells
 
 **Decided:** Introduced `ROLES_BY_ID` (O(1) lookup map), `toDateKey(date)` (no ISO allocation, no regex split), `React.memo` on `ScheduleCell`/`EmployeeRow`/`EmployeeViewRow`/`EmployeeScheduleCell`, `useCallback` on all handlers passed to grid rows, and `useMemo` for `currentDateStrs`/`allDateStrs`/`todayStr`.

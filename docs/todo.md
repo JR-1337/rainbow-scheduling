@@ -14,6 +14,8 @@
 
 ### Done
 
+- [2026-04-12] PDF demo-critical six: "Printed on" timestamp footer + live-app URL pointer. Removed auto-print; added sticky Print button in preview. `OFF — approved` marker on PTO cells (new timeOffRequests param + `hasApprovedTimeOffForDate` check). OT thresholds shifted to Ontario ESA (amber ≥40h, red ≥44h). Daily headcount row per week. `page-break-inside:avoid` on rows + `thead` repeats on page break. Role/color fallbacks for deleted role IDs. Hides "0.0h" for unscheduled employees. Legend gains PTO swatch.
+- [2026-04-12] Mobile admin toolbar hides on non-schedule destinations: Row-3 action buttons (Edit/Save/Go Live/Publish) + Row-4 status banner (Edit Mode + Fill/Clear Wk) gated on `mobileAdminTab === 'schedule' || 'mine'`. Requests/Comms destinations show just logo + period nav. Matches existing filing-tab gating pattern.
 - [2026-04-12] PDF export printer-friendly pass: scheduled cells now render as 2.5px role-colored outlines on white (was filled tint), thicker than 1px grid for distinctiveness. Header gradient → solid OTR navy. Title border + announcement accent → OTR purple #932378. Hours color under-35h cyan → slate (prints cleaner).
 - [2026-04-12] S33 hotfix: `stoDateKey(d)` typo at App.jsx:6451 was white-screening prod. Fixed to `toDateKey(sd)`.
 - [2026-04-12] Phase 10 extension: Admin quick approve/deny bottom sheets. `AdminRequestModal` helper renders `MobileBottomSheet` on mobile and centered modal on desktop. All 6 admin/recipient reject-flow modals migrated (time-off deny/revoke, offer reject, take-my-shift decline, swap decline, swap reject). Bundle -4.3KB from dedup.
