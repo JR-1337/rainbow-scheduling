@@ -61,7 +61,7 @@ export const ShiftEditorModal = ({ isOpen, onClose, onSave, employee, date, exis
       </div>
 
       <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
-        {existingShift && <GradientButton danger small onClick={handleDelete}><Trash2 size={10} /></GradientButton>}
+        {existingShift && <GradientButton danger small onClick={handleDelete} ariaLabel="Remove shift"><Trash2 size={10} /></GradientButton>}
         <div className="flex gap-2 ml-auto">
           <GradientButton variant="secondary" small onClick={onClose}>Cancel</GradientButton>
           <GradientButton small onClick={handleSave}><Check size={12} />Save</GradientButton>

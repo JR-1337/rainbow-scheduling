@@ -452,12 +452,12 @@ const getAvailabilityShading = (avail, storeHours) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // UI COMPONENTS - Smaller/Compact
 // ═══════════════════════════════════════════════════════════════════════════════
-export const GradientButton = ({ children, onClick, variant = 'primary', disabled = false, small = false, danger = false }) => (
-  <button onClick={onClick} disabled={disabled}
+export const GradientButton = ({ children, onClick, variant = 'primary', disabled = false, small = false, danger = false, ariaLabel }) => (
+  <button onClick={onClick} disabled={disabled} aria-label={ariaLabel} title={ariaLabel}
     className={`${small ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'} rounded-lg font-medium transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90`}
-    style={{ 
-      background: danger ? THEME.status.error : variant === 'primary' ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated, 
-      border: variant === 'secondary' ? `1px solid ${THEME.border.default}` : 'none', 
+    style={{
+      background: danger ? THEME.status.error : variant === 'primary' ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated,
+      border: variant === 'secondary' ? `1px solid ${THEME.border.default}` : 'none',
       color: (variant === 'primary' || danger) ? THEME.accent.text : THEME.text.primary
     }}>
     {children}
@@ -1729,13 +1729,15 @@ export default function App() {
     const emps = targetEmployees || fullTimeEmployees;
     const newShifts = { ...shifts };
     let addedCount = 0;
-    
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     emps.forEach(emp => {
       weekDates.forEach(date => {
+        if (date < todayStart) return;
         const dateStr = toDateKey(date);
         const key = `${emp.id}-${dateStr}`;
-        
-        // Only add if no existing shift
+
         if (!newShifts[key]) {
           const shift = createShiftFromAvailability(emp, date);
           if (shift) {

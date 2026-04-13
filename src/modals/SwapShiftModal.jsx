@@ -24,6 +24,13 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const safeShifts = shifts || {};
