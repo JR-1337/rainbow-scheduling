@@ -2,7 +2,12 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.17 (S41.3: passwordChanged flag replaces emp-XXX regex for default-pw detection)
+ * Version: 2.18 (S41.5: time-off overlap check now covers approved requests, not just pending)
+ *
+ * Changes in v2.18:
+ * - submitTimeOffRequest: overlap filter now includes status=='approved' (was
+ *   pending-only). Prevents duplicate time-off bookings for days the user has
+ *   already been granted off. Error code: ALREADY_SCHEDULED_OFF.
  *
  * Changes in v2.17:
  * - New optional Employees column: passwordChanged (TRUE/FALSE). Set to TRUE
@@ -730,12 +735,19 @@ function submitTimeOffRequest(payload) {
     return { success: false, error: { code: 'PAST_DATE', message: 'Cannot request time off for dates that have already passed' } };
   }
 
+  // S41.5: block overlap against BOTH pending and approved requests. Pending
+  // is the "one at a time" guard; approved catches re-requesting days the user
+  // already has off.
   const existingRequests = getSheetData(CONFIG.TABS.SHIFT_CHANGES)
-    .filter(r => r.requestType === 'time_off' && r.employeeEmail === callerEmail && r.status === 'pending');
+    .filter(r => r.requestType === 'time_off' && r.employeeEmail === callerEmail && ['pending', 'approved'].includes(r.status));
 
   for (const req of existingRequests) {
     const existingDates = req.datesRequested.split(',');
-    if (dates.some(d => existingDates.includes(d))) {
+    const overlap = dates.some(d => existingDates.includes(d));
+    if (overlap) {
+      if (req.status === 'approved') {
+        return { success: false, error: { code: 'ALREADY_SCHEDULED_OFF', message: 'You already have approved time off for one or more of these dates' } };
+      }
       return { success: false, error: { code: 'ALREADY_PENDING', message: 'You already have a pending request for one or more of these dates' } };
     }
   }

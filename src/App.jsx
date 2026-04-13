@@ -1969,11 +1969,12 @@ export default function App() {
 
   // Submit a new time off request (employee or admin action)
   const submitTimeOffRequest = async (request) => {
+    await guardedMutation('Submitting request', async () => {
     const result = await apiCall('submitTimeOffRequest', {
       dates: request.datesRequested.split(','),
       reason: request.reason || ''
     });
-    
+
     if (result.success) {
       const serverRequest = {
         ...request,
@@ -1986,14 +1987,16 @@ export default function App() {
         createdTimestamp: result.data.createdTimestamp
       };
       setTimeOffRequests(prev => [...prev, serverRequest]);
-      showToast('success', 'Time off request submitted');
+      showToast('success', 'Request sent — Sarvi has been notified');
     } else {
       showToast('error', result.error?.message || 'Failed to submit request');
     }
+    });
   };
   
   // Submit a shift offer (employee action)
   const submitShiftOffer = async (offer) => {
+    await guardedMutation('Submitting offer', async () => {
     const result = await apiCall('submitShiftOffer', {
       recipientEmail: offer.recipientEmail,
       shiftDate: offer.shiftDate,
@@ -2001,7 +2004,7 @@ export default function App() {
       shiftEnd: offer.shiftEnd,
       shiftRole: offer.shiftRole
     });
-    
+
     if (result.success) {
       const serverOffer = {
         ...offer,
@@ -2013,10 +2016,11 @@ export default function App() {
         createdTimestamp: result.data.createdTimestamp
       };
       setShiftOffers(prev => [...prev, serverOffer]);
-      showToast('success', 'Shift offer sent');
+      showToast('success', 'Offer sent — waiting for recipient response');
     } else {
       showToast('error', result.error?.message || 'Failed to submit offer');
     }
+    });
   };
   
   // Cancel a shift offer (offerer action)
@@ -2194,6 +2198,7 @@ export default function App() {
   
   // Submit a new swap request (employee action)
   const submitSwapRequest = async (swap) => {
+    await guardedMutation('Submitting swap', async () => {
     const result = await apiCall('submitSwapRequest', {
       partnerEmail: swap.partnerEmail,
       initiatorShift: {
@@ -2209,7 +2214,7 @@ export default function App() {
         role: swap.partnerShiftRole
       }
     });
-    
+
     if (result.success) {
       const serverSwap = {
         ...swap,
@@ -2221,10 +2226,11 @@ export default function App() {
         createdTimestamp: result.data.createdTimestamp
       };
       setShiftSwaps(prev => [...prev, serverSwap]);
-      showToast('success', 'Swap request sent to ' + swap.partnerName);
+      showToast('success', `Swap sent to ${swap.partnerName} — waiting for response`);
     } else {
       showToast('error', result.error?.message || 'Failed to submit swap request');
     }
+    });
   };
   
   // Cancel a swap request (initiator action)

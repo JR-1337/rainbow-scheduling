@@ -45,6 +45,16 @@ export const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, ti
     return !!shifts[shiftKey];
   };
 
+  // S41.5: block re-requesting days the user already has approved time off for
+  const hasApprovedTimeOffForDate = (dateStr) => {
+    if (!currentUser?.email) return false;
+    return timeOffRequests.some(r =>
+      (r.email === currentUser.email || r.employeeEmail === currentUser.email) &&
+      r.status === 'approved' &&
+      (r.datesRequested || '').split(',').includes(dateStr)
+    );
+  };
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -186,24 +196,26 @@ export const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, ti
             {calendarDays.map((date, i) => {
               const dateStr = date ? toDateKey(date) : '';
               const scheduled = date && isScheduledToWork(dateStr);
-              const isDisabled = !date || isPast(date) || scheduled;
+              const alreadyOff = date && hasApprovedTimeOffForDate(dateStr);
+              const isDisabled = !date || isPast(date) || scheduled || alreadyOff;
 
               return (
                 <button
                   key={dateStr || `pad-${i}`}
-                  onClick={() => !scheduled && toggleDate(date)}
+                  onClick={() => !scheduled && !alreadyOff && toggleDate(date)}
                   disabled={isDisabled}
                   className="aspect-square rounded-lg text-xs font-medium transition-all flex items-center justify-center relative"
                   style={{
-                    backgroundColor: isSelected(date) ? THEME.accent.cyan : scheduled ? THEME.bg.elevated : date ? THEME.bg.tertiary : 'transparent',
+                    backgroundColor: isSelected(date) ? THEME.accent.cyan : alreadyOff ? THEME.status.success + '25' : scheduled ? THEME.bg.elevated : date ? THEME.bg.tertiary : 'transparent',
                     color: isSelected(date) ? '#000' : isDisabled ? THEME.text.muted + '50' : date ? THEME.text.primary : 'transparent',
                     cursor: !isDisabled ? 'pointer' : 'not-allowed',
-                    border: date?.toDateString() === new Date().toDateString() ? `2px solid ${THEME.accent.purple}` : scheduled ? `2px solid ${THEME.status.error}40` : '2px solid transparent'
+                    border: date?.toDateString() === new Date().toDateString() ? `2px solid ${THEME.accent.purple}` : alreadyOff ? `2px solid ${THEME.status.success}80` : scheduled ? `2px solid ${THEME.status.error}40` : '2px solid transparent'
                   }}
-                  title={scheduled ? 'You are scheduled to work – use Take My Shift or Swap instead' : isPast(date) ? 'Past dates cannot be selected' : ''}
+                  title={alreadyOff ? 'You already have approved time off for this date' : scheduled ? 'You are scheduled to work – use Take My Shift or Swap instead' : isPast(date) ? 'Past dates cannot be selected' : ''}
                 >
                   {date?.getDate()}
-                  {scheduled && <span className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: THEME.status.error }} />}
+                  {alreadyOff && <span className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: THEME.status.success }} />}
+                  {scheduled && !alreadyOff && <span className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: THEME.status.error }} />}
                 </button>
               );
             })}
@@ -212,7 +224,7 @@ export const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, ti
           <div className="mt-2 p-2 rounded-lg flex items-start gap-2" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
             <AlertCircle size={14} style={{ color: THEME.text.muted, flexShrink: 0, marginTop: 1 }} />
             <p className="text-xs" style={{ color: THEME.text.muted }}>
-              Days you're scheduled to work (marked with <span style={{ color: THEME.status.error }}>●</span>) cannot be requested off. Use <strong>Take My Shift</strong> or <strong>Shift Swap</strong> instead.
+              Days scheduled to work (<span style={{ color: THEME.status.error }}>●</span>) — use <strong>Take My Shift</strong> or <strong>Swap</strong>. Days already off (<span style={{ color: THEME.status.success }}>●</span>) can't be re-requested.
             </p>
           </div>
 
