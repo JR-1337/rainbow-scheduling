@@ -2,16 +2,20 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.20 (S45: adaptive small-save fast path in batchSaveShifts)
+ * Version: 2.20.1 (S45: revert v2.20 fast-path; Apps Script overhead dominates)
  *
- * Changes in v2.20:
- * - batchSaveShifts: detects the actual delta between existing shifts and payload
- *   (new + modified + deleted). If total changes <= DELTA_FAST_PATH_THRESHOLD (10),
- *   uses per-row updateRow/appendRow/deleteRow (fast for small saves, ~1-2s).
- *   For larger deltas, falls back to the v2.19 single-call Sheets.Spreadsheets.Values.update
- *   bulk rewrite (fast for big saves, ~3-5s regardless of count).
- *   Self-tuning: small edits feel instant, full-period publishes stay bulk-efficient.
- *   No frontend changes required; payload shape unchanged.
+ * Changes in v2.20.1:
+ * - batchSaveShifts: reverted the v2.20 adaptive fast path. Playwright measurement
+ *   showed Apps Script web-app calls have a ~7-8s fixed overhead per request (auth +
+ *   302 redirect + minimal work). A no-op save with {shifts:[], periodDates:[]} still
+ *   costs ~7-8s. The v2.20 per-row fast path saved only ~1s of actual Sheet work,
+ *   which is drowned out by that overhead. Not worth the code complexity.
+ *   Back to the v2.19.2 single-call Sheets.Spreadsheets.Values.update for all saves.
+ *   The structural answer to save latency is leaving Apps Script (CF Worker proxy for
+ *   reads is cheap; writes stay bound until migration).
+ *
+ * Changes in v2.20 (superseded):
+ * - Adaptive fast path in batchSaveShifts. Added complexity, no measurable win vs v2.19.2.
  *
  * Changes in v2.19.2:
  * - getAllData: REVERTED to the proven 5-call getSheetData path. The batchGet read
@@ -1705,11 +1709,6 @@ function batchSaveShifts(payload) {
   if (!lock.tryLock(10000)) {
     return { success: false, error: { code: 'CONCURRENT_EDIT', message: 'Another admin is saving the schedule. Please wait a moment and try again.' } };
   }
-  // v2.20: below this delta size, skip the whole-tab rewrite and use per-row updates.
-  // 10 covers the typical "Sarvi tweaked a few shifts and saved" flow (~1-2s per round trip).
-  // Above this, the bulk rewrite pays off (150-shift saves stay ~3-5s).
-  const DELTA_FAST_PATH_THRESHOLD = 10;
-
   try {
     const sheet = getSheet(CONFIG.TABS.SHIFTS);
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -1724,75 +1723,7 @@ function batchSaveShifts(payload) {
     }
     const periodSet = new Set(periodDates || []);
 
-    // Index existing by key for O(1) diff + upsert lookups.
-    const existingByKey = new Map();
-    existing.forEach(row => {
-      existingByKey.set(`${row.employeeId}-${normalizeDate(row.date)}`, row);
-    });
-
-    // Deletions: rows in period range not listed in keepKeys.
-    const rowsToDelete = [];
-    existing.forEach(row => {
-      const d = normalizeDate(row.date);
-      const key = `${row.employeeId}-${d}`;
-      if (periodSet.has(d) && !keepKeys.has(key)) {
-        rowsToDelete.push(row);
-      }
-    });
-
-    // Shift-by-shift classification: new, modified, or unchanged.
-    // Unchanged rows don't need to be written on either path, but they matter for the
-    // change-count heuristic that picks fast vs bulk.
-    const shiftFieldsEqual = (a, b) => {
-      // Compare only the columns present in headers so _rowIndex etc. don't affect equality.
-      for (let i = 0; i < headers.length; i++) {
-        const h = headers[i];
-        const av = a[h] !== undefined && a[h] !== null ? String(a[h]) : '';
-        const bv = b[h] !== undefined && b[h] !== null ? String(b[h]) : '';
-        if (av !== bv) return false;
-      }
-      return true;
-    };
-
-    const newShifts = [];     // no existing row with this key
-    const modifiedShifts = []; // existing row, payload differs
-    shifts.forEach(s => {
-      const key = `${s.employeeId}-${normalizeDate(s.date)}`;
-      const existingRow = existingByKey.get(key);
-      if (!existingRow) newShifts.push({ shift: s, key });
-      else if (!shiftFieldsEqual(s, existingRow)) modifiedShifts.push({ shift: s, existingRow, key });
-      // else: unchanged, skip entirely
-    });
-
-    const actualChangeCount = newShifts.length + modifiedShifts.length + rowsToDelete.length;
-
-    // FAST PATH: few actual changes -> per-row ops, no full-tab rewrite.
-    if (actualChangeCount <= DELTA_FAST_PATH_THRESHOLD) {
-      // Deletions: sort descending to avoid row-index shift during iteration.
-      rowsToDelete.sort((a, b) => b._rowIndex - a._rowIndex).forEach(row => {
-        sheet.deleteRow(row._rowIndex);
-      });
-      // Row indices shifted after deletions, so re-index existing-by-key for upserts.
-      // Only needed if we have modifications to apply by row index.
-      let upsertIndex = existingByKey;
-      if (rowsToDelete.length > 0 && modifiedShifts.length > 0) {
-        const refreshed = getSheetData(CONFIG.TABS.SHIFTS);
-        upsertIndex = new Map();
-        refreshed.forEach(r => upsertIndex.set(`${r.employeeId}-${normalizeDate(r.date)}`, r));
-      }
-      modifiedShifts.forEach(({ shift, key }) => {
-        const target = upsertIndex.get(key);
-        if (target) updateRow(CONFIG.TABS.SHIFTS, target._rowIndex, shift);
-        else appendRow(CONFIG.TABS.SHIFTS, shift); // rare: was deleted between reads; treat as new
-      });
-      newShifts.forEach(({ shift }) => {
-        appendRow(CONFIG.TABS.SHIFTS, shift);
-      });
-      return { success: true, data: { savedCount: shifts.length, deletedCount: rowsToDelete.length, path: 'fast' } };
-    }
-
-    // BULK PATH: large delta (full-period rebuild or bulk fill/clear). Rewrite the whole data area
-    // in a single Sheets API call -- O(tab size) time but one HTTP round trip, wins above the threshold.
+    // Preserve original row order: keep survivors (not in period, or in period-and-kept).
     const survivors = [];
     const survivorIdx = new Map();
     existing.forEach(row => {
@@ -1803,6 +1734,8 @@ function batchSaveShifts(payload) {
         survivors.push(row);
       }
     });
+
+    // Overlay updates from shifts[] — update in place if key already a survivor, else append.
     const updates = new Map();
     shifts.forEach(s => { updates.set(`${s.employeeId}-${normalizeDate(s.date)}`, s); });
     updates.forEach((s, key) => {
@@ -1810,9 +1743,13 @@ function batchSaveShifts(payload) {
       else survivors.push(s);
     });
 
+    const deletedCount = existing.length - (survivors.length - shifts.filter(s => !existing.some(e => normalizeDate(e.date) === normalizeDate(s.date) && e.employeeId === s.employeeId)).length);
+
     const newRows = survivors.map(row =>
       headers.map(h => row[h] !== undefined && row[h] !== null ? row[h] : '')
     );
+
+    // Pad to the max of old/new length so stale rows below get wiped.
     const numCols = headers.length;
     const targetRows = Math.max(existing.length, newRows.length);
     while (newRows.length < targetRows) {
@@ -1822,6 +1759,8 @@ function batchSaveShifts(payload) {
     if (targetRows > 0) {
       const lastCol = columnLetter_(numCols);
       const range = `${CONFIG.TABS.SHIFTS}!A2:${lastCol}${1 + targetRows}`;
+      // USER_ENTERED matches the legacy appendRow/setValue behavior (Sheets auto-parses date strings,
+      // time strings, booleans, etc.) so cell types stay consistent with what's already in the sheet.
       Sheets.Spreadsheets.Values.update(
         { values: newRows },
         getSpreadsheet().getId(),
@@ -1830,7 +1769,7 @@ function batchSaveShifts(payload) {
       );
     }
 
-    return { success: true, data: { savedCount: shifts.length, deletedCount: rowsToDelete.length, path: 'bulk' } };
+    return { success: true, data: { savedCount: shifts.length, deletedCount: Math.max(0, deletedCount) } };
   } finally {
     lock.releaseLock();
   }
