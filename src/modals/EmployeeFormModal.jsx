@@ -77,6 +77,27 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
             </div>
           )}
 
+          <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: formData.employmentType === 'full-time' ? THEME.accent.blue + '15' : THEME.bg.tertiary }}>
+            <span className="text-xs flex items-center gap-1" style={{ color: formData.employmentType === 'full-time' ? THEME.accent.blue : THEME.text.secondary }}>
+              <Clock size={12} />
+              Employment Type
+            </span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setFormData({ ...formData, employmentType: 'full-time' })}
+                className="px-2 py-0.5 rounded text-xs"
+                style={{ backgroundColor: formData.employmentType === 'full-time' ? THEME.accent.blue : THEME.bg.elevated, color: formData.employmentType === 'full-time' ? '#fff' : THEME.text.muted }}>
+                Full-Time
+              </button>
+              <button
+                onClick={() => setFormData({ ...formData, employmentType: 'part-time' })}
+                className="px-2 py-0.5 rounded text-xs"
+                style={{ backgroundColor: formData.employmentType === 'part-time' ? THEME.accent.purple : THEME.bg.elevated, color: formData.employmentType === 'part-time' ? '#fff' : THEME.text.muted }}>
+                Part-Time
+              </button>
+            </div>
+          </div>
+
           {employee && (
             <>
               <div className="mt-2 flex gap-2">
@@ -119,27 +140,6 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                   </button>
                 </div>
               )}
-
-              <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: formData.employmentType === 'full-time' ? THEME.accent.blue + '15' : THEME.bg.tertiary }}>
-                <span className="text-xs flex items-center gap-1" style={{ color: formData.employmentType === 'full-time' ? THEME.accent.blue : THEME.text.secondary }}>
-                  <Clock size={12} />
-                  Employment Type
-                </span>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => setFormData({ ...formData, employmentType: 'full-time' })}
-                    className="px-2 py-0.5 rounded text-xs"
-                    style={{ backgroundColor: formData.employmentType === 'full-time' ? THEME.accent.blue : THEME.bg.elevated, color: formData.employmentType === 'full-time' ? '#fff' : THEME.text.muted }}>
-                    Full-Time
-                  </button>
-                  <button
-                    onClick={() => setFormData({ ...formData, employmentType: 'part-time' })}
-                    className="px-2 py-0.5 rounded text-xs"
-                    style={{ backgroundColor: formData.employmentType === 'part-time' ? THEME.accent.purple : THEME.bg.elevated, color: formData.employmentType === 'part-time' ? '#fff' : THEME.text.muted }}>
-                    Part-Time
-                  </button>
-                </div>
-              </div>
 
               {!isEditingSelf && !isEditingOwner && (
                 <div className="mt-2 p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>

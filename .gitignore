@@ -4,5 +4,9 @@ node_modules/
 dist/
 Photos/
 
+# Playwright MCP artifacts
+.playwright-mcp/
+/*.png
+
 # Claude Code local preferences
 CLAUDE.local.md

@@ -36,31 +36,6 @@ body {
   animation: spin 1s linear infinite;
 }
 
-/* Rainbow loading sphere - main loader after login */
-@keyframes rainbow-morph {
-  0%   { background: radial-gradient(circle at 30% 30%, #ff8080, #EC3228 50%, #BD2820); box-shadow: 0 0 30px #EC322880; }
-  20%  { background: radial-gradient(circle at 30% 30%, #6ba0e0, #0453A3 50%, #034282); box-shadow: 0 0 30px #0453A380; }
-  40%  { background: radial-gradient(circle at 30% 30%, #ffb874, #F57F20 50%, #C4661A); box-shadow: 0 0 30px #F57F2080; }
-  60%  { background: radial-gradient(circle at 30% 30%, #5de69a, #00A84D 50%, #00863E); box-shadow: 0 0 30px #00A84D80; }
-  80%  { background: radial-gradient(circle at 30% 30%, #c86aaf, #932378 50%, #761C60); box-shadow: 0 0 30px #93237880; }
-  100% { background: radial-gradient(circle at 30% 30%, #ff8080, #EC3228 50%, #BD2820); box-shadow: 0 0 30px #EC322880; }
-}
-
-@keyframes sphere-spin {
-  from { transform: rotate(0deg) scale(1); }
-  25%  { transform: rotate(90deg) scale(1.08); }
-  50%  { transform: rotate(180deg) scale(1); }
-  75%  { transform: rotate(270deg) scale(1.08); }
-  to   { transform: rotate(360deg) scale(1); }
-}
-
-.rainbow-sphere {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  animation: rainbow-morph 2.5s ease-in-out infinite, sphere-spin 1.8s ease-in-out infinite;
-}
-
 /* Small inline rainbow spinner for save/action loading */
 @keyframes rainbow-ring {
   0%   { border-color: #EC3228 transparent #EC322840 transparent; }
@@ -117,7 +92,6 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .rainbow-sphere { animation: none; }
   .rainbow-spinner { animation: spin 0.8s linear infinite; }
 }
 
@@ -199,14 +173,6 @@ body {
 .schedule-row:hover::after {
   background-color: rgba(0,0,0,0.04);
 }
-
-/* P3.5 - Density toggle (admin desktop grid) */
-.density-compact .grid > div { padding: 2px !important; }
-.density-compact .grid .p-1\.5 { padding: 4px 6px !important; }
-.density-compact .grid p.font-medium,
-.density-compact .grid p.font-semibold { font-size: 11px !important; line-height: 1.2 !important; }
-.density-compact .grid p.text-xs,
-.density-compact .grid span.text-xs { font-size: 10px !important; }
 
 /* Fix 8c - Screen Reader Only */
 .sr-only {

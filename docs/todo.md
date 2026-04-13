@@ -45,6 +45,12 @@ Post-demo concurrent-admin editing (surfaced 2026-04-12):
 - Employees who had the app open don't see the unpublish flicker (no push, no polling).
 - Options to explore: (a) lightweight lock field in Settings with admin email + timestamp, UI banner "Sarvi is editing W1" on other admins' screens; (b) periodic `getAllData` poll every 30-60s on admin view; (c) both. Revisit only if second admin is added.
 
+Post-demo new-employee welcome email:
+- Trigger: admin creates a new employee via EmployeeFormModal (create flow, not edit)
+- Send welcome email to employee's address: app link (https://rainbow-scheduling.vercel.app), their email as username, initial default password (emp-XXX zero-padded), note that they'll be prompted to change it on first login
+- Include any training handbook / onboarding materials (ask Sarvi post-demo if she has a PDF/doc to attach or link)
+- Admin sender identity: same "OTR Scheduling" MailApp sender used elsewhere
+
 Post-demo payroll aggregator (path 1, pending demo go-ahead):
 - Discovery (JR emailing Sarvi): Counterpoint export format? ADP upload format? Employee ID consistency across 3 systems? Bonus logic (formulaic vs ad-hoc)?
 - Feature: pay-period reconciliation view (scheduled vs actual, PTO lines, OT flags at ESA 40/44hr)
@@ -53,13 +59,13 @@ Post-demo payroll aggregator (path 1, pending demo go-ahead):
 - Counterpoint actuals ingestion (format TBD from discovery)
 
 Existing up-next preserved:
-- Post-demo: revisit density toggle CSS scope — broad `.density-compact .grid` selector may catch unintended grids
 - Post-demo: evaluate mobile bottom nav active states on deep-linked URLs if introduced
 - Code.gs deploy (manual - paste updated Code.gs to Apps Script) — required for S36
 - Professional sender email (dedicated Google Workspace account)
 
 ### Done
 
+- [2026-04-12] S41.6 Compact density toggle ripped. Was UX Phase 9 MVP (`.density-compact` CSS targeted `.grid` padding + text sizes). Only shrank a few cells marginally; not pulling weight vs. the toolbar slot it took. Removed: `adminDensity` state + localStorage persist + `useEffect`, both toggle buttons (L3105-3143), `density-${adminDensity}` class on schedule grid wrapper, and the 6 `.density-compact` CSS rules from index.css. Build PASS.
 - [2026-04-12] S41.1 Backend `callerEmail` audit + fix (Code.gs v2.16). Every protected handler previously destructured `callerEmail` from payload for business logic (ownership checks, filters, sheet writes). S37 stripped it frontend-side and `apiCall` only auto-injects `token` — so these reads returned `undefined` in prod, silently breaking request submit/approve/deny/revoke/cancel across time-off, offers, swaps + `getMyRequests`/`getIncoming*`. Fix: drop `callerEmail` from payload destructure, add `const callerEmail = auth.employee.email;` after the verifyAuth guard. `changePassword` now also runs verifyAuth (previously relied on derived payload callerEmail). Build PASS. REQUIRES Apps Script manual deploy before 2026-04-14 demo — live is v2.14 and has the bug.
 - [2026-04-12] S41.5 Time-off overlap + submit feedback. Backend v2.18: `submitTimeOffRequest` overlap filter now includes `status=='approved'` (previously pending-only). Blocks duplicate bookings for already-approved dates with error `ALREADY_SCHEDULED_OFF`. Frontend `RequestDaysOffModal` calendar grays out approved-off days (green dot + legend) in addition to scheduled-work days. All 3 employee submit handlers (time-off, offer, swap) wrapped with `guardedMutation` so the 'saving' toast shows instantly during the 2-3s round-trip; success toasts now include destination ("Sarvi has been notified", "waiting for recipient response"). REQUIRES Apps Script deploy v2.18.
 - [2026-04-12] S41.4 Employee mobile Alerts bottom sheet. Alerts tab in bottom-nav now always opens a sheet (previously silently did nothing when no announcement). Sheet surfaces: current announcement + feed of terminal status changes on the employee's own requests in the last 14 days (approved/denied/revoked/rejected/cancelled for time-off, offers, swaps). Badge on the tab when announcement exists OR new activity since last open; opening the sheet marks the feed as seen (localStorage per-user key). `MobileAlertsSheet` + `computeAlertItems` exported from `MobileEmployeeView.jsx`. Wired in `src/views/EmployeeView.jsx`. Build PASS.

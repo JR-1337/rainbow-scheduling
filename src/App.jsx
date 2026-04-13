@@ -108,7 +108,7 @@ export const StaffingBar = ({ scheduled, target }) => {
   );
 };
 
-// Fix 6 - Skeleton loading grid (replaces rainbow sphere for main app loading)
+// Fix 6 - Skeleton loading grid
 export const ScheduleSkeleton = () => (
   <div className="p-4" style={{ maxWidth: '1200px', margin: '0 auto' }}>
     <div className="flex gap-2 mb-4">
@@ -1064,14 +1064,6 @@ export default function App() {
   const [editModeByPeriod, setEditModeByPeriod] = useState({});
   const [publishedShifts, setPublishedShifts] = useState({});
   const [scheduleSaving, setScheduleSaving] = useState(false); // True while batch saving shifts
-  // P3.5 - Density toggle (admin desktop) - persists across reloads
-  const [adminDensity, setAdminDensity] = useState(() => {
-    if (typeof localStorage === 'undefined') return 'comfortable';
-    return localStorage.getItem('otr-density') || 'comfortable';
-  });
-  useEffect(() => {
-    if (typeof localStorage !== 'undefined') localStorage.setItem('otr-density', adminDensity);
-  }, [adminDensity]);
   const [staffingTargets, setStaffingTargets] = useState(DEFAULT_STAFFING_TARGETS);
   const [storeHoursOverrides, setStoreHoursOverrides] = useState({}); // { "2026-02-14": { open: "10:00", close: "21:00" } }
   const [staffingTargetOverrides, setStaffingTargetOverrides] = useState({}); // { "2026-02-14": 12 }
@@ -1157,6 +1149,16 @@ export default function App() {
   const [shiftOffers, setShiftOffers] = useState([]);
   const [shiftSwaps, setShiftSwaps] = useState([]);
   const [adminRequestModalOpen, setAdminRequestModalOpen] = useState(false);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  const adminMenuRef = useRef(null);
+  useEffect(() => {
+    if (!adminMenuOpen) return;
+    const onDoc = (e) => { if (adminMenuRef.current && !adminMenuRef.current.contains(e.target)) setAdminMenuOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setAdminMenuOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [adminMenuOpen]);
   const [adminDaysOffModalOpen, setAdminDaysOffModalOpen] = useState(false);
   const [autoPopulateConfirm, setAutoPopulateConfirm] = useState(null); // { type: 'populate-all' | 'populate-week' | 'clear-week' | 'clear-all', employee?: obj, week?: 1|2 }
   
@@ -1174,9 +1176,9 @@ export default function App() {
     }
   };
   
-  // Reset pay period to current (0) when user changes
+  // Reset pay period to current when user changes
   useEffect(() => {
-    setPeriodIndex(0);
+    setPeriodIndex(CURRENT_PERIOD_INDEX);
   }, [currentUser?.id]);
 
   // S37: auto-bounce to login on AUTH_EXPIRED / AUTH_INVALID from any apiCall.
@@ -2598,7 +2600,10 @@ export default function App() {
         <header className="sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: 'none', zIndex: 100 }}>
           {/* Row 1: Centered RAINBOW logo (hamburger removed - bottom nav "More" owns the drawer) */}
           <div className="flex items-center justify-center px-3 pt-3 pb-2" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>
-            <span className="tracking-[0.2em] font-semibold" style={{ color: THEME.text.primary, fontSize: '14px' }}>RAINBOW</span>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ color: THEME.text.muted, fontSize: '8px', letterSpacing: '0.2em' }}>OVER THE</p>
+              <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '16px', letterSpacing: '0.12em', lineHeight: 1 }}>RAINBOW</p>
+            </div>
           </div>
 
           {/* Row 2: Period nav centered */}
@@ -3084,13 +3089,10 @@ export default function App() {
             )}
           </div>
           
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             {published && !unsaved && <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: THEME.status.success + '20', color: THEME.status.success }}><Check size={10} />Published</span>}
-            <TooltipButton tooltip="Add Employee" onClick={() => { setEditingEmp(null); setEmpFormOpen(true); }}><User size={12} /></TooltipButton>
-            <div className="relative">
-              <TooltipButton tooltip="Manage Staff" onClick={() => setInactivePanelOpen(true)}><Users size={12} /></TooltipButton>
-              {inactiveCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-xs flex items-center justify-center" style={{ backgroundColor: THEME.status.warning, color: '#000', fontSize: '10px' }}>{inactiveCount}</span>}
-            </div>
+
+            {/* Primary operations: Export + Publish */}
             <div className="relative">
               <TooltipButton tooltip={currentAnnouncement?.message ? "Export PDF (includes announcement)" : "Export PDF"} onClick={() => generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement, timeOffRequests)}><FileText size={12} /></TooltipButton>
               {currentAnnouncement?.message && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full" style={{ backgroundColor: THEME.accent.blue }} />}
@@ -3099,51 +3101,7 @@ export default function App() {
               <TooltipButton tooltip={currentAnnouncement?.message ? "Email Schedules (includes announcement)" : "Email Schedules"} variant="primary" onClick={() => { haptic(); setEmailOpen(true); }}><Mail size={12} />Publish</TooltipButton>
               {currentAnnouncement?.message && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full" style={{ backgroundColor: THEME.accent.blue }} />}
             </div>
-            
-            <div className="w-px h-6 mx-1" style={{ backgroundColor: THEME.border.default }} />
 
-            {/* Density toggle (P3.5) */}
-            <div className="flex rounded-md overflow-hidden" role="group" aria-label="Grid density" style={{ border: `1px solid ${THEME.border.default}` }}>
-              <button
-                onClick={() => { haptic(); setAdminDensity('comfortable'); }}
-                aria-label="Comfortable density"
-                aria-pressed={adminDensity === 'comfortable'}
-                title="Comfortable"
-                className="px-2 py-1 flex items-center justify-center"
-                style={{
-                  backgroundColor: adminDensity === 'comfortable' ? THEME.accent.blue + '25' : 'transparent',
-                  color: adminDensity === 'comfortable' ? THEME.accent.blue : THEME.text.muted,
-                  minWidth: 32, minHeight: 28
-                }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <div style={{ width: 12, height: 2, backgroundColor: 'currentColor', borderRadius: 1 }} />
-                  <div style={{ width: 12, height: 2, backgroundColor: 'currentColor', borderRadius: 1 }} />
-                </div>
-              </button>
-              <button
-                onClick={() => { haptic(); setAdminDensity('compact'); }}
-                aria-label="Compact density"
-                aria-pressed={adminDensity === 'compact'}
-                title="Compact"
-                className="px-2 py-1 flex items-center justify-center"
-                style={{
-                  backgroundColor: adminDensity === 'compact' ? THEME.accent.blue + '25' : 'transparent',
-                  color: adminDensity === 'compact' ? THEME.accent.blue : THEME.text.muted,
-                  minWidth: 32, minHeight: 28,
-                  borderLeft: `1px solid ${THEME.border.default}`
-                }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <div style={{ width: 12, height: 1.5, backgroundColor: 'currentColor', borderRadius: 1 }} />
-                  <div style={{ width: 12, height: 1.5, backgroundColor: 'currentColor', borderRadius: 1 }} />
-                  <div style={{ width: 12, height: 1.5, backgroundColor: 'currentColor', borderRadius: 1 }} />
-                </div>
-              </button>
-            </div>
-
-            <TooltipButton tooltip="Admin Settings" onClick={() => setSettingsOpen(true)}><Settings size={12} /></TooltipButton>
-            
             {/* Admin's own time off request */}
             <button
               onClick={() => setAdminRequestModalOpen(true)}
@@ -3152,22 +3110,56 @@ export default function App() {
               title="Submit your own shift change request"
             >
               <Calendar size={12} />
-              Shift Changes
+              My Requests
             </button>
-            
-            <div className="flex items-center gap-2">
-              <div className="text-right">
-                <p className="text-xs font-medium flex items-center gap-1" style={{ color: THEME.text.primary }}>
-                  <Shield size={10} style={{ color: currentUser.isOwner ? THEME.accent.cyan : THEME.accent.purple }} />
-                  {currentUser.name}
-                </p>
-                <p className="text-xs" style={{ color: currentUser.isOwner ? THEME.accent.cyan : THEME.text.muted }}>
-                  {currentUser.isOwner ? 'Owner' : 'Admin'}
-                </p>
-              </div>
-              <button onClick={() => { clearAuth(); setCurrentUser(null); }} className="p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }} title="Sign Out">
-                <LogOut size={14} />
+
+            {/* Account / admin menu — collapses Add Employee, Manage Staff, Settings, Sign Out */}
+            <div className="relative" ref={adminMenuRef}>
+              <button
+                onClick={() => setAdminMenuOpen(v => !v)}
+                className="flex items-center gap-2 pl-1.5 pr-2 py-1 rounded-lg transition-colors"
+                style={{ backgroundColor: adminMenuOpen ? THEME.bg.tertiary : 'transparent' }}
+                aria-haspopup="menu"
+                aria-expanded={adminMenuOpen}
+                title="Account menu"
+              >
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold" style={{ backgroundColor: `var(--accent-color, ${THEME.accent.purple})`, color: '#fff' }}>
+                  {(currentUser.name || '?').slice(0, 1).toUpperCase()}
+                </div>
+                <div className="text-right leading-tight">
+                  <p className="text-xs font-medium flex items-center gap-1" style={{ color: THEME.text.primary }}>
+                    <Shield size={10} style={{ color: currentUser.isOwner ? THEME.accent.cyan : THEME.accent.purple }} />
+                    {currentUser.name}
+                  </p>
+                  <p className="text-xs" style={{ color: currentUser.isOwner ? THEME.accent.cyan : THEME.text.muted }}>
+                    {currentUser.isOwner ? 'Owner' : 'Admin'}
+                  </p>
+                </div>
+                {inactiveCount > 0 && !adminMenuOpen && (
+                  <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center" style={{ backgroundColor: THEME.status.warning, color: '#000', fontSize: '10px' }}>{inactiveCount}</span>
+                )}
               </button>
+              {adminMenuOpen && (
+                <div role="menu" className="absolute right-0 mt-1 w-56 rounded-xl overflow-hidden z-50" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, boxShadow: THEME.shadow.card }}>
+                  <button role="menuitem" onClick={() => { setAdminMenuOpen(false); setEditingEmp(null); setEmpFormOpen(true); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.text.primary }}>
+                    <User size={14} style={{ color: THEME.text.secondary }} />
+                    Add Employee
+                  </button>
+                  <button role="menuitem" onClick={() => { setAdminMenuOpen(false); setInactivePanelOpen(true); }} className="w-full flex items-center justify-between gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.text.primary }}>
+                    <span className="flex items-center gap-2"><Users size={14} style={{ color: THEME.text.secondary }} />Manage Staff</span>
+                    {inactiveCount > 0 && <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center" style={{ backgroundColor: THEME.status.warning, color: '#000', fontSize: '10px' }}>{inactiveCount}</span>}
+                  </button>
+                  <button role="menuitem" onClick={() => { setAdminMenuOpen(false); setSettingsOpen(true); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.text.primary }}>
+                    <Settings size={14} style={{ color: THEME.text.secondary }} />
+                    Admin Settings
+                  </button>
+                  <div className="h-px mx-2" style={{ backgroundColor: THEME.border.subtle }} />
+                  <button role="menuitem" onClick={() => { setAdminMenuOpen(false); clearAuth(); setCurrentUser(null); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.status.error }}>
+                    <LogOut size={14} />
+                    Sign Out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -3319,7 +3311,7 @@ export default function App() {
               )}
               
               {/* Schedule grid */}
-              <div className={`rounded-b-xl rounded-tr-xl overflow-visible relative density-${adminDensity}`} style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderTop: 'none', zIndex: 1, boxShadow: THEME.shadow.card }}>
+              <div className="rounded-b-xl rounded-tr-xl overflow-visible relative" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderTop: 'none', zIndex: 1, boxShadow: THEME.shadow.card }}>
                 <div className="grid gap-px" style={{ gridTemplateColumns: '140px repeat(7, 1fr)', backgroundColor: THEME.border.subtle }}>
                   <div className="p-1.5" style={{ backgroundColor: THEME.bg.tertiary }}><span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>Employee</span></div>
                   {currentDates.map((date, i) => {
