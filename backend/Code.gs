@@ -2,7 +2,17 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.16 (S41: handlers derive callerEmail from verifyAuth, not payload)
+ * Version: 2.17 (S41.3: passwordChanged flag replaces emp-XXX regex for default-pw detection)
+ *
+ * Changes in v2.17:
+ * - New optional Employees column: passwordChanged (TRUE/FALSE). Set to TRUE
+ *   when a user changes their own password, FALSE when an admin resets it.
+ *   login reads it as the source of truth for usingDefaultPassword; falls back
+ *   to the emp-XXX regex only when the field is missing (back-compat).
+ *   Fixes the S36/S37 bug where a user who chose a new password matching the
+ *   emp-XXX default pattern kept getting re-prompted to change it.
+ *   Manual step: add "passwordChanged" column T to Employees sheet; leave
+ *   blank for existing users — will auto-populate on their next change.
  *
  * Changes in v2.16:
  * - All protected handlers: dropped `callerEmail` from payload destructure and
@@ -520,7 +530,16 @@ function login(payload) {
 
   const { password: _pw, passwordHash: _ph, passwordSalt: _ps, _rowIndex, ...safeEmployee } = employee;
 
-  const usingDefaultPassword = String(employee.id) === pwStr || /^emp-\d{3}$/.test(pwStr);
+  // S41.3: passwordChanged flag is authoritative when present. Otherwise fall
+  // back to the pattern-based check so sheets without the column still work.
+  let usingDefaultPassword;
+  if (employee.passwordChanged === true || String(employee.passwordChanged).toUpperCase() === 'TRUE') {
+    usingDefaultPassword = false;
+  } else if (employee.passwordChanged === false || String(employee.passwordChanged).toUpperCase() === 'FALSE') {
+    usingDefaultPassword = true;
+  } else {
+    usingDefaultPassword = String(employee.id) === pwStr || /^emp-\d{3}$/.test(pwStr);
+  }
 
   return {
     success: true,
@@ -592,13 +611,18 @@ function changePassword(payload) {
   }
 
   // S36: store hash + salt for the new password and clear the plaintext column.
+  // S41.3: mark passwordChanged=true when the user changes their OWN password so
+  // login stops showing the default-password prompt even if the chosen password
+  // happens to match the emp-XXX pattern.
   const salt = generateSalt_();
   const hash = hashPassword_(salt, String(newPassword));
-  updateRow(CONFIG.TABS.EMPLOYEES, employee._rowIndex, {
+  const updates = {
     password: '',
     passwordHash: hash,
     passwordSalt: salt
-  });
+  };
+  if (emailToChange === callerEmail) updates.passwordChanged = true;
+  updateRow(CONFIG.TABS.EMPLOYEES, employee._rowIndex, updates);
 
   return { success: true, data: { message: 'Password changed successfully' } };
 }
@@ -626,10 +650,12 @@ function resetPassword(payload) {
 
   // S36: admin reset writes plaintext (so admin UI can display it) and clears any
   // existing hash/salt — next login will re-migrate to hash via the dual-check path.
+  // S41.3: clear passwordChanged so the user gets the default-password prompt again.
   updateRow(CONFIG.TABS.EMPLOYEES, employee._rowIndex, {
     password: newPassword,
     passwordHash: '',
-    passwordSalt: ''
+    passwordSalt: '',
+    passwordChanged: false
   });
 
   return { success: true, data: { message: `Password reset to ${newPassword} for ${employee.name}`, newPassword } };
@@ -1946,7 +1972,7 @@ function createEmployeesTab(ss) {
   if (!sheet) sheet = ss.insertSheet(TAB_NAME);
   sheet.clear();
 
-  const headers = ['id', 'name', 'email', 'password', 'phone', 'address', 'dob', 'active', 'isAdmin', 'isOwner', 'showOnSchedule', 'deleted', 'availability', 'counterPointId', 'adpNumber', 'rateOfPay', 'employmentType'];
+  const headers = ['id', 'name', 'email', 'password', 'phone', 'address', 'dob', 'active', 'isAdmin', 'isOwner', 'showOnSchedule', 'deleted', 'availability', 'counterPointId', 'adpNumber', 'rateOfPay', 'employmentType', 'passwordHash', 'passwordSalt', 'passwordChanged'];
   const avail = JSON.stringify({
     sunday: { available: true, start: '11:00', end: '18:00' },
     monday: { available: true, start: '11:00', end: '18:00' },
@@ -1959,13 +1985,13 @@ function createEmployeesTab(ss) {
 
   const data = [
     headers,
-    ['emp-owner', 'JR', 'johnrichmond007@gmail.com', 'emp-owner', '', '', '', true, true, true, false, false, avail, '', '', '', ''],
-    ['emp-admin-1', 'Sarvi', 'sarvi@rainbowjeans.com', 'emp-admin-1', '', '', '', true, true, false, false, false, avail, '', '', '', 'full-time'],
-    ['emp-1', 'Emma Wilson', 'emma@example.com', 'emp-1', '', '', '', false, false, false, true, false, avail, '', '', '17.50', 'part-time'],
-    ['emp-2', 'Liam Chen', 'liam@example.com', 'emp-2', '', '', '', false, false, false, true, false, avail, '', '', '17.50', 'part-time'],
-    ['emp-3', 'Olivia Martinez', 'olivia@example.com', 'emp-3', '', '', '', false, false, false, true, false, avail, '', '', '17.50', 'part-time'],
-    ['emp-4', 'Noah Patel', 'noah@example.com', 'emp-4', '', '', '', false, false, false, true, false, avail, '', '', '17.50', 'part-time'],
-    ['emp-5', 'Ava Thompson', 'ava@example.com', 'emp-5', '', '', '', false, false, false, true, false, avail, '', '', '17.50', 'part-time']
+    ['emp-owner', 'JR', 'johnrichmond007@gmail.com', 'emp-owner', '', '', '', true, true, true, false, false, avail, '', '', '', '', '', '', ''],
+    ['emp-admin-1', 'Sarvi', 'sarvi@rainbowjeans.com', 'emp-admin-1', '', '', '', true, true, false, false, false, avail, '', '', '', 'full-time', '', '', ''],
+    ['emp-1', 'Emma Wilson', 'emma@example.com', 'emp-1', '', '', '', false, false, false, true, false, avail, '', '', '17.50', 'part-time', '', '', ''],
+    ['emp-2', 'Liam Chen', 'liam@example.com', 'emp-2', '', '', '', false, false, false, true, false, avail, '', '', '17.50', 'part-time', '', '', ''],
+    ['emp-3', 'Olivia Martinez', 'olivia@example.com', 'emp-3', '', '', '', false, false, false, true, false, avail, '', '', '17.50', 'part-time', '', '', ''],
+    ['emp-4', 'Noah Patel', 'noah@example.com', 'emp-4', '', '', '', false, false, false, true, false, avail, '', '', '17.50', 'part-time', '', '', ''],
+    ['emp-5', 'Ava Thompson', 'ava@example.com', 'emp-5', '', '', '', false, false, false, true, false, avail, '', '', '17.50', 'part-time', '', '', '']
   ];
 
   sheet.getRange(1, 1, data.length, headers.length).setValues(data);

@@ -9,7 +9,7 @@ import {
   haptic,
   CURRENT_PERIOD_INDEX, Logo, TaskStarTooltip,
 } from '../App';
-import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet } from '../MobileEmployeeView';
+import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet, MobileAlertsSheet, computeAlertItems } from '../MobileEmployeeView';
 import { MyShiftOffersPanel } from '../panels/MyShiftOffersPanel';
 import { MySwapsPanel } from '../panels/MySwapsPanel';
 import { MyRequestsPanel } from '../panels/MyRequestsPanel';
@@ -128,6 +128,17 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileAnnouncementOpen, setMobileAnnouncementOpen] = useState(false);
+  const [mobileAlertsOpen, setMobileAlertsOpen] = useState(false);
+  // S41.4: track when the user last opened the alerts sheet so we can badge new items
+  const ALERTS_SEEN_KEY = `otr-alerts-last-seen-${currentUser?.email || 'anon'}`;
+  const [alertsLastSeenAt, setAlertsLastSeenAt] = useState(() => {
+    try { return Number(localStorage.getItem(ALERTS_SEEN_KEY) || 0); } catch { return 0; }
+  });
+  const markAlertsSeen = useCallback(() => {
+    const now = Date.now();
+    setAlertsLastSeenAt(now);
+    try { localStorage.setItem(ALERTS_SEEN_KEY, String(now)); } catch {}
+  }, [ALERTS_SEEN_KEY]);
   const [mobileActiveTab, setMobileActiveTab] = useState('week1'); // 'week1' | 'week2' | 'my-schedule'
   const [mobileShiftDetail, setMobileShiftDetail] = useState(null); // Phase 10: shift detail bottom sheet
   
@@ -284,6 +295,12 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
     
     // Total notification count for hamburger badge
     const totalNotifications = unseenTimeOffIds.length + unseenOfferIds.length + unseenReceivedOfferIds.length + unseenSwapIds.length + unseenReceivedSwapIds.length;
+
+    // S41.4: alerts-tab badge — true if announcement present, OR any alert item
+    // arrived after the user last opened the alerts sheet.
+    const alertItemsForBadge = computeAlertItems(currentUser, timeOffRequests, shiftOffers, shiftSwaps);
+    const hasUnseenAlerts = alertItemsForBadge.some(item => new Date(item.t).getTime() > alertsLastSeenAt);
+    const alertsBadge = hasAnnouncement || hasUnseenAlerts;
     
     return (
       <div className="min-h-screen" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }}>
@@ -512,21 +529,33 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
 
         {/* Bottom Tab Bar (Phase 6) */}
         <MobileBottomNav
-          activeTab={mobileMenuOpen ? 'more' : mobileAnnouncementOpen ? 'alerts' : requestModalOpen ? 'requests' : 'schedule'}
-          hasNotifications={hasAnnouncement || totalNotifications > 0}
+          activeTab={mobileMenuOpen ? 'more' : mobileAlertsOpen ? 'alerts' : requestModalOpen ? 'requests' : 'schedule'}
+          hasNotifications={alertsBadge || totalNotifications > 0}
           onTabChange={(tab) => {
             if (tab === 'schedule') {
               setMobileMenuOpen(false);
-              setMobileAnnouncementOpen(false);
+              setMobileAlertsOpen(false);
               setRequestModalOpen(false);
             } else if (tab === 'requests') {
               setRequestModalOpen(true);
             } else if (tab === 'alerts') {
-              if (hasAnnouncement) setMobileAnnouncementOpen(true);
+              setMobileAlertsOpen(true);
             } else if (tab === 'more') {
               setMobileMenuOpen(true);
             }
           }}
+        />
+
+        {/* S41.4: Alerts bottom sheet — replaces the old announcement-only popup path */}
+        <MobileAlertsSheet
+          isOpen={mobileAlertsOpen}
+          onClose={() => setMobileAlertsOpen(false)}
+          currentUser={currentUser}
+          announcement={hasAnnouncement ? announcement : null}
+          timeOffRequests={timeOffRequests}
+          shiftOffers={shiftOffers}
+          shiftSwaps={shiftSwaps}
+          onOpened={markAlertsSeen}
         />
 
         {/* Shift Detail Bottom Sheet (Phase 10) */}

@@ -6,9 +6,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { 
-  ChevronLeft, ChevronRight, X, Calendar, Star, Eye, LogOut, Shield, 
-  Loader, ArrowRightLeft, ArrowRight, Bell, Menu, Key 
+import {
+  ChevronLeft, ChevronRight, X, Calendar, Star, Eye, LogOut, Shield,
+  Loader, ArrowRightLeft, ArrowRight, Bell, Menu, Key, Check, MessageSquare, Ban
 } from 'lucide-react';
 
 import {
@@ -579,5 +579,151 @@ export const MobileBottomSheet = ({ isOpen, onClose, title, children }) => {
         </div>
       </div>
     </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// S41.4 — ALERTS BOTTOM SHEET (announcement + recent activity)
+// Collects terminal status changes on the employee's own requests from the last
+// 14 days and renders them as a feed. Opening marks the feed as seen.
+// ═══════════════════════════════════════════════════════════════════════════════
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
+export const computeAlertItems = (currentUser, timeOffRequests = [], shiftOffers = [], shiftSwaps = []) => {
+  if (!currentUser?.email) return [];
+  const me = currentUser.email;
+  const now = Date.now();
+  const withinWindow = (t) => t && (now - new Date(t).getTime() <= FOURTEEN_DAYS_MS);
+  const out = [];
+
+  timeOffRequests.forEach(r => {
+    if (r.employeeEmail !== me) return;
+    if (!['approved', 'denied', 'revoked'].includes(r.status)) return;
+    const t = r.revokedTimestamp || r.decidedTimestamp;
+    if (!withinWindow(t)) return;
+    out.push({ t, kind: 'time-off', status: r.status, id: r.requestId, datesRequested: r.datesRequested, reason: r.reason });
+  });
+
+  shiftOffers.forEach(o => {
+    const isMine = o.employeeEmail === me || o.offererEmail === me;
+    const toMe = o.recipientEmail === me;
+    if (!isMine && !toMe) return;
+    if (!['approved', 'rejected', 'revoked', 'recipient_rejected', 'cancelled'].includes(o.status)) return;
+    const t = o.revokedTimestamp || o.adminDecidedTimestamp || o.decidedTimestamp || o.recipientRespondedTimestamp || o.cancelledTimestamp;
+    if (!withinWindow(t)) return;
+    out.push({ t, kind: 'offer', status: o.status, id: o.requestId || o.offerId, direction: isMine ? 'sent' : 'received', shiftDate: o.shiftDate, otherName: isMine ? o.recipientName : (o.employeeName || o.offererName) });
+  });
+
+  shiftSwaps.forEach(s => {
+    const isMine = s.employeeEmail === me || s.initiatorEmail === me;
+    const toMe = s.partnerEmail === me;
+    if (!isMine && !toMe) return;
+    if (!['approved', 'rejected', 'revoked', 'partner_rejected', 'cancelled'].includes(s.status)) return;
+    const t = s.revokedTimestamp || s.adminDecidedTimestamp || s.decidedTimestamp || s.partnerRespondedTimestamp;
+    if (!withinWindow(t)) return;
+    out.push({ t, kind: 'swap', status: s.status, id: s.requestId || s.swapId, direction: isMine ? 'sent' : 'received', otherName: isMine ? s.partnerName : (s.employeeName || s.initiatorName) });
+  });
+
+  return out.sort((a, b) => new Date(b.t) - new Date(a.t));
+};
+
+const statusCopy = (item) => {
+  if (item.kind === 'time-off') {
+    const dates = (item.datesRequested || '').split(',').filter(Boolean);
+    const dateStr = dates.length === 1 ? dates[0] : `${dates.length} days`;
+    if (item.status === 'approved') return { title: `Time off approved`, detail: dateStr, color: THEME.status.success, Icon: Check };
+    if (item.status === 'denied') return { title: `Time off denied`, detail: dateStr, color: THEME.status.error, Icon: X };
+    if (item.status === 'revoked') return { title: `Time off approval revoked`, detail: dateStr, color: THEME.status.warning, Icon: Ban };
+  }
+  if (item.kind === 'offer') {
+    const who = item.otherName || 'someone';
+    if (item.status === 'approved') return { title: `Shift transfer approved`, detail: item.direction === 'sent' ? `To ${who} — ${item.shiftDate || ''}` : `From ${who} — ${item.shiftDate || ''}`, color: THEME.status.success, Icon: Check };
+    if (item.status === 'rejected') return { title: `Shift transfer rejected by admin`, detail: item.direction === 'sent' ? `To ${who}` : `From ${who}`, color: THEME.status.error, Icon: X };
+    if (item.status === 'recipient_rejected') return { title: item.direction === 'sent' ? `${who} declined your offer` : `You declined this offer`, detail: item.shiftDate || '', color: THEME.status.error, Icon: X };
+    if (item.status === 'revoked') return { title: `Shift transfer revoked`, detail: item.direction === 'sent' ? `To ${who}` : `From ${who}`, color: THEME.status.warning, Icon: Ban };
+    if (item.status === 'cancelled') return { title: `Offer cancelled`, detail: item.direction === 'sent' ? `To ${who}` : `From ${who}`, color: THEME.text.muted, Icon: X };
+  }
+  if (item.kind === 'swap') {
+    const who = item.otherName || 'someone';
+    if (item.status === 'approved') return { title: `Shift swap approved`, detail: `With ${who}`, color: THEME.status.success, Icon: Check };
+    if (item.status === 'rejected') return { title: `Shift swap rejected by admin`, detail: `With ${who}`, color: THEME.status.error, Icon: X };
+    if (item.status === 'partner_rejected') return { title: item.direction === 'sent' ? `${who} declined your swap` : `You declined this swap`, detail: '', color: THEME.status.error, Icon: X };
+    if (item.status === 'revoked') return { title: `Shift swap revoked`, detail: `With ${who}`, color: THEME.status.warning, Icon: Ban };
+    if (item.status === 'cancelled') return { title: `Swap cancelled`, detail: `With ${who}`, color: THEME.text.muted, Icon: X };
+  }
+  return { title: 'Update', detail: '', color: THEME.text.muted, Icon: Bell };
+};
+
+const relativeTime = (t) => {
+  const diff = Date.now() - new Date(t).getTime();
+  const mins = Math.round(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+export const MobileAlertsSheet = ({ isOpen, onClose, currentUser, announcement, timeOffRequests = [], shiftOffers = [], shiftSwaps = [], onOpened }) => {
+  const items = useMemo(
+    () => computeAlertItems(currentUser, timeOffRequests, shiftOffers, shiftSwaps),
+    [currentUser, timeOffRequests, shiftOffers, shiftSwaps]
+  );
+  const hasAnnouncement = !!(announcement && announcement.message);
+
+  useEffect(() => {
+    if (isOpen && onOpened) onOpened();
+  }, [isOpen, onOpened]);
+
+  return (
+    <MobileBottomSheet isOpen={isOpen} onClose={onClose} title="Alerts">
+      {hasAnnouncement && (
+        <div className="mb-3 p-3 rounded-lg" style={{ backgroundColor: THEME.accent.blue + '10', border: `1px solid ${THEME.accent.blue}40` }}>
+          <div className="flex items-center gap-2 mb-1">
+            <MessageSquare size={14} style={{ color: THEME.accent.blue }} />
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: THEME.accent.blue }}>Announcement</span>
+          </div>
+          {announcement.subject && (
+            <p className="text-sm font-semibold mb-1" style={{ color: THEME.text.primary }}>{announcement.subject}</p>
+          )}
+          <p className="text-xs whitespace-pre-wrap" style={{ color: THEME.text.secondary }}>{announcement.message}</p>
+        </div>
+      )}
+
+      <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: THEME.text.muted }}>
+        Recent updates
+      </div>
+      {items.length === 0 ? (
+        <div className="py-6 text-center" style={{ color: THEME.text.muted }}>
+          <Bell size={24} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+          <p className="text-sm">You're all caught up</p>
+          <p className="text-xs mt-1">Status changes on your requests will appear here.</p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {items.map(item => {
+            const { title, detail, color, Icon } = statusCopy(item);
+            return (
+              <li
+                key={`${item.kind}-${item.id}-${item.t}`}
+                className="p-3 rounded-lg flex items-start gap-3"
+                style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${color}30` }}
+              >
+                <div className="p-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color + '20' }}>
+                  <Icon size={14} style={{ color }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: THEME.text.primary }}>{title}</p>
+                  {detail && <p className="text-xs mt-0.5" style={{ color: THEME.text.muted }}>{detail}</p>}
+                </div>
+                <span className="text-xs flex-shrink-0" style={{ color: THEME.text.muted }}>{relativeTime(item.t)}</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </MobileBottomSheet>
   );
 };

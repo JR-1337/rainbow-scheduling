@@ -15,7 +15,8 @@ Pre-demo (before 2026-04-14):
 Manual deploy steps (required before post-demo security code runs in prod):
 - Add `passwordHash` + `passwordSalt` columns (R + S) to Employees sheet
 - Set `HMAC_SECRET` (32 random bytes base64) in Apps Script > Project Settings > Script Properties
-- Paste backend/Code.gs **v2.16** into Apps Script editor + Deploy > New Deployment (replace current active URL or keep URL via "Manage Deployments > Edit"). **BLOCKS DEMO: v2.14 in prod has the S37 callerEmail bug; every request action is broken until v2.16 ships.**
+- Paste backend/Code.gs **v2.17** into Apps Script editor + Deploy > New Deployment (replace current active URL or keep URL via "Manage Deployments > Edit"). **BLOCKS DEMO: v2.14 in prod has the S37 callerEmail bug + the default-password prompt loop; fix requires v2.17.**
+- Add column T `passwordChanged` to Employees sheet header row (TRUE/FALSE, leave blank for existing users)
 
 Post-demo (code landed; awaits manual deploy above):
 - S39.4 DEFERRED: mobile admin branch extraction conflicts with decisions.md 2026-02-10. Unblocks only after admin state moves to a Context provider. See 2026-04-12 decision entry.
@@ -38,6 +39,12 @@ Post-demo Meetings + PK shift types (Sarvi request, post-demo):
 - Visuals: neutral palette (grey/white, NOT role colors). When employee has both a work shift + event the same day → designation marker on the work-shift card. When event-only day → standalone card with neutral border in the grid.
 - UI parity: must match existing shift-editor and card patterns (PDF/email builders, mobile + desktop grids).
 
+Post-demo concurrent-admin editing (surfaced 2026-04-12):
+- Two admins editing the same period race: both Edit → both change → last Go Live wins, silently overwrites other's shifts via batchSaveShifts delete-not-in-payload logic.
+- Edit mode is local-only `editModeByPeriod[periodIndex]`; Go Live / Edit toggle writes to livePeriods but no "who's editing" signal.
+- Employees who had the app open don't see the unpublish flicker (no push, no polling).
+- Options to explore: (a) lightweight lock field in Settings with admin email + timestamp, UI banner "Sarvi is editing W1" on other admins' screens; (b) periodic `getAllData` poll every 30-60s on admin view; (c) both. Revisit only if second admin is added.
+
 Post-demo payroll aggregator (path 1, pending demo go-ahead):
 - Discovery (JR emailing Sarvi): Counterpoint export format? ADP upload format? Employee ID consistency across 3 systems? Bonus logic (formulaic vs ad-hoc)?
 - Feature: pay-period reconciliation view (scheduled vs actual, PTO lines, OT flags at ESA 40/44hr)
@@ -54,6 +61,9 @@ Existing up-next preserved:
 ### Done
 
 - [2026-04-12] S41.1 Backend `callerEmail` audit + fix (Code.gs v2.16). Every protected handler previously destructured `callerEmail` from payload for business logic (ownership checks, filters, sheet writes). S37 stripped it frontend-side and `apiCall` only auto-injects `token` — so these reads returned `undefined` in prod, silently breaking request submit/approve/deny/revoke/cancel across time-off, offers, swaps + `getMyRequests`/`getIncoming*`. Fix: drop `callerEmail` from payload destructure, add `const callerEmail = auth.employee.email;` after the verifyAuth guard. `changePassword` now also runs verifyAuth (previously relied on derived payload callerEmail). Build PASS. REQUIRES Apps Script manual deploy before 2026-04-14 demo — live is v2.14 and has the bug.
+- [2026-04-12] S41.4 Employee mobile Alerts bottom sheet. Alerts tab in bottom-nav now always opens a sheet (previously silently did nothing when no announcement). Sheet surfaces: current announcement + feed of terminal status changes on the employee's own requests in the last 14 days (approved/denied/revoked/rejected/cancelled for time-off, offers, swaps). Badge on the tab when announcement exists OR new activity since last open; opening the sheet marks the feed as seen (localStorage per-user key). `MobileAlertsSheet` + `computeAlertItems` exported from `MobileEmployeeView.jsx`. Wired in `src/views/EmployeeView.jsx`. Build PASS.
+- [2026-04-12] S41.3 Code.gs v2.17: `passwordChanged` flag replaces emp-XXX regex for default-password detection. Fixes the bug where a user who set their new password to match the emp-XXX pattern kept being re-prompted to change it. `login` reads `employee.passwordChanged` as source of truth; falls back to regex only when the field is missing (back-compat). `changePassword` (self-change only) writes `passwordChanged=true`; `resetPassword` writes `false`. Setup script adds column T + `passwordHash`/`passwordSalt` headers. REQUIRES Apps Script manual deploy + column T added to Employees sheet.
+- [2026-04-12] S41.2 Mobile smoke-test fixes: request modals' Submit buttons no longer clipped by bottom nav (paddingBottom with safe-area on outer modal div + flex-col scroll on days-off); admin double-click race on approve/deny/revoke killed via `actionBusyRef` + `guardedMutation` wrapper at App.jsx level — shows 'saving' toast during 2-3s Apps Script round-trip, silently drops the 2nd click; success toasts now reference destination ("moved to Settled history"); swap/offer Submit button gradients unified with days-off (blue→purple) for consistency.
 - [2026-04-12] S40.2 Restore `callerEmail` in `ChangePasswordModal` + `AdminSettingsModal` payloads. S37 dropped it, but backend `changePassword` in Code.gs never got the `verifyAuth(token)` wrapper during S36 — so self-change returned "Employee not found." Back-compat shim identical to the `chunkedBatchSave` case. Caught during S40.1 browser verify.
 - [2026-04-12] S40.3 Hotfix: restore `ROLES` import in `src/views/EmployeeView.jsx`. Trimmed during unused-symbol cleanup but IS used at L414/L730 in function bodies (request-type modal). Vite didn't catch it (lessons.md #30). Prod white-screened ~10 min between `9a052c0` and `2f27662`. Lesson added: don't trust hand-typed "unused" lists.
 - [2026-04-12] S40.1 Extract `EmployeeView` → `src/views/EmployeeView.jsx` (carries `EmployeeViewRow` + `EmployeeScheduleCell`). New App.jsx exports: `CURRENT_PERIOD_INDEX`, `Logo`, `TaskStarTooltip`. App.jsx 4597 → 3664 (-933). Build PASS, preview 200, browser-verified on branch before merge. Final inline extractable view out of App.jsx.
