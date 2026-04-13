@@ -1228,20 +1228,33 @@ export default function App() {
     if (result.success) {
       const { employees: empData, shifts: shiftData, requests } = result.data;
       
-      // Set employees - parse availability JSON string to object
+      // Set employees - parse availability JSON string to object. Any fallback path
+      // MUST return a fully-populated week so `employee.availability[dayName].available`
+      // never reads off undefined (crashes ScheduleCell + blanks the app).
+      const DEFAULT_AVAILABILITY = {
+        sunday: { available: true, start: '11:00', end: '18:00' },
+        monday: { available: true, start: '11:00', end: '18:00' },
+        tuesday: { available: true, start: '11:00', end: '18:00' },
+        wednesday: { available: true, start: '11:00', end: '18:00' },
+        thursday: { available: true, start: '11:00', end: '19:00' },
+        friday: { available: true, start: '11:00', end: '19:00' },
+        saturday: { available: true, start: '11:00', end: '19:00' }
+      };
+      const ensureFullWeek = (av) => {
+        if (!av || typeof av !== 'object') return { ...DEFAULT_AVAILABILITY };
+        const out = { ...DEFAULT_AVAILABILITY };
+        for (const day of Object.keys(DEFAULT_AVAILABILITY)) {
+          if (av[day] && typeof av[day] === 'object') out[day] = av[day];
+        }
+        return out;
+      };
       const parsedEmployees = (empData || []).map(emp => ({
         ...emp,
-        availability: typeof emp.availability === 'string'
-          ? (() => { try { return JSON.parse(emp.availability); } catch { return {}; } })()
-          : emp.availability || {
-              sunday: { available: true, start: '11:00', end: '18:00' },
-              monday: { available: true, start: '11:00', end: '18:00' },
-              tuesday: { available: true, start: '11:00', end: '18:00' },
-              wednesday: { available: true, start: '11:00', end: '18:00' },
-              thursday: { available: true, start: '11:00', end: '19:00' },
-              friday: { available: true, start: '11:00', end: '19:00' },
-              saturday: { available: true, start: '11:00', end: '19:00' }
-            }
+        availability: ensureFullWeek(
+          typeof emp.availability === 'string'
+            ? (() => { try { return JSON.parse(emp.availability); } catch { return null; } })()
+            : emp.availability
+        )
       }));
       setEmployees(parsedEmployees);
       
