@@ -2,6 +2,34 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-13 - Save Path: batchUpdate-only; adaptive fast path rejected
+
+**Decided:** `batchSaveShifts` uses a single `Sheets.Spreadsheets.Values.update` call that rewrites the whole Shifts data area, regardless of payload size. No per-row fast path. `valueInputOption: USER_ENTERED`, `LockService.tryLock(10000)` with a `CONCURRENT_EDIT` error code on collision.
+**Alternatives:** v2.20 adaptive fast path that branched on `actualChangeCount <= 10` to per-row `updateRow`/`appendRow`/`deleteRow` (rejected — Playwright measurement showed Apps Script web-app calls have a ~7-8s fixed overhead per request, so saving ~1s of actual Sheet work via per-row ops is drowned out; no measurable win and added code complexity). Revert to chunked sequential GET writes from v2.18 (rejected — that's where the 20s big-save came from). `Sheets.Spreadsheets.Values.batchGet` for reads on getAllData (tried v2.19/v2.19.1, rejected — FORMATTED_VALUE returns booleans as "TRUE"/"FALSE" strings, FORMATTED_STRING is locale-dependent for date cells, SERIAL_NUMBER needs a column-name list to convert back — every fix added maintenance debt).
+**Rationale:** Tonight's Playwright run measured a no-op save (`shifts:[]`, `periodDates:[]`) at 7-8s and a single-shift save at 9s. Per-call Apps Script overhead dwarfs the per-row vs bulk distinction. Bulk is simpler, same perceived perf, wins cleanly on big saves. Getting sub-5s saves requires leaving Apps Script entirely (CF Worker proxy for reads is planned post-demo; writes stay bound until migration).
+**Revisit if:** Migrated off Apps Script web-app (Cloud Run, direct Sheets API with OAuth, or Supabase). At that point the per-call floor drops and per-row strategies regain relevance.
+
+## 2026-04-13 - CF Worker Proxy as Next Structural Step (post-demo)
+
+**Decided:** Post-demo path 1 is a Cloudflare Worker that proxies frontend → Apps Script with stale-while-revalidate caching on `getAllData` (60s TTL in Workers KV). Writes pass through uncached. Login reads become ~300ms edge-cached globally; Apps Script stays as source of truth; Sarvi's Sheet view preserved; fully reversible by flipping API_URL back.
+**Alternatives:** Tonight-shippable login wins (`loginWithData` combined endpoint + `CacheService` on getAllData payload + pre-warm `ping` on login screen mount) — rejected for tonight because they stack inside Apps Script's overhead floor and become redundant the moment CF Worker ships. Supabase migration (deferred — planned path 2, only when real-time push or audit log becomes a hard requirement, likely with the payroll aggregator initiative). Direct Sheets API from frontend with OAuth-per-user (rejected — loses HMAC session model, loses server-side write validation, and requires every employee to Google-sign-in).
+**Rationale:** Free tier covers 100k req/day (we'd use ~5k). Same pattern as Vercel ISR / Next.js `revalidate`. The measurement that forced this decision: Apps Script web-app floor ~7-8s per call, measured with no-op save. No amount of in-stack optimization can push login under ~10s cold; proxy caching is the only way.
+**Revisit if:** Real-time push or audit log becomes a hard requirement → jump to Supabase (path 2). Or if CF Worker free tier limits bite (extremely unlikely at this scale).
+
+## 2026-04-13 - Welcome Sweep as Top-Level Overlay (Survives Branch Transition)
+
+**Decided:** The welcome sweep `<div className="welcome-sweep">` is rendered as the first child of each post-login return fragment (4 places: isLoadingData, loadError, EmployeeView, isMobileAdmin, main admin desktop). React reconciles it as the same DOM node across branches because it's consistently at child index 0, so the CSS animation continues smoothly across the loading→main transition. The 1000ms artificial `minDelay` in `handleLogin` is removed — data load now resolves as fast as possible, and the sweep overlay plays its full 900ms independently via `position: fixed; inset: 0; z-index: 200` regardless of which branch is mounted underneath.
+**Alternatives:** Keep the sweep only inside the `isLoadingData` branch with the 1000ms minDelay (rejected — min-delay is a hard floor on login even when data arrives faster). Render sweep via `createPortal` to `document.body` (rejected — portals remount if their render position changes across branches). Trigger sweep AFTER dataLoad resolves (rejected — adds 900ms to the critical path). Use a single wrapper component above the branch logic (rejected — the main admin return is 700+ lines; restructuring away from early-returns is invasive).
+**Rationale:** The 2026-04-12 decision calling the sweep "inside the existing 1s min-delay — does not add wait time" was wrong in one direction: the min-delay was the floor, not the ceiling. This refactor preserves the brand moment while removing the floor. Fragment-child-0 positioning gives React enough stability to keep the DOM node across the branch swap; empirically verified in browser that the sweep plays smoothly.
+**Revisit if:** Login path changes shape (e.g., a loginWithData endpoint lands and there's only one post-login branch).
+
+## 2026-04-13 - PROJECT-ROUTING Retired for RAINBOW Only
+
+**Decided:** This project no longer uses `docs/PROJECT-ROUTING.md` or the `~/APPS/BridgingFiles/ROUTING-MASTER.md` cross-project index. File deleted; RAINBOW row dropped from the master. `~/.claude/commands/handoff.md` Step 3c was condition-gated ("only if this file already exists in the project … absence means the project has opted out. Do NOT create one.") so future Sonnet sessions won't recreate it.
+**Alternatives:** Keep PROJECT-ROUTING + update on every session (rejected — RAINBOW is its own island, no cross-project flow with the ATHLETICA/Creative-Partner/Website triangle, so the index was dead weight being dutifully maintained). Strip global handoff rules entirely (rejected — ATHLETICA-STUDIO / Creative-Partner / Website still use routing; can't break them).
+**Rationale:** Absence-of-file is a cleaner opt-out signal than a RAINBOW-specific carve-out in global rules. Other projects unaffected.
+**Revisit if:** RAINBOW ever needs to reference resources in another project (e.g., payroll aggregator pulling from ATHLETICA-STUDIO exercise DB — unlikely).
+
 ## 2026-04-12 - Admin Desktop Header: 4 Visible Actions + Avatar Dropdown
 
 **Decided:** S42 collapsed the admin-desktop right-side toolbar from 7 icon-buttons to 4 surfaces. Visible: Export PDF, Publish, My Requests, avatar dropdown. The avatar button opens a menu containing Add Employee, Manage Staff (with subtle "N inactive" muted-text count, not a yellow badge), Admin Settings, Sign Out. Account menu uses click-outside + Escape to close.
