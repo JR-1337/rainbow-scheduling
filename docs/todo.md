@@ -4,6 +4,7 @@
 
 ### In Progress
 - Demo prep (Phases 1-10 core landed; functional test complete — see `docs/audits/s42-functional-test.md`)
+- **Pitch deck + leave-behinds for 2026-04-14 demo** — S47 build plan APPROVED at `~/.claude/plans/hidden-baking-papert.md`. Format: React app on Vercel (deck) + print-ready PDFs (price sheet + tech spec). Build location: `~/APPS/RAINBOW-PITCH/` (sibling Vite project). Pricing locked: $497/mo + 3-mo fitting trial + post-trial $2K + $125/hr post-trial tweaks. Slide 2 framing locked: cost-of-doing-nothing ($29,120/yr envelope) NOT predicted savings. Next session: scaffold project, build slides 1–7, then /price + /spec routes, deploy. Pending Sarvi inputs (receipt-box photo) noted in plan.
 
 ### Up Next
 
