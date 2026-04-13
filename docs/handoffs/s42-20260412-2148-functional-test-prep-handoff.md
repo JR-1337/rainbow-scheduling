@@ -92,19 +92,28 @@ Cross-cutting:
 - [ ] Focus rings on keyboard nav
 - [ ] Escape closes all modals + the avatar dropdown
 
-### Consistency audit against research files
+### Consistency audit against project conventions
 
-Beyond pass/fail on individual features, compare what you observe against the 5 research docs in [docs/research/](docs/research/). For each flagged inconsistency, record it in the audit as "Research-mismatch" rows.
+Beyond pass/fail on individual features, compare what you observe against the rules we've codified for this project. These are concrete pass/fail checks (unlike raw research, which would invite ambiguous interpretation):
 
-| Research doc | Check for |
-|---|---|
-| [ui-ux-first-principles.md](docs/research/ui-ux-first-principles.md) | Hick's Law (any surface with 7+ visible primary actions?); proximity (are related items grouped or scattered?); data-ink ratio (decorative chrome that doesn't carry info?); progressive disclosure (infrequent actions still visible?); Fitts's Law (small tap targets on mobile < 44px?) |
-| [scheduling-app-ux.md](docs/research/scheduling-app-ux.md) | Shift-grid conventions (color coding consistent?), request lifecycle clarity (pending/approved/denied visually distinct?), employee empathy (can they read their own schedule in 3 seconds?) |
-| [dark-mode-guidelines.md](docs/research/dark-mode-guidelines.md) | Dark-bg contrast issues (anything using dark drop-shadows instead of accent halos?); text-on-accent readability (esp green rotation — Publish button JR accepted, but check others) |
-| [2025-trends.md](docs/research/2025-trends.md) | Anything feeling dated or over-skeuomorphic vs. current web conventions |
-| [app-audit-report.md](docs/research/app-audit-report.md) | Any P0-P3 items from that audit that are still unaddressed |
+- [.claude/rules/conventions.md](.claude/rules/conventions.md) — React, data, backend, password/auth, mutations + feedback, display rules
+- [docs/decisions.md](docs/decisions.md) — non-trivial decisions w/ "Revisit if" gates. Active visual conventions to check at a minimum:
+  - 2026-04-12 Admin desktop header: 4 visible actions + avatar dropdown
+  - 2026-04-12 Welcome sweep on login (full-screen 5-stripe, 900ms)
+  - 2026-04-12 Publish button: hardcoded white text (rotating gradient)
+  - 2026-04-12 Schedule-context toolbar hides on non-schedule destinations
+  - 2026-04-12 Mobile bottom nav active state derived from modal/drawer state
+  - 2026-04-12 OTR accent colors are immutable (5 brand colors only)
+  - 2026-04-12 WCAG contrast via proper calculation (white-vs-navy auto-pick)
+  - 2026-04-12 Card shadows = accent-color halos (no dark drop-shadows)
+- [docs/lessons.md](docs/lessons.md) — correction patterns; any UI element violating one of these is a finding
+- [CLAUDE.md](CLAUDE.md) "Boundaries" — Sheets headers immutable, draft shifts private, ESA compliance
 
-Goal: the app should read as a single designed product, not a collection of features landed at different times. Flag places where the design language drifts.
+Record convention-violations as their own audit rows (separate from broken/rough). Reference the specific rule.
+
+### Optional: research audit (only if conventions audit comes back clean)
+
+If the convention audit yields few findings and there's time, do ONE pass through [docs/research/](docs/research/) (5 files) and write a separate `docs/audits/s42-research-gap.md` flagging any principle from the research that the codified conventions DON'T cover but probably should. This is for JR to decide whether to add to conventions, not for shipping fixes. Skip if conventions audit is already long.
 
 ### Report format
 
