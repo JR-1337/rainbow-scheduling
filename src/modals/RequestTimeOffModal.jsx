@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Calendar, Users, User, X } from 'lucide-react';
 import { THEME, TYPE } from '../theme';
 
 export const RequestTimeOffModal = ({ isOpen, onClose, onSelectType, currentUser }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const isAdmin = currentUser?.isAdmin || false;
