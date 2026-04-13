@@ -11,12 +11,12 @@ Stakeholders: JR (dev), Sarvi (scheduling admin - gets all request notifications
 </important>
 
 ## Stack
-Frontend: React 18+, Tailwind, Lucide | Backend: Apps Script (Code.gs v2.15), Sheets (5 tabs)
+Frontend: React 18+, Tailwind, Lucide | Backend: Apps Script (Code.gs v2.18 live as of 2026-04-12), Sheets (5 tabs)
 Deploy: Vercel (auto on push) + Apps Script (manual) | Email: MailApp as "OTR Scheduling"
-Auth (S36+): stateless HMAC session tokens (12h TTL), salted SHA-256 password hash, Script Property `HMAC_SECRET`, Employees columns `passwordHash`/`passwordSalt`. Live Apps Script still has v2.14 setup menu per JR decision (harmless, idempotent).
+Auth (S36+): stateless HMAC session tokens (12h TTL), salted SHA-256 password hash, Script Property `HMAC_SECRET`, Employees columns `passwordHash` (R), `passwordSalt` (S), `passwordChanged` (T, authoritative for default-pw detection; falls back to emp-XXX regex when blank).
 
 ## Files
-`src/App.jsx` (~8500) main app, state, shared exports | `src/MobileEmployeeView.jsx` (~440) | `src/MobileAdminView.jsx` (~430) | `src/auth.js` session token + cached user + auth-failure callback | `src/pdf/generate.js` | `src/email/build.js` | `src/utils/format.js` (parseLocalDate, escapeHtml) | `src/main.jsx` entry | `src/index.css` Tailwind | `backend/Code.gs` (~1870) edit here, paste to Apps Script
+`src/App.jsx` (~3680) main app, state, shared exports, `guardedMutation` helper | `src/views/EmployeeView.jsx` extracted employee desktop/mobile view | `src/MobileEmployeeView.jsx` mobile components incl. `MobileAlertsSheet`, `computeAlertItems`, `MobileBottomNav`, `MobileBottomSheet` | `src/MobileAdminView.jsx` | `src/theme.js` THEME/TYPE/OTR | `src/constants.js` ROLES/ROLES_BY_ID/status color maps | `src/panels/` admin+employee list panels | `src/modals/` request/offer/swap/settings/password modals | `src/auth.js` session token + cached user + auth-failure callback | `src/pdf/generate.js` | `src/email/build.js` | `src/utils/format.js` | `backend/Code.gs` (~2100) edit here, paste to Apps Script
 
 ## Architecture
 4 views = role(admin|employee) x device(mobile|desktop @768px):
