@@ -38,4 +38,4 @@ Fallback: `vercel link --scope johnrichmonds-projects-7f62ccc5 --project rainbow
 Config: `API_URL`@App.jsx | `SPREADSHEET_ID`@Code.gs | `ADMIN_EMAIL`@Code.gs=Sarvi | `PAY_PERIOD_START`@App.jsx=2026-01-26
 
 ## Active Context
-handoffs:`docs/handoffs/` | tasks:`docs/todo.md`(Phase 6) | decisions:`docs/decisions.md` | lessons:`docs/lessons.md` | schema:`docs/schemas/sheets-schema.md` | routing:`docs/PROJECT-ROUTING.md` | master:`~/APPS/BridgingFiles/ROUTING-MASTER.md`
+handoffs:`docs/handoffs/` | tasks:`docs/todo.md`(Phase 6) | decisions:`docs/decisions.md` | lessons:`docs/lessons.md` | schema:`docs/schemas/sheets-schema.md` | audit:`docs/audits/s42-functional-test.md`
