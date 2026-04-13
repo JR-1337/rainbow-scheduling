@@ -1401,9 +1401,7 @@ export default function App() {
     };
     setCurrentUser(parsedUser);
     setWelcomeSweep(true);
-    const minDelay = new Promise(r => setTimeout(r, 1000));
-    const dataLoad = loadDataFromBackend(parsedUser.email);
-    await Promise.all([minDelay, dataLoad]);
+    await loadDataFromBackend(parsedUser.email);
   };
   
   const { startDate, endDate, dates } = useMemo(() => getPayPeriodDates(periodIndex), [periodIndex]);
@@ -2546,26 +2544,34 @@ export default function App() {
   if (!currentUser) {
     return <LoginScreen onLogin={handleLogin} />;
   }
-  
+
+  // Post-login overlay: plays on login success, survives loading->main transition
+  // (kept as child 0 of the returned fragment so React reconciles it as the same DOM node across branches)
+  const sweepOverlay = welcomeSweep && (
+    <div className="welcome-sweep" aria-hidden="true" onAnimationEnd={() => setWelcomeSweep(false)}>
+      {OTR.accents.map((a, i) => <div key={i} style={{ backgroundColor: a.primary }} />)}
+    </div>
+  );
+
   // Show loading screen while fetching data (skeleton - feels faster than spinner)
   if (isLoadingData) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }} role="status" aria-live="polite" aria-label="Loading schedule">
-        {welcomeSweep && (
-          <div className="welcome-sweep" aria-hidden="true" onAnimationEnd={() => setWelcomeSweep(false)}>
-            {OTR.accents.map((a, i) => <div key={i} style={{ backgroundColor: a.primary }} />)}
+      <>
+        {sweepOverlay}
+        <div className="min-h-screen" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }} role="status" aria-live="polite" aria-label="Loading schedule">
+          <div className="pt-8" style={{ backgroundColor: THEME.bg.secondary }}>
+            <ScheduleSkeleton />
           </div>
-        )}
-        <div className="pt-8" style={{ backgroundColor: THEME.bg.secondary }}>
-          <ScheduleSkeleton />
         </div>
-      </div>
+      </>
     );
   }
   
   // Show error if data load failed
   if (loadError) {
     return (
+      <>
+        {sweepOverlay}
       <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: THEME.bg.primary }}>
         <div className="text-center max-w-md">
           <AlertCircle size={32} className="mx-auto mb-4" style={{ color: THEME.status.error }} />
@@ -2586,12 +2592,13 @@ export default function App() {
           </button>
         </div>
       </div>
+      </>
     );
   }
-  
+
   // Show employee view if not admin
   if (!currentUser.isAdmin) {
-    return <EmployeeView employees={employees} shifts={publishedShifts} dates={dates} periodInfo={{ startDate, endDate }} currentUser={currentUser} onLogout={() => { clearAuth(); setCurrentUser(null); }} timeOffRequests={timeOffRequests} onCancelRequest={cancelTimeOffRequest} onSubmitRequest={submitTimeOffRequest} shiftOffers={shiftOffers} onSubmitOffer={submitShiftOffer} onCancelOffer={cancelShiftOffer} onAcceptOffer={acceptShiftOffer} onRejectOffer={rejectShiftOffer} shiftSwaps={shiftSwaps} onSubmitSwap={submitSwapRequest} onCancelSwap={cancelSwapRequest} onAcceptSwap={acceptSwapRequest} onRejectSwap={rejectSwapRequest} periodIndex={periodIndex} onPeriodChange={setPeriodIndex} isEditMode={isCurrentPeriodEditMode} announcement={currentAnnouncement} />;
+    return (<>{sweepOverlay}<EmployeeView employees={employees} shifts={publishedShifts} dates={dates} periodInfo={{ startDate, endDate }} currentUser={currentUser} onLogout={() => { clearAuth(); setCurrentUser(null); }} timeOffRequests={timeOffRequests} onCancelRequest={cancelTimeOffRequest} onSubmitRequest={submitTimeOffRequest} shiftOffers={shiftOffers} onSubmitOffer={submitShiftOffer} onCancelOffer={cancelShiftOffer} onAcceptOffer={acceptShiftOffer} onRejectOffer={rejectShiftOffer} shiftSwaps={shiftSwaps} onSubmitSwap={submitSwapRequest} onCancelSwap={cancelSwapRequest} onAcceptSwap={acceptSwapRequest} onRejectSwap={rejectSwapRequest} periodIndex={periodIndex} onPeriodChange={setPeriodIndex} isEditMode={isCurrentPeriodEditMode} announcement={currentAnnouncement} /></>);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2599,8 +2606,8 @@ export default function App() {
   // ═══════════════════════════════════════════════════════════════════════════
   if (isMobileAdmin) {
     const mobileCurrentDates = activeWeek === 1 ? week1 : week2;
-    
-    return (
+
+    return (<>{sweepOverlay}
       <div className="min-h-screen" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@300;400;600&display=swap');`}</style>
         <GradientBackground />
@@ -3015,11 +3022,14 @@ export default function App() {
           </div>
         )}
       </div>
+      </>
     );
   }
 
   // Admin DESKTOP view below
   return (
+    <>
+    {sweepOverlay}
     <div className="min-h-screen relative" style={{ fontFamily: "'Inter', sans-serif" }}>
       <GradientBackground />
       <style>{`
@@ -3708,5 +3718,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </>
   );
 }
