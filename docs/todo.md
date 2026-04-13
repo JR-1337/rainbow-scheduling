@@ -3,8 +3,7 @@
 <!-- Protocol: ~/.claude/rules/todo.md -->
 
 ### In Progress
-- Demo prep + post-demo cleanup (Phases 1-10 core landed)
-- S43 (next session, Sonnet 4.6): execute 86-check functional-test sweep per approved plan at `~/.claude/plans/elegant-purring-kahn.md`. Read-only on src/backend. Append findings to `docs/audits/s42-functional-test.md` (bootstrapped in S43-plan). Email-safe (only john@ + sarvi@). End-of-session: cancel JR's Apr 21 test day-off, revert `.claude/settings.local.json`, clean any Sarvi test shifts.
+- Demo prep (Phases 1-10 core landed; functional test complete — see `docs/audits/s42-functional-test.md`)
 
 ### Up Next
 
