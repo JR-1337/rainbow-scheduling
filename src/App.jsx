@@ -549,10 +549,10 @@ const TooltipButton = ({ children, onClick, variant = 'secondary', disabled = fa
     <div className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
       <button ref={btnRef} onClick={onClick} disabled={disabled}
         className="px-2 py-1 text-xs rounded-lg font-medium transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-        style={{ 
-          background: variant === 'primary' ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated, 
-          border: variant === 'secondary' ? `1px solid ${THEME.border.default}` : 'none', 
-          color: THEME.text.primary 
+        style={{
+          background: variant === 'primary' ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated,
+          border: variant === 'secondary' ? `1px solid ${THEME.border.default}` : 'none',
+          color: variant === 'primary' ? '#FFFFFF' : THEME.text.primary
         }}>
         {children}
       </button>
@@ -1149,6 +1149,7 @@ export default function App() {
   const [shiftOffers, setShiftOffers] = useState([]);
   const [shiftSwaps, setShiftSwaps] = useState([]);
   const [adminRequestModalOpen, setAdminRequestModalOpen] = useState(false);
+  const [welcomeSweep, setWelcomeSweep] = useState(false);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const adminMenuRef = useRef(null);
   useEffect(() => {
@@ -1390,7 +1391,7 @@ export default function App() {
     }
   };
   
-  // Handle login - set user and load data (min 1s loading sphere display)
+  // Handle login - set user and load data (min 1s loading display)
   const handleLogin = async (user) => {
     const parsedUser = {
       ...user,
@@ -1399,6 +1400,7 @@ export default function App() {
         : user.availability
     };
     setCurrentUser(parsedUser);
+    setWelcomeSweep(true);
     const minDelay = new Promise(r => setTimeout(r, 1000));
     const dataLoad = loadDataFromBackend(parsedUser.email);
     await Promise.all([minDelay, dataLoad]);
@@ -2547,6 +2549,11 @@ export default function App() {
   if (isLoadingData) {
     return (
       <div className="min-h-screen" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }} role="status" aria-live="polite" aria-label="Loading schedule">
+        {welcomeSweep && (
+          <div className="welcome-sweep" aria-hidden="true" onAnimationEnd={() => setWelcomeSweep(false)}>
+            {OTR.accents.map((a, i) => <div key={i} style={{ backgroundColor: a.primary }} />)}
+          </div>
+        )}
         <div className="pt-8" style={{ backgroundColor: THEME.bg.secondary }}>
           <ScheduleSkeleton />
         </div>
@@ -3135,9 +3142,6 @@ export default function App() {
                     {currentUser.isOwner ? 'Owner' : 'Admin'}
                   </p>
                 </div>
-                {inactiveCount > 0 && !adminMenuOpen && (
-                  <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center" style={{ backgroundColor: THEME.status.warning, color: '#000', fontSize: '10px' }}>{inactiveCount}</span>
-                )}
               </button>
               {adminMenuOpen && (
                 <div role="menu" className="absolute right-0 mt-1 w-56 rounded-xl overflow-hidden z-50" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, boxShadow: THEME.shadow.card }}>
@@ -3147,7 +3151,7 @@ export default function App() {
                   </button>
                   <button role="menuitem" onClick={() => { setAdminMenuOpen(false); setInactivePanelOpen(true); }} className="w-full flex items-center justify-between gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.text.primary }}>
                     <span className="flex items-center gap-2"><Users size={14} style={{ color: THEME.text.secondary }} />Manage Staff</span>
-                    {inactiveCount > 0 && <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center" style={{ backgroundColor: THEME.status.warning, color: '#000', fontSize: '10px' }}>{inactiveCount}</span>}
+                    {inactiveCount > 0 && <span className="text-xs" style={{ color: THEME.text.muted, fontSize: '10px' }}>{inactiveCount} inactive</span>}
                   </button>
                   <button role="menuitem" onClick={() => { setAdminMenuOpen(false); setSettingsOpen(true); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.text.primary }}>
                     <Settings size={14} style={{ color: THEME.text.secondary }} />
