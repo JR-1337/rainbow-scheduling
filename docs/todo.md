@@ -12,15 +12,14 @@
 Pre-demo (before 2026-04-14):
 - S35 browser verify live + demo polish
 
-Manual deploy steps (required before post-demo security code runs in prod):
-- Add `passwordHash` + `passwordSalt` columns (R + S) to Employees sheet
-- Set `HMAC_SECRET` (32 random bytes base64) in Apps Script > Project Settings > Script Properties
-- Paste backend/Code.gs **v2.18** into Apps Script editor + Deploy > New Deployment (replace current active URL or keep URL via "Manage Deployments > Edit"). **BLOCKS DEMO: v2.14 in prod has the S37 callerEmail bug + default-password prompt loop + approved-date overlap bug; fix requires v2.18.**
-- Add column T `passwordChanged` to Employees sheet header row (TRUE/FALSE, leave blank for existing users)
-
-Post-demo (code landed; awaits manual deploy above):
+Post-demo:
 - S39.4 DEFERRED: mobile admin branch extraction conflicts with decisions.md 2026-02-10. Unblocks only after admin state moves to a Context provider. See 2026-04-12 decision entry.
 - S40 persistence-file sweep + forward handoff
+
+Post-demo perf (S45 research): two paths likely to ship in order, both free:
+- **Path 1 — Cloudflare Worker proxy with stale-while-revalidate cache** (~1 day). Worker sits between frontend and Apps Script, caches getAllData responses in Workers KV (60s TTL), serves cached instantly from edge (~150-300ms) + revalidates in background. Writes bypass cache. Same pattern as Vercel ISR. Cost: $0 (free tier 100k req/day; we'd use ~5k). Result: login reads become ~300ms perceived regardless of Apps Script cold-start. Sarvi's Sheet view preserved. Fully reversible (change API_URL back). Zero migration risk.
+- **Path 2 — Supabase + Sheets sync** (~5-7 days). Only when real-time push / audit log / proper SQL for payroll aggregator become hard requirements. $0 free tier. Replaces Sheet-as-UI with in-app sortable/filterable data table.
+- Tonight-shippable login wins deferred (documented for later): `loginWithData` combined endpoint + `CacheService` on getAllData payload. Stack with path 1 if wanted; redundant once Cloudflare cache is live.
 
 Post-demo consecutive-days warning (Sarvi request):
 - Flag any employee scheduled 6+ consecutive days (ESA-adjacent retail rule; Sarvi has gotten in trouble over this)
@@ -65,6 +64,7 @@ Existing up-next preserved:
 
 ### Done
 
+- [2026-04-12] Manual deploy completed mid-S41 (per s41 handoff): Code.gs v2.18 pasted + redeployed, `HMAC_SECRET` Script Property set, columns R `passwordHash` + S `passwordSalt` added to Employees sheet. Column T `passwordChanged` added 2026-04-13 by JR. All v2.14-era bugs (S37 callerEmail, default-password prompt loop, approved-date overlap) cleared in prod.
 - [2026-04-12] S42.1 Welcome sweep: full-screen 5-stripe rainbow pass (900ms cubic-bezier) plays once on login, mounted inside isLoadingData branch, self-unmounts on onAnimationEnd. Respects prefers-reduced-motion. Publish button forced to white text (hardcoded, not auto-contrast) per JR preference — fails WCAG on green accent rotation but reads fine. Inactive-employee yellow badge dropped from avatar button; moved to subtle "N inactive" muted text inside the Manage Staff menuitem. Purged dead rainbow-sphere CSS.
 - [2026-04-12] S42 demo polish pass: density toggle ripped; mobile admin header now shows OVER THE above RAINBOW; login resets to CURRENT_PERIOD_INDEX (was hard-coded 0, landing every user on Jan 26); admin "Shift Changes" button renamed "My Requests"; admin desktop toolbar collapsed 7→4 (Export, Publish, My Requests, avatar dropdown) per docs/research/ui-ux-first-principles.md; EmployeeFormModal employment-type toggle now renders on create (not just edit); welcome email on new-employee create added to post-demo backlog.
 - [2026-04-12] S41.6 Compact density toggle ripped. Was UX Phase 9 MVP (`.density-compact` CSS targeted `.grid` padding + text sizes). Only shrank a few cells marginally; not pulling weight vs. the toolbar slot it took. Removed: `adminDensity` state + localStorage persist + `useEffect`, both toggle buttons (L3105-3143), `density-${adminDensity}` class on schedule grid wrapper, and the 6 `.density-compact` CSS rules from index.css. Build PASS.
