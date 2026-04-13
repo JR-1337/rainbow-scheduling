@@ -4,7 +4,7 @@
 
 ### In Progress
 - Demo prep + post-demo cleanup (Phases 1-10 core landed)
-- S42.2 next session: full functional-test of every feature (admin + employee, desktop + mobile, including Publish/Email) against live deploy. Collect audit report of bugs/rough edges. Propose fixes. JR evaluates + rules in the morning (2026-04-13). **Email-safe testing constraint: any Publish/Email run can only send to `john@richmondathletica.com` + `sarvi@rainbowjeans.com`. Uncheck all other recipients in EmailModal before send.**
+- S43 (next session, Sonnet 4.6): execute 86-check functional-test sweep per approved plan at `~/.claude/plans/elegant-purring-kahn.md`. Read-only on src/backend. Append findings to `docs/audits/s42-functional-test.md` (bootstrapped in S43-plan). Email-safe (only john@ + sarvi@). End-of-session: cancel JR's Apr 21 test day-off, revert `.claude/settings.local.json`, clean any Sarvi test shifts.
 
 ### Up Next
 
