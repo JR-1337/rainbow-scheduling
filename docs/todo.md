@@ -4,14 +4,26 @@
 
 ### In Progress
 - Demo prep (Phases 1-10 core landed; functional test complete — see `docs/audits/s42-functional-test.md`)
-- **Pitch deck + leave-behinds for 2026-04-14 demo** — S50 update: **Playwright video capture step DROPPED** (Chromebook RAM/Wayland made headed-Node Playwright crash; JR rejected manual screen recording). Cover slide 1 spec changed: welcome-sweep CSS + wordmark + hero bg + **before/after static screenshots** of empty→full grid (replacing the dropped video loop) + thesis sub-line. **S50 demo-critical fix shipped (`7f3021c`)**: defensive availability fallback in App.jsx prevents white-screen crash that was blocking ALL logins (Sarvi/Dan/Scott) — synthetics seeded by S48 had empty availability strings → JSON parse → `{}` → undefined day lookup → crash. Vercel auto-deploy in flight at session-end. **RAINBOW-PITCH scaffold STARTED** (vite create ran into `~/APPS/RAINBOW-PITCH/` but never `npm install`ed; no slides built yet). Next session: verify `7f3021c` deploy live → static photo capture (MCP playwright OR JR phone) → resume scaffold (npm install + theme.js copy + Cover slide).
+- **Pitch deck + leave-behinds for 2026-04-14 demo** — **S51: SHIPPED.** RAINBOW-PITCH live at https://rainbow-pitch.vercel.app. 5 slides (Cover / Cost / Today / Alternatives / Proposal) + `/price` + `/spec` print routes. Phase 2 folded into Proposal continuity strip (deck dropped 6→5 slides per JR). Inter + Josefin Sans fonts, tonal elevation card system, single-accent (not rainbow gradient) on type, off-white text. Risk-reversal hero ("Walk any time in the first 90 days") on Proposal. No pricing on deck — numbers on printed /price. JR plan for next session: slide-by-slide review with fresh context per slide.
 
 ### Up Next
 
 **Active plan:** `~/.claude/plans/lovely-launching-marble.md` — audit-driven security + bugfix + refactor chunked into S33.5 → S40.
 
+Pitch deck slide-by-slide review (S52+, per JR — one slide per chat session with fresh context):
+- Slide 1 (Cover) — currently title-card only (no before/after photos per JR override of plan spec)
+- Slide 2 (Cost) — envelope / legal $170K / scale 476 cards
+- Slide 3 (Today) — auto-fill / ESA live / phone self-serve / PDF for payroll + screenshots
+- Slide 4 (Alternatives) — Counterpoint / ADP / SaaS columns
+- Slide 5 (Proposal) — risk-reversal hero + 4 principle cards + Phase 2 continuity strip
+- `/price` and `/spec` print routes
+
+Pitch deck cleanup (blocked on JR call):
+- Schedule data re-seed: vary availability per synthetic employee (each unavailable 2 days/wk, no 6+ day streaks, headcount matches per-day targets), then recapture cover-empty + cover-full + slide3-admin-wide. Options: (a) Apps Script JR pastes + runs, (b) manual Sheet edit, (c) skip for demo.
+
 Pre-demo (before 2026-04-14):
 - S35 browser verify live + demo polish
+- **JR login recovery** — password not working on https://rainbow-scheduling.vercel.app. Recovery: log in as Sarvi (admin1) → Manage Staff → JR row → Reset password → default emp-NNN → log in as JR → set new. Demo itself runs from Sarvi's account so this is a convenience-only blocker.
 
 Post-demo:
 - S39.4 DEFERRED: mobile admin branch extraction conflicts with decisions.md 2026-02-10. Unblocks only after admin state moves to a Context provider. See 2026-04-12 decision entry.

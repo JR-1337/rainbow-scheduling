@@ -39,3 +39,6 @@ Config: `API_URL`@App.jsx | `SPREADSHEET_ID`@Code.gs | `ADMIN_EMAIL`@Code.gs=Sar
 
 ## Active Context
 handoffs:`docs/handoffs/` | tasks:`docs/todo.md`(Phase 6) | decisions:`docs/decisions.md` | lessons:`docs/lessons.md` | schema:`docs/schemas/sheets-schema.md` | audit:`docs/audits/s42-functional-test.md`
+
+## Sibling Project
+`~/APPS/RAINBOW-PITCH/` (separate git repo, no remote; deployed to Vercel via CLI at https://rainbow-pitch.vercel.app). 5-slide deck + `/price` + `/spec` print routes. Reuses `src/theme.js` from this repo (copied, not symlinked). Edit slides in `~/APPS/RAINBOW-PITCH/src/slides/` then `vercel --prod --yes` from that dir. Assets staged in `pitchdeck/assets/` of THIS repo; shipped ones copied to `~/APPS/RAINBOW-PITCH/public/assets/`.

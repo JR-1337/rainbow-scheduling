@@ -2,6 +2,18 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-14 - Deck Drops to 5 Slides; Phase 2 Folds into Proposal
+**Decided:** Drop standalone Phase 2 slide. Fold it into the Proposal slide as a one-line "After the trial" continuity strip naming the three tracks (Counterpoint→ADP bridge, consecutive-days warning, meetings/PK shift types) with "scoped fixed-price after the trial" wording. Deck count drops 6 → 5. Risk-reversal hero line ("Walk any time in the first 90 days. The only cost is the weeks you used.") becomes Proposal's display headline.
+**Alternatives:** (a) Keep Phase 2 as slide 5 per plan — rejected by JR: risks reading as pre-close upsell to a price-first Dan. (b) Move Phase 2 between slides 2 and 3 — rejected: disrupts cost → proof → disqualify-alternatives arc. (c) Drop Phase 2 entirely — rejected: roadmap value needs to land, just not as its own slide.
+**Rationale:** For Dan (price-first, slow decider), showing three more future builds immediately before the money conversation primes "how much will ALL this cost" anxiety. Folded, the same info reads as continuity commitment ("these are already scoped") rather than upsell. Proposal becomes the emotional close with the risk-reversal line doing more heavy lifting.
+**Revisit if:** Phase 2 discovery answers from Sarvi make a specific track demo-ready enough that it deserves its own slide again (receipt-box kill with sample reconciliation view, most likely).
+
+## 2026-04-14 - Cover Stays Title Card; Before/After Photo Pair Dropped
+**Decided:** Slide 1 (cover) is stacked "OVER THE RAINBOW" wordmark in solid white Josefin Sans (matches app `Logo` component exactly) + single accent bar + thesis line. No before/after auto-fill screenshot pair on the cover.
+**Alternatives:** (a) Plan's S50-spec before/after pair on cover — JR rejected. Reason: cover should be a clean brand moment; proof of auto-fill can live on slide 3 where "custom-built for OTR" has room for screenshots. (b) Rainbow-gradient-on-type for "Rainbow" — rejected: reads SaaS-hero, fights brand.
+**Rationale:** Cover's job is welcome + thesis. The app's own Logo component is two-line stacked text in solid color — matching it makes the deck feel like a direct extension of the product. Auto-fill screenshots still appear on slide 3 (What Rainbow does today) where they support the "custom-built" claim.
+**Revisit if:** Slide 3 review shows screenshots don't land the auto-fill beat clearly and the cover needs to do that job instead.
+
 ## 2026-04-14 - Cover Slide Drops Video Loop; Replaces with Before/After Static Screenshots + Welcome-Sweep
 **Decided:** Slide 1 (cover) keeps welcome-sweep CSS animation + Rainbow wordmark + hero photo bg + thesis sub-line. Drops the auto-fill video loop centerpiece. Replaces it with a **before/after split**: empty next-period grid screenshot ↔ same grid populated, with a center caption ("One click. 40+ shifts." or similar). Live wow-moment happens in the meeting itself when Sarvi/JR hand the phone to Dan/Scott to run Auto-Fill themselves.
 **Alternatives:** (a) Headed Playwright video recording — failed: Chromebook RAM/Wayland kept disconnecting the browser process. (b) JR manually screen-records on Chromebook — JR rejected: "I don't want to make the vid." (c) CSS-animated mock cover — JR rejected: loses "real proof" feel for Scott. (d) Single hero screenshot — rejected: doesn't carry the auto-fill beat. (e) ffmpeg cross-fade between two stills as inline mp4 — viable but adds complexity for marginal gain over a clean side-by-side still.
