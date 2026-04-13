@@ -2,22 +2,27 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.19.1 (S45 hotfix: batchGet valueRenderOption so booleans stay native)
+ * Version: 2.19.2 (S45: keep batchUpdate save speedup, drop batchGet read path)
  *
- * Changes in v2.19.1:
- * - getAllData: batchGet now passes valueRenderOption:UNFORMATTED_VALUE +
- *   dateTimeRenderOption:FORMATTED_STRING. Fixes a bug where the default FORMATTED_VALUE
- *   returned booleans as strings ("TRUE"/"FALSE"), causing frontend filters like
- *   `emp.active === true` to return zero rows → empty schedule on login.
+ * Changes in v2.19.2:
+ * - getAllData: REVERTED to the proven 5-call getSheetData path. The batchGet read
+ *   path (v2.19, v2.19.1) tripped over Sheets API render-mode mismatches with native
+ *   getDataRange().getValues() (booleans as strings, dates as locale-dependent strings).
+ *   Workarounds added maintenance debt without an elegant fix. Frontend changes
+ *   (preconnect, min-delay removal, immutable cache headers) already give the bulk of
+ *   the login speedup; backend read time was a smaller share than estimated.
+ * - batchSaveShifts: KEPT the single Sheets.Spreadsheets.Values.update call. This is
+ *   pure-write, no read-shape ambiguity, and delivers the actual demo-transforming
+ *   win (~20s → ~2-3s on big saves).
+ * - batchSaveShifts: valueInputOption=USER_ENTERED matches legacy appendRow/setValue
+ *   auto-parse semantics, so cell types stay consistent with what Sarvi sees in the sheet.
+ * - batchSaveShifts: waitLock -> tryLock with a clean CONCURRENT_EDIT error code on
+ *   collision instead of a bare Apps Script throw.
  *
- * Changes in v2.19:
- * - getAllData: reads all 5 tabs in ONE Sheets.Spreadsheets.Values.batchGet call instead of 5 sequential
- *   getDataRange().getValues() calls. Login data fetch ~40% faster. Falls back to per-tab reads if the
- *   Advanced Sheets Service isn't enabled.
- * - batchSaveShifts: replaces N deleteRow + N updateRow/appendRow loop with ONE Sheets.Spreadsheets.Values.update
- *   call writing the whole Shifts tab in a single API round trip. 150-shift save goes from ~20s to ~2-3s.
- *   LockService.getDocumentLock() serializes concurrent admin saves to prevent lost writes.
- * - Requires: Advanced Google Sheets API enabled in Apps Script (Services > + > Google Sheets API).
+ * Changes in v2.19 / v2.19.1 (superseded above):
+ * - Attempted Sheets.Spreadsheets.Values.batchGet for getAllData. v2.19 returned
+ *   booleans as "TRUE"/"FALSE" strings (broke schedule). v2.19.1's FORMATTED_STRING
+ *   fix was locale-dependent. Both reverted in v2.19.2.
  *
  * Changes in v2.18:
  * - submitTimeOffRequest: overlap filter now includes status=='approved' (was
@@ -258,8 +263,9 @@ function getSheet(tabName) {
   return sheet;
 }
 
-// Parse a 2D values array (as returned by getValues() or Sheets.Spreadsheets.Values.batchGet)
-// into [{header: value, ..., _rowIndex}]. Shared by getSheetData and the v2.19 batchGet path in getAllData.
+// Parse a 2D values array (from sheet.getDataRange().getValues()) into
+// [{header: value, ..., _rowIndex}]. Date objects in date-typed cells are
+// formatted to 'yyyy-MM-dd' (or 'HH:mm' for time-only cells, year=1899).
 function parseSheetValues_(values) {
   if (!values || values.length < 2) return [];
   const headers = values[0];
@@ -1470,36 +1476,11 @@ function getAllData(payload) {
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
-  // v2.19 perf: single batchGet for all 5 tabs via Advanced Sheets Service (Sheets API v4).
-  // Replaces 5 sequential getDataRange().getValues() calls — one HTTP round trip instead of five.
-  // Falls back to per-tab reads if the Sheets service isn't enabled (guards against deploy drift).
-  let employees, shifts, settings, announcements, requests;
-  const tabs = [CONFIG.TABS.EMPLOYEES, CONFIG.TABS.SHIFTS, CONFIG.TABS.SETTINGS, CONFIG.TABS.ANNOUNCEMENTS, CONFIG.TABS.SHIFT_CHANGES];
-  try {
-    if (typeof Sheets === 'undefined') throw new Error('Advanced Sheets service not enabled');
-    const ssId = getSpreadsheet().getId();
-    // valueRenderOption=UNFORMATTED_VALUE so booleans come back as true/false (not "TRUE"/"FALSE")
-    // matching the native getDataRange().getValues() return shape. Without this, frontend filters
-    // like `emp.active === true` fail and staff lists come back empty.
-    const result = Sheets.Spreadsheets.Values.batchGet(ssId, {
-      ranges: tabs,
-      valueRenderOption: 'UNFORMATTED_VALUE',
-      dateTimeRenderOption: 'FORMATTED_STRING'
-    });
-    const byRange = {};
-    (result.valueRanges || []).forEach((vr, i) => { byRange[tabs[i]] = vr.values || []; });
-    employees = parseSheetValues_(byRange[CONFIG.TABS.EMPLOYEES]);
-    shifts = parseSheetValues_(byRange[CONFIG.TABS.SHIFTS]);
-    settings = parseSheetValues_(byRange[CONFIG.TABS.SETTINGS]);
-    announcements = parseSheetValues_(byRange[CONFIG.TABS.ANNOUNCEMENTS]);
-    requests = parseSheetValues_(byRange[CONFIG.TABS.SHIFT_CHANGES]);
-  } catch (e) {
-    employees = getSheetData(CONFIG.TABS.EMPLOYEES);
-    shifts = getSheetData(CONFIG.TABS.SHIFTS);
-    settings = getSheetData(CONFIG.TABS.SETTINGS);
-    announcements = getSheetData(CONFIG.TABS.ANNOUNCEMENTS);
-    requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  }
+  const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
+  const shifts = getSheetData(CONFIG.TABS.SHIFTS);
+  const settings = getSheetData(CONFIG.TABS.SETTINGS);
+  const announcements = getSheetData(CONFIG.TABS.ANNOUNCEMENTS);
+  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
 
   const livePeriodsRow = settings.find(s => s.key === 'livePeriods');
   const livePeriods = livePeriodsRow && livePeriodsRow.value
@@ -1709,9 +1690,12 @@ function batchSaveShifts(payload) {
   };
 
   // v2.19 perf: single Sheets.Spreadsheets.Values.update() replaces the N*deleteRow + N*updateRow/appendRow
-  // loop. One round trip to Sheets API instead of hundreds. Document-level lock serializes concurrent saves.
+  // loop. One round trip to Sheets API instead of hundreds. Document-level lock serializes concurrent saves;
+  // tryLock returns a clean error code on collision rather than a bare Apps Script throw.
   const lock = LockService.getDocumentLock();
-  lock.waitLock(10000);
+  if (!lock.tryLock(10000)) {
+    return { success: false, error: { code: 'CONCURRENT_EDIT', message: 'Another admin is saving the schedule. Please wait a moment and try again.' } };
+  }
   try {
     const sheet = getSheet(CONFIG.TABS.SHIFTS);
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -1765,11 +1749,13 @@ function batchSaveShifts(payload) {
     if (targetRows > 0) {
       const lastCol = columnLetter_(numCols);
       const range = `${CONFIG.TABS.SHIFTS}!A2:${lastCol}${1 + targetRows}`;
+      // USER_ENTERED matches the legacy appendRow/setValue behavior (Sheets auto-parses date strings,
+      // time strings, booleans, etc.) so cell types stay consistent with what's already in the sheet.
       Sheets.Spreadsheets.Values.update(
         { values: newRows },
         getSpreadsheet().getId(),
         range,
-        { valueInputOption: 'RAW' }
+        { valueInputOption: 'USER_ENTERED' }
       );
     }
 
