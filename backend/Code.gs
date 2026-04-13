@@ -2,7 +2,13 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.19 (S45: Advanced Sheets API batchGet in getAllData, single-call batchUpdate in batchSaveShifts)
+ * Version: 2.19.1 (S45 hotfix: batchGet valueRenderOption so booleans stay native)
+ *
+ * Changes in v2.19.1:
+ * - getAllData: batchGet now passes valueRenderOption:UNFORMATTED_VALUE +
+ *   dateTimeRenderOption:FORMATTED_STRING. Fixes a bug where the default FORMATTED_VALUE
+ *   returned booleans as strings ("TRUE"/"FALSE"), causing frontend filters like
+ *   `emp.active === true` to return zero rows → empty schedule on login.
  *
  * Changes in v2.19:
  * - getAllData: reads all 5 tabs in ONE Sheets.Spreadsheets.Values.batchGet call instead of 5 sequential
@@ -1472,7 +1478,14 @@ function getAllData(payload) {
   try {
     if (typeof Sheets === 'undefined') throw new Error('Advanced Sheets service not enabled');
     const ssId = getSpreadsheet().getId();
-    const result = Sheets.Spreadsheets.Values.batchGet(ssId, { ranges: tabs });
+    // valueRenderOption=UNFORMATTED_VALUE so booleans come back as true/false (not "TRUE"/"FALSE")
+    // matching the native getDataRange().getValues() return shape. Without this, frontend filters
+    // like `emp.active === true` fail and staff lists come back empty.
+    const result = Sheets.Spreadsheets.Values.batchGet(ssId, {
+      ranges: tabs,
+      valueRenderOption: 'UNFORMATTED_VALUE',
+      dateTimeRenderOption: 'FORMATTED_STRING'
+    });
     const byRange = {};
     (result.valueRanges || []).forEach((vr, i) => { byRange[tabs[i]] = vr.values || []; });
     employees = parseSheetValues_(byRange[CONFIG.TABS.EMPLOYEES]);
