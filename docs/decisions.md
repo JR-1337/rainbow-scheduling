@@ -2,6 +2,27 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-12 - Admin Desktop Header: 4 Visible Actions + Avatar Dropdown
+
+**Decided:** S42 collapsed the admin-desktop right-side toolbar from 7 icon-buttons to 4 surfaces. Visible: Export PDF, Publish, My Requests, avatar dropdown. The avatar button opens a menu containing Add Employee, Manage Staff (with subtle "N inactive" muted-text count, not a yellow badge), Admin Settings, Sign Out. Account menu uses click-outside + Escape to close.
+**Alternatives:** Keep all 7 visible (rejected — research in `docs/research/ui-ux-first-principles.md` cites Hick's Law + proximity + progressive disclosure; 7 buttons = cognitive wall). Collapse more aggressively into a 3-button row (rejected — Export + Publish + My Requests are Sarvi's daily actions, burying any of them costs a tap she'd take dozens of times per week). Keep the yellow notification badge on the avatar for inactive count (rejected — state isn't news; badges imply unread/new, inactive employees are just a state).
+**Rationale:** Sarvi's daily primary actions stay one click away. Low-frequency account/admin actions go behind a dropdown where discovery still works but visual noise drops. Preserves the OTR rotating-accent identity on the avatar ring and keeps the brand daily-color moment without pinning it to a static icon sprawl.
+**Revisit if:** Sarvi reports missing a menu-buried action regularly, or a new primary action needs to land in the header (then promote by frequency, don't just add another icon to the visible row).
+
+## 2026-04-12 - Welcome Sweep on Login (Full-Screen 5-Stripe Rainbow)
+
+**Decided:** On successful login (handleLogin), `welcomeSweep` state flips true. The loading-screen branch (`isLoadingData`) renders a full-screen fixed overlay with 5 horizontal colored stripes (OTR.accents map: red, blue, orange, green, purple). Overlay animates translateX(-100% → 0 → +100%) over 900ms cubic-bezier(0.7, 0, 0.3, 1), then onAnimationEnd fires setWelcomeSweep(false) to unmount. Respects `prefers-reduced-motion` (animation-duration: 1ms). Sits inside the existing 1s min-delay — does not add wait time.
+**Alternatives:** Fancier morph / rainbow-sphere revive (rejected — UX Phase 3 deliberately replaced the sphere with ScheduleSkeleton for faster perceived load; adding it back to loading screen undoes that). Short accent-color flash instead of full stripe sweep (rejected — loses the "Rainbow moment" brand hit and reads as a UI blink). Play the sweep only on first login ever (rejected — the moment is cheap, it's the signature welcome, every login is fine).
+**Rationale:** The store is literally named "Over the Rainbow." A once-per-login color sweep is the brand door chime. Cost is negligible (50 LOC CSS + state; fits in existing loading window; GPU-accelerated transform). Sarvi reviewed and loved it.
+**Revisit if:** Demo feedback says it's excessive, or future mobile/low-end device perf telemetry shows jank.
+
+## 2026-04-12 - Publish Button: Hardcoded White Text (Not THEME.accent.text Auto-Contrast)
+
+**Decided:** TooltipButton `variant="primary"` (used by the admin-desktop Publish button) uses hardcoded `color: '#FFFFFF'` over the rotating accent gradient. Background is still `linear-gradient(135deg, THEME.accent.blue, THEME.accent.purple)` where the two THEME slots are actually `OTR_ACCENT.primary` + `.dark` (rotating). So the gradient changes daily; the text stays white.
+**Alternatives:** `THEME.accent.text` (auto-picks white/navy for WCAG) — rejected, JR chose visual consistency over WCAG compliance on one accent rotation (green). Fixed brand blue→purple gradient (rejected — JR wants the daily color-rotation moment preserved on the Publish button; fixed gradient kills it). Rotate text color instead of background (rejected — inconsistent).
+**Rationale:** On 4/5 accent rotations (red/blue/orange/purple) white on primary passes or is near-passing WCAG. On green rotation, white-on-green gets ~3.1:1 which fails AA but reads fine for short labels. JR valued brand-moment consistency over strict AA compliance here. Documented trade-off, not an oversight.
+**Revisit if:** Accessibility audit flags it, or if Sarvi reports the button being hard to read on green-accent days.
+
 ## 2026-04-12 - callerEmail Regression Fixed Backend-Side (Not Frontend Shim)
 
 **Decided:** S41.1 rewrites every protected Code.gs handler to derive `callerEmail` from `auth.employee.email` after `verifyAuth(payload)` instead of destructuring from the payload. Code.gs bumped to v2.16. Frontend unchanged.
