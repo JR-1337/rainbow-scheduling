@@ -33,14 +33,14 @@ This plan locks the content, pricing, and build order so the deck/sheets can be 
 
 **Dropped from earlier 7-slide shape:** standalone "business case" slide. When the deck is self-narrating, slide 2 already does that job.
 
-### Slide 1 — Cover (spec)
+### Slide 1 — Cover (spec, S50-revised — VIDEO DROPPED)
 
 - **Background:** OTR hero photo (blogTO denim wall, `public/hero.jpg`) with dark navy overlay so foreground reads
 - **Center:** "Rainbow" wordmark rendered in the same rotating accent gradient the live app uses (imports `OTR_ACCENT` from copied `theme.js`) — brand system proves itself on first slide
-- **Animation on slide entry:** welcome-sweep (900ms rainbow wash, lifted from the app's login sequence) — literally shows the product's visual signature before any explanation
-- **Cover video loop (centerpiece):** auto-populating a full empty week. Empty schedule grid → 40+ shifts fill in under 2 seconds. Loops seamlessly. Mounted inside a device frame (laptop or phone mockup) on the slide. This is the "holy shit it just did that" beat.
+- **Animation on slide entry:** welcome-sweep (900ms rainbow wash, lifted from the app's login sequence — pure CSS keyframes, copied from index.css). Brand-signature motion still happens.
+- **Centerpiece (S50-revised):** **before/after split** showing auto-fill power as a static still — left half empty next-period grid screenshot, right half same grid populated with shifts, center caption "One click. 40+ shifts." (or similar punchy line). Replaces the dropped video loop.
 - **Thesis sub-line (on slide, not spoken):** *"A scheduling app built for OTR. Not a template. Not a subscription. Not for anyone else."*
-- **Fallback:** if video fails on meeting-room wifi, the first frame is served as a static poster so the slide never renders blank
+- **Why video dropped (S50):** Chromebook RAM + Wayland headed-Playwright = repeat crashes ("browser disconnected") trying to record. JR ruled out manual screen recording. Static before/after carries the same beat in one readable frame; live wow-moment happens in the meeting on Dan/Scott's phones (they run Auto-Fill themselves).
 
 ### Slide 2 — Cost of today (S48-locked copy)
 
@@ -191,7 +191,9 @@ Per JR S47: the whole deck pushes Rainbow as **custom-built, tuned to OTR's spec
 - Export: browser print → save as PDF. Sarvi prints the PDFs and physically hands them to Dan + Scott at meeting end.
 - Same OTR accent branding so the leave-behinds match the deck visually.
 
-## Build Order (S48-revised)
+## Build Order (S50-revised — Playwright video step DROPPED)
+
+**S50 status:** step 1 DONE (S48). Step 2 (Playwright capture) ABANDONED — Chromebook can't reliably do headed video. Replaced with **step 2.5 = static photos via MCP playwright OR JR phone screenshot** post-availability-fix deploy. Step 1.5 = the `7f3021c` availability fix that unblocks the live app for everyone.
 
 1. **Demo-data reset (RUN FIRST)** — wipes the live test data before any capture or scaffolding. Write `backend/seed-demo-data.gs` as a standalone Apps Script file JR pastes into the Apps Script project and runs once. Function behaviour:
    - **Clears** Employees, Shifts, ShiftChanges, Announcements tabs (keeps header rows). **Preserves** Settings tab (pay-period anchor, store info, etc.).
@@ -203,7 +205,17 @@ Per JR S47: the whole deck pushes Rainbow as **custom-built, tuned to OTR's spec
      - **20 synthetic employees** — emails `emp.001@example.com` … `emp.020@example.com` (RFC 2606 reserved domain → guaranteed non-deliverable, zero email-leak risk during testing). Mix of roles (cashier, backup cashier, mens, womens, floor monitor) and employment types (full-time + part-time). Default passwords `emp-001` … `emp-020`, plaintext in column D, `passwordChanged=FALSE` → realistic first-login flow if Dan/Scott want to see it.
    - **Seeds shifts** for the 20 synthetic employees across the **current pay period only** (Sarvi-visible and demo-loaded). **Next pay period stays empty** so the Playwright cover-loop capture has a fresh empty grid to auto-populate.
    - **Does NOT add** Dan/Scott/JR to any shifts.
-2. **Playwright cover-loop capture** — after demo-data reset is confirmed.
+2. **~~Playwright cover-loop capture~~ — DROPPED S50.** Was: headed-Playwright recording of auto-fill animation → mp4. Result: Node Playwright crashed ("browser disconnected") on Chromebook RAM/Wayland; MCP playwright snapshot worked but the live app was white-screening from the availability bug; JR rejected manual screen recording. **Replaced by step 2.5 below.**
+
+**2.5 Static photo capture (S50, post-`7f3021c` deploy)** — once Vercel ships the availability fix:
+- MCP playwright (or JR phone): login as Sarvi, navigate to empty next pay period, screenshot empty grid → `pitchdeck/assets/cover-empty.png`
+- Click Auto-Fill W1 + W2, screenshot full grid → `pitchdeck/assets/cover-full.png`
+- Same session: admin-grid full view + admin-requests panel + employee-mobile schedule → `slide3-*.png`
+- Cover slide consumes `cover-empty.png` + `cover-full.png` as the before/after split centerpiece.
+
+**LEGACY — IGNORE the original step 2 spec below. Retained only because the file's older capture script (`pitchdeck/capture/cover-loop.mjs`) references it.**
+
+~~Original step 2 (do not execute):~~
    - **Target:** `https://rainbow-scheduling.vercel.app`
    - **Login:** `sarvi@rainbowjeans.com` / `admin1` (creds passed at runtime, NOT committed to any file)
    - **Flow:** login → wait for welcome-sweep to settle → navigate to the **next pay period** (the empty one; current has seeded shifts per demo-reset design) → enter edit mode → trigger **Auto-Fill Week** on W1 then W2 → record the fill animation with one clean pause at the end → exit
