@@ -19,7 +19,9 @@ S54 skipped Slide 3 on JR's call, shipped Slide 4 (Alternatives) full review, re
 
 - Slide 4 (Alternatives): grew from 2→3 bullets per column. Counterpoint +"No employee view." ADP compliance bullet reworked with 8hr-rest correction + framed ESA as "not native, each rule a manual config"; added customer-sentiment 3rd bullet grounded in `pitchdeck/competitorAnalysis.md` + `Competitive Scheduling App Analysis.md`. SaaS bullet 2 fixed (Australian labour awards + WIW defaults to US 40hr OT, no 8hr rest); +3rd on restaurants/hospitality origin + no retail floor-coverage model. Italic footer: "Concierge customer service. Staff and management training, free."
 - Slide 3 (Today): accent span narrowed to "Custom" only (was full "Custom-built"). Body copy NOT reviewed this session — still cites "11-hour daily rest rule" (ESA is 8hr). Slide 3 review deferred per JR.
-- Research-grounded claims: ADP customer-sentiment bullet pulled from documented patterns (outsourced call centers, ticketing loops, "black-box" account mgmt). SaaS restaurant-industry framing defensible: 7shifts explicitly restaurant-only, Deputy Australian-origin, WIW multi-industry but weighted hospitality. Homebase NOT named — plausible blind spot if OTR actually considered it.
+- Research-grounded claims: ADP customer-sentiment bullet pulled from documented patterns (outsourced call centers, ticketing loops, "black-box" account mgmt). SaaS restaurant-industry framing defensible: 7shifts explicitly restaurant-only, Deputy Australian-origin, WIW multi-industry but weighted hospitality.
+- **Slide 4 Column 3 revisit pending:** late in session JR flagged he doesn't believe 7shifts/Deputy/WIW are the apps OTR actually evaluated. He's running a discovery research prompt in Gemini (real shortlist for a family-run Ontario clothing retailer with Counterpoint+ADP Canada). Column 3 will be rewritten when findings land — likely candidates include Homebase, Sling, Connecteam, TimeForge (NCR partner). Prompt text is in S54 chat transcript.
+- **"Australian labour awards" rephrase pending:** technically correct (Australian awards = statutory industry pay/conditions agreements) but reads as typo to North American audience. Rephrase to "built for Australian labour law" or similar when Column 3 is reworked.
 
 ## Hot Files
 
@@ -49,6 +51,7 @@ S54 skipped Slide 3 on JR's call, shipped Slide 4 (Alternatives) full review, re
 | Item | Blocked By | Notes |
 |---|---|---|
 | Slide 3 body-copy review + 11hr→8hr fix | Deferred by JR in S54 | Must be addressed before demo if Slide 3 stays in deck. Ontario ESA correct figure is 8hr per ontario.ca/document/your-guide-employment-standards-act-0/hours-work. |
+| Slide 4 Column 3 rewrite + "labour awards" rephrase | JR's Gemini research on actual Ontario-retail-SMB scheduling app shortlist | Current named apps (7shifts/Deputy/WIW) may be shadow-boxing. Real candidates likely include Homebase, Sling, Connecteam, TimeForge. Rephrase Deputy bullet from "Australian labour awards" → "Australian labour law" at the same time. |
 | Phase 2 build | Sarvi discovery | Post-demo. |
 | Demo outcome capture | 2026-04-14 meeting | Will need to be logged in decisions.md after demo. |
 
