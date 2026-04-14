@@ -66,6 +66,8 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
     return Object.entries(safeShifts)
       .filter(([key, shift]) => {
         if (!shift) return false;
+        // S64 Stage 6 — defensive: only work shifts are swappable (backend also enforces).
+        if ((shift.type || 'work') !== 'work') return false;
         if (key.length < 11) return false;
         const dateStr = key.slice(-10);
         const keyEmpId = key.slice(0, -11);
