@@ -7,8 +7,12 @@ import {
   formatDateLong,
   formatTimeDisplay,
 } from '../App';
+import { EVENT_TYPES } from '../constants';
+import { computeDayUnionHours } from '../utils/timemath';
 
-export const buildEmailContent = (emp, shifts, dates, periodInfo, adminContacts = [], announcement = null) => {
+// S64 Stage 7 — emails list meeting/PK entries as separate bullets; weekly total
+// uses union hours so a 9-5 work + 3-5 PK day totals 8h, not 10h.
+export const buildEmailContent = (emp, shifts, dates, periodInfo, adminContacts = [], announcement = null, events = {}) => {
   const weekNum1 = getWeekNumber(dates[0]);
   const weekNum2 = getWeekNumber(dates[7]);
   const year = periodInfo.startDate.getFullYear();
@@ -24,18 +28,28 @@ export const buildEmailContent = (emp, shifts, dates, periodInfo, adminContacts 
   let totalHours = 0;
 
   dates.forEach(date => {
-    const shift = shifts[`${emp.id}-${toDateKey(date)}`];
+    const k = `${emp.id}-${toDateKey(date)}`;
+    const shift = shifts[k];
+    const dayEvents = (events[k] || []).filter(ev => EVENT_TYPES[ev.type]);
+    if (!shift && dayEvents.length === 0) return;
+
+    const dayStr = formatDateLong(date);
+    let line = `  ${dayStr}`;
+
     if (shift) {
       const role = ROLES_BY_ID[shift.role];
-      const dayStr = formatDateLong(date);
       const timeStr = `${formatTimeDisplay(shift.startTime)} - ${formatTimeDisplay(shift.endTime)}`;
-
-      let line = `  ${dayStr}`;
       line += `\n  ${timeStr} • ${shift.hours}h • ${role?.fullName || 'No Role'}`;
       if (shift.task) line += `\n  ⭐ Task: ${shift.task}`;
-      scheduleLines.push(line);
-      totalHours += shift.hours || 0;
     }
+    dayEvents.forEach(ev => {
+      const et = EVENT_TYPES[ev.type];
+      const timeStr = `${formatTimeDisplay(ev.startTime)} - ${formatTimeDisplay(ev.endTime)}`;
+      line += `\n  • ${et.label} ${timeStr}${ev.note ? ` — ${ev.note}` : ''}`;
+    });
+
+    scheduleLines.push(line);
+    totalHours += computeDayUnionHours([shift, ...dayEvents].filter(Boolean));
   });
 
   if (scheduleLines.length === 0) return { subject, body: '', hasShifts: false };

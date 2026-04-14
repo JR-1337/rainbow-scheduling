@@ -11,11 +11,16 @@ import {
   isStatHoliday,
   hasApprovedTimeOffForDate,
 } from '../App';
+import { EVENT_TYPES } from '../constants';
+import { computeDayUnionHours } from '../utils/timemath';
 import { escapeHtml, stripEmoji } from '../utils/format';
 
 const cleanText = (s) => escapeHtml(stripEmoji(s));
 
-export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = []) => {
+// S64 Stage 7 — events carry meeting/PK entries per `${empId}-${date}` key.
+// Hours are union-counted (9-5 work + 3-5 PK = 8h). OT threshold uses totalHours
+// because all paid time counts under Ontario ESA.
+export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = [], events = {}) => {
   const week1 = dates.slice(0, 7);
   const week2 = dates.slice(7, 14);
   const weekNum1 = getWeekNumber(week1[0]);
@@ -29,9 +34,17 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   const adminContacts = employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
 
   const calcWeekHours = (empId, weekDates) => {
-    let t = 0;
-    weekDates.forEach(d => { const s = shifts[`${empId}-${toDateKey(d)}`]; if (s) t += s.hours || 0; });
-    return t;
+    let workHours = 0;
+    let totalHours = 0;
+    weekDates.forEach(d => {
+      const k = `${empId}-${toDateKey(d)}`;
+      const s = shifts[k];
+      const evs = (events[k] || []).filter(ev => EVENT_TYPES[ev.type]);
+      if (s) workHours += s.hours || 0;
+      const combined = [s, ...evs].filter(Boolean);
+      if (combined.length > 0) totalHours += computeDayUnionHours(combined);
+    });
+    return { workHours, totalHours };
   };
 
   const announcementHtml = (announcement && announcement.message) ? `
@@ -50,11 +63,18 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       </th>`;
     }).join('');
 
+    const eventBadgeHtml = (evs) => evs.map(ev => {
+      const et = EVENT_TYPES[ev.type];
+      if (!et) return '';
+      return `<div style="font-size:7px;color:#475569;margin-top:2px;line-height:1.3;"><strong style="color:#1F2937;">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` · ${cleanText(ev.note)}` : ''}</div>`;
+    }).join('');
+
     const rows = schedulable.map(emp => {
       const cells = weekDates.map(date => {
         const dateStr = toDateKey(date);
         const shift = shifts[`${emp.id}-${dateStr}`];
-        if (!shift) {
+        const dayEvents = (events[`${emp.id}-${dateStr}`] || []).filter(ev => EVENT_TYPES[ev.type]);
+        if (!shift && dayEvents.length === 0) {
           if (hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests)) {
             return `<td style="padding:6px;border:1px dashed #94a3b8;background:#ffffff;text-align:center;">
               <div style="font-size:9px;font-weight:700;color:#475569;letter-spacing:1px;">OFF</div>
@@ -62,6 +82,12 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
             </td>`;
           }
           return '<td style="padding:6px;border:1px solid #cbd5e1;background:#ffffff;"></td>';
+        }
+        if (!shift) {
+          // Event-only day — neutral grey card.
+          return `<td style="padding:5px;border:2px solid #9CA3AF;background:#F3F4F6;text-align:center;">
+            ${eventBadgeHtml(dayEvents)}
+          </td>`;
         }
         const role = ROLES_BY_ID[shift.role];
         const roleName = role?.name || 'Shift';
@@ -73,13 +99,17 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
           <div style="font-size:9px;color:#0D0E22;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
           <div style="font-size:8px;color:#475569;">${shift.hours}h</div>
           ${shift.task ? `<div style="font-size:7px;color:#d97706;margin-top:2px;line-height:1.3;word-break:break-word;">★ ${cleanText(shift.task)}</div>` : ''}
+          ${eventBadgeHtml(dayEvents)}
         </td>`;
       }).join('');
 
-      const hours = calcWeekHours(emp.id, weekDates);
-      // Ontario ESA: OT kicks in at 44h. Amber warns approaching, red flags at/over threshold.
-      const hoursColor = hours >= 44 ? '#ef4444' : hours >= 40 ? '#d97706' : '#475569';
-      const hoursDisplay = hours > 0 ? `${hours.toFixed(1)}h` : '—';
+      const { workHours, totalHours } = calcWeekHours(emp.id, weekDates);
+      // Ontario ESA: OT kicks in at 44h. All paid time counts, so use totalHours for coloring.
+      const hoursColor = totalHours >= 44 ? '#ef4444' : totalHours >= 40 ? '#d97706' : '#475569';
+      const hasExtras = totalHours > workHours + 0.01;
+      const hoursDisplay = totalHours > 0
+        ? (hasExtras ? `${totalHours.toFixed(1)}h <span style="font-size:8px;color:#64748b;font-weight:500;">(${workHours.toFixed(1)} work)</span>` : `${totalHours.toFixed(1)}h`)
+        : '—';
 
       return `<tr style="page-break-inside:avoid;">
         <td style="padding:8px;border:1px solid #cbd5e1;background:#ffffff;">

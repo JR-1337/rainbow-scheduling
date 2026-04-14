@@ -4,7 +4,7 @@ import { THEME } from '../theme';
 import { buildEmailContent } from '../email/build';
 import { Modal, GradientButton, Checkbox, toDateKey, getWeekNumber, formatMonthWord } from '../App';
 
-export const EmailModal = ({ isOpen, onClose, employees, shifts, dates, periodInfo, announcement, onComplete }) => {
+export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, dates, periodInfo, announcement, onComplete }) => {
   const emailableEmps = employees
     .filter(e => e.active && !e.deleted && !e.isOwner)
     .filter(e => !e.isAdmin || e.showOnSchedule);
@@ -73,7 +73,7 @@ www.rainbowjeans.com`;
 
     } else {
       selectedEmps.forEach((emp, i) => {
-        const { subject, body, hasShifts } = buildEmailContent(emp, shifts, dates, periodInfo, adminContacts, announcement);
+        const { subject, body, hasShifts } = buildEmailContent(emp, shifts, dates, periodInfo, adminContacts, announcement, events);
         if (!hasShifts) { emailResults.push({ emp, status: 'skipped', reason: 'No shifts' }); return; }
         const mailtoLink = `mailto:${emp.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         emailResults.push({ emp, status: 'sent' });
