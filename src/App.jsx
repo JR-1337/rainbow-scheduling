@@ -1040,6 +1040,14 @@ export default function App() {
   const [editingShift, setEditingShift] = useState(null);
   const [unsaved, setUnsaved] = useState(false);
   const [published, setPublished] = useState(false);
+
+  // Warn before refresh/close when there are unsaved schedule changes
+  useEffect(() => {
+    if (!unsaved) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [unsaved]);
   const [activeWeek, setActiveWeek] = useState(1);
   const [activeTab, setActiveTab] = useState('schedule'); // 'schedule', 'comms', or 'requests'
   
