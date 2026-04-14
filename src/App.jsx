@@ -3374,16 +3374,10 @@ export default function App() {
                         <p className="text-sm font-bold" style={{ color: THEME.text.primary }}>{date.getDate()}</p>
                         <p className="text-xs" style={{ color: hasOverride ? THEME.accent.cyan + 'CC' : THEME.text.muted }}>{formatTimeShort(sh.open)}-{formatTimeShort(sh.close)}</p>
                         <p className="text-xs mt-0.5">
-                          {isPast ? (
-                            <span style={{ color: THEME.text.muted }}>{scheduled}</span>
-                          ) : (
-                            <>
-                              <AnimatedNumber value={scheduled} overtimeThreshold={Infinity} style={{ color: overTarget ? THEME.status.error + 'AA' : atTarget ? THEME.status.success + '99' : THEME.text.muted }} />
-                              <span style={{ color: hasOverride ? THEME.accent.cyan + '99' : THEME.text.muted }}>/{target}</span>
-                            </>
-                          )}
+                          <AnimatedNumber value={scheduled} overtimeThreshold={Infinity} style={{ color: overTarget ? THEME.status.error + 'AA' : atTarget ? THEME.status.success + '99' : THEME.text.muted }} />
+                          <span style={{ color: hasOverride ? THEME.accent.cyan + '99' : THEME.text.muted }}>/{target}</span>
                         </p>
-                        {!isPast && target > 0 && (
+                        {target > 0 && (
                           <div className="px-1"><StaffingBar scheduled={scheduled} target={target} /></div>
                         )}
                       </div>
