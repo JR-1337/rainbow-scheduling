@@ -10,13 +10,16 @@
 
 **Active plan:** `~/.claude/plans/lovely-launching-marble.md` — audit-driven security + bugfix + refactor chunked into S33.5 → S40.
 
-Pitch deck slide-by-slide review (S52+, per JR — one slide per chat session with fresh context):
-- Slide 1 (Cover) — currently title-card only (no before/after photos per JR override of plan spec)
-- Slide 2 (Cost) — envelope / legal $170K / scale 476 cards
-- Slide 3 (Today) — auto-fill / ESA live / phone self-serve / PDF for payroll + screenshots
-- Slide 4 (Alternatives) — Counterpoint / ADP / SaaS columns
+Pitch deck slide-by-slide review (per JR — one slide per chat session with fresh context):
+- ~~Slide 1 (Cover)~~ — **S53: REVIEWED.** Card copy unchanged per JR ("leave alone, perfect"). Added italic footer: "Rainbow Scheduling app: built to order by the one who does the work. Sarvi knows best."
+- ~~Slide 2 (Cost)~~ — **S53: SHIPPED.** Full rewrite. Sub-headline "A year of a GM's attention, rendered in dollars." Card 1 label "The hidden hours". Card 2 Guardrails / "Compliance built into the schedule." (44hr OT + 8hr rest + consecutive-days; $170K ceiling DROPPED). Card 3 "The back-and-forth" / "Every request, routed — not relayed." (comms load + self-serve + logged decisions). Footer: "What it takes, today, just to open on time."
+- Slide 3 (Today) — **S54 NEXT.** Currently: auto-fill / ESA live / phone self-serve / PDF for payroll + screenshots. Known issue: copy still says "11-hour daily rest rule" which is wrong (Ontario ESA is 8 hours) — must be corrected in S54.
+- Slide 4 (Alternatives) — Counterpoint / ADP / SaaS columns. Known issue: ADP + SaaS columns also cite 11-hr rest — same correction needed.
 - Slide 5 (Proposal) — risk-reversal hero + 4 principle cards + Phase 2 continuity strip
 - `/price` and `/spec` print routes
+
+Pending JR sign-off (from S53, not yet shipped):
+- Accent-word-per-header pattern for all slides (match Slide 2's $25,480 treatment). Proposed: Slide 1 "OTR", Slide 3 "Custom-built", Slide 4 "fit", Slide 5 "Walk".
 
 Pitch deck cleanup (blocked on JR call):
 - Schedule data re-seed: vary availability per synthetic employee (each unavailable 2 days/wk, no 6+ day streaks, headcount matches per-day targets), then recapture cover-empty + cover-full + slide3-admin-wide. Options: (a) Apps Script JR pastes + runs, (b) manual Sheet edit, (c) skip for demo.
