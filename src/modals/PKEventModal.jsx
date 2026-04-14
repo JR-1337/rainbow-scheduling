@@ -22,15 +22,15 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees }) => {
     }
   }, [isOpen]);
 
-  useEffect(() => { setOverrides({}); }, [date, start, end]);
+  useEffect(() => { setOverrides({}); }, [date]);
 
   const candidates = useMemo(() => {
     const active = (employees || []).filter(e => e.active && !e.deleted && !e.isOwner);
     return active.map(e => {
-      const check = availabilityCoversWindow(e.availability, date, start, end);
-      const defaultChecked = check.covers;
+      const check = availabilityCoversWindow(e.availability, date);
+      const defaultChecked = check.eligible;
       const checked = overrides[e.id] !== undefined ? overrides[e.id] : defaultChecked;
-      return { ...e, eligible: check.covers, reason: check.reason, checked };
+      return { ...e, eligible: check.eligible, reason: check.reason, checked };
     }).sort((a, b) => {
       const aFt = a.type === 'full' ? 0 : 1;
       const bFt = b.type === 'full' ? 0 : 1;
