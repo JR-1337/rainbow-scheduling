@@ -61,7 +61,6 @@ const EmployeeScheduleCell = React.memo(({ shift, date, loggedInEmpId, storeHour
             <span className="text-xs font-semibold truncate pr-3" style={{ color: role?.color }}>{role?.name}</span>
             <div className="flex items-center justify-between">
               <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
-              <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>{shift.hours}h</span>
             </div>
           </div>
         ) : null}
@@ -94,7 +93,6 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, loggedInEmpId, ge
               {employee.name}
               {isMe && <span className="text-xs" style={{ color: THEME.accent.cyan }}>(You)</span>}
             </p>
-            <p className="text-xs font-semibold" style={{ color: hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan }}><AnimatedNumber value={hours} decimals={1} suffix="h" /></p>
           </div>
         </div>
       </div>

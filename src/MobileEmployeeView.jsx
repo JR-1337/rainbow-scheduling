@@ -290,10 +290,6 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                     }}>
                       {emp.name.split(' ').slice(1).join(' ')}
                     </p>
-                    <p className="font-semibold" style={{
-                      color: hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan,
-                      fontSize: '10px', lineHeight: 1.2
-                    }}>{hours.toFixed(1)}h</p>
                   </td>
                   
                   {/* Shift cells */}
@@ -343,12 +339,11 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                               <div>
                                 <span style={{ color: THEME.text.secondary, fontSize: '9px' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
                               </div>
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium" style={{ color: THEME.text.muted, fontSize: '9px' }}>{shift.hours}h</span>
-                                {isOwnShift && shift.task && (
+                              {isOwnShift && shift.task && (
+                                <div className="flex items-center justify-end">
                                   <Star size={8} fill={THEME.task} color={THEME.task} />
-                                )}
-                              </div>
+                                </div>
+                              )}
                             </div>
                           ) : null}
                         </div>
