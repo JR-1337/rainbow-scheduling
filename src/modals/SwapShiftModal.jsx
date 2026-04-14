@@ -71,9 +71,7 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
         const keyEmpId = key.slice(0, -11);
         if (keyEmpId !== empId) return false;
         const shiftDate = parseLocalDate(dateStr);
-        const tomorrowNoon = new Date(tomorrow);
-        tomorrowNoon.setHours(12, 0, 0, 0);
-        return shiftDate >= tomorrowNoon;
+        return shiftDate >= tomorrow;
       })
       .map(([key, shift]) => {
         const dateStr = key.slice(-10);

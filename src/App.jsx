@@ -611,7 +611,9 @@ const ScheduleCell = React.memo(({ shift, date, onClick, availability, storeHour
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
         
         {isFullyUnavailable && !shift && !isDeleted && (
-          <div className="absolute inset-0" style={{ background: `repeating-linear-gradient(45deg, transparent, transparent 3px, ${OTR.navy}30 3px, ${OTR.navy}30 6px)` }} />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="text-xs" style={{ color: THEME.text.muted, fontSize: '9px' }}>Unavailable</span>
+          </div>
         )}
 
         {hasApprovedTimeOff && !shift && !isDeleted && (
@@ -2581,14 +2583,21 @@ export default function App() {
     </div>
   );
 
-  // Show loading screen while fetching data (skeleton - feels faster than spinner)
+  // Show loading screen while fetching data (skeleton + persistent reassurance overlay)
   if (isLoadingData) {
     return (
       <>
         {sweepOverlay}
-        <div className="min-h-screen" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }} role="status" aria-live="polite" aria-label="Loading schedule">
+        <div className="min-h-screen relative" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }} role="status" aria-live="polite" aria-label="Loading schedule">
           <div className="pt-8" style={{ backgroundColor: THEME.bg.secondary }}>
             <ScheduleSkeleton />
+          </div>
+          <div className="fixed inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 150 }}>
+            <div className="flex flex-col items-center gap-3 px-6 py-5 rounded-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, boxShadow: THEME.shadow.card }}>
+              <div className="rainbow-spinner" style={{ width: 28, height: 28, borderWidth: 3 }} />
+              <p className="text-sm font-medium" style={{ color: THEME.text.primary }}>Loading your schedule…</p>
+              <p className="text-xs italic" style={{ color: THEME.text.muted }}>This can take a moment on first sign-in.</p>
+            </div>
           </div>
         </div>
       </>
@@ -3422,7 +3431,7 @@ export default function App() {
               <div className="mt-2 p-1.5 rounded-lg flex items-center gap-2 flex-wrap text-xs" style={{ backgroundColor: THEME.bg.secondary, zIndex: 1 }}>
                 {ROLES.filter(r => r.id !== 'none').map(r => <div key={r.id} className="flex items-center gap-1"><div className="w-2 h-2 rounded" style={{ backgroundColor: r.color }} /><span style={{ color: THEME.text.secondary }}>{r.fullName}</span></div>)}
                 <div className="flex items-center gap-1 ml-auto"><Star size={10} fill={THEME.task} color={THEME.task} /><span style={{ color: THEME.text.secondary }}>Task</span></div>
-                <div className="flex items-center gap-1"><div className="w-3 h-2 rounded-sm" style={{ background: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px)` }} /><span style={{ color: THEME.text.secondary }}>Unavailable</span></div>
+                <div className="flex items-center gap-1"><div className="w-3 h-2 rounded-sm flex items-center justify-center" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}` }} /><span style={{ color: THEME.text.secondary }}>Unavailable</span></div>
                 <div className="flex items-center gap-1"><div className="w-3 h-2 rounded-sm" style={{ background: `repeating-linear-gradient(-45deg, transparent, transparent 2px, ${THEME.accent.cyan}40 2px, ${THEME.accent.cyan}40 4px)` }} /><span style={{ color: THEME.text.secondary }}>Time Off</span></div>
                 {adminContacts.length > 0 && (
                   <>

@@ -126,6 +126,13 @@ export const ChangePasswordModal = ({ isOpen, onClose, currentUser, isFirstLogin
 
           {error && <p className="text-xs mt-2" style={{ color: THEME.status.error }}>{error}</p>}
 
+          {loading && (
+            <div className="flex items-center gap-2 mt-3 px-2.5 py-2 rounded-lg" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.subtle}` }}>
+              <div className="rainbow-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+              <p className="text-xs italic" style={{ color: THEME.text.secondary }}>Saving your password — this can take a moment.</p>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 mt-3 pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
             {!isFirstLogin && (
               <GradientButton variant="secondary" small onClick={onClose} disabled={loading}>Cancel</GradientButton>

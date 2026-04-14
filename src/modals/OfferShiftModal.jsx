@@ -66,9 +66,7 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
       const empId = key.slice(0, -11);
       if (empId !== currentUser?.id) return false;
       const shiftDate = parseLocalDate(dateStr);
-      const tomorrowNoon = new Date(tomorrow);
-      tomorrowNoon.setHours(12, 0, 0, 0);
-      return shiftDate >= tomorrowNoon;
+      return shiftDate >= tomorrow;
     })
     .map(([key, shift]) => {
       const dateStr = key.slice(-10);
