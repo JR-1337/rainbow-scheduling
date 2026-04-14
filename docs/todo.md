@@ -23,7 +23,7 @@ Pitch deck cleanup (blocked on JR call):
 
 Pre-demo (before 2026-04-14):
 - S35 browser verify live + demo polish
-- **JR login recovery** — password not working on https://rainbow-scheduling.vercel.app. Recovery: log in as Sarvi (admin1) → Manage Staff → JR row → Reset password → default emp-NNN → log in as JR → set new. Demo itself runs from Sarvi's account so this is a convenience-only blocker.
+- ~~**JR login recovery**~~ — RESOLVED S52 (`ff54544`). Root cause was NOT a password issue: `App.jsx` `handleLogin` parent (line 1408) called `JSON.parse(user.availability)` on a value that was `""` for admins, throwing `SyntaxError: Unexpected end of JSON input` before `setCurrentUser` could fire. User saw spinner stop, no toast, stayed on login. Fix: defensive parse + try/catch + empty-string short-circuit. Verified live via fresh playwright login as Sarvi/admin1 — landed on schedule grid with zero console errors.
 
 Post-demo:
 - S39.4 DEFERRED: mobile admin branch extraction conflicts with decisions.md 2026-02-10. Unblocks only after admin state moves to a Context provider. See 2026-04-12 decision entry.

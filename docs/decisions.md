@@ -2,6 +2,12 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-14 - Defensive Availability Parse Added to Login Handler (S52)
+**Decided:** `App.jsx` parent `handleLogin` (line 1408) wraps the `user.availability` JSON parse in try/catch with empty-string short-circuit. Empty/malformed values resolve to `{}`; `getAllData`'s `ensureFullWeek` then normalizes to a full 7-day shape on the next data refresh. Shipped as `ff54544` (S52). Live verified via fresh playwright login as Sarvi/admin1.
+**Alternatives:** (a) Move `ensureFullWeek` to a shared util and call from both parse sites — rejected for this fix (more files, larger diff for an urgent demo-eve bug). Future refactor candidate. (b) Filter availability out of the login response server-side — rejected: backend should not lose information based on consumer fragility. (c) Server-side seed write to populate every employee's availability with a default JSON — rejected: doesn't fix the class of bug, just hides this instance.
+**Rationale:** Same root cause class as S50 white-screen bug — empty Sheet field → `JSON.parse('')` throws → app stuck. S50 fixed the `getAllData` path; the login path was uncovered. Inline defensive parse is the smallest possible change that solves the visible bug; canonicalizing into a shared helper is a cleanup task for a non-demo session.
+**Revisit if:** Any other Sheet-sourced JSON field (storeHours, requests blobs, settings) starts producing the same throw class. Sweep all parse sites and consider extracting a single `safeParseJSON(raw, fallback)` util.
+
 ## 2026-04-14 - Deck Drops to 5 Slides; Phase 2 Folds into Proposal
 **Decided:** Drop standalone Phase 2 slide. Fold it into the Proposal slide as a one-line "After the trial" continuity strip naming the three tracks (Counterpoint→ADP bridge, consecutive-days warning, meetings/PK shift types) with "scoped fixed-price after the trial" wording. Deck count drops 6 → 5. Risk-reversal hero line ("Walk any time in the first 90 days. The only cost is the weeks you used.") becomes Proposal's display headline.
 **Alternatives:** (a) Keep Phase 2 as slide 5 per plan — rejected by JR: risks reading as pre-close upsell to a price-first Dan. (b) Move Phase 2 between slides 2 and 3 — rejected: disrupts cost → proof → disqualify-alternatives arc. (c) Drop Phase 2 entirely — rejected: roadmap value needs to land, just not as its own slide.
