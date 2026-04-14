@@ -242,8 +242,8 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
       return a.name.localeCompare(b.name);
     });
   
-  // Admin contacts for display
-  const adminContacts = employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
+  // Admin contacts for employee-facing display: Sarvi only (other admins hidden per JR)
+  const adminContacts = employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted && e.name?.toLowerCase() === 'sarvi');
   
   // Perf: memoize date-key arrays so inner loops are O(N) strings, not O(N) ISO allocations
   const currentDateStrs = useMemo(() => currentDates.map(toDateKey), [currentDates]);

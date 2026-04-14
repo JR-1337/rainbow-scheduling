@@ -269,20 +269,22 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                       </td>
                     </tr>
                   )}
-                  <tr style={isMe ? { outline: `1.5px solid ${THEME.accent.purple}60`, outlineOffset: '-1px', borderRadius: '4px' } : undefined}>
+                  <tr>
                   {/* Name cell - frozen left */}
                   <td style={{
                     width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH,
-                    backgroundColor: THEME.bg.secondary,
+                    backgroundColor: isMe ? THEME.accent.purple + '20' : THEME.bg.secondary,
                     borderRight: `1px solid ${THEME.border.default}`,
                     borderBottom: `1px solid ${THEME.border.subtle}`,
+                    borderLeft: isMe ? `3px solid ${THEME.accent.purple}` : 'none',
                     padding: '4px', verticalAlign: 'middle'
                   }}>
-                    <p className="font-medium truncate" style={{
-                      color: THEME.text.primary,
+                    <p className="font-medium truncate flex items-center gap-1" style={{
+                      color: isMe ? THEME.accent.purple : THEME.text.primary,
                       fontSize: '12px', lineHeight: 1.2
                     }}>
                       {emp.name.split(' ')[0]}
+                      {isMe && <span style={{ color: THEME.accent.cyan, fontSize: '9px' }}>(You)</span>}
                     </p>
                     <p className="truncate" style={{
                       color: THEME.text.muted,
@@ -306,7 +308,7 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                     return (
                       <td key={i} style={{
                         width: CELL_WIDTH, minWidth: CELL_WIDTH, height: CELL_HEIGHT,
-                        backgroundColor: THEME.bg.secondary,
+                        backgroundColor: isMe ? THEME.accent.purple + '10' : THEME.bg.secondary,
                         borderBottom: `1px solid ${THEME.border.subtle}`,
                         padding: '2px'
                       }}>
@@ -331,7 +333,7 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                             </div>
                           ) : isUnavailable && !shift ? (
                             <div className="flex items-center justify-center h-full">
-                              <span style={{ color: THEME.text.muted, fontSize: '8px' }}>N/A</span>
+                              <span style={{ color: THEME.text.muted, fontSize: '8px' }}>Unavailable</span>
                             </div>
                           ) : shift ? (
                             <div className="p-1 h-full flex flex-col justify-between">
