@@ -13,13 +13,10 @@
 Pitch deck slide-by-slide review (per JR — one slide per chat session with fresh context):
 - ~~Slide 1 (Cover)~~ — **S53: REVIEWED.** Card copy unchanged per JR ("leave alone, perfect"). Added italic footer: "Rainbow Scheduling app: built to order by the one who does the work. Sarvi knows best."
 - ~~Slide 2 (Cost)~~ — **S53: SHIPPED.** Full rewrite. Sub-headline "A year of a GM's attention, rendered in dollars." Card 1 label "The hidden hours". Card 2 Guardrails / "Compliance built into the schedule." (44hr OT + 8hr rest + consecutive-days; $170K ceiling DROPPED). Card 3 "The back-and-forth" / "Every request, routed — not relayed." (comms load + self-serve + logged decisions). Footer: "What it takes, today, just to open on time."
-- Slide 3 (Today) — **S54 NEXT.** Currently: auto-fill / ESA live / phone self-serve / PDF for payroll + screenshots. Known issue: copy still says "11-hour daily rest rule" which is wrong (Ontario ESA is 8 hours) — must be corrected in S54.
-- Slide 4 (Alternatives) — Counterpoint / ADP / SaaS columns. Known issue: ADP + SaaS columns also cite 11-hr rest — same correction needed.
-- Slide 5 (Proposal) — risk-reversal hero + 4 principle cards + Phase 2 continuity strip
+- Slide 3 (Today) — **DEFERRED in S54, still OUTSTANDING.** Currently: auto-fill / ESA live / phone self-serve / PDF for payroll + screenshots. S54 refined header accent to just "Custom" (was whole "Custom-built"). Known issue: body still cites "11-hour daily rest rule" — Ontario ESA is 8 hours — must be corrected when this slide is reviewed.
+- ~~Slide 4 (Alternatives)~~ — **S54: SHIPPED.** 3 bullets per column (9 total). Counterpoint +3rd "No employee view." ADP: reworked compliance bullet (8hr rest corrected, ESA framed as "not native, each rule a manual config") + added customer-sentiment 3rd ("Support is widely reported as broken"). SaaS: bullet 2 fixed (Australian labour awards + WIW defaults to US 40hr OT, no 8hr rest) + 3rd added (restaurants/hospitality, no retail floor-coverage model). Italic footer: "Concierge customer service. Staff and management training, free."
+- Slide 5 (Proposal) — **S55 NEXT per JR /handoff arg.** Risk-reversal hero + 4 principle cards + Phase 2 continuity strip. Header accent currently "Walk". Review pattern: 3-bullet-per-card may apply here too, check with JR.
 - `/price` and `/spec` print routes
-
-Pending JR sign-off (from S53, not yet shipped):
-- Accent-word-per-header pattern for all slides (match Slide 2's $25,480 treatment). Proposed: Slide 1 "OTR", Slide 3 "Custom-built", Slide 4 "fit", Slide 5 "Walk".
 
 Pitch deck cleanup (blocked on JR call):
 - Schedule data re-seed: vary availability per synthetic employee (each unavailable 2 days/wk, no 6+ day streaks, headcount matches per-day targets), then recapture cover-empty + cover-full + slide3-admin-wide. Options: (a) Apps Script JR pastes + runs, (b) manual Sheet edit, (c) skip for demo.
