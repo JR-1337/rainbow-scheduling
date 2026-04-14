@@ -611,7 +611,7 @@ const ScheduleCell = React.memo(({ shift, date, onClick, availability, storeHour
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
         
         {isFullyUnavailable && !shift && !isDeleted && (
-          <div className="absolute inset-0" style={{ background: `repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.32) 3px, rgba(0,0,0,0.32) 6px)` }} />
+          <div className="absolute inset-0" style={{ background: `repeating-linear-gradient(45deg, transparent, transparent 3px, ${OTR.navy}30 3px, ${OTR.navy}30 6px)` }} />
         )}
 
         {hasApprovedTimeOff && !shift && !isDeleted && (
