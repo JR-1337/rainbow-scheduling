@@ -11,3 +11,11 @@ export const escapeHtml = (str) => {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 };
+
+// Strip emoji / pictographs for the PDF print path: browsers that render the
+// print-to-PDF window without a color-emoji font produce replacement squares.
+// Keeps typographic symbols like ★ • — (not Extended_Pictographic).
+export const stripEmoji = (str) => {
+  if (str == null) return '';
+  return String(str).replace(/\p{Extended_Pictographic}\uFE0F?/gu, '').replace(/\uFE0F/g, '');
+};

@@ -11,7 +11,9 @@ import {
   isStatHoliday,
   hasApprovedTimeOffForDate,
 } from '../App';
-import { escapeHtml } from '../utils/format';
+import { escapeHtml, stripEmoji } from '../utils/format';
+
+const cleanText = (s) => escapeHtml(stripEmoji(s));
 
 export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = []) => {
   const week1 = dates.slice(0, 7);
@@ -34,8 +36,8 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 
   const announcementHtml = (announcement && announcement.message) ? `
     <div style="margin:15px 0;padding:15px;background:#faf7fb;border-radius:8px;border-left:4px solid #932378;">
-      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;letter-spacing:0.5px;">📢 ${escapeHtml(announcement.subject)}</h3>` : '<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;">📢 Announcement</h3>'}
-      <div style="color:#0D0E22;font-size:11px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(announcement.message)}</div>
+      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;letter-spacing:0.5px;">${cleanText(announcement.subject)}</h3>` : '<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;">Announcement</h3>'}
+      <div style="color:#0D0E22;font-size:11px;line-height:1.6;white-space:pre-wrap;">${cleanText(announcement.message)}</div>
     </div>
   ` : '';
 
@@ -70,7 +72,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
           <div style="font-size:10px;font-weight:700;color:${roleColor};margin-bottom:2px;">${roleName}</div>
           <div style="font-size:9px;color:#0D0E22;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
           <div style="font-size:8px;color:#475569;">${shift.hours}h</div>
-          ${shift.task ? `<div style="font-size:7px;color:#d97706;margin-top:2px;line-height:1.3;word-break:break-word;">★ ${escapeHtml(shift.task)}</div>` : ''}
+          ${shift.task ? `<div style="font-size:7px;color:#d97706;margin-top:2px;line-height:1.3;word-break:break-word;">★ ${cleanText(shift.task)}</div>` : ''}
         </td>`;
       }).join('');
 
@@ -81,7 +83,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 
       return `<tr style="page-break-inside:avoid;">
         <td style="padding:8px;border:1px solid #cbd5e1;background:#ffffff;">
-          <div style="font-weight:600;font-size:11px;color:#0D0E22;">${escapeHtml(emp.name)}</div>
+          <div style="font-weight:600;font-size:11px;color:#0D0E22;">${cleanText(emp.name)}</div>
           <div style="font-size:10px;color:${hoursColor};font-weight:600;">${hoursDisplay}</div>
         </td>
         ${cells}
@@ -123,7 +125,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   const adminContactsHtml = adminContacts.length > 0 ? `
     <div style="margin-top:12px;padding:10px 15px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
       <div style="font-weight:600;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Contact Admin</div>
-      ${adminContacts.map(a => `<span style="margin-right:20px;font-size:11px;color:#334155;">${escapeHtml(a.name)}: <span style="color:#0369a1;">${escapeHtml(a.email)}</span></span>`).join('')}
+      ${adminContacts.map(a => `<span style="margin-right:20px;font-size:11px;color:#334155;">${cleanText(a.name)}: <span style="color:#0369a1;">${cleanText(a.email)}</span></span>`).join('')}
     </div>
   ` : '';
 
@@ -149,7 +151,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 </head>
 <body style="background:#ffffff;">
   <div class="no-print" style="position:sticky;top:0;background:#ffffff;padding:10px 0;margin-bottom:10px;border-bottom:1px solid #e2e8f0;text-align:right;z-index:10;">
-    <button class="print-btn" onclick="window.print()">🖨 Print Schedule</button>
+    <button class="print-btn" onclick="window.print()">Print Schedule</button>
     <span style="margin-left:15px;color:#64748b;font-size:11px;">Review the preview below, then click Print.</span>
   </div>
   <div style="text-align:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid #0D0E22;">
