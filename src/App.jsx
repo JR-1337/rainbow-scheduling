@@ -611,11 +611,11 @@ const ScheduleCell = React.memo(({ shift, date, onClick, availability, storeHour
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
         
         {isFullyUnavailable && !shift && !isDeleted && (
-          <div className="absolute inset-0 opacity-60" style={{ background: `repeating-linear-gradient(45deg, transparent, transparent 3px, ${THEME.bg.hover} 3px, ${THEME.bg.hover} 6px)` }} />
+          <div className="absolute inset-0" style={{ background: `repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.32) 3px, rgba(0,0,0,0.32) 6px)` }} />
         )}
-        
+
         {hasApprovedTimeOff && !shift && !isDeleted && (
-          <div className="absolute inset-0 opacity-70" style={{ background: `repeating-linear-gradient(-45deg, transparent, transparent 3px, ${THEME.accent.cyan}30 3px, ${THEME.accent.cyan}30 6px)` }} />
+          <div className="absolute inset-0" style={{ background: `repeating-linear-gradient(-45deg, transparent, transparent 3px, ${THEME.accent.cyan}AA 3px, ${THEME.accent.cyan}AA 6px)` }} />
         )}
         
         {hasPartial && shading.top > 5 && !shift && !isDeleted && (
@@ -1956,17 +1956,17 @@ export default function App() {
   
   const saveShift = (s) => {
     const k = `${s.employeeId}-${s.date}`;
-    // Update local state only - shifts are batch saved when going LIVE
-    if (s.deleted) { 
-      const n = { ...shifts }; 
-      delete n[k]; 
-      setShifts(n); 
-      showToast('success', 'Shift removed (will save when you Go Live)');
+    // Update local state only - persisted by SAVE button (drafts) or Go Live (publish)
+    if (s.deleted) {
+      const n = { ...shifts };
+      delete n[k];
+      setShifts(n);
+      showToast('success', 'Shift removed — click SAVE to keep changes');
     } else {
       setShifts({ ...shifts, [k]: s });
-      showToast('success', 'Shift updated (will save when you Go Live)');
+      showToast('success', 'Shift updated — click SAVE to keep changes');
     }
-    setUnsaved(true); 
+    setUnsaved(true);
     setPublished(false);
   };
   
@@ -2923,14 +2923,16 @@ export default function App() {
         
         {/* Shift Editor Modal (reused from desktop) */}
         {editingShift && (
-          <ShiftEditorModal 
-            isOpen 
-            onClose={() => setEditingShift(null)} 
-            onSave={saveShift} 
-            employee={editingShift.employee} 
-            date={editingShift.date} 
-            existingShift={editingShift.shift} 
-            totalPeriodHours={getEmpHours(editingShift.employee.id)} 
+          <ShiftEditorModal
+            isOpen
+            onClose={() => setEditingShift(null)}
+            onSave={saveShift}
+            employee={editingShift.employee}
+            date={editingShift.date}
+            existingShift={editingShift.shift}
+            totalPeriodHours={getEmpHours(editingShift.employee.id)}
+            availability={editingShift.employee.availability?.[getDayName(editingShift.date)]}
+            hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)}
           />
         )}
         
@@ -3591,7 +3593,7 @@ export default function App() {
       </main>
       
       <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} suggestedPassword={editingEmp ? undefined : `emp-${String(employees.length + 1).padStart(3, '0')}`} />
-      {editingShift && <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} employee={editingShift.employee} date={editingShift.date} existingShift={editingShift.shift} totalPeriodHours={getEmpHours(editingShift.employee.id)} />}
+      {editingShift && <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} employee={editingShift.employee} date={editingShift.date} existingShift={editingShift.shift} totalPeriodHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} />}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <InactiveEmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
       <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />

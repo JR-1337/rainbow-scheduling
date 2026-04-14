@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Trash2, Check } from 'lucide-react';
+import { Star, Trash2, Check, AlertTriangle } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES } from '../constants';
 import { toDateKey, isStatHoliday, getStoreHoursForDate, formatDateLong, Modal, TimePicker, GradientButton, AnimatedNumber, calculateHours } from '../App';
@@ -9,7 +9,7 @@ const getDefaultBookingTimes = (date) => {
   return { start: storeHours.open, end: storeHours.close };
 };
 
-export const ShiftEditorModal = ({ isOpen, onClose, onSave, employee, date, existingShift, totalPeriodHours }) => {
+export const ShiftEditorModal = ({ isOpen, onClose, onSave, employee, date, existingShift, totalPeriodHours, availability, hasApprovedTimeOff = false }) => {
   const storeHours = getStoreHoursForDate(date);
   const isHoliday = isStatHoliday(date);
   const defaultTimes = getDefaultBookingTimes(date);
@@ -28,6 +28,18 @@ export const ShiftEditorModal = ({ isOpen, onClose, onSave, employee, date, exis
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Shift" size="sm">
+      {(hasApprovedTimeOff || (availability && availability.available === false)) && (
+        <div className="p-2 rounded-lg mb-2 flex items-start gap-2" style={{ backgroundColor: THEME.status.warning + '20', border: `1px solid ${THEME.status.warning}` }}>
+          <AlertTriangle size={14} style={{ color: THEME.status.warning, marginTop: 1, flexShrink: 0 }} />
+          <p className="text-xs" style={{ color: THEME.text.primary }}>
+            {hasApprovedTimeOff
+              ? <><strong>{employee.name}</strong> has approved time off for this date.</>
+              : <><strong>{employee.name}</strong> is marked unavailable on {formatDateLong(date).split(',')[0]}s.</>}
+            <span style={{ color: THEME.text.secondary }}> You can still schedule them, but double-check first.</span>
+          </p>
+        </div>
+      )}
+
       <div className="p-2 rounded-lg mb-2" style={{ backgroundColor: THEME.bg.tertiary }}>
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: 'white' }}>{employee.name.charAt(0)}</div>
