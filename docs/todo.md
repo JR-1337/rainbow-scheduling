@@ -86,6 +86,11 @@ Existing up-next preserved:
 PDF export cleanup (S61, logged while building Meetings+PK):
 - PDF header/footer currently shows every admin's email — should show Sarvi's contact only (filter to `ADMIN_EMAIL` or the owner-designated store contact)
 - App logo emoji renders as garbled characters in the PDF output (font subset missing glyph or jsPDF encoding issue). Swap to an inline SVG/image or ASCII wordmark for the PDF path
+- Broader rule: any glyph that fails to render in jsPDF's default font set should be stripped (not fallback-replaced) — emojis, lucide icons if any slip through, non-Latin symbols. Sarvi's printout should never show replacement squares / code-point boxes.
+
+Defaults UI + retroactive-default bug (S62, Sarvi-surfaced 2026-04-14):
+- Store-hours default was hardcoded in `STORE_HOURS` constant. S62 quick fix: Mon/Tue/Wed → 10:00-18:00. Proper fix in ~4 days: move to Settings-sheet row, editable via new "Store Hours" tab in `AdminSettingsModal`, mirror the `staffingTargets` pattern.
+- **Retroactive-default concern (JR flag):** changing a default staffing target or store-hours default re-renders past dates with the new value. Past "understaffed" flags / availability shading mutate retroactively. Either (a) snapshot per-date defaults at publish time into an override, (b) version defaults with `effectiveFrom` date and look up by date at render time, or (c) on default-change, auto-write the prior default as explicit overrides for every past date up to today. Decide during the proper-fix session.
 
 ### Done
 
