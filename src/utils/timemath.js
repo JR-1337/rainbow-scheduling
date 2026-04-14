@@ -48,6 +48,26 @@ export function computeDayUnionHours(entries) {
   return totalMin / 60 + fallbackHours;
 }
 
+// S62 — Does an employee's availability for the weekday of `dateStr` cover the
+// [startHHMM, endHHMM] window? Used by the PK bulk modal to auto-check attendees.
+// Returns { covers: bool, reason?: string }. Reasons are short human strings for
+// the greyed-out row UI.
+const DAY_NAMES = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+
+export function availabilityCoversWindow(availability, dateStr, startHHMM, endHHMM) {
+  if (!dateStr) return { covers: false, reason: 'no date' };
+  const day = DAY_NAMES[new Date(dateStr + 'T12:00:00').getDay()];
+  const a = availability?.[day];
+  if (!a || a.available === false) return { covers: false, reason: `unavailable ${day.slice(0,3)}` };
+  if (!a.start || !a.end) return { covers: true };
+  const aStart = parseHM(a.start);
+  const aEnd = parseHM(a.end);
+  const wStart = parseHM(startHHMM);
+  const wEnd = parseHM(endHHMM);
+  if (aStart <= wStart && aEnd >= wEnd) return { covers: true };
+  return { covers: false, reason: `avail ${a.start}-${a.end} only` };
+}
+
 // Walk backward from `uptoDateStr` (YYYY-MM-DD) counting consecutive prior days
 // (inclusive of uptoDate) on which the employee has a work-type shift. Used by
 // the ShiftEditor consecutive-days advisory. ESA isn't enforced — informational only.

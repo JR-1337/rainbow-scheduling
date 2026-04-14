@@ -9,8 +9,10 @@ const getDefaultBookingTimes = (date) => {
   return { start: storeHours.open, end: storeHours.close };
 };
 
-// 2hr block starting at the next full hour from now (or 14:00 if that's already past).
-const getDefaultEventTimes = () => {
+// 2hr block. PK defaults to 6-8pm (Sarvi's typical after-close training window per S62).
+// Meeting defaults to the next full hour from now (or 14:00 if that's already past).
+const getDefaultEventTimes = (type = 'meeting') => {
+  if (type === 'pk') return { start: '18:00', end: '20:00' };
   const now = new Date();
   let hour = now.getHours() + 1;
   if (hour < 10 || hour > 17) hour = 14;
@@ -71,7 +73,7 @@ export const ShiftEditorModal = ({
       };
     }
     const ev = existingEvents.find(e => e.type === type);
-    const t = getDefaultEventTimes();
+    const t = getDefaultEventTimes(type);
     return {
       startTime: ev?.startTime || t.start,
       endTime: ev?.endTime || t.end,

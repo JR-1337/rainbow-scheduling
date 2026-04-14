@@ -8,10 +8,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import React, { useState, useMemo } from 'react';
-import { 
+import {
   ChevronLeft, ChevronRight, X, Calendar, Star, Eye, LogOut, Shield,
   Loader, ArrowRightLeft, ArrowRight, Bell, Menu, Key, Settings,
-  Check, ClipboardList, MessageSquare, User, Save, Mail, AlertCircle, Edit3
+  Check, ClipboardList, MessageSquare, User, Save, Mail, AlertCircle, Edit3, BookOpen
 } from 'lucide-react';
 
 import {
@@ -25,9 +25,9 @@ import { EVENT_TYPES } from './constants';
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN MOBILE HAMBURGER DRAWER
 // ═══════════════════════════════════════════════════════════════════════════════
-export const MobileAdminDrawer = ({ 
-  isOpen, onClose, currentUser, onLogout, 
-  onOpenChangePassword, onOpenSettings, onOpenOwnRequests,
+export const MobileAdminDrawer = ({
+  isOpen, onClose, currentUser, onLogout,
+  onOpenChangePassword, onOpenSettings, onOpenOwnRequests, onOpenPK,
   pendingRequestCount = 0
 }) => {
   if (!isOpen) return null;
@@ -71,6 +71,17 @@ export const MobileAdminDrawer = ({
             <Calendar size={16} />
             My Shift Changes
           </button>
+          {/* Schedule PK (bulk) */}
+          {onOpenPK && (
+            <button
+              onClick={() => { onOpenPK(); onClose(); }}
+              className="w-full px-4 py-2.5 text-sm font-medium rounded-lg flex items-center gap-3"
+              style={{ backgroundColor: THEME.event.pkBg, color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}` }}
+            >
+              <BookOpen size={16} />
+              Schedule PK
+            </button>
+          )}
           {/* Admin Settings */}
           {onOpenSettings && (
             <button

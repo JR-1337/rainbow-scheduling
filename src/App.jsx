@@ -23,6 +23,7 @@ import { ReceivedSwapsHistoryPanel } from './panels/ReceivedSwapsHistoryPanel';
 import { UnifiedRequestHistory } from './panels/UnifiedRequestHistory';
 import { InactiveEmployeesPanel } from './panels/InactiveEmployeesPanel';
 import { ShiftEditorModal } from './modals/ShiftEditorModal';
+import { PKEventModal } from './modals/PKEventModal';
 import { RequestTimeOffModal } from './modals/RequestTimeOffModal';
 import { CommunicationsPanel } from './panels/CommunicationsPanel';
 import { AdminSettingsModal } from './modals/AdminSettingsModal';
@@ -36,7 +37,7 @@ import { EmployeeView } from './views/EmployeeView';
 export { parseLocalDate, escapeHtml, THEME, TYPE, ROLES, ROLES_BY_ID };
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
-  User, Users, Phone, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, EyeOff, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu
+  User, Users, Phone, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, EyeOff, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu, BookOpen
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1223,6 +1224,7 @@ export default function App() {
     return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
   }, [adminMenuOpen]);
   const [adminDaysOffModalOpen, setAdminDaysOffModalOpen] = useState(false);
+  const [pkModalOpen, setPkModalOpen] = useState(false);
   const [autoPopulateConfirm, setAutoPopulateConfirm] = useState(null); // { type: 'populate-all' | 'populate-week' | 'clear-week' | 'clear-all', employee?: obj, week?: 1|2 }
   
   // Mobile admin state
@@ -1270,6 +1272,23 @@ export default function App() {
     } finally {
       actionBusyRef.current = false;
     }
+  };
+
+  // S62 — Bulk PK: one modal, one save. Backend createPKEvent is already in Code.gs (v2.21.0).
+  const handleBulkPK = async (payload) => {
+    await guardedMutation('Scheduling PK', async () => {
+      const result = await apiCall('bulkCreatePKEvent', payload);
+      if (!result.success) {
+        showToast('error', result.error?.message || 'Failed to schedule PK');
+        return;
+      }
+      const { created = [], skipped = [] } = result.data || {};
+      let msg = `PK scheduled for ${created.length}`;
+      if (skipped.length) msg += ` (${skipped.length} skipped)`;
+      showToast('success', msg);
+      setPkModalOpen(false);
+      if (currentUser?.email) await loadDataFromBackend(currentUser.email);
+    });
   };
   useEffect(() => {
     if (didBootstrapRef.current) return;
@@ -3063,6 +3082,7 @@ export default function App() {
           onOpenChangePassword={() => setMobileAdminChangePasswordOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenOwnRequests={() => setAdminRequestModalOpen(true)}
+          onOpenPK={() => setPkModalOpen(true)}
           pendingRequestCount={pendingRequestCount}
         />
 
@@ -3132,17 +3152,25 @@ export default function App() {
         />
         
         {/* Email Publish Modal */}
-        <EmailModal 
-          isOpen={emailOpen} 
-          onClose={() => setEmailOpen(false)} 
-          employees={employees} 
-          shifts={shifts} 
-          dates={dates} 
-          periodInfo={{ startDate, endDate }} 
-          announcement={currentAnnouncement} 
-          onComplete={() => { setPublished(true); setUnsaved(false); }} 
+        <EmailModal
+          isOpen={emailOpen}
+          onClose={() => setEmailOpen(false)}
+          employees={employees}
+          shifts={shifts}
+          dates={dates}
+          periodInfo={{ startDate, endDate }}
+          announcement={currentAnnouncement}
+          onComplete={() => { setPublished(true); setUnsaved(false); }}
         />
-        
+
+        {/* S62 — Bulk PK modal (mobile admin) */}
+        <PKEventModal
+          isOpen={pkModalOpen}
+          onClose={() => setPkModalOpen(false)}
+          onSchedule={handleBulkPK}
+          employees={employees}
+        />
+
         {/* Auto-populate confirmation modal */}
         {autoPopulateConfirm && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} role="dialog" aria-modal="true" aria-label="Confirm Auto-Populate" onClick={() => setAutoPopulateConfirm(null)}>
@@ -3407,35 +3435,27 @@ export default function App() {
                     <span className="text-xs font-medium" style={{ color: THEME.accent.blue }}>Full-Time ({fullTimeEmployees.length})</span>
                   </div>
                   <div className="w-px h-4" style={{ backgroundColor: THEME.border.default }} />
-                  
-                  {/* Auto-fill buttons */}
-                  <button
-                    onClick={() => {
-                      const weekDates = activeWeek === 1 ? week1 : week2;
-                      const hasExisting = fullTimeEmployees.some(e => employeeHasShiftsInWeek(e, weekDates));
-                      if (hasExisting) {
-                        setAutoPopulateConfirm({ type: 'populate-all', week: activeWeek });
-                      } else {
-                        const count = autoPopulateWeek(weekDates);
-                        if (count > 0) showToast('success', `Added ${count} shifts for full-time employees`);
-                        else showToast('warning', 'No shifts added — check that full-time employees have availability set');
-                      }
-                    }}
-                    className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 hover:opacity-80"
-                    style={{ backgroundColor: THEME.accent.blue, color: 'white' }}
-                  >
-                    <Zap size={10} />
-                    Auto-Fill All FT Week {activeWeek}
-                  </button>
-                  
-                  {/* Per-employee dropdown */}
+
+                  {/* S62 — Auto-Fill dropdown (collapsed: top option = All FT, rest = individual employees) */}
                   <select
+                    value=""
                     onChange={(e) => {
-                      const empId = e.target.value;
-                      if (!empId) return;
-                      const emp = fullTimeEmployees.find(x => x.id === empId);
-                      if (emp) {
-                        const weekDates = activeWeek === 1 ? week1 : week2;
+                      const val = e.target.value;
+                      e.target.value = '';
+                      if (!val) return;
+                      const weekDates = activeWeek === 1 ? week1 : week2;
+                      if (val === '__all__') {
+                        const hasExisting = fullTimeEmployees.some(x => employeeHasShiftsInWeek(x, weekDates));
+                        if (hasExisting) {
+                          setAutoPopulateConfirm({ type: 'populate-all', week: activeWeek });
+                        } else {
+                          const count = autoPopulateWeek(weekDates);
+                          if (count > 0) showToast('success', `Added ${count} shifts for full-time employees`);
+                          else showToast('warning', 'No shifts added — check that full-time employees have availability set');
+                        }
+                      } else {
+                        const emp = fullTimeEmployees.find(x => x.id === val);
+                        if (!emp) return;
                         if (employeeHasShiftsInWeek(emp, weekDates)) {
                           setAutoPopulateConfirm({ type: 'populate-week', employee: emp, week: activeWeek });
                         } else {
@@ -3444,46 +3464,59 @@ export default function App() {
                           else showToast('warning', `No shifts added — ${emp.name} may not have availability set for this week`);
                         }
                       }
-                      e.target.value = '';
                     }}
                     className="px-2 py-1 rounded text-xs outline-none"
                     style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${THEME.border.default}` }}
+                    aria-label={`Auto-fill week ${activeWeek}`}
                   >
-                    <option value="">Auto-Fill Week {activeWeek}...</option>
-                    {fullTimeEmployees.map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.name}</option>
-                    ))}
+                    <option value="">⚡ Auto-Fill Week {activeWeek}...</option>
+                    <option value="__all__" style={{ fontWeight: 700 }}>All Full-Timers</option>
+                    <optgroup label="— or pick one —">
+                      {fullTimeEmployees.map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                      ))}
+                    </optgroup>
                   </select>
-                  
+
                   <div className="w-px h-4" style={{ backgroundColor: THEME.border.default }} />
-                  
-                  {/* Clear buttons */}
+
+                  {/* S62 — Clear dropdown (collapsed the same way) */}
                   <select
+                    value=""
                     onChange={(e) => {
-                      const empId = e.target.value;
-                      if (!empId) return;
-                      const emp = fullTimeEmployees.find(x => x.id === empId);
-                      if (emp) {
-                        setAutoPopulateConfirm({ type: 'clear-week', employee: emp, week: activeWeek });
-                      }
+                      const val = e.target.value;
                       e.target.value = '';
+                      if (!val) return;
+                      if (val === '__all__') {
+                        setAutoPopulateConfirm({ type: 'clear-all', week: activeWeek });
+                      } else {
+                        const emp = fullTimeEmployees.find(x => x.id === val);
+                        if (emp) setAutoPopulateConfirm({ type: 'clear-week', employee: emp, week: activeWeek });
+                      }
                     }}
                     className="px-2 py-1 rounded text-xs outline-none"
                     style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted, border: `1px solid ${THEME.border.default}` }}
+                    aria-label={`Clear week ${activeWeek}`}
                   >
-                    <option value="">Clear Week {activeWeek}...</option>
-                    {fullTimeEmployees.filter(emp => employeeHasShiftsInWeek(emp, activeWeek === 1 ? week1 : week2)).map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.name}</option>
-                    ))}
+                    <option value="">🗑 Clear Week {activeWeek}...</option>
+                    <option value="__all__" style={{ fontWeight: 700, color: THEME.status.error }}>All Full-Timers</option>
+                    <optgroup label="— or pick one —">
+                      {fullTimeEmployees.filter(emp => employeeHasShiftsInWeek(emp, activeWeek === 1 ? week1 : week2)).map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                      ))}
+                    </optgroup>
                   </select>
-                  
+
+                  <div className="w-px h-4" style={{ backgroundColor: THEME.border.default }} />
+
+                  {/* S62 — Schedule PK (bulk). Neutral palette per Stage 3 rule (events != accent colors). */}
                   <button
-                    onClick={() => setAutoPopulateConfirm({ type: 'clear-all', week: activeWeek })}
+                    onClick={() => setPkModalOpen(true)}
                     className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 hover:opacity-80"
-                    style={{ backgroundColor: THEME.status.error + '20', color: THEME.status.error }}
+                    style={{ backgroundColor: THEME.event.pkBg, color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}` }}
                   >
-                    <Trash2 size={10} />
-                    Clear All FT Week {activeWeek}
+                    <BookOpen size={10} />
+                    Schedule PK
                   </button>
                 </div>
               )}
@@ -3757,6 +3790,12 @@ export default function App() {
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <InactiveEmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
       <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />
+      <PKEventModal
+        isOpen={pkModalOpen}
+        onClose={() => setPkModalOpen(false)}
+        onSchedule={handleBulkPK}
+        employees={employees}
+      />
       {editingColumnDate && (
         <ColumnHeaderEditor
           date={editingColumnDate}
