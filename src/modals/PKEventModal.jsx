@@ -70,9 +70,14 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees }) => {
       <div className="text-xs font-semibold mb-1 px-1" style={{ color: THEME.text.secondary }}>{label} ({group.length})</div>
       <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${THEME.border.default}` }}>
         {group.map((c, idx) => (
-          <label
+          <div
             key={c.id}
-            className="flex items-center gap-2 px-2 py-1.5 cursor-pointer text-xs"
+            role="checkbox"
+            aria-checked={c.checked}
+            tabIndex={0}
+            onClick={() => toggle(c.id, !c.checked)}
+            onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(c.id, !c.checked); } }}
+            className="flex items-center gap-2 px-2 py-1.5 cursor-pointer text-xs select-none"
             style={{
               backgroundColor: idx % 2 === 0 ? THEME.bg.elevated : THEME.bg.secondary,
               borderTop: idx === 0 ? 'none' : `1px solid ${THEME.border.subtle}`,
@@ -85,7 +90,6 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees }) => {
                 backgroundColor: c.checked ? THEME.accent.purple : THEME.bg.elevated,
                 border: `2px solid ${c.checked ? THEME.accent.purple : THEME.border.default}`,
               }}
-              onClick={(e) => { e.preventDefault(); toggle(c.id, !c.checked); }}
             >
               {c.checked && <Check size={10} color="white" />}
             </div>
@@ -93,7 +97,7 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees }) => {
             {!c.eligible && (
               <span className="text-xs italic flex-shrink-0" style={{ color: THEME.text.muted }}>{c.reason}</span>
             )}
-          </label>
+          </div>
         ))}
       </div>
     </div>
