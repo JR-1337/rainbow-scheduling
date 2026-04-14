@@ -30,7 +30,9 @@ const _contrast = (hex1, hex2) => {
   const lighter = Math.max(l1, l2), darker = Math.min(l1, l2);
   return (lighter + 0.05) / (darker + 0.05);
 };
-const _accentText = _contrast('#FFFFFF', OTR_ACCENT.primary) >= _contrast(OTR.navy, OTR_ACCENT.primary) ? '#FFFFFF' : OTR.navy;
+// Brand decision: gradient primary buttons always use white text for OTR consistency
+// across all 5 accent colors, even when navy would have higher WCAG contrast (orange/green/red).
+const _accentText = '#FFFFFF';
 const _ar = parseInt(OTR_ACCENT.primary.slice(1,3),16), _ag = parseInt(OTR_ACCENT.primary.slice(3,5),16), _ab = parseInt(OTR_ACCENT.primary.slice(5,7),16);
 
 const _hour = new Date().getHours();
