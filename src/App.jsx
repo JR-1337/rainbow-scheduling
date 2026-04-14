@@ -1406,12 +1406,19 @@ export default function App() {
   
   // Handle login - set user and load data (min 1s loading display)
   const handleLogin = async (user) => {
-    const parsedUser = {
-      ...user,
-      availability: typeof user.availability === 'string'
-        ? JSON.parse(user.availability)
-        : user.availability
-    };
+    // S52: defensive parse — login response carries availability as raw Sheet
+    // value (often empty string). JSON.parse('') throws and silently drops the
+    // user back to login. ensureFullWeek in getAllData covers data-load; this
+    // covers the login path. Same root cause class as S50 white-screen bug.
+    let parsedAvailability = user.availability;
+    if (typeof parsedAvailability === 'string') {
+      try {
+        parsedAvailability = parsedAvailability ? JSON.parse(parsedAvailability) : {};
+      } catch {
+        parsedAvailability = {};
+      }
+    }
+    const parsedUser = { ...user, availability: parsedAvailability };
     setCurrentUser(parsedUser);
     setWelcomeSweep(true);
     await loadDataFromBackend(parsedUser.email);
