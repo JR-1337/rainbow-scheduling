@@ -74,13 +74,15 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         const dateStr = toDateKey(date);
         const shift = shifts[`${emp.id}-${dateStr}`];
         const dayEvents = (events[`${emp.id}-${dateStr}`] || []).filter(ev => EVENT_TYPES[ev.type]);
+        // Approved time-off wins over events — an employee on time-off shouldn't
+        // show a meeting/PK card even if one was scheduled before the request was approved.
+        if (!shift && hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests)) {
+          return `<td style="padding:6px;border:1px dashed #94a3b8;background:#ffffff;text-align:center;">
+            <div style="font-size:9px;font-weight:700;color:#475569;letter-spacing:1px;">OFF</div>
+            <div style="font-size:7px;color:#64748b;">approved</div>
+          </td>`;
+        }
         if (!shift && dayEvents.length === 0) {
-          if (hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests)) {
-            return `<td style="padding:6px;border:1px dashed #94a3b8;background:#ffffff;text-align:center;">
-              <div style="font-size:9px;font-weight:700;color:#475569;letter-spacing:1px;">OFF</div>
-              <div style="font-size:7px;color:#64748b;">approved</div>
-            </td>`;
-          }
           return '<td style="padding:6px;border:1px solid #cbd5e1;background:#ffffff;"></td>';
         }
         if (!shift) {
