@@ -16,6 +16,7 @@ import {
   getStoreHoursForDate, isStatHoliday, GradientBackground, haptic, useFocusTrap
 } from './App';
 import { EVENT_TYPES } from './constants';
+import { computeDayUnionHours } from './utils/timemath';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE DETECTION HOOK
@@ -406,18 +407,25 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
 // ═══════════════════════════════════════════════════════════════════════════════
 // MY SCHEDULE SUMMARY TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-export const MobileMySchedule = ({ currentUser, shifts, dates, timeOffRequests = [] }) => {
+export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, timeOffRequests = [] }) => {
   const week1 = dates.slice(0, 7), week2 = dates.slice(7, 14);
   const weekNum1 = getWeekNumber(week1[0]), weekNum2 = getWeekNumber(week2[0]);
-  
+
+  // S64 Stage 8.1 — union-count work+events so a 9-5 work + 3-5 PK = 8h, not 10h.
+  // Shift count stays work-only (matches S60 semantics).
   const getWeekShifts = (weekDates) => {
     let totalHours = 0;
     const shiftList = [];
     weekDates.forEach(date => {
       const dateStr = toDateKey(date);
-      const shift = shifts[`${currentUser.id}-${dateStr}`];
+      const k = `${currentUser.id}-${dateStr}`;
+      const shift = shifts[k];
+      const dayEvents = events[k] || [];
+      const combined = [shift, ...dayEvents].filter(Boolean);
+      if (combined.length > 0) {
+        totalHours += computeDayUnionHours(combined);
+      }
       if (shift) {
-        totalHours += shift.hours || 0;
         const role = ROLES_BY_ID[shift.role];
         shiftList.push({ date, dateStr, shift, role });
       }
@@ -449,37 +457,51 @@ export const MobileMySchedule = ({ currentUser, shifts, dates, timeOffRequests =
         {weekDates.map((date, i) => {
           const dateStr = toDateKey(date);
           const shift = shifts[`${currentUser.id}-${dateStr}`];
+          const dayEvents = (events[`${currentUser.id}-${dateStr}`] || []).filter(ev => EVENT_TYPES[ev.type]);
           const role = shift ? ROLES_BY_ID[shift.role] : null;
           const isTimeOff = myTimeOffDates.has(dateStr);
           const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
           const today = date.toDateString() === new Date().toDateString();
-          
+
           return (
-            <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg" style={{ 
+            <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg" style={{
               backgroundColor: today ? THEME.accent.purple + '15' : THEME.bg.tertiary,
-              borderLeft: `3px solid ${shift ? role?.color : isTimeOff ? THEME.text.muted : 'transparent'}`,
+              borderLeft: `3px solid ${shift ? role?.color : dayEvents.length > 0 ? EVENT_TYPES[dayEvents[0].type].border : isTimeOff ? THEME.text.muted : 'transparent'}`,
               border: today ? `1px solid ${THEME.accent.purple}40` : undefined
             }}>
               <div className="w-12 flex-shrink-0">
                 <p className="text-xs font-bold" style={{ color: today ? THEME.accent.purple : THEME.text.primary }}>{dayName}</p>
                 <p style={{ color: THEME.text.muted, fontSize: '10px' }}>{date.getDate()}/{date.getMonth() + 1}</p>
               </div>
-              
-              {shift ? (
-                <div className="flex-1 flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: role?.color + '25', color: role?.color }}>{role?.name}</span>
-                  <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)} – {formatTimeShort(shift.endTime)}</span>
-                  {shift.task && (
-                    <span className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: THEME.task + '20', color: THEME.task }}>
-                      <Star size={8} fill={THEME.task} color={THEME.task} />{shift.task}
-                    </span>
-                  )}
-                </div>
-              ) : isTimeOff ? (
-                <span className="text-xs" style={{ color: THEME.text.muted }}>Time Off (Approved)</span>
-              ) : (
-                <span className="text-xs" style={{ color: THEME.text.muted }}>—</span>
-              )}
+
+              <div className="flex-1 flex flex-col gap-1">
+                {shift ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: role?.color + '25', color: role?.color }}>{role?.name}</span>
+                    <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)} – {formatTimeShort(shift.endTime)}</span>
+                    {shift.task && (
+                      <span className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: THEME.task + '20', color: THEME.task }}>
+                        <Star size={8} fill={THEME.task} color={THEME.task} />{shift.task}
+                      </span>
+                    )}
+                  </div>
+                ) : isTimeOff ? (
+                  <span className="text-xs" style={{ color: THEME.text.muted }}>Time Off (Approved)</span>
+                ) : dayEvents.length === 0 ? (
+                  <span className="text-xs" style={{ color: THEME.text.muted }}>—</span>
+                ) : null}
+
+                {dayEvents.map((ev, j) => {
+                  const et = EVENT_TYPES[ev.type];
+                  return (
+                    <div key={j} className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}` }}>{et.shortLabel}</span>
+                      <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(ev.startTime)} – {formatTimeShort(ev.endTime)}</span>
+                      {ev.note && <span className="text-xs truncate" style={{ color: THEME.text.muted }}>{ev.note}</span>}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
         })}

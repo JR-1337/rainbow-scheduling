@@ -464,6 +464,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
             <MobileMySchedule
               currentUser={currentUser}
               shifts={shifts}
+              events={events}
               dates={dates}
               timeOffRequests={timeOffRequests}
             />

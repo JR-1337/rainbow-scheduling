@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet } from './MobileEmployeeView';
 import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, MobileEmployeeQuickView, MobileAdminBottomNav } from './MobileAdminView';
 import { parseLocalDate, escapeHtml } from './utils/format';
-import { computeDayUnionHours } from './utils/timemath';
+import { computeDayUnionHours, computeConsecutiveWorkDayStreak } from './utils/timemath';
 import { generateSchedulePDF } from './pdf/generate';
 import { buildEmailContent } from './email/build';
 import { getAuthToken, setAuthToken, clearAuth, getCachedUser, setCachedUser, setOnAuthFailure, handleAuthError } from './auth';
@@ -3057,6 +3057,7 @@ export default function App() {
             <MobileMySchedule
               currentUser={currentUser}
               shifts={shifts}
+              events={events}
               dates={dates}
               timeOffRequests={timeOffRequests}
             />
@@ -3101,20 +3102,25 @@ export default function App() {
         />
         
         {/* Shift Editor Modal (reused from desktop) */}
-        {editingShift && (
-          <ShiftEditorModal
-            isOpen
-            onClose={() => setEditingShift(null)}
-            onSave={saveShift}
-            employee={editingShift.employee}
-            date={editingShift.date}
-            existingShift={editingShift.shift}
-            existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []}
-            totalPeriodHours={getEmpHours(editingShift.employee.id)}
-            availability={editingShift.employee.availability?.[getDayName(editingShift.date)]}
-            hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)}
-          />
-        )}
+        {editingShift && (() => {
+          const prior = new Date(editingShift.date); prior.setDate(prior.getDate() - 1);
+          const priorStreak = computeConsecutiveWorkDayStreak((id, k) => !!shifts[`${id}-${k}`], editingShift.employee.id, toDateKey(prior));
+          return (
+            <ShiftEditorModal
+              isOpen
+              onClose={() => setEditingShift(null)}
+              onSave={saveShift}
+              employee={editingShift.employee}
+              date={editingShift.date}
+              existingShift={editingShift.shift}
+              existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []}
+              totalPeriodHours={getEmpHours(editingShift.employee.id)}
+              availability={editingShift.employee.availability?.[getDayName(editingShift.date)]}
+              hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)}
+              priorWorkStreak={priorStreak}
+            />
+          );
+        })()}
         
         {/* Change Password Modal */}
         <ChangePasswordModal
@@ -3786,7 +3792,11 @@ export default function App() {
       </main>
       
       <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} suggestedPassword={editingEmp ? undefined : `emp-${String(employees.length + 1).padStart(3, '0')}`} />
-      {editingShift && <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} employee={editingShift.employee} date={editingShift.date} existingShift={editingShift.shift} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} />}
+      {editingShift && (() => {
+        const prior = new Date(editingShift.date); prior.setDate(prior.getDate() - 1);
+        const priorStreak = computeConsecutiveWorkDayStreak((id, k) => !!shifts[`${id}-${k}`], editingShift.employee.id, toDateKey(prior));
+        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} employee={editingShift.employee} date={editingShift.date} existingShift={editingShift.shift} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} priorWorkStreak={priorStreak} />;
+      })()}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <InactiveEmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
       <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />

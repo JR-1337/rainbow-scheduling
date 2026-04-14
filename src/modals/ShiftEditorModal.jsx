@@ -37,6 +37,7 @@ export const ShiftEditorModal = ({
   totalPeriodHours,
   availability,
   hasApprovedTimeOff = false,
+  priorWorkStreak = 0,
 }) => {
   const storeHours = getStoreHoursForDate(date);
   const isHoliday = isStatHoliday(date);
@@ -104,6 +105,10 @@ export const ShiftEditorModal = ({
     : totalPeriodHours;
 
   const showAvailabilityWarning = activeType === 'work' && (hasApprovedTimeOff || (availability && availability.available === false));
+  // S64 Stage 8.2 — advisory banner on 5th+ consecutive work day. Informational only,
+  // does not block save. Only shown on work tab (meeting/pk don't count toward streak).
+  const resultingStreak = activeType === 'work' ? priorWorkStreak + 1 : 0;
+  const showStreakWarning = activeType === 'work' && resultingStreak >= 5;
 
   const handleSave = () => {
     if (activeType === 'work') {
@@ -150,6 +155,15 @@ export const ShiftEditorModal = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Shift" size="sm">
+      {showStreakWarning && (
+        <div className="p-2 rounded-lg mb-2 flex items-start gap-2" style={{ backgroundColor: THEME.status.warning + '15', border: `1px solid ${THEME.status.warning}60` }}>
+          <AlertTriangle size={14} style={{ color: THEME.status.warning, marginTop: 1, flexShrink: 0 }} />
+          <p className="text-xs" style={{ color: THEME.text.primary }}>
+            <strong>{employee.name}</strong> would be on their {resultingStreak === 5 ? '5th' : `${resultingStreak}th`} consecutive work day.
+            <span style={{ color: THEME.text.secondary }}> OK to save; just a heads-up.</span>
+          </p>
+        </div>
+      )}
       {showAvailabilityWarning && (
         <div className="p-2 rounded-lg mb-2 flex items-start gap-2" style={{ backgroundColor: THEME.status.warning + '20', border: `1px solid ${THEME.status.warning}` }}>
           <AlertTriangle size={14} style={{ color: THEME.status.warning, marginTop: 1, flexShrink: 0 }} />
