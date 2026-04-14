@@ -15,6 +15,7 @@ import {
   THEME, TYPE, ROLES, ROLES_BY_ID, toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber,
   getStoreHoursForDate, isStatHoliday, GradientBackground, haptic, useFocusTrap
 } from './App';
+import { EVENT_TYPES } from './constants';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE DETECTION HOOK
@@ -156,7 +157,7 @@ export const MobileAnnouncementPopup = ({ isOpen, onClose, announcement }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // FROZEN SPREADSHEET GRID
 // ═══════════════════════════════════════════════════════════════════════════════
-export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, getEmployeeHours, timeOffRequests = [], onShiftClick }) => {
+export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, loggedInUser, getEmployeeHours, timeOffRequests = [], onShiftClick }) => {
   const scrollContainerRef = useRef(null);
   const NAME_COL_WIDTH = 72;
   const CELL_WIDTH = 80;
@@ -298,13 +299,19 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                   {dates.map((date, i) => {
                     const dateStr = toDateKey(date);
                     const shift = shifts[`${emp.id}-${dateStr}`];
+                    // Defensive: unknown event types are silently hidden.
+                    const cellEvents = (events[`${emp.id}-${dateStr}`] || []).filter(ev => EVENT_TYPES[ev.type]);
+                    const hasEvents = cellEvents.length > 0;
+                    const firstEvent = hasEvents ? cellEvents[0] : null;
+                    const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
+                    const eventOnly = !shift && hasEvents;
                     const isTimeOff = hasApprovedTimeOff(emp, dateStr);
                     const dayName = getDayName(date);
                     const avail = emp.availability?.[dayName];
                     const isUnavailable = avail && !avail.available;
                     const role = shift ? ROLES_BY_ID[shift.role] : null;
                     const isOwnShift = emp.id === loggedInUser.id;
-                    
+
                     return (
                       <td key={i} style={{
                         width: CELL_WIDTH, minWidth: CELL_WIDTH, height: CELL_HEIGHT,
@@ -314,29 +321,33 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                       }}>
                         <div
                           className="h-full rounded-md relative overflow-hidden"
-                          onClick={shift && onShiftClick ? () => onShiftClick({ employee: emp, date, dateStr, shift, role }) : undefined}
+                          onClick={(shift || hasEvents) && onShiftClick ? () => onShiftClick({ employee: emp, date, dateStr, shift, role, events: cellEvents }) : undefined}
                           style={{
-                            cursor: shift && onShiftClick ? 'pointer' : 'default',
+                            cursor: (shift || hasEvents) && onShiftClick ? 'pointer' : 'default',
                             backgroundColor: isTimeOff ? THEME.text.muted + '15'
-                              : isUnavailable && !shift ? THEME.bg.tertiary
-                              : shift ? role?.color + '25' : THEME.bg.tertiary,
+                              : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
+                              : shift ? role?.color + '25'
+                              : eventOnly ? firstEventType.bg
+                              : THEME.bg.tertiary,
                             border: `1px solid ${isTimeOff ? THEME.text.muted + '30'
-                              : isUnavailable && !shift ? THEME.border.subtle
-                              : shift ? role?.color + '50' : THEME.border.default}`,
-                            opacity: isTimeOff ? 0.7 : isUnavailable && !shift ? 0.5 : 1,
+                              : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
+                              : shift ? role?.color + '50'
+                              : eventOnly ? firstEventType.border
+                              : THEME.border.default}`,
+                            opacity: isTimeOff ? 0.7 : isUnavailable && !shift && !hasEvents ? 0.5 : 1,
                             height: CELL_HEIGHT - 4
                           }}
                         >
-                          {isTimeOff && !shift ? (
+                          {isTimeOff && !shift && !hasEvents ? (
                             <div className="flex items-center justify-center h-full">
                               <span style={{ color: THEME.text.muted, fontSize: '9px' }}>Time Off</span>
                             </div>
-                          ) : isUnavailable && !shift ? (
+                          ) : isUnavailable && !shift && !hasEvents ? (
                             <div className="flex items-center justify-center h-full">
                               <span style={{ color: THEME.text.muted, fontSize: '8px' }}>Unavailable</span>
                             </div>
                           ) : shift ? (
-                            <div className="p-1 h-full flex flex-col justify-between">
+                            <div className="p-1 h-full flex flex-col justify-between relative">
                               <span className="font-semibold truncate" style={{ color: role?.color, fontSize: '10px' }}>{role?.name}</span>
                               <div>
                                 <span style={{ color: THEME.text.secondary, fontSize: '9px' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
@@ -346,6 +357,35 @@ export const MobileScheduleGrid = ({ employees, shifts, dates, loggedInUser, get
                                   <Star size={8} fill={THEME.task} color={THEME.task} />
                                 </div>
                               )}
+                              {hasEvents && (
+                                <div className="absolute bottom-0 right-0 flex gap-0.5 p-0.5">
+                                  {cellEvents.map((ev, j) => {
+                                    const et = EVENT_TYPES[ev.type];
+                                    if (!et) return null;
+                                    return (
+                                      <span key={j}
+                                        title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
+                                        className="rounded font-semibold leading-tight"
+                                        style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>
+                                        {et.shortLabel}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          ) : eventOnly ? (
+                            <div className="p-1 h-full flex flex-col justify-between"
+                              title={cellEvents.map(ev => {
+                                const et = EVENT_TYPES[ev.type];
+                                return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
+                              }).join('\n')}>
+                              <span className="font-semibold truncate" style={{ color: firstEventType.text, fontSize: '10px' }}>
+                                {cellEvents.length === 1 ? firstEventType.shortLabel : `${cellEvents.length} events`}
+                              </span>
+                              <span style={{ color: firstEventType.text, opacity: 0.8, fontSize: '9px' }}>
+                                {formatTimeShort(firstEvent.startTime)}-{formatTimeShort(firstEvent.endTime)}
+                              </span>
                             </div>
                           ) : null}
                         </div>

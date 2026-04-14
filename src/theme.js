@@ -47,6 +47,14 @@ export const THEME = {
   border: { subtle: `rgba(${_ar}, ${_ag}, ${_ab}, 0.15)`, default: OTR_ACCENT.primary + '80', bright: OTR_ACCENT.primary },
   status: { success: '#34D399', warning: '#FBBF24', error: '#F87171' },
   task: '#D97706',
+  // S61 — Meeting + PK overlay entries are deliberately OFF the OTR accent rotation.
+  // Fixed neutral greys so event pills read as "non-schedule" information on any
+  // daily-rotated accent. Meeting is the lighter pair, PK the darker, so two
+  // overlays on the same cell are distinguishable at a glance.
+  event: {
+    meetingBg: '#F3F4F6', meetingText: '#374151', meetingBorder: '#D1D5DB',
+    pkBg: '#E5E7EB', pkText: '#1F2937', pkBorder: '#9CA3AF',
+  },
   shadow: {
     card: `0 8px 32px -4px rgba(${_ar},${_ag},${_ab},0.55), 0 4px 12px -2px rgba(${_ar},${_ag},${_ab},0.4)`,
     cardSm: `0 4px 16px -2px rgba(${_ar},${_ag},${_ab},0.42)`,

@@ -2,11 +2,12 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet } from './MobileEmployeeView';
 import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, MobileEmployeeQuickView, MobileAdminBottomNav } from './MobileAdminView';
 import { parseLocalDate, escapeHtml } from './utils/format';
+import { computeDayUnionHours } from './utils/timemath';
 import { generateSchedulePDF } from './pdf/generate';
 import { buildEmailContent } from './email/build';
 import { getAuthToken, setAuthToken, clearAuth, getCachedUser, setCachedUser, setOnAuthFailure, handleAuthError } from './auth';
 import { OTR, OTR_ACCENT, THEME, TYPE } from './theme';
-import { ROLES, ROLES_BY_ID, REQUEST_STATUS_COLORS } from './constants';
+import { ROLES, ROLES_BY_ID, REQUEST_STATUS_COLORS, EVENT_TYPES } from './constants';
 import { AdminRequestModal } from './modals/AdminRequestModal';
 import { AdminTimeOffPanel } from './panels/AdminTimeOffPanel';
 import { AdminMyTimeOffPanel } from './panels/AdminMyTimeOffPanel';
@@ -217,7 +218,9 @@ const chunkedBatchSave = async (payload, onProgress) => {
   const totalChunks = Math.ceil(shifts.length / CHUNK_SIZE);
   
   // Build all shift keys for the full period (needed for delete logic on last chunk)
-  const allShiftKeys = shifts.map(s => `${s.employeeId}-${s.date}`);
+  // S61 — 3-tuple form `${empId}-${date}-${type}` matches backend `keyOf`. Missing/empty
+  // type defaults to 'work' to stay bit-identical to existing data (backend also defaults).
+  const allShiftKeys = shifts.map(s => `${s.employeeId}-${s.date}-${s.type || 'work'}`);
   
   for (let i = 0; i < shifts.length; i += CHUNK_SIZE) {
     const chunk = shifts.slice(i, i + CHUNK_SIZE);
@@ -591,10 +594,19 @@ export const hasApprovedTimeOffForDate = (employeeEmail, dateStr, timeOffRequest
   );
 };
 
-const ScheduleCell = React.memo(({ shift, date, onClick, availability, storeHours, isDeleted = false, hasApprovedTimeOff = false, isLocked = false }) => {
+const ScheduleCell = React.memo(({ shift, events = [], date, onClick, availability, storeHours, isDeleted = false, hasApprovedTimeOff = false, isLocked = false }) => {
   const [showTask, setShowTask] = useState(false);
   const starRef = useRef(null);
   const role = shift ? ROLES_BY_ID[shift.role] : null;
+  // S61 — "event-only" cells render as neutral cards replacing the role stripe; work cells
+  // get small type-pills overlaid so the work card stays the primary read.
+  // Defensive: drop events whose `type` isn't in EVENT_TYPES so a malformed Sheet row
+  // (e.g. typo'd 'meting') can't crash the grid.
+  const visibleEvents = (events || []).filter(ev => EVENT_TYPES[ev.type]);
+  const hasEvents = visibleEvents.length > 0;
+  const eventOnly = !shift && hasEvents;
+  const firstEvent = hasEvents ? visibleEvents[0] : null;
+  const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
   const isHoliday = isStatHoliday(date);
   const shading = getAvailabilityShading(availability, storeHours);
   const isFullyUnavailable = !availability.available;
@@ -605,8 +617,11 @@ const ScheduleCell = React.memo(({ shift, date, onClick, availability, storeHour
   
   return (
     <>
-      <div onClick={isClickable ? onClick : undefined} className={`h-14 rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && shift ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
-        style={{ backgroundColor: shift ? role?.color + '25' : THEME.bg.tertiary, border: `1px solid ${shift ? role?.color + '50' : THEME.border.default}` }}>
+      <div onClick={isClickable ? onClick : undefined} className={`h-14 rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
+        style={{
+          backgroundColor: shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
+          border: `1px solid ${shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`
+        }}>
         
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
         
@@ -640,6 +655,37 @@ const ScheduleCell = React.memo(({ shift, date, onClick, availability, storeHour
               <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
               <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>{shift.hours}h</span>
             </div>
+            {/* S61 — event pill(s): small neutral chip in bottom-right when a work shift
+                also has a meeting/pk the same day. Native title carries the note. */}
+            {hasEvents && (
+              <div className="absolute bottom-0 right-0 flex gap-0.5 p-0.5">
+                {visibleEvents.map((ev, i) => {
+                  const et = EVENT_TYPES[ev.type];
+                  if (!et) return null;
+                  return (
+                    <span key={i}
+                      title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
+                      className="rounded px-1 text-[9px] font-semibold leading-tight"
+                      style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}` }}>
+                      {et.shortLabel}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : eventOnly ? (
+          <div className="p-1.5 h-full flex flex-col justify-between relative"
+            title={visibleEvents.map(ev => {
+              const et = EVENT_TYPES[ev.type];
+              return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
+            }).join('\n')}>
+            <span className="text-xs font-semibold truncate" style={{ color: firstEventType.text }}>
+              {visibleEvents.length === 1 ? firstEventType.shortLabel : `${visibleEvents.length} events`}
+            </span>
+            <span className="text-xs" style={{ color: firstEventType.text, opacity: 0.8 }}>
+              {formatTimeShort(firstEvent.startTime)}-{formatTimeShort(firstEvent.endTime)}
+            </span>
           </div>
         ) : (
           !isDeleted && !isLocked && (
@@ -658,7 +704,7 @@ const ScheduleCell = React.memo(({ shift, date, onClick, availability, storeHour
 // ═══════════════════════════════════════════════════════════════════════════════
 // EMPLOYEE ROW
 // ═══════════════════════════════════════════════════════════════════════════════
-const EmployeeRow = React.memo(({ employee, dates, shifts, onCellClick, getEmployeeHours, onEdit, isDeleted = false, onShowTooltip, onHideTooltip, timeOffRequests = [], isLocked = false }) => {
+const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, onCellClick, getEmployeeHours, onEdit, isDeleted = false, onShowTooltip, onHideTooltip, timeOffRequests = [], isLocked = false }) => {
   const rowRef = useRef(null);
   const hours = getEmployeeHours(employee.id);
 
@@ -691,10 +737,11 @@ const EmployeeRow = React.memo(({ employee, dates, shifts, onCellClick, getEmplo
         const storeHrs = getStoreHoursForDate(date);
         const shift = shifts[`${employee.id}-${toDateKey(date)}`];
         const dateStr = toDateKey(date);
+        const cellEvents = events[`${employee.id}-${dateStr}`] || [];
         const approvedTimeOff = hasApprovedTimeOffForDate(employee.email, dateStr, timeOffRequests);
         return (
           <div key={dateStr} className="p-0.5" style={{ backgroundColor: THEME.bg.secondary }}>
-            <ScheduleCell shift={shift} date={date} availability={av} storeHours={storeHrs} onClick={() => !isDeleted && !isLocked && onCellClick(employee, date, shift)} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} />
+            <ScheduleCell shift={shift} events={cellEvents} date={date} availability={av} storeHours={storeHrs} onClick={() => !isDeleted && !isLocked && onCellClick(employee, date, shift)} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} />
           </div>
         );
       })}
@@ -1036,6 +1083,10 @@ export default function App() {
   const [employees, setEmployees] = useState([]);
   const [periodIndex, setPeriodIndex] = useState(CURRENT_PERIOD_INDEX);
   const [shifts, setShifts] = useState({});
+  // S61 — Meeting/PK overlay entries, keyed identically to `shifts`. Values are arrays
+  // (a cell can hold both a meeting and a pk). Work shifts stay in `shifts`; this map
+  // exists alongside so the 25+ existing `shifts[key]` access sites keep working.
+  const [events, setEvents] = useState({});
   const [empFormOpen, setEmpFormOpen] = useState(false);
   const [editingEmp, setEditingEmp] = useState(null);
   const [emailOpen, setEmailOpen] = useState(false);
@@ -1073,6 +1124,7 @@ export default function App() {
   // New periods default to edit mode (true)
   const [editModeByPeriod, setEditModeByPeriod] = useState({});
   const [publishedShifts, setPublishedShifts] = useState({});
+  const [publishedEvents, setPublishedEvents] = useState({});
   const [scheduleSaving, setScheduleSaving] = useState(false); // True while batch saving shifts
   const [staffingTargets, setStaffingTargets] = useState(DEFAULT_STAFFING_TARGETS);
   const [storeHoursOverrides, setStoreHoursOverrides] = useState({}); // { "2026-02-14": { open: "10:00", close: "21:00" } }
@@ -1270,7 +1322,10 @@ export default function App() {
       
       // Convert shifts array to keyed object { "empId-date": shiftData }
       // Also fix date/time formats from Google Sheets
+      // S61 — Partition by `type`: work entries land in `shiftsObj`,
+      // meeting/pk entries land in `eventsObj` (array per cell).
       const shiftsObj = {};
+      const eventsObj = {};
       (shiftData || []).forEach(shift => {
         // Fix date format - Sheets returns ISO timestamp, we need YYYY-MM-DD
         let dateStr = shift.date;
@@ -1307,9 +1362,15 @@ export default function App() {
         };
         
         const key = `${fixedShift.employeeId}-${dateStr}`;
-        shiftsObj[key] = fixedShift;
+        const shiftType = fixedShift.type || 'work';
+        if (shiftType === 'work') {
+          shiftsObj[key] = fixedShift;
+        } else {
+          (eventsObj[key] = eventsObj[key] || []).push(fixedShift);
+        }
       });
       setShifts(shiftsObj);
+      setEvents(eventsObj);
       
       // Load live periods from backend BEFORE filtering published shifts
       const { livePeriods: loadedLivePeriods } = result.data;
@@ -1324,6 +1385,7 @@ export default function App() {
       // Build publishedShifts: ONLY include shifts from LIVE periods
       // Non-live periods are drafts that employees should not see
       const publishedObj = {};
+      const publishedEventsObj = {};
       if (loadedLivePeriods && loadedLivePeriods.length > 0) {
         // Build a Set of all dates that belong to LIVE periods
         const liveDates = new Set();
@@ -1343,8 +1405,16 @@ export default function App() {
             publishedObj[key] = shift;
           }
         });
+        // S61 — mirror for meeting/pk overlay entries
+        Object.entries(eventsObj).forEach(([key, arr]) => {
+          const firstDate = (arr && arr[0] && arr[0].date) || key.split('-').slice(-3).join('-');
+          if (liveDates.has(firstDate)) {
+            publishedEventsObj[key] = arr;
+          }
+        });
       }
       setPublishedShifts(publishedObj);
+      setPublishedEvents(publishedEventsObj);
       
       // Process requests into the 3 types with field mapping
       // Backend uses employeeName/employeeEmail/requestId, frontend uses different names
@@ -1452,7 +1522,7 @@ export default function App() {
       setScheduleSaving(true);
       // Going from Edit Mode → LIVE: batch save shifts and mark as LIVE
       
-      // Collect all shifts for this period
+      // Collect all shifts for this period (work + meeting + pk)
       const periodShifts = [];
       const periodDates = [];
       dates.forEach(date => {
@@ -1471,12 +1541,32 @@ export default function App() {
               startTime: shifts[key].startTime,
               endTime: shifts[key].endTime,
               role: shifts[key].role || 'none',
-              task: shifts[key].task || ''
+              task: shifts[key].task || '',
+              type: 'work',
+              note: ''
             });
           }
+          // S61 — meeting/pk overlay entries live alongside the work shift and
+          // also need to reach the Sheet when the period is saved.
+          (events[key] || []).forEach(ev => {
+            periodShifts.push({
+              id: ev.id || `${(ev.type || 'evt').toUpperCase()}-${emp.id}-${dateStr}`,
+              employeeId: emp.id,
+              employeeName: emp.name,
+              employeeEmail: emp.email,
+              date: dateStr,
+              startTime: ev.startTime,
+              endTime: ev.endTime,
+              role: ev.role || 'none',
+              task: '',
+              type: ev.type || 'meeting',
+              note: ev.note || '',
+              hours: typeof ev.hours === 'number' ? ev.hours : calculateHours(ev.startTime, ev.endTime)
+            });
+          });
         });
       });
-      
+
       // Batch save shifts to backend
       setToast({ type: 'saving', message: `Saving ${periodShifts.length} shifts...` });
       const saveResult = await apiCall('batchSaveShifts', {
@@ -1561,7 +1651,7 @@ export default function App() {
     if (scheduleSaving) return;
     haptic();
     setScheduleSaving(true);
-    // Collect all shifts for this period
+    // Collect all shifts for this period (work + meeting + pk)
     const periodShifts = [];
     const periodDates = [];
     dates.forEach(date => {
@@ -1579,9 +1669,28 @@ export default function App() {
             startTime: shifts[key].startTime,
             endTime: shifts[key].endTime,
             role: shifts[key].role || 'none',
-            task: shifts[key].task || ''
+            task: shifts[key].task || '',
+            type: 'work',
+            note: ''
           });
         }
+        // S61 — event entries (meeting/pk) ride along on the same batch save.
+        (events[key] || []).forEach(ev => {
+          periodShifts.push({
+            id: ev.id || `${(ev.type || 'evt').toUpperCase()}-${emp.id}-${dateStr}`,
+            employeeId: emp.id,
+            employeeName: emp.name,
+            employeeEmail: emp.email,
+            date: dateStr,
+            startTime: ev.startTime,
+            endTime: ev.endTime,
+            role: ev.role || 'none',
+            task: '',
+            type: ev.type || 'meeting',
+            note: ev.note || '',
+            hours: typeof ev.hours === 'number' ? ev.hours : calculateHours(ev.startTime, ev.endTime)
+          });
+        });
       });
     });
     
@@ -1700,14 +1809,24 @@ export default function App() {
   const currentDateStrs = useMemo(() => currentDates.map(toDateKey), [currentDates]);
   const todayStr = useMemo(() => toDateKey(new Date()), []);
 
+  // S61 — hours count work + meeting + pk, but overlaps are union-counted.
+  // Fast path: day has only a work shift (no events). Slow path: events present,
+  // merge all intervals for the day and sum the union.
   const getEmpHours = useCallback((id) => {
     let t = 0;
     for (let i = 0; i < currentDateStrs.length; i++) {
-      const s = shifts[`${id}-${currentDateStrs[i]}`];
-      if (s) t += s.hours || 0;
+      const key = `${id}-${currentDateStrs[i]}`;
+      const work = shifts[key];
+      const evs = events[key];
+      if (!evs || evs.length === 0) {
+        if (work) t += work.hours || 0;
+      } else {
+        const all = work ? [work, ...evs] : evs;
+        t += computeDayUnionHours(all);
+      }
     }
     return t;
-  }, [currentDateStrs, shifts]);
+  }, [currentDateStrs, shifts, events]);
 
   // Count scheduled employees for a given date
   const getScheduledCount = useCallback((date) => {
@@ -1740,6 +1859,9 @@ export default function App() {
       endTime: avail.end || STORE_HOURS[dayName].close,
       role: 'none',
       task: '',
+      // S61 — explicit so `allShiftKeys` and the backend key both agree on 'work'
+      type: 'work',
+      note: '',
       hours: calculateHours(avail.start || STORE_HOURS[dayName].open, avail.end || STORE_HOURS[dayName].close)
     };
   };
@@ -1964,17 +2086,36 @@ export default function App() {
     }
   };
   
+  // S61 — route by type. Work shifts live in `shifts[k]` (scalar). Meeting/PK
+  // entries live in `events[k]` (array; one entry per type). Delete is type-aware
+  // and only wipes the matching entry.
   const saveShift = (s) => {
     const k = `${s.employeeId}-${s.date}`;
-    // Update local state only - persisted by SAVE button (drafts) or Go Live (publish)
+    const type = s.type || 'work';
+    const label = type === 'meeting' ? 'Meeting' : type === 'pk' ? 'PK event' : 'Shift';
     if (s.deleted) {
-      const n = { ...shifts };
-      delete n[k];
-      setShifts(n);
-      showToast('success', 'Shift removed — click SAVE to keep changes');
+      if (type === 'work') {
+        const n = { ...shifts };
+        delete n[k];
+        setShifts(n);
+      } else {
+        const n = { ...events };
+        const arr = (n[k] || []).filter(e => (e.type || 'work') !== type);
+        if (arr.length > 0) n[k] = arr; else delete n[k];
+        setEvents(n);
+      }
+      showToast('success', `${label} removed — click SAVE to keep changes`);
     } else {
-      setShifts({ ...shifts, [k]: s });
-      showToast('success', 'Shift updated — click SAVE to keep changes');
+      if (type === 'work') {
+        setShifts({ ...shifts, [k]: s });
+      } else {
+        const n = { ...events };
+        const arr = (n[k] || []).filter(e => (e.type || 'work') !== type);
+        arr.push(s);
+        n[k] = arr;
+        setEvents(n);
+      }
+      showToast('success', `${label} updated — click SAVE to keep changes`);
     }
     setUnsaved(true);
     setPublished(false);
@@ -2635,7 +2776,7 @@ export default function App() {
 
   // Show employee view if not admin
   if (!currentUser.isAdmin) {
-    return (<>{sweepOverlay}<EmployeeView employees={employees} shifts={publishedShifts} dates={dates} periodInfo={{ startDate, endDate }} currentUser={currentUser} onLogout={() => { clearAuth(); setCurrentUser(null); }} timeOffRequests={timeOffRequests} onCancelRequest={cancelTimeOffRequest} onSubmitRequest={submitTimeOffRequest} shiftOffers={shiftOffers} onSubmitOffer={submitShiftOffer} onCancelOffer={cancelShiftOffer} onAcceptOffer={acceptShiftOffer} onRejectOffer={rejectShiftOffer} shiftSwaps={shiftSwaps} onSubmitSwap={submitSwapRequest} onCancelSwap={cancelSwapRequest} onAcceptSwap={acceptSwapRequest} onRejectSwap={rejectSwapRequest} periodIndex={periodIndex} onPeriodChange={setPeriodIndex} isEditMode={isCurrentPeriodEditMode} announcement={currentAnnouncement} /></>);
+    return (<>{sweepOverlay}<EmployeeView employees={employees} shifts={publishedShifts} events={publishedEvents} dates={dates} periodInfo={{ startDate, endDate }} currentUser={currentUser} onLogout={() => { clearAuth(); setCurrentUser(null); }} timeOffRequests={timeOffRequests} onCancelRequest={cancelTimeOffRequest} onSubmitRequest={submitTimeOffRequest} shiftOffers={shiftOffers} onSubmitOffer={submitShiftOffer} onCancelOffer={cancelShiftOffer} onAcceptOffer={acceptShiftOffer} onRejectOffer={rejectShiftOffer} shiftSwaps={shiftSwaps} onSubmitSwap={submitSwapRequest} onCancelSwap={cancelSwapRequest} onAcceptSwap={acceptSwapRequest} onRejectSwap={rejectSwapRequest} periodIndex={periodIndex} onPeriodChange={setPeriodIndex} isEditMode={isCurrentPeriodEditMode} announcement={currentAnnouncement} /></>);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2842,6 +2983,7 @@ export default function App() {
               <MobileAdminScheduleGrid
                 employees={schedulableEmployees}
                 shifts={shifts}
+                events={events}
                 dates={mobileCurrentDates}
                 loggedInUser={currentUser}
                 getEmployeeHours={getEmpHours}
@@ -2947,6 +3089,7 @@ export default function App() {
             employee={editingShift.employee}
             date={editingShift.date}
             existingShift={editingShift.shift}
+            existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []}
             totalPeriodHours={getEmpHours(editingShift.employee.id)}
             availability={editingShift.employee.availability?.[getDayName(editingShift.date)]}
             hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)}
@@ -3409,7 +3552,7 @@ export default function App() {
                   return (
                     <React.Fragment key={e.id}>
                       {isFirstPT && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
-                      <EmployeeRow employee={e} dates={currentDates} shifts={shifts} onCellClick={handleCellClick} getEmployeeHours={getEmpHours} onEdit={handleEditEmployee} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={!isCurrentPeriodEditMode} />
+                      <EmployeeRow employee={e} dates={currentDates} shifts={shifts} events={events} onCellClick={handleCellClick} getEmployeeHours={getEmpHours} onEdit={handleEditEmployee} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={!isCurrentPeriodEditMode} />
                     </React.Fragment>
                   );
                 })}</div>
@@ -3422,7 +3565,7 @@ export default function App() {
                       <span className="text-xs" style={{ color: THEME.text.muted }}>Former Staff (History)</span>
                       <div className="flex-1 h-px" style={{ backgroundColor: THEME.border.default }} />
                     </div>
-                    {deletedWithShifts.map(e => <EmployeeRow key={e.id} employee={e} dates={currentDates} shifts={shifts} onCellClick={() => {}} getEmployeeHours={getEmpHours} onEdit={() => {}} isDeleted onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={true} />)}
+                    {deletedWithShifts.map(e => <EmployeeRow key={e.id} employee={e} dates={currentDates} shifts={shifts} events={events} onCellClick={() => {}} getEmployeeHours={getEmpHours} onEdit={() => {}} isDeleted onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={true} />)}
                   </>
                 )}
               </div>
@@ -3610,7 +3753,7 @@ export default function App() {
       </main>
       
       <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} suggestedPassword={editingEmp ? undefined : `emp-${String(employees.length + 1).padStart(3, '0')}`} />
-      {editingShift && <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} employee={editingShift.employee} date={editingShift.date} existingShift={editingShift.shift} totalPeriodHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} />}
+      {editingShift && <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} employee={editingShift.employee} date={editingShift.date} existingShift={editingShift.shift} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} />}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <InactiveEmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
       <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />

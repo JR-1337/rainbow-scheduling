@@ -15,15 +15,17 @@ id | name | email | password | phone | address | dob | active | isAdmin | isOwne
 - `passwordHash`: base64url-encoded SHA-256 of `salt + password`. Empty until first post-S36 login or password change.
 - `passwordSalt`: per-user UUID salt used with `passwordHash`. Empty until first post-S36 login or password change.
 
-## Shifts Tab (9 columns, A-I)
+## Shifts Tab (11 columns, A-K)
 
 ```
-id | employeeId | employeeName | employeeEmail | date | startTime | endTime | role | task
+id | employeeId | employeeName | employeeEmail | date | startTime | endTime | role | task | type | note
 ```
 
 - Always store `employeeName` alongside `employeeId` (audit trail)
 - `role`: One of `cashier`, `backupCashier`, `mens`, `womens`, `floorMonitor`, `none`
-- `task`: Optional free-text task description
+- `task`: Optional free-text task description (work shifts only)
+- **`type`** (S61, col J): `'work'` | `'meeting'` | `'pk'`. Empty cells normalize to `'work'` on read in `getAllData`/`getShifts`. Shift-row uniqueness in `saveShift` + `batchSaveShifts` is `(employeeId, date, type)` — a single employee can have up to one work + one meeting + one pk row per day.
+- **`note`** (S61, col K): Meeting/PK subject line (e.g. "Spring denim line" for PK, "1:1 review" for meeting). Blank for work shifts.
 
 ## Settings Tab (2 columns: key, value)
 

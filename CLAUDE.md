@@ -11,12 +11,12 @@ Stakeholders: JR (dev), Sarvi (scheduling admin - gets all request notifications
 </important>
 
 ## Stack
-Frontend: React 18+, Tailwind, Lucide | Backend: Apps Script (Code.gs v2.18 live as of 2026-04-12), Sheets (5 tabs)
+Frontend: React 18+, Tailwind, Lucide | Backend: Apps Script (Code.gs v2.21.0 live as of 2026-04-14 — Meetings/PK schema), Sheets (5 tabs; Shifts tab has `type` + `note` columns J/K for work|meeting|pk)
 Deploy: Vercel (auto on push) + Apps Script (manual) | Email: MailApp as "OTR Scheduling"
 Auth (S36+): stateless HMAC session tokens (12h TTL), salted SHA-256 password hash, Script Property `HMAC_SECRET`, Employees columns `passwordHash` (R), `passwordSalt` (S), `passwordChanged` (T, authoritative for default-pw detection; falls back to emp-XXX regex when blank).
 
 ## Files
-`src/App.jsx` (~3680) main app, state, shared exports, `guardedMutation` helper | `src/views/EmployeeView.jsx` extracted employee desktop/mobile view | `src/MobileEmployeeView.jsx` mobile components incl. `MobileAlertsSheet`, `computeAlertItems`, `MobileBottomNav`, `MobileBottomSheet` | `src/MobileAdminView.jsx` | `src/theme.js` THEME/TYPE/OTR | `src/constants.js` ROLES/ROLES_BY_ID/status color maps | `src/panels/` admin+employee list panels | `src/modals/` request/offer/swap/settings/password modals | `src/auth.js` session token + cached user + auth-failure callback | `src/pdf/generate.js` | `src/email/build.js` | `src/utils/format.js` | `backend/Code.gs` (~2100) edit here, paste to Apps Script
+`src/App.jsx` (~3680) main app, state, shared exports, `guardedMutation` helper | `src/views/EmployeeView.jsx` extracted employee desktop/mobile view | `src/MobileEmployeeView.jsx` mobile components incl. `MobileAlertsSheet`, `computeAlertItems`, `MobileBottomNav`, `MobileBottomSheet` | `src/MobileAdminView.jsx` | `src/theme.js` THEME/TYPE/OTR (incl. `THEME.event` neutral greys) | `src/constants.js` ROLES/ROLES_BY_ID/REQUEST_STATUS_COLORS/EVENT_TYPES | `src/panels/` admin+employee list panels | `src/modals/` request/offer/swap/settings/password modals (S61: `ShiftEditorModal` tabbed Work/Meeting/PK) | `src/auth.js` session token + cached user + auth-failure callback | `src/pdf/generate.js` | `src/email/build.js` | `src/utils/format.js` | `src/utils/timemath.js` (S61: interval-union hours) | `backend/Code.gs` (~2200) edit here, paste to Apps Script
 
 ## Architecture
 4 views = role(admin|employee) x device(mobile|desktop @768px):
@@ -25,8 +25,10 @@ Auth (S36+): stateless HMAC session tokens (12h TTL), salted SHA-256 password ha
 - Employee Desktop: read-only grid + request sidebar
 - Employee Mobile: separate `EmployeeView` (only needs published data)
 
-Requests: submit → (recipient accepts for offers/swaps) → admin approves/denies → email. Cancel pending; revoke approved (future only).
+Requests: submit → (recipient accepts for offers/swaps) → admin approves/denies → email. Cancel pending; revoke approved (future only). Non-work entries (meeting/pk) blocked from offer/swap (backend error `INVALID_SHIFT_TYPE`).
 Save button: SAVE(blue) → GO LIVE(green) → EDIT(yellow)
+
+Shift state (S61): split maps. `shifts[${empId}-${date}]` = work shift object (unchanged). `events[${empId}-${date}]` = array of meeting/pk entries. `publishedShifts`/`publishedEvents` are LIVE-gated copies for employee view. Union hours via `computeDayUnionHours` (work+events on same day count overlap once). 3-tuple backend key `${empId}-${date}-${type}` keeps work/meeting/pk distinct rows in the Sheet.
 
 ## Roles
 `cashier`=#8B5CF6 | `backupCashier`=#A78BFA | `mens`=#3B82F6 | `womens`=#F472B6 | `floorMonitor`=#F59E0B | `none`=#475569

@@ -10,6 +10,7 @@ import {
   CURRENT_PERIOD_INDEX, Logo, TaskStarTooltip,
 } from '../App';
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet, MobileAlertsSheet, computeAlertItems } from '../MobileEmployeeView';
+import { EVENT_TYPES } from '../constants';
 import { MyShiftOffersPanel } from '../panels/MyShiftOffersPanel';
 import { MySwapsPanel } from '../panels/MySwapsPanel';
 import { MyRequestsPanel } from '../panels/MyRequestsPanel';
@@ -24,30 +25,44 @@ import { RequestDaysOffModal } from '../modals/RequestDaysOffModal';
 import { OfferShiftModal } from '../modals/OfferShiftModal';
 import { SwapShiftModal } from '../modals/SwapShiftModal';
 
-const EmployeeScheduleCell = React.memo(({ shift, date, loggedInEmpId, storeHours, isTimeOff = false, isUnavailable = false }) => {
+const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmpId, storeHours, isTimeOff = false, isUnavailable = false }) => {
   const [showTask, setShowTask] = useState(false);
   const starRef = useRef(null);
   const role = shift ? ROLES_BY_ID[shift.role] : null;
   const isHoliday = isStatHoliday(date);
   const isOwnShift = shift?.employeeId === loggedInEmpId;
   const showTaskStar = shift?.task && isOwnShift;
-  
+  // Defensive: drop events with unknown type so malformed Sheet rows don't crash.
+  const visibleEvents = (events || []).filter(ev => EVENT_TYPES[ev.type]);
+  const hasEvents = visibleEvents.length > 0;
+  const eventOnly = !shift && hasEvents;
+  const firstEvent = hasEvents ? visibleEvents[0] : null;
+  const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
+
   return (
     <>
       <div className="h-14 rounded-lg relative overflow-hidden"
-        style={{ 
-          backgroundColor: isTimeOff ? THEME.text.muted + '15' : isUnavailable && !shift ? THEME.bg.tertiary : (shift ? role?.color + '25' : THEME.bg.tertiary),
-          border: `1px solid ${isTimeOff ? THEME.text.muted + '30' : isUnavailable && !shift ? THEME.border.subtle : (shift ? role?.color + '50' : THEME.border.default)}`,
-          opacity: isTimeOff ? 0.7 : isUnavailable && !shift ? 0.5 : 1
+        style={{
+          backgroundColor: isTimeOff ? THEME.text.muted + '15'
+            : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
+            : shift ? role?.color + '25'
+            : eventOnly ? firstEventType.bg
+            : THEME.bg.tertiary,
+          border: `1px solid ${isTimeOff ? THEME.text.muted + '30'
+            : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
+            : shift ? role?.color + '50'
+            : eventOnly ? firstEventType.border
+            : THEME.border.default}`,
+          opacity: isTimeOff ? 0.7 : isUnavailable && !shift && !hasEvents ? 0.5 : 1
         }}>
-        
+
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
-        
-        {isTimeOff && !shift ? (
+
+        {isTimeOff && !shift && !hasEvents ? (
           <div className="p-1.5 h-full flex flex-col items-center justify-center">
             <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>Time Off</span>
           </div>
-        ) : isUnavailable && !shift ? (
+        ) : isUnavailable && !shift && !hasEvents ? (
           <div className="p-1.5 h-full flex flex-col items-center justify-center">
             <span className="text-xs" style={{ color: THEME.text.muted, fontSize: '9px' }}>Unavailable</span>
           </div>
@@ -62,6 +77,35 @@ const EmployeeScheduleCell = React.memo(({ shift, date, loggedInEmpId, storeHour
             <div className="flex items-center justify-between">
               <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
             </div>
+            {hasEvents && (
+              <div className="absolute bottom-0 right-0 flex gap-0.5 p-0.5">
+                {visibleEvents.map((ev, j) => {
+                  const et = EVENT_TYPES[ev.type];
+                  if (!et) return null;
+                  return (
+                    <span key={j}
+                      title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
+                      className="rounded font-semibold leading-tight"
+                      style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>
+                      {et.shortLabel}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : eventOnly ? (
+          <div className="p-1.5 h-full flex flex-col justify-between"
+            title={visibleEvents.map(ev => {
+              const et = EVENT_TYPES[ev.type];
+              return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
+            }).join('\n')}>
+            <span className="text-xs font-semibold truncate" style={{ color: firstEventType.text }}>
+              {visibleEvents.length === 1 ? firstEventType.shortLabel : `${visibleEvents.length} events`}
+            </span>
+            <span className="text-xs" style={{ color: firstEventType.text, opacity: 0.8 }}>
+              {formatTimeShort(firstEvent.startTime)}-{formatTimeShort(firstEvent.endTime)}
+            </span>
           </div>
         ) : null}
       </div>
@@ -70,7 +114,7 @@ const EmployeeScheduleCell = React.memo(({ shift, date, loggedInEmpId, storeHour
   );
 });
 
-const EmployeeViewRow = React.memo(({ employee, dates, shifts, loggedInEmpId, getEmployeeHours, timeOffRequests = [] }) => {
+const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, loggedInEmpId, getEmployeeHours, timeOffRequests = [] }) => {
   const hours = getEmployeeHours(employee.id);
   const isMe = employee.id === loggedInEmpId;
   
@@ -101,13 +145,14 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, loggedInEmpId, ge
         const storeHrs = getStoreHoursForDate(date);
         const dateStr = toDateKey(date);
         const shift = shifts[`${employee.id}-${dateStr}`];
+        const cellEvents = events[`${employee.id}-${dateStr}`] || [];
         const isTimeOff = hasApprovedTimeOff(dateStr);
         const dayName = getDayName(date);
         const avail = employee.availability?.[dayName];
         const isUnavailable = avail && !avail.available;
         return (
           <div key={dateStr} className="p-0.5" style={{ backgroundColor: isMe ? THEME.accent.purple + '10' : THEME.bg.secondary }}>
-            <EmployeeScheduleCell shift={shift ? { ...shift, employeeId: employee.id } : null} date={date} loggedInEmpId={loggedInEmpId} storeHours={storeHrs} isTimeOff={isTimeOff} isUnavailable={isUnavailable} />
+            <EmployeeScheduleCell shift={shift ? { ...shift, employeeId: employee.id } : null} events={cellEvents} date={date} loggedInEmpId={loggedInEmpId} storeHours={storeHrs} isTimeOff={isTimeOff} isUnavailable={isUnavailable} />
           </div>
         );
       })}
@@ -115,7 +160,7 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, loggedInEmpId, ge
   );
 });
 
-const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLogout, timeOffRequests, onCancelRequest, onSubmitRequest, shiftOffers, onSubmitOffer, onCancelOffer, onAcceptOffer, onRejectOffer, shiftSwaps, onSubmitSwap, onCancelSwap, onAcceptSwap, onRejectSwap, periodIndex = 0, onPeriodChange, isEditMode = false, announcement }) => {
+const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, currentUser, onLogout, timeOffRequests, onCancelRequest, onSubmitRequest, shiftOffers, onSubmitOffer, onCancelOffer, onAcceptOffer, onRejectOffer, shiftSwaps, onSubmitSwap, onCancelSwap, onAcceptSwap, onRejectSwap, periodIndex = 0, onPeriodChange, isEditMode = false, announcement }) => {
   const [activeWeek, setActiveWeek] = useState(1);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [daysOffModalOpen, setDaysOffModalOpen] = useState(false);
@@ -401,6 +446,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
             <MobileScheduleGrid
               employees={schedulableEmployees}
               shifts={shifts}
+              events={events}
               dates={mobileActiveTab === 'week1' ? mobileWeek1 : mobileWeek2}
               loggedInUser={currentUser}
               getEmployeeHours={mobileActiveTab === 'week1' ? getEmpHours : (id) => {
@@ -745,7 +791,7 @@ const EmployeeView = ({ employees, shifts, dates, periodInfo, currentUser, onLog
               return (
                 <React.Fragment key={e.id}>
                   {isFirstPT && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
-                  <EmployeeViewRow employee={e} dates={currentDates} shifts={shifts} loggedInEmpId={currentUser.id} getEmployeeHours={getEmpHours} timeOffRequests={timeOffRequests} />
+                  <EmployeeViewRow employee={e} dates={currentDates} shifts={shifts} events={events} loggedInEmpId={currentUser.id} getEmployeeHours={getEmpHours} timeOffRequests={timeOffRequests} />
                 </React.Fragment>
               );
             })}</div>

@@ -2,7 +2,23 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.20.1 (S45: revert v2.20 fast-path; Apps Script overhead dominates)
+ * Version: 2.21.0 (S61: Meetings + PK shift types — orthogonal `type` field, bulk PK endpoint, offer/swap work-only guards)
+ *
+ * Changes in v2.21.0:
+ * - Shifts tab gains two new columns: `type` ('work' | 'meeting' | 'pk') and `note`.
+ *   `createShiftsTab` appends them; existing rows read as `type: 'work'` via normalization
+ *   in getAllData/getShifts (empty string → 'work'). No data migration needed.
+ * - Shift-row uniqueness key in saveShift + batchSaveShifts is now
+ *   `${employeeId}-${date}-${type}` so work + meeting + pk can coexist on the same day.
+ *   `allShiftKeys` from the frontend follows the 3-tuple form.
+ * - submitShiftOffer + submitSwapRequest reject with error code INVALID_SHIFT_TYPE
+ *   when the selected shift is not type='work'. Meetings and PK events are not
+ *   transferable.
+ * - New admin-only handler `bulkCreatePKEvent({date, startTime, endTime, note, employeeIds})`
+ *   appends a type='pk' row for each employeeId in a single Sheets.Spreadsheets.Values.update
+ *   call (mirrors the v2.19 batchSaveShifts pattern — one round-trip, not N).
+ * - Manual step (one-time, Sarvi's live Sheet): add headers `type` (column J) and
+ *   `note` (column K) to the Shifts tab. Existing rows left blank are fine.
  *
  * Changes in v2.20.1:
  * - batchSaveShifts: reverted the v2.20 adaptive fast path. Playwright measurement
@@ -225,6 +241,7 @@ function handleRequest(action, payload) {
       'saveStaffingTargets': () => saveStaffingTargets(payload),
       'saveSetting': () => saveSetting(payload),
       'batchSaveShifts': () => batchSaveShifts(payload),
+      'bulkCreatePKEvent': () => bulkCreatePKEvent(payload),
 
       // Announcements
       'saveAnnouncement': () => saveAnnouncement(payload),
@@ -947,10 +964,18 @@ function submitShiftOffer(payload) {
   }
 
   const shifts = getSheetData(CONFIG.TABS.SHIFTS);
-  const offererShift = shifts.find(s => s.employeeEmail === callerEmail && s.date === shiftDate);
-  if (!offererShift) return { success: false, error: { code: 'NOT_YOUR_SHIFT', message: 'You do not have a shift on this date' } };
+  // v2.21.0: only work shifts are transferable. A day with only a meeting/pk
+  // has no offerable shift; a recipient with only a meeting/pk is still free.
+  const offererShift = shifts.find(s => s.employeeEmail === callerEmail && s.date === shiftDate && (s.type || 'work') === 'work');
+  if (!offererShift) {
+    const anyShift = shifts.find(s => s.employeeEmail === callerEmail && s.date === shiftDate);
+    if (anyShift) {
+      return { success: false, error: { code: 'INVALID_SHIFT_TYPE', message: 'Only work shifts can be offered. Meetings and PK events are not transferable.' } };
+    }
+    return { success: false, error: { code: 'NOT_YOUR_SHIFT', message: 'You do not have a shift on this date' } };
+  }
 
-  const recipientShift = shifts.find(s => s.employeeEmail === recipientEmail && s.date === shiftDate);
+  const recipientShift = shifts.find(s => s.employeeEmail === recipientEmail && s.date === shiftDate && (s.type || 'work') === 'work');
   if (recipientShift) {
     return { success: false, error: { code: 'RECIPIENT_UNAVAILABLE', message: `${recipient.name} is already scheduled on this date` } };
   }
@@ -1194,11 +1219,20 @@ function submitSwapRequest(payload) {
   if (!partner) return { success: false, error: { code: 'NOT_FOUND', message: 'Partner not found or inactive' } };
 
   const shifts = getSheetData(CONFIG.TABS.SHIFTS);
-  const initiatorOwnedShift = shifts.find(s => s.employeeEmail === callerEmail && s.date === initiatorShift.date);
-  const partnerOwnedShift = shifts.find(s => s.employeeEmail === partnerEmail && s.date === partnerShift.date);
+  // v2.21.0: only work shifts are swappable. Meetings and PK are mandatory.
+  const initiatorOwnedShift = shifts.find(s => s.employeeEmail === callerEmail && s.date === initiatorShift.date && (s.type || 'work') === 'work');
+  const partnerOwnedShift = shifts.find(s => s.employeeEmail === partnerEmail && s.date === partnerShift.date && (s.type || 'work') === 'work');
 
-  if (!initiatorOwnedShift) return { success: false, error: { code: 'NOT_YOUR_SHIFT', message: `You don't have a shift on ${initiatorShift.date}` } };
-  if (!partnerOwnedShift) return { success: false, error: { code: 'INVALID_SHIFTS', message: `${partner.name} doesn't have a shift on ${partnerShift.date}` } };
+  if (!initiatorOwnedShift) {
+    const anyInitiator = shifts.find(s => s.employeeEmail === callerEmail && s.date === initiatorShift.date);
+    if (anyInitiator) return { success: false, error: { code: 'INVALID_SHIFT_TYPE', message: 'Only work shifts can be swapped. Meetings and PK events are not transferable.' } };
+    return { success: false, error: { code: 'NOT_YOUR_SHIFT', message: `You don't have a shift on ${initiatorShift.date}` } };
+  }
+  if (!partnerOwnedShift) {
+    const anyPartner = shifts.find(s => s.employeeEmail === partnerEmail && s.date === partnerShift.date);
+    if (anyPartner) return { success: false, error: { code: 'INVALID_SHIFT_TYPE', message: `${partner.name}'s entry on that date is not a work shift and cannot be swapped.` } };
+    return { success: false, error: { code: 'INVALID_SHIFTS', message: `${partner.name} doesn't have a shift on ${partnerShift.date}` } };
+  }
 
   const requestId = generateRequestId('SWAP');
   const now = new Date().toISOString();
@@ -1522,7 +1556,7 @@ function getAllData(payload) {
     success: true,
     data: {
       employees: employees.map(e => { const { _rowIndex, ...rest } = e; return rest; }),
-      shifts: shifts.map(s => { const { _rowIndex, ...rest } = s; return rest; }),
+      shifts: shifts.map(s => { const { _rowIndex, ...rest } = s; return { ...rest, type: rest.type || 'work', note: rest.note || '' }; }),
       settings,
       announcements,
       requests: requests.map(r => { const { _rowIndex, ...rest } = r; return rest; }),
@@ -1547,7 +1581,8 @@ function getEmployees(payload) {
 function getShifts(payload) {
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
-  return { success: true, data: { shifts: getSheetData(CONFIG.TABS.SHIFTS) } };
+  const shifts = getSheetData(CONFIG.TABS.SHIFTS).map(s => ({ ...s, type: s.type || 'work', note: s.note || '' }));
+  return { success: true, data: { shifts } };
 }
 
 function saveShift(payload) {
@@ -1564,9 +1599,12 @@ function saveShift(payload) {
   };
 
   const shiftDate = normalizeDate(shift.date);
+  const shiftType = shift.type || 'work';
   const shifts = getSheetData(CONFIG.TABS.SHIFTS);
   const existingShift = shifts.find(s =>
-    s.employeeId === shift.employeeId && normalizeDate(s.date) === shiftDate
+    s.employeeId === shift.employeeId &&
+    normalizeDate(s.date) === shiftDate &&
+    (s.type || 'work') === shiftType
   );
 
   if (shift.deleted) {
@@ -1715,11 +1753,16 @@ function batchSaveShifts(payload) {
     const existingValues = sheet.getDataRange().getValues();
     const existing = parseSheetValues_(existingValues);
 
+    // v2.21.0: keys include `type` so work + meeting + pk entries on the same day are
+    // distinct rows. Back-compat: a row (or payload shift) with empty/missing type
+    // falls back to 'work'. Frontend now always sends explicit type.
+    const keyOf = (s) => `${s.employeeId}-${normalizeDate(s.date)}-${s.type || 'work'}`;
+
     const keepKeys = new Set();
     if (allShiftKeys && allShiftKeys.length > 0) {
       allShiftKeys.forEach(k => keepKeys.add(k));
     } else {
-      shifts.forEach(s => keepKeys.add(`${s.employeeId}-${normalizeDate(s.date)}`));
+      shifts.forEach(s => keepKeys.add(keyOf(s)));
     }
     const periodSet = new Set(periodDates || []);
 
@@ -1728,7 +1771,7 @@ function batchSaveShifts(payload) {
     const survivorIdx = new Map();
     existing.forEach(row => {
       const d = normalizeDate(row.date);
-      const key = `${row.employeeId}-${d}`;
+      const key = keyOf(row);
       if (!periodSet.has(d) || keepKeys.has(key)) {
         survivorIdx.set(key, survivors.length);
         survivors.push(row);
@@ -1737,13 +1780,13 @@ function batchSaveShifts(payload) {
 
     // Overlay updates from shifts[] — update in place if key already a survivor, else append.
     const updates = new Map();
-    shifts.forEach(s => { updates.set(`${s.employeeId}-${normalizeDate(s.date)}`, s); });
+    shifts.forEach(s => { updates.set(keyOf(s), s); });
     updates.forEach((s, key) => {
       if (survivorIdx.has(key)) survivors[survivorIdx.get(key)] = s;
       else survivors.push(s);
     });
 
-    const deletedCount = existing.length - (survivors.length - shifts.filter(s => !existing.some(e => normalizeDate(e.date) === normalizeDate(s.date) && e.employeeId === s.employeeId)).length);
+    const deletedCount = existing.length - (survivors.length - shifts.filter(s => !existing.some(e => keyOf(e) === keyOf(s))).length);
 
     const newRows = survivors.map(row =>
       headers.map(h => row[h] !== undefined && row[h] !== null ? row[h] : '')
@@ -1770,6 +1813,98 @@ function batchSaveShifts(payload) {
     }
 
     return { success: true, data: { savedCount: shifts.length, deletedCount: Math.max(0, deletedCount) } };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// v2.21.0: Bulk-create a PK (Product Knowledge) event for many employees in a
+// single Sheets API round-trip. Sarvi triggers this from the admin toolbar.
+// Existing work shifts on the same date are untouched — a PK row is orthogonal.
+// Dupes (same employee already has a pk entry for this date) are skipped silently.
+function bulkCreatePKEvent(payload) {
+  const { date, startTime, endTime, note, employeeIds } = payload;
+
+  const auth = verifyAuth(payload, true);
+  if (!auth.authorized) return { success: false, error: auth.error };
+
+  if (!date || !startTime || !endTime) {
+    return { success: false, error: { code: 'VALIDATION_ERROR', message: 'date, startTime, and endTime are required' } };
+  }
+  if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
+    return { success: false, error: { code: 'VALIDATION_ERROR', message: 'employeeIds must be a non-empty array' } };
+  }
+
+  const normalizedDate = String(date).split('T')[0];
+  const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
+  const byId = new Map();
+  employees.forEach(e => { if (e.active) byId.set(String(e.id), e); });
+
+  const lock = LockService.getDocumentLock();
+  if (!lock.tryLock(10000)) {
+    return { success: false, error: { code: 'CONCURRENT_EDIT', message: 'Another admin is saving the schedule. Please wait a moment and try again.' } };
+  }
+  try {
+    const sheet = getSheet(CONFIG.TABS.SHIFTS);
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    // S61 — refuse to write if the one-time manual header migration hasn't happened.
+    // Otherwise the append silently drops the `type`/`note` fields and the PK rows are
+    // indistinguishable from work rows on the next getAllData.
+    if (headers.indexOf('type') === -1 || headers.indexOf('note') === -1) {
+      return { success: false, error: { code: 'SHEET_NOT_MIGRATED', message: 'Shifts tab is missing `type` and/or `note` columns. Add them to row 1 before scheduling PK/meeting events.' } };
+    }
+    const existing = parseSheetValues_(sheet.getDataRange().getValues());
+
+    const existingPKKeys = new Set();
+    existing.forEach(row => {
+      const d = String(row.date || '').split('T')[0];
+      if ((row.type || 'work') === 'pk' && d === normalizedDate) {
+        existingPKKeys.add(String(row.employeeId));
+      }
+    });
+
+    const newRows = [];
+    const created = [];
+    const skipped = [];
+
+    employeeIds.forEach(rawId => {
+      const idKey = String(rawId);
+      const emp = byId.get(idKey);
+      if (!emp) { skipped.push({ id: rawId, reason: 'not_active' }); return; }
+      if (existingPKKeys.has(idKey)) { skipped.push({ id: rawId, reason: 'already_has_pk' }); return; }
+
+      const shiftId = 'PK-' + Utilities.getUuid().substring(0, 8);
+      const rowObj = {
+        id: shiftId,
+        employeeId: emp.id,
+        employeeName: emp.name,
+        employeeEmail: emp.email,
+        date: normalizedDate,
+        startTime,
+        endTime,
+        role: 'none',
+        task: '',
+        type: 'pk',
+        note: note || ''
+      };
+      newRows.push(headers.map(h => rowObj[h] !== undefined && rowObj[h] !== null ? rowObj[h] : ''));
+      created.push(emp.id);
+    });
+
+    if (newRows.length > 0) {
+      const startRow = sheet.getLastRow() + 1;
+      const endRow = startRow + newRows.length - 1;
+      const lastCol = columnLetter_(headers.length);
+      const range = `${CONFIG.TABS.SHIFTS}!A${startRow}:${lastCol}${endRow}`;
+      Sheets.Spreadsheets.Values.update(
+        { values: newRows },
+        getSpreadsheet().getId(),
+        range,
+        { valueInputOption: 'USER_ENTERED' }
+      );
+    }
+
+    return { success: true, data: { created, skipped, date: normalizedDate } };
   } finally {
     lock.releaseLock();
   }
@@ -2090,7 +2225,7 @@ function createShiftsTab(ss) {
   if (sheet && sheet.getLastRow() > 1) { Logger.log('⏭️ Shifts: Already has data — skipping'); return; }
   if (!sheet) sheet = ss.insertSheet(TAB_NAME);
   sheet.clear();
-  const headers = ['id', 'employeeId', 'employeeName', 'employeeEmail', 'date', 'startTime', 'endTime', 'role', 'task'];
+  const headers = ['id', 'employeeId', 'employeeName', 'employeeEmail', 'date', 'startTime', 'endTime', 'role', 'task', 'type', 'note'];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   formatTab(sheet, headers.length);
   Logger.log('✅ Shifts: Created');

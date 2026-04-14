@@ -76,13 +76,20 @@ Post-demo payroll aggregator (path 1, pending demo go-ahead):
 - Feature: ADP-ready export (format TBD from discovery)
 - Counterpoint actuals ingestion (format TBD from discovery)
 
+Schedule-change notifications (S61, new):
+- Notify Sarvi whenever anyone **other than Sarvi or JR** modifies the schedule (creates/edits/deletes a shift, approves a swap/offer, etc.). Intent: Sarvi keeps full visibility even when delegated admins (or future roles) make edits. Scope to define: which actions count (batchSaveShifts, saveShift, approve/revoke/cancel of offers/swaps), email vs in-app alert, digest vs per-event. Exclude acts where the actor IS Sarvi or JR (by email). Implementation likely sits in `backend/Code.gs` after each write handler — check `auth.employee.email` against `CONFIG.ADMIN_EMAIL` + JR's email, send MailApp to `CONFIG.ADMIN_EMAIL` if mismatched.
+
 Existing up-next preserved:
 - Post-demo: evaluate mobile bottom nav active states on deep-linked URLs if introduced
-- Code.gs deploy (manual - paste updated Code.gs to Apps Script) — required for S36
 - Professional sender email (dedicated Google Workspace account)
+
+PDF export cleanup (S61, logged while building Meetings+PK):
+- PDF header/footer currently shows every admin's email — should show Sarvi's contact only (filter to `ADMIN_EMAIL` or the owner-designated store contact)
+- App logo emoji renders as garbled characters in the PDF output (font subset missing glyph or jsPDF encoding issue). Swap to an inline SVG/image or ASCII wordmark for the PDF path
 
 ### Done
 
+- [2026-04-14] S61 verified Apps Script v2.20.1 already live — Manage Deployments shows "S36 Auth Rebuild v2.20.1" version 28, deployed 2026-04-13 10:24 AM. Editor contents match local `backend/Code.gs` (Save grayed out = no diff). Carried S58 blocker cleared; no redeploy needed.
 - [2026-04-14] S59 schedule grid UX polish round (`050b8fe`, `c595938`, `6cfe186`, `d81d554`, `5caa01c`, + employee-hours-hide). (1) Past-date columns now show `scheduled/target` with green/red/muted color-coding (was scheduled-only). (2) Restored unavailable + approved-time-off warning banner in ShiftEditorModal; both states pass through from desktop + mobile-admin grid. (3) Hatching contrast: unavailable now `OTR.navy` 19% alpha (was `THEME.bg.hover` — invisible on cream cells); time-off cyan `30` → `AA` alpha. (4) Toast on save: "click SAVE to keep changes" (was misleading "will save when you Go Live"). (5) `beforeunload` listener fires native browser leave-site dialog when `unsaved=true`. (6) `theme.js` `_accentText` pinned to white — was using WCAG contrast logic that picked navy on orange/green/red OTR accents → black-text Save buttons. (7) Hidden employee-row `Xh` total + per-cell `Xh` from EmployeeView + MobileScheduleGrid (kept header summary + My Shifts list). See `docs/handoffs/s59-20260414-schedule-ux-polish.md`.
 - [2026-04-14] S50 demo-critical bug fix (`7f3021c`): `App.jsx` `ensureFullWeek()` defensive availability fallback. Pre-fix every login crashed with `TypeError: Cannot read properties of undefined (reading 'available')` (148 console errors, white screen). Synthetics seeded by S48 had empty-string availability → JSON.parse failed → `{}` → undefined day lookup → crash. Build PASS, pushed to Vercel for auto-deploy. Decision logged 2026-04-14. Lesson logged.
 - [2026-04-14] S50 cover slide spec changed: video loop DROPPED. Welcome-sweep CSS + wordmark + hero bg + before/after static screenshots + thesis sub-line. Live wow-moment moves to in-meeting hands-on. `pitchdeck/build-plan.md` updated; decision logged 2026-04-14.

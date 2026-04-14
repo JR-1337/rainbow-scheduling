@@ -20,6 +20,7 @@ import {
 } from './App';
 
 import { MobileScheduleGrid } from './MobileEmployeeView';
+import { EVENT_TYPES } from './constants';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN MOBILE HAMBURGER DRAWER
@@ -123,8 +124,8 @@ export const MobileAdminDrawer = ({
 // ADMIN MOBILE SCHEDULE GRID - Read-only with staffing counters
 // Extends the employee grid pattern with staffing target info in headers
 // ═══════════════════════════════════════════════════════════════════════════════
-export const MobileAdminScheduleGrid = ({ 
-  employees, shifts, dates, loggedInUser, getEmployeeHours, 
+export const MobileAdminScheduleGrid = ({
+  employees, shifts, events = {}, dates, loggedInUser, getEmployeeHours,
   timeOffRequests = [], getScheduledCount, getStaffingTarget,
   staffingTargetOverrides = {}, storeHoursOverrides = {},
   isEditMode = false, onCellClick, onNameClick
@@ -266,47 +267,58 @@ export const MobileAdminScheduleGrid = ({
                   {dates.map((date, i) => {
                     const dateStr = toDateKey(date);
                     const shift = shifts[`${emp.id}-${dateStr}`];
-                    
-                    const approvedTimeOff = timeOffRequests.some(r => 
-                      r.email === emp.email && r.status === 'approved' && 
+                    // Defensive: unknown event types are silently hidden so a malformed
+                    // Sheet row can't crash the grid.
+                    const cellEvents = (events[`${emp.id}-${dateStr}`] || []).filter(ev => EVENT_TYPES[ev.type]);
+                    const hasEvents = cellEvents.length > 0;
+                    const firstEvent = hasEvents ? cellEvents[0] : null;
+                    const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
+                    const eventOnly = !shift && hasEvents;
+
+                    const approvedTimeOff = timeOffRequests.some(r =>
+                      r.email === emp.email && r.status === 'approved' &&
                       r.datesRequested?.split(',').includes(dateStr)
                     );
-                    
+
                     const dayName = getDayName(date).toLowerCase();
                     const avail = emp.availability?.[dayName];
                     const isUnavailable = avail && !avail.available;
                     const role = shift ? ROLES_BY_ID[shift.role] : null;
-                    
+
                     return (
-                      <td key={i} 
+                      <td key={i}
                         onClick={() => isEditMode && onCellClick && onCellClick(emp, date, shift || null)}
-                        style={{ 
+                        style={{
                           width: CELL_WIDTH, minWidth: CELL_WIDTH, height: CELL_HEIGHT,
                           backgroundColor: THEME.bg.secondary,
                           borderBottom: `1px solid ${THEME.border.subtle}`,
                           padding: '2px',
                           cursor: isEditMode ? 'pointer' : 'default'
                         }}>
-                        <div className="h-full rounded-md relative overflow-hidden" style={{ 
-                          backgroundColor: approvedTimeOff ? THEME.text.muted + '15' 
-                            : isUnavailable && !shift ? THEME.bg.tertiary 
-                            : shift ? role?.color + '25' : THEME.bg.tertiary,
-                          border: `1px solid ${approvedTimeOff ? THEME.text.muted + '30' 
-                            : isUnavailable && !shift ? THEME.border.subtle 
-                            : shift ? role?.color + '50' : THEME.border.default}`,
-                          opacity: approvedTimeOff ? 0.7 : isUnavailable && !shift ? 0.5 : 1,
+                        <div className="h-full rounded-md relative overflow-hidden" style={{
+                          backgroundColor: approvedTimeOff ? THEME.text.muted + '15'
+                            : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
+                            : shift ? role?.color + '25'
+                            : eventOnly ? firstEventType.bg
+                            : THEME.bg.tertiary,
+                          border: `1px solid ${approvedTimeOff ? THEME.text.muted + '30'
+                            : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
+                            : shift ? role?.color + '50'
+                            : eventOnly ? firstEventType.border
+                            : THEME.border.default}`,
+                          opacity: approvedTimeOff ? 0.7 : isUnavailable && !shift && !hasEvents ? 0.5 : 1,
                           height: CELL_HEIGHT - 4
                         }}>
-                          {approvedTimeOff && !shift ? (
+                          {approvedTimeOff && !shift && !hasEvents ? (
                             <div className="flex items-center justify-center h-full">
                               <span style={{ color: THEME.text.muted, fontSize: '9px' }}>Time Off</span>
                             </div>
-                          ) : isUnavailable && !shift ? (
+                          ) : isUnavailable && !shift && !hasEvents ? (
                             <div className="flex items-center justify-center h-full">
                               <span style={{ color: THEME.text.muted, fontSize: '8px' }}>N/A</span>
                             </div>
                           ) : shift ? (
-                            <div className="p-1 h-full flex flex-col justify-between">
+                            <div className="p-1 h-full flex flex-col justify-between relative">
                               <span className="font-semibold truncate" style={{ color: role?.color, fontSize: '10px' }}>{role?.name}</span>
                               <div>
                                 <span style={{ color: THEME.text.secondary, fontSize: '9px' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
@@ -317,6 +329,35 @@ export const MobileAdminScheduleGrid = ({
                                   <Star size={8} fill={THEME.task} color={THEME.task} />
                                 )}
                               </div>
+                              {hasEvents && (
+                                <div className="absolute bottom-0 right-0 flex gap-0.5 p-0.5">
+                                  {cellEvents.map((ev, j) => {
+                                    const et = EVENT_TYPES[ev.type];
+                                    if (!et) return null;
+                                    return (
+                                      <span key={j}
+                                        title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
+                                        className="rounded font-semibold leading-tight"
+                                        style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>
+                                        {et.shortLabel}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          ) : eventOnly ? (
+                            <div className="p-1 h-full flex flex-col justify-between"
+                              title={cellEvents.map(ev => {
+                                const et = EVENT_TYPES[ev.type];
+                                return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
+                              }).join('\n')}>
+                              <span className="font-semibold truncate" style={{ color: firstEventType.text, fontSize: '10px' }}>
+                                {cellEvents.length === 1 ? firstEventType.shortLabel : `${cellEvents.length} events`}
+                              </span>
+                              <span style={{ color: firstEventType.text, opacity: 0.8, fontSize: '9px' }}>
+                                {formatTimeShort(firstEvent.startTime)}-{formatTimeShort(firstEvent.endTime)}
+                              </span>
                             </div>
                           ) : null}
                         </div>

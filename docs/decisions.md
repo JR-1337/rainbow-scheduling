@@ -2,6 +2,30 @@
 
 <!-- Protocol: ~/.claude/rules/decisions.md -->
 
+## 2026-04-14 - Meetings + PK feature: split-maps over nested-array (S61)
+**Decided:** Frontend shift state keeps `shifts[key]` work-only (current shape, unchanged). New parallel `events[key]` map holds arrays of meeting/pk entries. One partition point on `loadDataFromBackend` splits the flat backend payload into the two maps. `publishedShifts` gets a parallel `publishedEvents` for employee-view LIVE gating. Backend Sheet rows stay flat with a new orthogonal `type` column ('work'|'meeting'|'pk') + `note` column. Backend `saveShift` + `batchSaveShifts` use 3-tuple key `${empId}-${date}-${type}` so work + meeting + pk coexist on the same day.
+**Alternatives:** (a) Nested array `shifts[key] = [entries]` (original plan) — rejected mid-Stage-2 after grep showed 25+ call sites assuming `shifts[key]` returns a single work-shift object. Nested would invasively break every `shifts[key].hours`, `shifts[key].role`, `if (shifts[key])` site + add a `.find(s => s.type === 'work')` to every hot-path cell render. (b) Composite-key `${empId}-${date}-${type}` at all frontend sites — rejected for identical reasons to nested.
+**Rationale:** 25+ existing sites treat `shifts[key]` as scalar work shift; zero touched by split-maps. O(1) lookup on hot path preserved. Mental model matches how the store thinks: "the schedule" = work, "events" = overlays. Nested-array would only pay off if 4+ orthogonal entry types were planned; exactly 2 are (meeting, pk).
+**Revisit if:** A 3rd or 4th orthogonal entry type is proposed (then merging to a nested array or composite key buys back uniformity).
+
+## 2026-04-14 - Offers + swaps blocked for non-work shift types (S61)
+**Decided:** Only `type='work'` entries are transferable. Frontend offer/swap modals filter their shift lists to work-only (Stage 6 not yet shipped — filter lives in backend now). Backend `submitShiftOffer` + `submitSwapRequest` reject non-work attempts with error code `INVALID_SHIFT_TYPE` and message "Only work shifts can be offered/swapped."
+**Alternatives:** (a) Allow all types to be offered/swapped with admin approval gating — rejected. Swapping a mandatory meeting or PK training is conceptually nonsensical; Sarvi would always reject. (b) Silent drop of non-work from the picker only — rejected; explicit backend rejection plus the same error toast on the client creates a clear audit trail and defensive-in-depth.
+**Rationale:** Meetings and PK events are admin-scheduled mandatory commitments. Employees cannot delegate them. Backend rejection + frontend filter = two layers.
+**Revisit if:** A future non-work type is introduced that IS delegatable (e.g., "optional training").
+
+## 2026-04-14 - Hours: union-count overlaps across work + meeting + pk (S61)
+**Decided:** When a day has multiple entries (work + meeting + pk), weekly/period hours count the **union** of all intervals, not the sum. A 9-5 work + 3-5 pk = 8h for that day, not 10h. Fast-path (no events): existing `shift.hours` sum stays unchanged. Slow-path (events present): `computeDayUnionHours([work, ...events])` via `src/utils/timemath.js` merges intervals then sums. Unparseable entries fall back to their stored `hours` field so fast/slow paths agree on stale data.
+**Alternatives:** (a) Sum all entries (double-count overlap) — rejected. Misrepresents actual paid time and would trigger false OT red-flags at 40/44hr. (b) Ignore meeting/pk in totals — rejected. They are paid time and count toward ESA 40/44hr thresholds per Ontario rules.
+**Rationale:** ESA overtime threshold is 44hr "worked" — paid-but-concurrent time shouldn't double-count. Employees can't be in two places simultaneously. Mirrors how payroll treats overlapping timecard punches.
+**Revisit if:** Sarvi reports discrepancies between displayed hours and ADP-exported hours.
+
+## 2026-04-14 - Meeting + PK skip the 5-consecutive-days streak (S61)
+**Decided:** The consecutive-days warning (informational, added in Stage 8) counts only `type='work'` days. A meeting on Day 5 of a 4-work-day streak does not extend the streak to 5.
+**Alternatives:** (a) Any scheduled entry extends streak — rejected. A 2-hr meeting on a planned off-day is not a full workday and penalises Sarvi for scheduling training. (b) Soft inclusion (meeting counts half) — rejected as arbitrary and opaque to the user.
+**Rationale:** Ontario ESA consecutive-days logic is about fatigue from sustained shop-floor work. Meetings/training don't carry the same load.
+**Revisit if:** An employee reports fatigue complaints driven by back-to-back training + work days.
+
 ## 2026-04-14 - Pitch deck typography baseline for 10ft / 50" TV viewing (S60)
 **Decided:** Global typography clamp ladder enforces visual hierarchy at every viewport from laptop to 1920+ TV: `.display` 40-96px, `.body` 16-26px, `.h3` 18-24px, `.label` 12-18px, `.stat` 32-60px, `.h2` 24-44px. `.slide-content` max-width 1180 → `min(1500px, 94vw)`. `.slide` side padding clamp upper bound 80 → 56. Every inline `fontSize` in slides converted to clamp respecting the ladder (subhead 26 max > card title 22-24 max > card body 19-20 max > eyebrow 17-18 max > footer 17 max). Backups in `~/APPS/RAINBOW-PITCH/.backup-s60-typography/`.
 **Alternatives:** (a) Slide-3-only bump — rejected by JR; problem affects whole deck. (b) Bump globals only without sweeping inline overrides — rejected; cards keep their fixed sizes and break hierarchy ("now we have card fonts bigger than the subheader"). (c) Switch to a CSS variable scale (--font-body) referenced everywhere — overkill for a 5-slide deck; clamp inline is enough.
