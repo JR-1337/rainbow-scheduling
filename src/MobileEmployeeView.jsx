@@ -402,7 +402,7 @@ export const MobileMySchedule = ({ currentUser, shifts, dates, timeOffRequests =
     <div className="mb-3">
       <div className="flex items-center justify-between mb-2 px-1">
         <h4 className="text-xs font-semibold" style={{ color: THEME.text.muted }}>WEEK {weekNum}</h4>
-        <span className="text-xs font-bold" style={{ color: THEME.accent.cyan }}>{weekData.totalHours.toFixed(1)}h</span>
+        <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>{weekData.shiftList.length} shift{weekData.shiftList.length === 1 ? '' : 's'}</span>
       </div>
       
       <div className="space-y-1.5">
@@ -429,7 +429,6 @@ export const MobileMySchedule = ({ currentUser, shifts, dates, timeOffRequests =
                 <div className="flex-1 flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: role?.color + '25', color: role?.color }}>{role?.name}</span>
                   <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)} – {formatTimeShort(shift.endTime)}</span>
-                  <span className="text-xs font-medium" style={{ color: THEME.accent.cyan }}>{shift.hours}h</span>
                   {shift.task && (
                     <span className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: THEME.task + '20', color: THEME.task }}>
                       <Star size={8} fill={THEME.task} color={THEME.task} />{shift.task}
@@ -453,10 +452,6 @@ export const MobileMySchedule = ({ currentUser, shifts, dates, timeOffRequests =
       {/* Period Summary Header */}
       <div className="flex items-center justify-between mb-3 pb-2" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
         <h3 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>My Schedule</h3>
-        <div className="flex items-center gap-3">
-          <span className="text-xs" style={{ color: THEME.text.muted }}>{w1.shiftList.length + w2.shiftList.length} shifts</span>
-          <span className="text-sm font-bold" style={{ color: THEME.accent.cyan }}>{periodTotal.toFixed(1)}h</span>
-        </div>
       </div>
       
       {renderWeek(week1, w1, weekNum1)}
