@@ -11,7 +11,7 @@ import {
   isStatHoliday,
   hasApprovedTimeOffForDate,
 } from '../App';
-import { EVENT_TYPES } from '../constants';
+import { EVENT_TYPES, PRIMARY_CONTACT_EMAIL } from '../constants';
 import { computeDayUnionHours } from '../utils/timemath';
 import { escapeHtml, stripEmoji } from '../utils/format';
 
@@ -31,7 +31,13 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     .filter(e => e.active && !e.deleted && !e.isOwner)
     .filter(e => !e.isAdmin || e.showOnSchedule);
 
-  const adminContacts = employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
+  // PDF contact row shows the primary store contact only (Sarvi). If her record
+  // isn't found, fall back to any active non-owner admin so the PDF still lists
+  // a human to contact.
+  const primaryContact = employees.find(e => e.email === PRIMARY_CONTACT_EMAIL && e.active && !e.deleted);
+  const adminContacts = primaryContact
+    ? [primaryContact]
+    : employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
 
   const calcWeekHours = (empId, weekDates) => {
     let workHours = 0;

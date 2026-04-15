@@ -32,6 +32,9 @@ export const EVENT_TYPES = {
   },
 };
 
+// Primary store contact rendered on the PDF printout. Matches backend CONFIG.ADMIN_EMAIL.
+export const PRIMARY_CONTACT_EMAIL = 'sarvi@rainbowjeans.com';
+
 export const REQUEST_STATUS_COLORS = {
   pending: THEME.status.warning,
   approved: THEME.status.success,
