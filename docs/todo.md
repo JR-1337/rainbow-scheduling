@@ -46,12 +46,12 @@ Post-demo consecutive-days warning (Sarvi request):
 - UI: cell border warning on 6th+ day + top-of-schedule banner listing offenders (same pattern as OT banner)
 - Pending Sarvi answers: does PTO break streak? single day off resets? warning or hard block? (defaults: yes / yes / warning only)
 
-Meetings + PK shift types (Sarvi request — Stages 1-5 SHIPPED, Stages 6-9 remaining):
+Meetings + PK shift types (Sarvi request — Stages 1-8 SHIPPED, Stage 9 remaining):
 - ✅ Stages 1-4 (S61+S62+S63): backend schema with type column, frontend split-maps for work vs event state, cell visuals (neutral-palette pills), tabbed ShiftEditorModal (Work/Meeting/PK), union-hours math, per-cell create flow.
 - ✅ Stage 5 (S63): bulk PKEventModal + autofill-toolbar refactor + mobile entry.
-- **Stage 6 (offer/swap guards)** — frontend filters still need update so Meeting/PK entries don't appear in Offer/Swap modal pickers; backend already blocks via `INVALID_SHIFT_TYPE` error.
-- **Stage 7 (PDF + email)** — `src/pdf/generate.js` `calcWeekHours` needs to return `{workHours, totalHours}` using `computeDayUnionHours`; cell render should add `[MTG 2-4pm]` / `[PK 2-4pm]` line; footer legend "Includes meeting/training hours." `src/email/build.js` needs per-day event bullets and union-hours weekly total.
-- **Stage 8 (mobile + 5-day streak)** — `MobileMySchedule` per-week shift count should use work-only; day cards stack work + event cards below; ShiftEditorModal pre-save consecutive-days banner on work type only, skip meeting/pk.
+- ✅ **Stage 6 (S64, `4996c5b`)**: defensive `type==='work'` filters on `myFutureShifts` + `recipientWorksOnDate` in both OfferShiftModal + SwapShiftModal. Backend `INVALID_SHIFT_TYPE` rejection already surfaces via existing `showToast('error', result.error?.message)` path.
+- ✅ **Stage 7 (S64, `fc65095` + fix `b2d7889`)**: `src/pdf/generate.js` `calcWeekHours` returns `{workHours, totalHours}` via `computeDayUnionHours`; hours header shows total with `(N work)` hint when events contribute; OT coloring uses total; cell renders MTG/PK badge line; event-only day = neutral grey card; approved time-off wins over event card. `src/email/build.js` per-day block lists work then `• Meeting/PK time — note` bullets; weekly total uses union hours. App.jsx + EmailModal forward `events` prop.
+- ✅ **Stage 8 (S64, `4406ae0`)**: `MobileMySchedule` accepts `events`, renders event rows under each day, union-counts per-day hours; `ShiftEditorModal` yellow advisory banner when saving a work shift would reach 5+ consecutive work days (informational, non-blocking).
 - **Stage 9 (docs)** — `docs/schemas/sheets-schema.md` add `type`+`note` columns; append Meetings/PK decisions to `docs/decisions.md`; update CLAUDE.md Architecture section.
 - Plan file: `~/.claude/plans/tranquil-booping-porcupine.md` (Stage 5 section superseded by `~/.claude/plans/radiant-swimming-island.md`).
 
