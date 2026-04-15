@@ -46,13 +46,13 @@ Post-demo consecutive-days warning (Sarvi request):
 - UI: cell border warning on 6th+ day + top-of-schedule banner listing offenders (same pattern as OT banner)
 - Pending Sarvi answers: does PTO break streak? single day off resets? warning or hard block? (defaults: yes / yes / warning only)
 
-Meetings + PK shift types (Sarvi request — Stages 1-8 SHIPPED, Stage 9 remaining):
+Meetings + PK shift types (Sarvi request — ✅ Stages 1-9 SHIPPED 2026-04-14):
 - ✅ Stages 1-4 (S61+S62+S63): backend schema with type column, frontend split-maps for work vs event state, cell visuals (neutral-palette pills), tabbed ShiftEditorModal (Work/Meeting/PK), union-hours math, per-cell create flow.
 - ✅ Stage 5 (S63): bulk PKEventModal + autofill-toolbar refactor + mobile entry.
 - ✅ **Stage 6 (S64, `4996c5b`)**: defensive `type==='work'` filters on `myFutureShifts` + `recipientWorksOnDate` in both OfferShiftModal + SwapShiftModal. Backend `INVALID_SHIFT_TYPE` rejection already surfaces via existing `showToast('error', result.error?.message)` path.
 - ✅ **Stage 7 (S64, `fc65095` + fix `b2d7889`)**: `src/pdf/generate.js` `calcWeekHours` returns `{workHours, totalHours}` via `computeDayUnionHours`; hours header shows total with `(N work)` hint when events contribute; OT coloring uses total; cell renders MTG/PK badge line; event-only day = neutral grey card; approved time-off wins over event card. `src/email/build.js` per-day block lists work then `• Meeting/PK time — note` bullets; weekly total uses union hours. App.jsx + EmailModal forward `events` prop.
 - ✅ **Stage 8 (S64, `4406ae0`)**: `MobileMySchedule` accepts `events`, renders event rows under each day, union-counts per-day hours; `ShiftEditorModal` yellow advisory banner when saving a work shift would reach 5+ consecutive work days (informational, non-blocking).
-- **Stage 9 (docs)** — `docs/schemas/sheets-schema.md` add `type`+`note` columns; append Meetings/PK decisions to `docs/decisions.md`; update CLAUDE.md Architecture section.
+- ✅ **Stage 9 (docs, S65 verify)** — `docs/schemas/sheets-schema.md` `type`+`note` columns documented (L21-28); `docs/decisions.md` has split-maps, offer-block, union-hours, 5-day-streak entries (L17/23/29/35); `docs/lessons.md` 71-74 cover implementation surprises; `CLAUDE.md:31` Architecture line carries split-maps/publishedEvents/union-hours/3-tuple-key wording. All scope landed during S61-S64; S65 verified on session start.
 - Plan file: `~/.claude/plans/tranquil-booping-porcupine.md` (Stage 5 section superseded by `~/.claude/plans/radiant-swimming-island.md`).
 
 Post-demo concurrent-admin editing (surfaced 2026-04-12):
