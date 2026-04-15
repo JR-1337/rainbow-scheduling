@@ -80,10 +80,7 @@ Existing up-next preserved:
 - Post-demo: evaluate mobile bottom nav active states on deep-linked URLs if introduced
 - Professional sender email (dedicated Google Workspace account)
 
-PDF export cleanup (S61, logged while building Meetings+PK):
-- PDF header/footer currently shows every admin's email — should show Sarvi's contact only (filter to `ADMIN_EMAIL` or the owner-designated store contact)
-- App logo emoji renders as garbled characters in the PDF output (font subset missing glyph or jsPDF encoding issue). Swap to an inline SVG/image or ASCII wordmark for the PDF path
-- Broader rule: any glyph that fails to render in jsPDF's default font set should be stripped (not fallback-replaced) — emojis, lucide icons if any slip through, non-Latin symbols. Sarvi's printout should never show replacement squares / code-point boxes.
+~~PDF export cleanup~~ — **S65 SHIPPED (`4477325`).** Contact Admin row filtered to `PRIMARY_CONTACT_EMAIL` (Sarvi) via new constant mirroring backend `ADMIN_EMAIL`; falls back to active non-owner admins if Sarvi's record is missing. Non-ASCII audit: only em-dash / bullet / middle-dot / ★ remain, all standard Unicode in system fonts. No emoji or lucide glyphs in generate.js; S62's `stripEmoji` continues to clean dynamic content at user-input boundaries. "jsPDF font subset" concern in original entry was stale — PDF uses HTML + browser print, not jsPDF.
 
 Defaults UI + retroactive-default bug (S62, Sarvi-surfaced 2026-04-14):
 - Store-hours default was hardcoded in `STORE_HOURS` constant. S62 quick fix: Mon/Tue/Wed → 10:00-18:00. Proper fix in ~4 days: move to Settings-sheet row, editable via new "Store Hours" tab in `AdminSettingsModal`, mirror the `staffingTargets` pattern.
