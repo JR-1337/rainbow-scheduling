@@ -1,46 +1,114 @@
-# RAINBOW Scheduling App
+# RAINBOW Scheduling App -- Claude Code Adapter
 
-Retail scheduling platform for OTR/Rainbow Jeans (Ontario). Employees view shifts, submit requests. Admins build schedules, manage requests, publish announcements. Live: https://rainbow-scheduling.vercel.app
-Stakeholders: JR (dev), Sarvi (scheduling admin - gets all request notifications).
+## Purpose
+
+Retail scheduling platform for Over The Rainbow / Rainbow Jeans (Ontario apparel store). Employees view shifts and submit requests. Admins build schedules, manage requests, publish announcements. Live at <https://rainbow-scheduling.vercel.app>. Stakeholders: JR (dev), Sarvi (scheduling admin, gets all request notifications).
+
+This file is the Claude adapter. It points to canonical memory, defines ownership, and stays thin. Normal work reads and writes `CONTEXT/*`, not this file.
+
+## Canonical Memory
+
+All mutable project memory lives in `CONTEXT/`:
+
+- `CONTEXT/TODO.md` -- Active worklist, Blocked, Verification, Completed
+- `CONTEXT/DECISIONS.md` -- Durable product, architecture, and workflow decisions (reverse chronological, with H/M/L confidence)
+- `CONTEXT/ARCHITECTURE.md` -- Current structure, components, flows, integrations
+- `CONTEXT/LESSONS.md` -- Preferences, repeated pitfalls, workflow corrections
+- `CONTEXT/handoffs/` -- One current session handoff
+- `CONTEXT/archive/` -- Historical material with learning value (S42 audit)
+
+## Ownership
+
+Non-overlapping. Never duplicate content across files.
+
+- Task state and next step -> TODO.md only
+- Rationale and trade-offs -> DECISIONS.md only
+- System shape, boundaries, file paths -> ARCHITECTURE.md only
+- Preferences, corrections, repeated pitfalls -> LESSONS.md only
+- Session continuity -> one handoff in `CONTEXT/handoffs/` only
+
+## Read And Write Rules
+
+### Boot read
+
+At session start, read in this order:
+
+1. Current handoff in `CONTEXT/handoffs/` (if resuming continuity)
+2. `CONTEXT/TODO.md`
+3. `CONTEXT/DECISIONS.md`
+4. `CONTEXT/ARCHITECTURE.md`
+5. `CONTEXT/LESSONS.md` (when approach could be shaped by user preferences or past corrections)
+
+### Mid-chat re-read
+
+Re-read a memory file when:
+
+- It was just written by you or the user
+- Scope shifts to a different component
+- A contradiction between stated intent and memory appears
+- You are about to make a decision that depends on current plan, settled direction, or structure
+
+### Write triggers
+
+- TODO.md -- when task status, order, blockers, next steps, or verification state changes
+- DECISIONS.md -- when a durable direction is chosen or proven by implementation
+- ARCHITECTURE.md -- when structure, boundaries, flows, or integrations change
+- LESSONS.md -- when a durable preference, correction, or repeated pitfall emerges
+- Handoff -- only on explicit end-of-session or handoff request, after syncing the main files
+
+### End-of-task sync
+
+Before claiming a task done: verify TODO.md reflects new status, DECISIONS.md captures any durable choice made, ARCHITECTURE.md reflects any structural change, LESSONS.md captures any correction worth keeping.
+
+### Do not write
+
+- Do not update this adapter for routine task progress. Update adapters only when routing, ownership rules, or read/write behavior changes.
+- Do not write to the Cursor adapter from Claude. That file is ignored during normal work except for adapter repair.
+
+## Module Adapters
+
+None currently. Create a module adapter when:
+
+- A subtree gets its own runtime, service, or deployment surface
+- A subtree owns an external integration or cross-boundary contract
+- A subtree appears repeatedly in active work, handoffs, or repeated mistakes
+
+Candidate boundaries if that grows: `backend/` (Apps Script), `src/pdf/` + `src/email/` (output layer), or a future payroll-aggregator module.
 
 ## Boundaries
-<important>
-- Sheets column headers immutable → read `docs/schemas/sheets-schema.md` before modifying backend/data
-- Draft shifts private → `publishedShifts` = LIVE periods only. Employees never see unpublished
-- Ontario ESA compliance (44hr/week overtime)
-</important>
 
-## Stack
-Frontend: React 18+, Tailwind, Lucide | Backend: Apps Script (Code.gs v2.21.0 live as of 2026-04-14 — Meetings/PK schema), Sheets (5 tabs; Shifts tab has `type` + `note` columns J/K for work|meeting|pk)
-Deploy: Vercel (auto on push) + Apps Script (manual) | Email: MailApp as "OTR Scheduling"
-Auth (S36+): stateless HMAC session tokens (12h TTL), salted SHA-256 password hash, Script Property `HMAC_SECRET`, Employees columns `passwordHash` (R), `passwordSalt` (S), `passwordChanged` (T, authoritative for default-pw detection; falls back to emp-XXX regex when blank).
+### In scope
 
-## Files
-`src/App.jsx` (~3680) main app, state, shared exports, `guardedMutation` helper | `src/views/EmployeeView.jsx` extracted employee desktop/mobile view | `src/MobileEmployeeView.jsx` mobile components incl. `MobileAlertsSheet`, `computeAlertItems`, `MobileBottomNav`, `MobileBottomSheet` | `src/MobileAdminView.jsx` | `src/theme.js` THEME/TYPE/OTR (incl. `THEME.event` neutral greys) | `src/constants.js` ROLES/ROLES_BY_ID/REQUEST_STATUS_COLORS/EVENT_TYPES | `src/panels/` admin+employee list panels | `src/modals/` request/offer/swap/settings/password modals (S61: `ShiftEditorModal` tabbed Work/Meeting/PK) | `src/auth.js` session token + cached user + auth-failure callback | `src/pdf/generate.js` | `src/email/build.js` | `src/utils/format.js` | `src/utils/timemath.js` (S61: interval-union hours) | `backend/Code.gs` (~2200) edit here, paste to Apps Script
+Scheduling grid, requests (time-off / offer / swap), announcements, PDF + email, auth, admin employee management.
 
-## Architecture
-4 views = role(admin|employee) x device(mobile|desktop @768px):
-- Admin Desktop: full grid, inline edit, auto-populate, employee mgmt, PDF, email
-- Admin Mobile: `if(isMobileAdmin)` branch in App.jsx (30+ state, avoids prop drilling)
-- Employee Desktop: read-only grid + request sidebar
-- Employee Mobile: separate `EmployeeView` (only needs published data)
+### Out of scope
 
-Requests: submit → (recipient accepts for offers/swaps) → admin approves/denies → email. Cancel pending; revoke approved (future only). Non-work entries (meeting/pk) blocked from offer/swap (backend error `INVALID_SHIFT_TYPE`).
-Save button: SAVE(blue) → GO LIVE(green) → EDIT(yellow)
+- Punch clock / timekeeping
+- Payroll processing (lives in ADP)
+- Inventory, POS, any Counterpoint replacement
 
-Shift state (S61): split maps. `shifts[${empId}-${date}]` = work shift object (unchanged). `events[${empId}-${date}]` = array of meeting/pk entries. `publishedShifts`/`publishedEvents` are LIVE-gated copies for employee view. Union hours via `computeDayUnionHours` (work+events on same day count overlap once). 3-tuple backend key `${empId}-${date}-${type}` keeps work/meeting/pk distinct rows in the Sheet.
+### Immutable constraints
 
-## Roles
-`cashier`=#8B5CF6 | `backupCashier`=#A78BFA | `mens`=#3B82F6 | `womens`=#F472B6 | `floorMonitor`=#F59E0B | `none`=#475569
+Do not change these without explicit JR approval:
 
-## Deploy
-Vercel: push → auto-deploy. Broken? GitHub Settings → Apps → Vercel → Configure → unhide repo
-Apps Script: edit Code.gs → Deploy → Manage → Edit active. Execute as "Me", access "Anyone w/ Google"
-Fallback: `vercel link --scope johnrichmonds-projects-7f62ccc5 --project rainbow-scheduling --yes && vercel --prod --yes`
-Config: `API_URL`@App.jsx | `SPREADSHEET_ID`@Code.gs | `ADMIN_EMAIL`@Code.gs=Sarvi | `PAY_PERIOD_START`@App.jsx=2026-01-26
+- Google Sheets column headers (`docs/schemas/sheets-schema.md`)
+- Draft shifts stay private: `publishedShifts` / `publishedEvents` gate employee visibility to LIVE periods only
+- Ontario ESA 44-hour overtime threshold surfaces as amber/red visual flag (not publish-blocker)
+- OTR 5 brand accent colors immutable: Red #EC3228, Blue #0453A3, Orange #F57F20, Green #00A84D, Purple #932378
 
-## Active Context
-handoffs:`docs/handoffs/` | tasks:`docs/todo.md`(Phase 6) | decisions:`docs/decisions.md` | lessons:`docs/lessons.md` | schema:`docs/schemas/sheets-schema.md` | audit:`docs/audits/s42-functional-test.md`
+### Reference material (non-canonical)
 
-## Sibling Project
-`~/APPS/RAINBOW-PITCH/` (separate git repo, no remote; deployed to Vercel via CLI at https://rainbow-pitch.vercel.app). 5-slide deck + `/price` + `/spec` print routes. Reuses `src/theme.js` from this repo (copied, not symlinked). Edit slides in `~/APPS/RAINBOW-PITCH/src/slides/` then `vercel --prod --yes` from that dir. Assets staged in `pitchdeck/assets/` of THIS repo; shipped ones copied to `~/APPS/RAINBOW-PITCH/public/assets/`.
+These live outside `CONTEXT/*` and hold static or slow-changing material:
+
+- `docs/schemas/sheets-schema.md` -- canonical Sheets column headers
+- `docs/schemas/TEMPLATE-schema.md` -- schema doc template
+- `docs/DEPLOY-S36-AUTH.md` -- one-time auth deploy notes
+- `docs/research/*.md` -- UX research references
+
+### Sibling project
+
+`~/APPS/RAINBOW-PITCH/` -- separate repo, separate Vercel deploy at <https://rainbow-pitch.vercel.app>. Pitch slides and print routes. Reuses a copy of `src/theme.js`. Not governed by this adapter.
+
+## Cross-Harness
+
+Cursor uses its own adapter at `.cursor/rules/context-system.mdc`. Both adapters point to the same `CONTEXT/*`. During normal work this adapter ignores the Cursor one. Only read the Cursor adapter during adapter repair or suspected drift; if one adapter is repaired for drift, repair the other in the same task.

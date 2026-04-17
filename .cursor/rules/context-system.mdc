@@ -1,0 +1,92 @@
+---
+description: RAINBOW Scheduling App -- Cursor adapter; routes to CONTEXT/* canonical memory
+alwaysApply: true
+---
+
+# SYSTEM_DIRECTIVE: CONTEXT_SYSTEM
+
+RAINBOW Scheduling App. Retail scheduling platform for Over The Rainbow / Rainbow Jeans. Live at <https://rainbow-scheduling.vercel.app>. Stakeholders: JR (dev), Sarvi (scheduling admin).
+
+Canonical mutable memory lives in `CONTEXT/`. This file is a thin routing adapter. Normal work reads and writes `CONTEXT/*`, not this file.
+
+## Memory Ownership
+
+Non-overlapping file roles:
+
+- `CONTEXT/TODO.md` -- Active worklist, Blocked, Verification, Completed
+- `CONTEXT/DECISIONS.md` -- durable decisions, reverse chronological, H/M/L confidence
+- `CONTEXT/ARCHITECTURE.md` -- current structure, components, flows, integrations
+- `CONTEXT/LESSONS.md` -- preferences, repeated pitfalls, workflow corrections
+- `CONTEXT/handoffs/` -- one current session handoff
+- `CONTEXT/archive/` -- historical docs with learning value
+
+Never duplicate content across files. Task state belongs in TODO.md only. Rationale belongs in DECISIONS.md only.
+
+## Memory Style
+
+Telegraphic ASCII in `CONTEXT/*`:
+
+- bullets under 12 words, sentences under 20 words, no paragraphs
+- state first, explanation second
+- ASCII operators only: `!=` `==` `->` `=>` `in` `not` `and` `or` `blocked by` `TODO:` `RISK:`
+- no LaTeX math, Unicode math, box-drawing, fancy quotes, or em-dashes
+- dates belong in handoffs, decisions, completed work, and git history; not in adapters
+
+Adapters use normal plain English.
+
+## Boot Read
+
+At session start, read in this order:
+
+1. current handoff in `CONTEXT/handoffs/` if resuming continuity
+2. `CONTEXT/TODO.md`
+3. `CONTEXT/DECISIONS.md`
+4. `CONTEXT/ARCHITECTURE.md`
+5. `CONTEXT/LESSONS.md` when approach could be shaped by user preferences or past corrections
+
+## Module Adapters
+
+None currently. Create a module adapter (scoped `globs`, `alwaysApply: false`) when a subtree has its own runtime, owns an external integration, or recurs in active work.
+
+Candidate module boundaries if growth warrants: `backend/` (Apps Script), `src/pdf/` + `src/email/`, future payroll-aggregator.
+
+## Mid-Chat Re-Read
+
+Re-read a memory file when:
+
+- it was just written by you or the user
+- scope shifts to a different component
+- a contradiction between stated intent and memory appears
+- you are about to make a decision that depends on current plan, settled direction, or structure
+
+## Write Triggers
+
+- `TODO.md` -- task status, order, blockers, next steps, verification state change
+- `DECISIONS.md` -- durable direction chosen or proven by implementation
+- `ARCHITECTURE.md` -- structure, boundaries, flows, integrations change
+- `LESSONS.md` -- durable preference, correction, or repeated pitfall emerges
+- handoff -- only on explicit end-of-session or handoff request, after syncing main files
+
+## End-Of-Task Sync
+
+Before claiming a task done: verify TODO.md reflects new status, DECISIONS.md captures any durable choice, ARCHITECTURE.md reflects structural changes, LESSONS.md captures corrections worth keeping.
+
+## Do Not Write
+
+- do not update this adapter for routine task progress
+- do not write to the Claude adapter (`CLAUDE.md`) from Cursor; that file is ignored during normal work except adapter repair
+- do not add module adapters speculatively
+- do not store task lists, decision history, or handoff text inside this adapter
+
+## Cross-Harness
+
+Claude uses its own adapter at `CLAUDE.md`. Both adapters point to the same `CONTEXT/*`. During normal work this adapter ignores the Claude one. Only read the Claude adapter during adapter repair or suspected drift; if one adapter is repaired for drift, repair the other in the same task.
+
+## Immutable Constraints
+
+These are project-wide invariants:
+
+- Google Sheets column headers -- see `docs/schemas/sheets-schema.md`
+- `publishedShifts` / `publishedEvents` gate employee visibility to LIVE periods only
+- Ontario ESA 44-hour overtime surfaces as amber/red visual flag, not publish-blocker
+- OTR 5 brand accents immutable: Red #EC3228, Blue #0453A3, Orange #F57F20, Green #00A84D, Purple #932378
