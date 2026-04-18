@@ -12,6 +12,12 @@ body {
   min-height: 100vh;
 }
 
+/* Suppress mobile browser pull-to-refresh so bottom-sheet drags and grid
+   scroll don't accidentally reload the page. */
+html, body {
+  overscroll-behavior-y: none;
+}
+
 /* Login form — guaranteed to be in the compiled bundle */
 #login-email::placeholder,
 #login-password::placeholder {

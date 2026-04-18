@@ -2055,27 +2055,31 @@ export default function App() {
       }
     }
     
-    // Optimistic update
-    if (editingEmp) setEmployees(employees.map(x => x.id === e.id ? e : x)); 
-    else setEmployees([...employees, { ...e, active: true }]); 
-    setEditingEmp(null); 
-    
+    // Optimistic update — capture prev so we can revert on API failure
+    const prevEmployees = employees;
+    const wasEditing = !!editingEmp;
+    if (editingEmp) setEmployees(employees.map(x => x.id === e.id ? e : x));
+    else setEmployees([...employees, { ...e, active: true }]);
+    setEditingEmp(null);
+
     // Stringify availability for storage
     const employeeForApi = {
       ...e,
       availability: typeof e.availability === 'object' ? JSON.stringify(e.availability) : e.availability,
       ...(e.password ? { password: e.password } : {})
     };
-    
+
     // Call API to persist
     const result = await apiCall('saveEmployee', {
       employee: employeeForApi
     });
-    
+
     if (result.success) {
-      showToast('success', editingEmp ? `${e.name} updated` : `${e.name} added`);
+      showToast('success', wasEditing ? `${e.name} updated` : `${e.name} added`);
       return true;
     } else {
+      // Revert so the UI matches the server's rejection
+      setEmployees(prevEmployees);
       showToast('error', result.error?.message || 'Failed to save employee');
       return false;
     }
@@ -2104,9 +2108,10 @@ export default function App() {
       return false; // Return false to indicate failure
     }
     
-    // Optimistic update
+    // Optimistic update — capture prev so we can revert on API failure
+    const prevEmployees = employees;
     setEmployees(employees.map(e => e.id === id ? { ...e, deleted: true, active: false } : e));
-    
+
     // Stringify availability for storage
     const employeeForApi = {
       ...emp,
@@ -2114,16 +2119,17 @@ export default function App() {
       active: false,
       availability: typeof emp.availability === 'object' ? JSON.stringify(emp.availability) : emp.availability
     };
-    
+
     // Call API to persist
     const result = await apiCall('saveEmployee', {
       employee: employeeForApi
     });
-    
+
     if (result.success) {
       showToast('success', `${emp.name} removed`);
       return true;
     } else {
+      setEmployees(prevEmployees);
       showToast('error', result.error?.message || 'Failed to remove employee');
       return false;
     }
@@ -2134,9 +2140,10 @@ export default function App() {
     const emp = employees.find(e => e.id === id);
     if (!emp) return;
     
-    // Optimistic update
+    // Optimistic update — capture prev so we can revert on API failure
+    const prevEmployees = employees;
     setEmployees(employees.map(e => e.id === id ? { ...e, active: true, deleted: false } : e));
-    
+
     // Stringify availability for storage
     const employeeForApi = {
       ...emp,
@@ -2144,16 +2151,17 @@ export default function App() {
       deleted: false,
       availability: typeof emp.availability === 'object' ? JSON.stringify(emp.availability) : emp.availability
     };
-    
+
     // Call API to persist
     const result = await apiCall('saveEmployee', {
       employee: employeeForApi
     });
-    
+
     if (result.success) {
       showToast('success', `${emp.name} reactivated`);
       return true;
     } else {
+      setEmployees(prevEmployees);
       showToast('error', result.error?.message || 'Failed to reactivate employee');
       return false;
     }
@@ -3236,8 +3244,8 @@ export default function App() {
           isOpen={mobileStaffPanelOpen}
           onClose={() => setMobileStaffPanelOpen(false)}
           employees={employees}
-          onEdit={(emp) => { setEditingEmp(emp); setEmpFormOpen(true); }}
-          onAdd={() => { setEditingEmp(null); setEmpFormOpen(true); }}
+          onEdit={(emp) => { setMobileStaffPanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }}
+          onAdd={() => { setMobileStaffPanelOpen(false); setEditingEmp(null); setEmpFormOpen(true); }}
           onReactivate={reactivateEmployee}
           onDelete={deleteEmployee}
         />
