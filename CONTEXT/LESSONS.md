@@ -17,6 +17,31 @@ Rules:
 - ASCII operators only.
 -->
 
+## [PROJECT] -- Tokens aliased to OTR_ACCENT rotate daily; modal identity must not use them
+Lesson: `THEME.accent.blue/pink/purple` are aliased to `OTR_ACCENT.primary/dark` and rotate. Anything that should carry a fixed visual identity (e.g. per-modal accent) must use a separate static token.
+Context: Shipping SwapShiftModal and OfferShiftModal using `THEME.accent.purple/pink` made their headers rotate to blue/orange on non-matching days. Added `THEME.modal.swap.accent` + `THEME.modal.offer.accent` to decouple.
+Affirmations: 0
+
+## [PROJECT] -- Style-override on a Button variant is a smell
+Lesson: If you find yourself passing `style={{ backgroundColor, color, border }}` into a `<Button variant="...">`, codify it as a new variant instead. The override defeats the tokenization.
+Context: Sign Out drawer button shipped as `variant="secondary"` + 3-line style override for error-tone. Introducing `destructiveOutline` variant removed the override entirely.
+Affirmations: 0
+
+## [PROJECT] -- AdaptiveModal hot-resize survives mid-modal without remount
+Lesson: `useIsMobile()` resize listener triggers a re-render but React reconciles children; internal modal state (selected step, form fields) survives the bottom-sheet <-> centered-card switch. Worth trusting when rolling new AdaptiveModal call sites.
+Context: Playwright smoke 2026-04-18 hot-resized 390->1280 mid-RequestTimeOffModal; modal transformed without closing or losing state.
+Affirmations: 0
+
+## [PROJECT] -- AdaptiveModal mobile path doesn't render the icon prop
+Lesson: On mobile, `AdaptiveModal` defers to `MobileBottomSheet({ title })` which has no icon slot. `icon` + `iconColor` are desktop-only. If per-modal visual identity needs to carry on mobile, either pass identity via `title` prefix (emoji / glyph) or extend `MobileBottomSheet` to accept an icon.
+Context: Observed during 2026-04-18 re-verify; fine for current UX but documented so future AdaptiveModal work doesn't assume symmetric props.
+Affirmations: 0
+
+## [PROJECT] -- Reactivate and re-inactivate Alex Kim is the canonical smoke pattern for employee-side flows
+Lesson: Admin cannot exercise OfferShift/SwapShift (filtered to non-admin). To smoke them, reactivate an inactive test account, sign in, smoke, sign out, re-edit to Inactive. Alex Kim / `emp.001@example.com` / `emp-001` is the standing test account.
+Context: Playwright re-verify 2026-04-18 required this dance.
+Affirmations: 0
+
 ## Apps Script and Sheets platform
 
 ## [PROJECT] -- Sheets stores numeric-looking passwords as numbers

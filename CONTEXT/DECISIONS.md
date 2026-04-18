@@ -18,6 +18,40 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-18 -- Request modals use fixed (non-rotating) identity colors
+Decision: `src/theme.js` exports `THEME.modal.swap.accent = '#7C3AED'` (violet) and `THEME.modal.offer.accent = '#EC4899'` (pink). `SwapShiftModal` + `OfferShiftModal` use these instead of `THEME.accent.purple` / `THEME.accent.pink` (which are aliased to rotating `OTR_ACCENT`). Submit-button brand gradient (blue -> rotating purple) preserved as primary-action convention.
+Rationale: Playwright smoke 2026-04-18 revealed modal headers lost their visual identity on rotation days (e.g. "pink" offer modal rendered orange when OTR accent rotated to orange). Fixed modal identity colors are orthogonal to the daily brand rotation.
+Confidence: H -- verified 2026-04-18 on prod b0851f8 with OTR rotated to Orange: Offer header stayed pink, Swap header stayed violet. Screenshots in .playwright-mcp/reverify-05/06.
+Rejected alternative: recolor `THEME.accent.pink` / `THEME.accent.purple` to break their alias to `OTR_ACCENT`. Rejected because those tokens are also used for non-modal UI (e.g. isAdmin avatar + Shield icon) where rotation IS desired.
+
+## 2026-04-18 -- Offer/Swap filter includes today, not strictly tomorrow
+Decision: `src/modals/OfferShiftModal.jsx` + `src/modals/SwapShiftModal.jsx` filter `shiftDate >= today` (midnight-anchored). Dropped the `tomorrow` local variable.
+Rationale: Original filter `>= tomorrow` excluded today's not-yet-started shifts. Staff can reasonably want to give away or swap a shift they realized this morning they can't work. Current-day exclusion added friction without protection.
+Confidence: M -- verified build green + empty-state still shows correctly when no future shifts (Alex had no Apr 18+ shifts). Not hands-tested with a today-shift scenario; behaves correctly per code.
+Revisit if: post-submit window enforcement is needed (e.g. no offers within 2hrs of shift start).
+
+## 2026-04-18 -- Admin-blocked request types are hidden, not disabled
+Decision: `src/modals/RequestTimeOffModal.jsx` filters the `requestTypes` array via `!isAdmin && { ... }` followed by `.filter(Boolean)`. Admins see a single "Days Off" card; non-admins see all three.
+Rationale: Showing disabled "Employees Only" cards to admins was informational noise. One-card UI is cleaner.
+Confidence: H -- Playwright-verified on prod b0851f8 as JR (admin) sees only Days Off, as Alex (employee) sees all three.
+
+## 2026-04-18 -- Button.jsx destructiveOutline variant replaces inline override
+Decision: `src/components/Button.jsx` adds 6th variant `destructiveOutline` (bg.tertiary + status.error text + status.error@30% border). `MobileAdminDrawer` Sign Out button now uses `variant="destructiveOutline"` instead of `variant="secondary"` + a style-override for color/border.
+Rationale: Style-override on a variant defeats tokenization. Codifying the pattern as a named variant keeps all destructive-action affordances within the Button primitive.
+Confidence: H -- Playwright-verified 2026-04-18 on prod b0851f8.
+
+## 2026-04-18 -- Button.jsx primitive replaces 13 inline button sites
+Decision: `src/components/Button.jsx` -- 5 variants (primary, secondary, ghost, recoverable, destructive) + 1 follow-up (destructiveOutline) x 3 sizes (sm 36 / md 44 / lg 48). Accepts `leftIcon` / `rightIcon` (lucide components) + `iconSize`, `fullWidth`, `disabled`, plus passthrough for `className`, `style`, `aria-*`. Uses `React.forwardRef` so refs land on the underlying `<button>`.
+Rationale: Audit Phase D item 18. Thirteen ad-hoc inline buttons across `MobileStaffPanel` (chip filters, Edit, Reactivate, Remove, Restore, Add Employee) and `MobileAdminDrawer` (7 drawer actions) had drift on sizes, paddings, and tonal color mappings. Primitive centralizes the mapping to THEME tokens and preserves the 44px mobile touch floor.
+Confidence: H -- Playwright-smoked on prod ab1cb58 + b0851f8.
+
+## 2026-04-18 -- AdaptiveModal primitive branches on useIsMobile
+Decision: `src/components/AdaptiveModal.jsx` -- mobile (`window.innerWidth < 768`) renders via `MobileBottomSheet` (z-150, pill tap-to-close, 70vh scroll). Desktop renders centered overlay card (max-w-md default, max-h-85vh, flex column with scrollable body + sticky footer). Hot-resize via `useIsMobile` resize listener re-renders without remount -- verified mid-modal resize preserves internal state.
+Props: `isOpen`, `onClose`, `children` required; `title`, `icon` (lucide) + `iconColor`, `headerGradient`, `maxWidth`, `headerExtra`, `footer`, `ariaLabel`, `bodyClassName`.
+Rationale: Audit Phase D item 21. `OfferShiftModal`, `SwapShiftModal`, `RequestTimeOffModal` had no mobile-specific rendering -- all used a centered card pattern on small screens. Unifying them via `AdaptiveModal` gets them the bottom-sheet pattern JR already picked for `MobileStaffPanel`. The `footer` slot lands sticky on desktop and at sheet-bottom on mobile.
+Confidence: H -- Playwright-smoked on prod e64838b + b0851f8, both viewports, all three modals. Empty states render correctly.
+Revisit if: step-indicator in `SwapShiftModal` should move to `headerExtra` slot instead of body.
+
 ## 2026-04-18 -- MobileStaffPanel is a bottom-sheet, not a centered Modal
 Decision: `src/panels/MobileStaffPanel.jsx` renders via `MobileBottomSheet` (imported directly from `./MobileEmployeeView`, not App re-export). Z-150 anchored to bottom. 44px min touch targets on chips + action buttons. Safe-area-inset-bottom applied to list padding and sticky Add button.
 Rationale: Audit item #14. Z-hack to raise EmployeeFormModal above a centered staff modal was rejected in favor of a proper mobile pattern. Sheet conversion + later drawer-close + form-reopen-on-close combo yields correct stacking without z-games.
