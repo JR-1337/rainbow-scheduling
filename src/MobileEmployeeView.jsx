@@ -607,10 +607,31 @@ export const MobileBottomSheet = ({ isOpen, onClose, title, children }) => {
         }}
         onClick={e => e.stopPropagation()}
       >
-        <div
-          className="w-10 h-1 rounded-full mx-auto mt-2 mb-3"
-          style={{ backgroundColor: THEME.text.muted + '40' }}
-        />
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="block mx-auto mt-2 mb-3 rounded-full"
+          style={{
+            width: 48,
+            height: 20,
+            padding: 0,
+            background: 'transparent',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <span
+            style={{
+              display: 'block',
+              width: 40,
+              height: 4,
+              borderRadius: 9999,
+              backgroundColor: THEME.text.muted + '66',
+            }}
+          />
+        </button>
         {title && (
           <div
             className="px-4 pb-2 font-semibold flex items-center justify-between"
