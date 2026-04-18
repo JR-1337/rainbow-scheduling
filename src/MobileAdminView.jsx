@@ -467,7 +467,7 @@ export const MobileAnnouncementPanel = ({
         )}
         <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
           <p className="text-xs flex items-center gap-1.5" style={{ color: THEME.text.muted }}>
-            <Edit3 size={10} /> Enter Edit Mode to modify announcements
+            <Edit3 size={12} /> Enter Edit Mode to modify announcements
           </p>
         </div>
       </div>
@@ -522,7 +522,7 @@ export const MobileAnnouncementPanel = ({
           className="text-xs px-3 py-1 rounded-lg font-medium flex items-center gap-1 disabled:opacity-50"
           style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}
         >
-          {isSaving ? <><Loader size={10} className="animate-spin" /> Saving...</> : <><Save size={10} /> Save</>}
+          {isSaving ? <><Loader size={12} className="animate-spin" /> Saving...</> : <><Save size={12} /> Save</>}
         </button>
       </div>
     </div>
@@ -562,12 +562,12 @@ export const MobileEmployeeQuickView = ({ isOpen, onClose, employee }) => {
         <div className="p-4 space-y-1.5">
           {employee.email && (
             <a href={`mailto:${employee.email}`} className="flex items-center gap-2 text-xs p-2.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.accent.cyan }}>
-              <Mail size={13} /> {employee.email}
+              <Mail size={14} /> {employee.email}
             </a>
           )}
           {employee.phone && (
             <a href={`tel:${employee.phone}`} className="flex items-center gap-2 text-xs p-2.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.accent.cyan }}>
-              <User size={13} /> {employee.phone}
+              <User size={14} /> {employee.phone}
             </a>
           )}
           {!employee.email && !employee.phone && (
