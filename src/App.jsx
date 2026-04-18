@@ -1249,6 +1249,10 @@ export default function App() {
   // Mobile admin state
   const [mobileAdminDrawerOpen, setMobileAdminDrawerOpen] = useState(false);
   const [mobileStaffPanelOpen, setMobileStaffPanelOpen] = useState(false);
+  // When the Edit/Add form is opened from the Staff bottom-sheet we hide the
+  // sheet so the form can stack above the z-200 drawer. On form close, reopen
+  // the sheet so the user lands back where they started.
+  const [reopenStaffAfterForm, setReopenStaffAfterForm] = useState(false);
   const [mobileAdminTab, setMobileAdminTab] = useState('schedule'); // 'schedule' | 'requests' | 'comms'
   const [mobileAdminChangePasswordOpen, setMobileAdminChangePasswordOpen] = useState(false);
   const [quickViewEmployee, setQuickViewEmployee] = useState(null);
@@ -3247,8 +3251,8 @@ export default function App() {
           isOpen={mobileStaffPanelOpen}
           onClose={() => setMobileStaffPanelOpen(false)}
           employees={employees}
-          onEdit={(emp) => { setMobileStaffPanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }}
-          onAdd={() => { setMobileStaffPanelOpen(false); setEditingEmp(null); setEmpFormOpen(true); }}
+          onEdit={(emp) => { setMobileStaffPanelOpen(false); setReopenStaffAfterForm(true); setEditingEmp(emp); setEmpFormOpen(true); }}
+          onAdd={() => { setMobileStaffPanelOpen(false); setReopenStaffAfterForm(true); setEditingEmp(null); setEmpFormOpen(true); }}
           onReactivate={reactivateEmployee}
           onDelete={deleteEmployee}
         />
@@ -3993,7 +3997,7 @@ export default function App() {
         </div>
       </main>
       
-      <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} suggestedPassword={editingEmp ? undefined : `emp-${String(employees.length + 1).padStart(3, '0')}`} />
+      <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); if (reopenStaffAfterForm) { setReopenStaffAfterForm(false); setMobileStaffPanelOpen(true); } }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} suggestedPassword={editingEmp ? undefined : `emp-${String(employees.length + 1).padStart(3, '0')}`} />
       {editingShift && (() => {
         const prior = new Date(editingShift.date); prior.setDate(prior.getDate() - 1);
         const priorStreak = computeConsecutiveWorkDayStreak((id, k) => !!shifts[`${id}-${k}`], editingShift.employee.id, toDateKey(prior));
