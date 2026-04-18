@@ -65,7 +65,7 @@ export const InactiveEmployeesPanel = ({ isOpen, onClose, employees, onReactivat
                     <button
                       onClick={() => onReactivate(emp.id)}
                       className="px-2 py-1 rounded text-xs font-medium hover:opacity-80"
-                      style={{ backgroundColor: 'rgba(4, 83, 163, 0.20)', color: '#60A5FA', border: '1px solid rgba(4, 83, 163, 0.40)' }}
+                      style={{ backgroundColor: THEME.action.recoverable.bg, color: THEME.action.recoverable.fg, border: `1px solid ${THEME.action.recoverable.border}` }}
                     >
                       Restore
                     </button>

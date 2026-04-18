@@ -227,6 +227,7 @@ export const MobileAdminScheduleGrid = ({
                 return (
                   <th key={i}
                     onClick={canEditHeader ? () => onHeaderClick(date) : undefined}
+                    aria-label={canEditHeader ? `Edit ${dateStr} hours and target` : undefined}
                     style={{
                       position: 'sticky', top: 0, zIndex: 20,
                       width: CELL_WIDTH, minWidth: CELL_WIDTH, height: HEADER_HEIGHT,
@@ -235,6 +236,17 @@ export const MobileAdminScheduleGrid = ({
                       padding: '2px', textAlign: 'center',
                       cursor: canEditHeader ? 'pointer' : 'default',
                     }}>
+                    {canEditHeader && (
+                      <Edit3
+                        size={9}
+                        style={{
+                          position: 'absolute', top: 2, right: 2,
+                          color: THEME.accent.cyan,
+                          opacity: 0.7,
+                          pointerEvents: 'none',
+                        }}
+                      />
+                    )}
                     <p className="font-semibold" style={{ color: isToday ? THEME.accent.purple : hol ? THEME.status.warning : THEME.text.primary, fontSize: '10px' }}>
                       {getDayName(date).slice(0, 3)}
                     </p>

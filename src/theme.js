@@ -46,6 +46,18 @@ export const THEME = {
   roles: { cashier: '#932378', backupCashier: '#B44D9A', mens: '#0453A3', womens: '#EC3228', floorMonitor: '#F57F20', none: '#64748B' },
   border: { subtle: `rgba(${_ar}, ${_ag}, ${_ab}, 0.15)`, default: OTR_ACCENT.primary + '80', bright: OTR_ACCENT.primary },
   status: { success: '#34D399', warning: '#FBBF24', error: '#F87171' },
+  action: {
+    recoverable: {
+      bg: `rgba(${_ar}, ${_ag}, ${_ab}, 0.20)`,
+      fg: '#60A5FA',
+      border: `rgba(${_ar}, ${_ag}, ${_ab}, 0.40)`,
+    },
+    destructiveTonal: {
+      bg: '#F8717120',
+      fg: '#F87171',
+      border: '#F8717140',
+    },
+  },
   task: '#D97706',
   // S61 — Meeting + PK overlay entries are deliberately OFF the OTR accent rotation.
   // Fixed neutral greys so event pills read as "non-schedule" information on any

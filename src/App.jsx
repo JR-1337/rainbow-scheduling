@@ -970,6 +970,7 @@ export const CollapsibleSection = ({ title, icon: Icon, iconColor, badge, badgeC
 // COLUMN HEADER EDITOR - Click to edit store hours and staffing target per date
 // ═══════════════════════════════════════════════════════════════════════════════
 const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrides, staffingTargetOverrides, onSave, onClose }) => {
+  const isMobile = useIsMobile();
   const dateStr = toDateKey(date);
   const today = toDateKey(new Date());
   const isPast = dateStr < today;
@@ -1001,18 +1002,15 @@ const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrides, sta
     onClose();
   };
   
-  return (
-    <div className="fixed inset-0 flex items-start justify-center pt-24" style={{ zIndex: 100000 }} onClick={onClose}>
-      <div 
-        className="rounded-xl shadow-2xl p-3 w-64" 
-        style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.bright}` }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs font-semibold" style={{ color: THEME.text.primary }}>{dayLabel}</h3>
-          <button onClick={onClose} className="p-0.5 rounded hover:opacity-70"><X size={14} style={{ color: THEME.text.muted }} /></button>
-        </div>
-        
+  const body = (
+    <>
+        {!isMobile && (
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold" style={{ color: THEME.text.primary }}>{dayLabel}</h3>
+            <button onClick={onClose} className="p-0.5 rounded hover:opacity-70"><X size={14} style={{ color: THEME.text.muted }} /></button>
+          </div>
+        )}
+
         {isPast ? (
           <p className="text-xs py-2" style={{ color: THEME.text.muted }}>Past dates cannot be edited.</p>
         ) : (
@@ -1068,6 +1066,25 @@ const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrides, sta
             </div>
           </>
         )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <MobileBottomSheet isOpen={true} onClose={onClose} title={dayLabel}>
+        {body}
+      </MobileBottomSheet>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 flex items-start justify-center pt-24" style={{ zIndex: 100000 }} onClick={onClose}>
+      <div
+        className="rounded-xl shadow-2xl p-3 w-64"
+        style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.bright}` }}
+        onClick={e => e.stopPropagation()}
+      >
+        {body}
       </div>
     </div>
   );

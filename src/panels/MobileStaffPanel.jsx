@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { UserCheck, UserX, Trash2, Plus, Edit3, Shield } from 'lucide-react';
-import { THEME, Modal } from '../App';
+import { UserCheck, Trash2, Plus, Edit3, Shield } from 'lucide-react';
+import { THEME } from '../App';
+import { MobileBottomSheet } from '../MobileEmployeeView';
 
 export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, onReactivate, onDelete }) => {
   const [filter, setFilter] = useState('active');
@@ -22,12 +23,12 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
       <button
         key={id}
         onClick={() => setFilter(id)}
-        className="px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5"
+        className="px-3 rounded-full text-xs font-medium flex items-center gap-1.5"
         style={{
           backgroundColor: isActive ? color + '25' : THEME.bg.tertiary,
           color: isActive ? color : THEME.text.muted,
           border: `1px solid ${isActive ? color + '60' : THEME.border.subtle}`,
-          minHeight: 36,
+          minHeight: 44,
         }}
       >
         {label}
@@ -37,7 +38,7 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Staff" size="lg">
+    <MobileBottomSheet isOpen={isOpen} onClose={onClose} title="Staff">
       <div className="flex gap-2 mb-3 sticky top-0 z-10 pb-2" style={{ backgroundColor: THEME.bg.secondary }}>
         {chip('active', 'Active', THEME.status.success)}
         {chip('inactive', 'Inactive', THEME.status.warning)}
@@ -50,7 +51,10 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
           <p className="text-sm" style={{ color: THEME.text.secondary }}>No {filter} employees.</p>
         </div>
       ) : (
-        <div className="space-y-2 pb-16">
+        <div
+          className="space-y-2"
+          style={{ paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}
+        >
           {list.map(emp => (
             <div key={emp.id} className="p-2.5 rounded-lg flex items-center justify-between gap-2" style={{ backgroundColor: THEME.bg.tertiary }}>
               <div className={`flex items-center gap-2 flex-1 min-w-0 ${filter === 'deleted' ? 'opacity-60' : ''}`}>
@@ -60,7 +64,7 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate flex items-center gap-1" style={{ color: THEME.text.primary }}>
                     {emp.name}
-                    {emp.isAdmin && <Shield size={10} style={{ color: THEME.accent.purple, flexShrink: 0 }} />}
+                    {emp.isAdmin && <Shield size={12} style={{ color: THEME.accent.purple, flexShrink: 0 }} />}
                   </p>
                   <p className="text-xs truncate" style={{ color: THEME.text.muted }}>{emp.email}</p>
                 </div>
@@ -69,11 +73,11 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
                 {filter === 'active' && (
                   <button
                     onClick={() => onEdit(emp)}
-                    className="px-2.5 py-2 rounded-lg flex items-center gap-1 text-xs font-medium"
-                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}`, minHeight: 36 }}
+                    className="px-3 rounded-lg flex items-center gap-1 text-xs font-medium"
+                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}`, minHeight: 44 }}
                     aria-label={`Edit ${emp.name}`}
                   >
-                    <Edit3 size={12} />
+                    <Edit3 size={14} />
                     Edit
                   </button>
                 )}
@@ -81,16 +85,18 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
                   <>
                     <button
                       onClick={() => onReactivate(emp.id)}
-                      className="px-2.5 py-2 rounded-lg text-xs font-medium"
-                      style={{ backgroundColor: THEME.status.success + '20', color: THEME.status.success, minHeight: 36 }}
+                      className="px-3 rounded-lg text-xs font-medium"
+                      style={{ backgroundColor: THEME.status.success + '20', color: THEME.status.success, minHeight: 44 }}
                     >
                       Reactivate
                     </button>
                     <button
                       onClick={() => onDelete(emp.id)}
-                      className="px-2.5 py-2 rounded-lg text-xs font-medium"
-                      style={{ backgroundColor: THEME.status.error + '20', color: THEME.status.error, minHeight: 36 }}
+                      className="px-3 rounded-lg text-xs font-medium flex items-center gap-1"
+                      style={{ backgroundColor: THEME.status.error + '20', color: THEME.status.error, minHeight: 44 }}
+                      aria-label={`Remove ${emp.name}`}
                     >
+                      <Trash2 size={14} />
                       Remove
                     </button>
                   </>
@@ -98,8 +104,13 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
                 {filter === 'deleted' && (
                   <button
                     onClick={() => onReactivate(emp.id)}
-                    className="px-3 py-2 rounded-lg text-xs font-medium"
-                    style={{ backgroundColor: 'rgba(4, 83, 163, 0.20)', color: '#60A5FA', border: '1px solid rgba(4, 83, 163, 0.40)', minHeight: 36 }}
+                    className="px-3 rounded-lg text-xs font-medium"
+                    style={{
+                      backgroundColor: THEME.action.recoverable.bg,
+                      color: THEME.action.recoverable.fg,
+                      border: `1px solid ${THEME.action.recoverable.border}`,
+                      minHeight: 44,
+                    }}
                   >
                     Restore
                   </button>
@@ -111,17 +122,27 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
       )}
 
       {filter === 'active' && (
-        <div className="sticky bottom-0 pt-2" style={{ backgroundColor: THEME.bg.secondary }}>
+        <div
+          className="sticky bottom-0 pt-2"
+          style={{
+            backgroundColor: THEME.bg.secondary,
+            paddingBottom: 'env(safe-area-inset-bottom)',
+          }}
+        >
           <button
             onClick={onAdd}
-            className="w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold"
-            style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}
+            className="w-full px-4 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold"
+            style={{
+              background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
+              color: THEME.accent.text,
+              minHeight: 48,
+            }}
           >
             <Plus size={16} />
             Add Employee
           </button>
         </div>
       )}
-    </Modal>
+    </MobileBottomSheet>
   );
 };
