@@ -1843,13 +1843,6 @@ export default function App() {
   // All active employees including admins (for employee management)
   const allActiveEmployees = useMemo(() => [...employees].filter(e => e.active && !e.deleted && !e.isOwner).sort((a, b) => a.name.localeCompare(b.name)), [employees]);
   
-  // Deleted employees who have shifts in current period (for history display)
-  const deletedWithShifts = useMemo(() => {
-    return employees.filter(e => e.deleted).filter(emp => {
-      return dates.some(d => shifts[`${emp.id}-${toDateKey(d)}`]);
-    }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [employees, dates, shifts]);
-  
   // Count inactive/deleted for badge (exclude owner from count)
   const inactiveCount = employees.filter(e => (!e.active || e.deleted) && !e.isOwner).length;
   
@@ -2064,10 +2057,10 @@ export default function App() {
     
     if (result.success) {
       showToast('success', editingEmp ? `${e.name} updated` : `${e.name} added`);
-      return true; // Return true to indicate success
+      return true;
     } else {
       showToast('error', result.error?.message || 'Failed to save employee');
-      return true; // Still return true since optimistic update happened
+      return false;
     }
   };
   
@@ -2115,7 +2108,7 @@ export default function App() {
       return true;
     } else {
       showToast('error', result.error?.message || 'Failed to remove employee');
-      return true; // Still return true since optimistic update happened
+      return false;
     }
   };
   
@@ -2142,8 +2135,10 @@ export default function App() {
     
     if (result.success) {
       showToast('success', `${emp.name} reactivated`);
+      return true;
     } else {
       showToast('error', result.error?.message || 'Failed to reactivate employee');
+      return false;
     }
   };
   
@@ -3114,7 +3109,7 @@ export default function App() {
                 icon={User}
                 iconColor={THEME.accent.cyan}
                 badge={(
-                  timeOffRequests.filter(r => r.employeeEmail === currentUser?.email && r.status === 'pending').length
+                  timeOffRequests.filter(r => r.email === currentUser?.email && r.status === 'pending').length
                   + shiftOffers.filter(o => o.offererEmail === currentUser?.email && ['awaiting_recipient', 'awaiting_admin'].includes(o.status)).length
                   + shiftSwaps.filter(s => s.initiatorEmail === currentUser?.email && ['awaiting_partner', 'awaiting_admin'].includes(s.status)).length
                 ) || undefined}
