@@ -20,6 +20,9 @@ Rules:
 ## Active
 
 - Test Sarvi-batch end-to-end -- next: JR + Sarvi smoke 10 items per plan verification section (frontend LIVE, Apps Script v2.22 LIVE)
+- Mobile admin parity smoke -- next: JR phone smoke the 7-item checklist from mobile-parity deploy (`dc2866f`)
+- Adversarial audit Phase C smoke -- next: JR phone smoke bottom-sheet staff panel, 44px targets, column-header Edit3 affordance (post-commit f1a5397)
+- Adversarial audit Phase D -- next: Button.jsx variants, AdaptiveModal primitive, icon-scale sweep (risky; defer until after Phase C smoke)
 - Backup-cash role clarification -- next: JR asks Sarvi whether she wants a NEW role vs existing `backupCashier`
 - CF Worker SWR cache -- next: design KV cache key from `getAllData` payload; flip `API_URL` in src/App.jsx
 - Welcome email on new-employee create -- trigger in EmployeeFormModal create flow, send default emp-XXX password
