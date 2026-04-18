@@ -19,8 +19,11 @@ Rules:
 
 ## Active
 
-- Post-demo capture -- next step: record Sarvi-reported items from 2026-04-15 demo
-- CF Worker SWR cache (~1 day) -- next step: design KV cache key from `getAllData` payload; flip `API_URL` in src/App.jsx
+- Manual Sheet + Apps Script deploy -- next: add `defaultSection` column U to Employees tab, paste updated Code.gs, publish new deployment
+- Deploy Rainbow frontend -- next: `vercel --prod --yes` after build verify (not yet pushed)
+- Test Sarvi-batch end-to-end -- next: JR + Sarvi smoke 10 items per plan verification section
+- Backup-cash role clarification -- next: JR asks Sarvi whether she wants a NEW role vs existing `backupCashier`
+- CF Worker SWR cache -- next: design KV cache key from `getAllData` payload; flip `API_URL` in src/App.jsx
 - Welcome email on new-employee create -- trigger in EmployeeFormModal create flow, send default emp-XXX password
 - Schedule-change notifications to Sarvi -- notify when non-Sarvi-or-JR edits schedule; hook after each Code.gs write handler
 - Payroll aggregator path 1 -- blocked by demo go-ahead; see Blocked
@@ -31,27 +34,27 @@ Rules:
 - S62 2-tab settings split + retroactive-default fix (~4 days) -- waiting on JR green-light "Friday" -- since 2026-04-14
 - CF Worker cache -- waiting on JR green-light + Cloudflare hands-on -- since 2026-04-14
 - Consecutive-days 6+ warning -- waiting on Sarvi answers (PTO breaks streak? reset on single day? warn or block?) -- since 2026-04-14
-- Post-demo Sarvi-reported items -- waiting on 2026-04-15 demo outcome capture -- since 2026-04-15
+- Backup-cash role -- waiting on Sarvi confirmation of intent (new role vs existing) -- since 2026-04-18
 - Payroll aggregator path 1 -- waiting on Sarvi discovery (Counterpoint export, ADP format, employee ID, bonus logic) -- since 2026-04-12
 - S39.4 mobile admin extraction -- blocked by admin state -> context provider refactor -- see DECISIONS 2026-02-10 mobile-admin-branch
 
 ## Verification
 
-- Last validated: `npm run build` PASS at commit `4477325` (S65, 2026-04-14); Vercel auto-deployed
-- Last validated: HEAD `ee1e542` == origin/main, working tree clean
-- Last validated: Apps Script v2.21.0 live (Meetings+PK schema, 2026-04-13/14)
+- Last validated: `npm run build` PASS at uncommitted working tree (2026-04-18)
+- Last validated: HEAD `1f073d7` == origin/main
+- Last validated: pitch deck "two weeks" fix live at https://rainbow-pitch.vercel.app (2026-04-18)
+- Missing validation: Sarvi-batch 10 items not yet deployed to Rainbow prod; Apps Script `defaultSection` header not yet added to live Sheet
 - Missing validation: no automated test suite; manual Playwright smoke only
-- Missing validation: 2026-04-15 demo feedback not yet captured
-- RISK: demo outcome unknown -- Sarvi reports may reshape Active list
-- RISK: CF Worker is post-demo; Apps Script ~7-8s floor persists until then
+- RISK: `defaultSection` column on live Sheet must be added before fresh employee saves lose the field (fallback to `'none'` is safe, so backward-compatible)
+- RISK: Apps Script v2.21.x still live; new `defaultSection` writes ignored until new deployment published
 
 ## Completed
 
+- [2026-04-18] Sarvi batch 10 items shipped (plan `so-sarvi-gave-me-quizzical-perlis.md`) -- pitch deck 3-wk typo fix (LIVE), PK Saturday 10-10:45 default, bulk Autofill PK Week button, employee defaultSection field, PDF greyscale redundant encoding (glyph + border style + bold/asterisk), Restore button tonal-blue fix, Hidden-from-Schedule collapsed by default, Former Staff removed from grid, autofill toast enhanced with week context
+- [2026-04-17] CONTEXT migration committed (`1f073d7`) -- docs/* -> CONTEXT/*, thin Claude + Cursor adapters
 - [2026-04-14] S65 PDF Contact Admin filter (`4477325`) -- verified in generate.js; PRIMARY_CONTACT_EMAIL in src/constants.js
 - [2026-04-14] S64 Meetings+PK Stages 6-8 (`4996c5b`, `fc65095`, `4406ae0`) -- offer/swap filters, PDF/email union hours, mobile my-schedule events
 - [2026-04-14] S63 Meetings+PK Stage 5 -- PKEventModal bulk create + autofill toolbar 4->3 controls; verified round-trip
-- [2026-04-14] S62 Sarvi fixes -- store-hours default 10-18 Mon/Tue/Wed, PDF emoji strip, one-off Apps Script availability migration
-- [2026-04-14] S61 Meetings+PK Stages 1-4 -- split-maps, 3-tuple backend key, tabbed ShiftEditorModal, union hours
 
 <!-- TEMPLATE
 ## Active

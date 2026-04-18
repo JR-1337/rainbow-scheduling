@@ -18,6 +18,44 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-18 -- PDF greyscale redundant encoding for B&W break-room printer
+Decision: `src/pdf/generate.js` encodes role/OT/holiday/announcement on a non-hue channel in addition to color. Role: letter-glyph prefix (`C:`, `B:`, `M:`, `W:`, `F:`) + per-role border style (solid/dashed/dotted, 2-3px). OT (>=44h): bold + trailing `*`. Near-OT (40-43h): bold. Holiday: heavy black top border + "HOL" caption. Announcement: italic body + `[!]` glyph + double top border.
+Rationale: Break-room printer is B&W; hue-only encoding collapses into indistinguishable grey. Per `color.md` §8 "contrast > specific hue" + `applied-accessibility.md` §2 "make it right in black and white" + WCAG 1.4.1. Colors retained for color printers -- pure redundancy.
+Confidence: H - shipped 2026-04-18, `npm run build` PASS
+
+## 2026-04-18 -- PK default times branch on day-of-week
+Decision: `src/utils/eventDefaults.js` exports `getPKDefaultTimes(dateInput)`. Saturday returns `{10:00, 10:45}` (pre-open briefing). Other days return `{18:00, 20:00}` (post-close training). Used by `ShiftEditorModal`, `PKEventModal`, and bulk-week autofill.
+Rationale: Sarvi confirmed Saturday PK is always 10-10:45 pre-open. Hardcoded 18:00-20:00 was wrong 1 day of 7; friction compounded weekly.
+Confidence: H - shipped 2026-04-18
+
+## 2026-04-18 -- Employee `defaultSection` field added to schema
+Decision: New column U `defaultSection` on Employees sheet (values `mens|womens|cashier|backupCashier|floorMonitor|none`, default `none`). Autofill's `createShiftFromAvailability` uses `employee.defaultSection || 'none'` instead of hardcoded `'none'`. UI surface in `EmployeeFormModal`. Backend via header-driven `getSheetData`/`appendRow` -- no row-mapper changes needed.
+Rationale: Autofill was stamping `role:'none'` on every shift, forcing Sarvi to re-assign sections manually. System already knows the employee's usual section; sensible default reduces input work per `applied-component-patterns.md` SS 8.
+Confidence: H - shipped 2026-04-18; backward-compatible (missing column falls back to 'none')
+Revisit if: Sarvi wants per-day section override (e.g. backupCashier Mon/Tue, mens Wed-Sat).
+
+## 2026-04-18 -- Bulk "Autofill PK Week" added as secondary toolbar button
+Decision: New outline button "Autofill Wk N" next to "Schedule PK" in admin toolbar. Loops active week's 7 dates, computes eligible full-timers per day via `availabilityCoversWindow`, calls `bulkCreatePKEvent` sequentially. Day-of-week default times. Skips days with no eligible. Frontend-only loop; no backend change.
+Rationale: Plan Item 3. Per-day PK entry was one button at a time; scheduler-friction fix. Secondary (outline) variant keeps it one notch below primary "Schedule PK" per button-hierarchy rule (`applied-component-patterns.md` SS 2).
+Confidence: H - shipped 2026-04-18
+Revisit if: Apps Script 7-8s/call floor makes the 7-sequence loop too slow (~50s) -- then add backend `bulkCreatePKEventWeek` for single round-trip.
+
+## 2026-04-18 -- Former Staff with shifts removed from schedule grid entirely
+Decision: `src/App.jsx` deletes the inline "Former Staff (History)" block inside the schedule grid. Deleted employees no longer appear on the schedule view even if they hold shifts in the displayed period. Backend records + shift rows preserved for audit/payroll. Restore via Manage Staff > Restore.
+Rationale: Sarvi feedback 2026-04-18. Per `visual-hierarchy.md` §6 squint test -- former staff intermixed with current roster is a false signal. Records stay; visibility doesn't.
+Confidence: H - shipped 2026-04-18
+Note: `deletedWithShifts` useMemo at App.jsx:1845 is now dead code; flagged for future cleanup.
+
+## 2026-04-18 -- Restore button tonal-blue + opacity restructure
+Decision: `src/panels/InactiveEmployeesPanel.jsx` -- opacity-60 moved from parent row to the identity region only (avatar + name). Restore button skinned as tonal brand-blue `rgba(4, 83, 163, 0.20)` bg + `#60A5FA` text + `rgba(4, 83, 163, 0.40)` border. Full opacity so it reads as clickable.
+Rationale: Previous button inherited parent opacity (reads "disabled" per `applied-dark-theme.md` SS 4) AND used disabled-coded token pair (`bg.elevated` + `text.secondary`). Per `applied-accessibility.md` §1 disabled vs enabled must differ by >=3:1 contrast, not opacity alone. Tonal blue signals "recoverable administrative" (not green "go", not red "danger").
+Confidence: H - shipped 2026-04-18
+
+## 2026-04-18 -- Hidden from Schedule section collapsed by default
+Decision: `src/App.jsx:3683+` wrap "Hidden from Schedule" in existing `CollapsibleSection` component with `defaultOpen={false}` and a count badge.
+Rationale: Tertiary info (admins-not-on-schedule, inactive) was competing with primary grid for attention. Per `visual-hierarchy.md` SS 2 three-levels-max + `applied-component-patterns.md` SS 7 progressive disclosure. Reuses existing component, zero new infra.
+Confidence: H - shipped 2026-04-18
+
 ## 2026-04-17 -- Project memory migrated to CONTEXT/* with thin adapters
 Decision: Canonical mutable memory lives in `CONTEXT/TODO.md`, `DECISIONS.md`, `ARCHITECTURE.md`, `LESSONS.md`. Adapters `CLAUDE.md` + `.cursor/rules/context-system.mdc` stay thin (under 150 lines) and route to CONTEXT/*. Legacy `docs/todo.md`, `docs/decisions.md`, `docs/lessons.md`, `docs/handoffs/`, `docs/audits/`, `.claude/rules/conventions.md` deleted. Reference docs retained at `docs/schemas/`, `docs/research/`, `docs/DEPLOY-S36-AUTH.md`.
 Rationale: Standardizes memory ownership across Claude + Cursor harnesses; decouples canonical state from adapters; ASCII-only telegraphic style preserves meaning while shrinking token footprint. Recovery backup at `.migration-recovery/2026-04-17-0043/` (gitignored).

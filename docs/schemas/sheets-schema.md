@@ -2,10 +2,10 @@
 
 CRITICAL: These column headers are exact. Do not rename, reorder, or omit fields.
 
-## Employees Tab (19 columns, A-S)
+## Employees Tab (21 columns, A-U)
 
 ```
-id | name | email | password | phone | address | dob | active | isAdmin | isOwner | showOnSchedule | deleted | availability | counterPointId | adpNumber | rateOfPay | employmentType | passwordHash | passwordSalt
+id | name | email | password | phone | address | dob | active | isAdmin | isOwner | showOnSchedule | deleted | availability | counterPointId | adpNumber | rateOfPay | employmentType | passwordHash | passwordSalt | passwordChanged | defaultSection
 ```
 
 - `availability`: JSON string - `{ "sunday": { "available": true, "start": "11:00", "end": "18:00" }, ... }`

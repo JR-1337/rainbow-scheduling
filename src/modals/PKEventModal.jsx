@@ -3,24 +3,40 @@ import { BookOpen, Check, Users } from 'lucide-react';
 import { Modal, TimePicker, GradientButton, toDateKey } from '../App';
 import { THEME } from '../theme';
 import { availabilityCoversWindow } from '../utils/timemath';
+import { getPKDefaultTimes } from '../utils/eventDefaults';
 
 export const PKEventModal = ({ isOpen, onClose, onSchedule, employees }) => {
   const today = toDateKey(new Date());
+  const initialPK = getPKDefaultTimes(today);
   const [date, setDate] = useState(today);
-  const [start, setStart] = useState('18:00');
-  const [end, setEnd] = useState('20:00');
+  const [start, setStart] = useState(initialPK.start);
+  const [end, setEnd] = useState(initialPK.end);
   const [note, setNote] = useState('');
   const [overrides, setOverrides] = useState({});
+  const [timesUserSet, setTimesUserSet] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setDate(toDateKey(new Date()));
-      setStart('18:00');
-      setEnd('20:00');
+      const d = toDateKey(new Date());
+      const def = getPKDefaultTimes(d);
+      setDate(d);
+      setStart(def.start);
+      setEnd(def.end);
       setNote('');
       setOverrides({});
+      setTimesUserSet(false);
     }
   }, [isOpen]);
+
+  // Apply day-of-week PK default when date changes, unless user has manually
+  // set the times (avoids stomping intentional overrides).
+  useEffect(() => {
+    if (!timesUserSet) {
+      const def = getPKDefaultTimes(date);
+      setStart(def.start);
+      setEnd(def.end);
+    }
+  }, [date, timesUserSet]);
 
   useEffect(() => { setOverrides({}); }, [date, start, end]);
 
@@ -118,8 +134,8 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees }) => {
             style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
           />
         </div>
-        <TimePicker value={start} onChange={setStart} label="Start" />
-        <TimePicker value={end} onChange={setEnd} label="End" />
+        <TimePicker value={start} onChange={(v) => { setStart(v); setTimesUserSet(true); }} label="Start" />
+        <TimePicker value={end} onChange={(v) => { setEnd(v); setTimesUserSet(true); }} label="End" />
       </div>
 
       {/* Note */}

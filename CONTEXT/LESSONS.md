@@ -182,7 +182,7 @@ Affirmations: 0
 ## [PROJECT] -- Follow approved plan verbatim
 Lesson: Do not ask "bundle or split?" or "what's next?" mid-execution. If ambiguous, re-read plan file; do not re-ask JR.
 Context: Plan sign-off removes decisions from the loop. Re-asking wastes context and erodes trust.
-Affirmations: 0
+Affirmations: 1
 
 ## [PROJECT] -- One clarifying question per directive
 Lesson: Ask at most one, only on the actual unresolved axis. "Audit the file" means audit the file.

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Star, Trash2, Check, AlertTriangle, Plus } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES, EVENT_TYPES } from '../constants';
+import { getPKDefaultTimes } from '../utils/eventDefaults';
 import { toDateKey, isStatHoliday, getStoreHoursForDate, formatDateLong, Modal, TimePicker, GradientButton, AnimatedNumber, calculateHours } from '../App';
 
 const getDefaultBookingTimes = (date) => {
@@ -9,10 +10,10 @@ const getDefaultBookingTimes = (date) => {
   return { start: storeHours.open, end: storeHours.close };
 };
 
-// 2hr block. PK defaults to 6-8pm (Sarvi's typical after-close training window per S62).
+// PK defaults branch on day-of-week via getPKDefaultTimes (Saturday pre-open).
 // Meeting defaults to the next full hour from now (or 14:00 if that's already past).
-const getDefaultEventTimes = (type = 'meeting') => {
-  if (type === 'pk') return { start: '18:00', end: '20:00' };
+const getDefaultEventTimes = (type = 'meeting', date = null) => {
+  if (type === 'pk') return getPKDefaultTimes(date || new Date());
   const now = new Date();
   let hour = now.getHours() + 1;
   if (hour < 10 || hour > 17) hour = 14;
@@ -74,7 +75,7 @@ export const ShiftEditorModal = ({
       };
     }
     const ev = existingEvents.find(e => e.type === type);
-    const t = getDefaultEventTimes(type);
+    const t = getDefaultEventTimes(type, date);
     return {
       startTime: ev?.startTime || t.start,
       endTime: ev?.endTime || t.end,

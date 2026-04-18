@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, Loader, UserCheck, UserX, Shield, Clock, Key, Check } from 'lucide-react';
 import { THEME } from '../theme';
+import { ROLES } from '../constants';
 import { Modal, GradientButton, Input, apiCall, STORE_HOURS } from '../App';
 
 export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null, currentUser = null, showToast, suggestedPassword = '' }) => {
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   const defaultAvail = days.reduce((a, d) => ({ ...a, [d]: { available: true, start: STORE_HOURS[d].open, end: STORE_HOURS[d].close } }), {});
-  const [formData, setFormData] = useState(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', availability: defaultAvail });
+  const [formData, setFormData] = useState(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', availability: defaultAvail });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [password, setPassword] = useState(suggestedPassword);
   const [errors, setErrors] = useState({});
   const [displayedPassword, setDisplayedPassword] = useState(employee?.password || '');
 
-  useEffect(() => { setFormData(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', availability: defaultAvail }); setShowDeleteConfirm(false); setPassword(suggestedPassword); setErrors({}); setDisplayedPassword(employee?.password || ''); }, [employee, isOpen]);
+  useEffect(() => { setFormData(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', availability: defaultAvail }); setShowDeleteConfirm(false); setPassword(suggestedPassword); setErrors({}); setDisplayedPassword(employee?.password || ''); }, [employee, isOpen]);
 
   const isEditingSelf = employee && currentUser && employee.email === currentUser.email;
   const isEditingOwner = employee?.isOwner === true;
@@ -76,6 +77,17 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
               <p className="text-xs mt-0.5" style={{ color: THEME.text.muted }}>Suggested format. Employee can change this after first login.</p>
             </div>
           )}
+
+          <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: THEME.bg.tertiary }}>
+            <span className="text-xs" style={{ color: THEME.text.secondary }}>Default Section</span>
+            <select
+              value={formData.defaultSection || 'none'}
+              onChange={e => setFormData({ ...formData, defaultSection: e.target.value })}
+              className="px-2 py-0.5 rounded text-xs"
+              style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${THEME.border.default}` }}>
+              {ROLES.map(r => <option key={r.id} value={r.id}>{r.fullName}</option>)}
+            </select>
+          </div>
 
           <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: formData.employmentType === 'full-time' ? THEME.accent.blue + '15' : THEME.bg.tertiary }}>
             <span className="text-xs flex items-center gap-1" style={{ color: formData.employmentType === 'full-time' ? THEME.accent.blue : THEME.text.secondary }}>

@@ -2192,7 +2192,7 @@ function createEmployeesTab(ss) {
   if (!sheet) sheet = ss.insertSheet(TAB_NAME);
   sheet.clear();
 
-  const headers = ['id', 'name', 'email', 'password', 'phone', 'address', 'dob', 'active', 'isAdmin', 'isOwner', 'showOnSchedule', 'deleted', 'availability', 'counterPointId', 'adpNumber', 'rateOfPay', 'employmentType', 'passwordHash', 'passwordSalt', 'passwordChanged'];
+  const headers = ['id', 'name', 'email', 'password', 'phone', 'address', 'dob', 'active', 'isAdmin', 'isOwner', 'showOnSchedule', 'deleted', 'availability', 'counterPointId', 'adpNumber', 'rateOfPay', 'employmentType', 'passwordHash', 'passwordSalt', 'passwordChanged', 'defaultSection'];
   const avail = JSON.stringify({
     sunday: { available: true, start: '11:00', end: '18:00' },
     monday: { available: true, start: '11:00', end: '18:00' },

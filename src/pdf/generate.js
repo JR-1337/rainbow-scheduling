@@ -17,6 +17,28 @@ import { escapeHtml, stripEmoji } from '../utils/format';
 
 const cleanText = (s) => escapeHtml(stripEmoji(s));
 
+// Greyscale-redundant encoding: break-room printer is B&W. Role, OT, holiday,
+// and announcement each gain a non-hue channel (letter glyph, border style,
+// font weight, typographic marker) so information survives the grayscale
+// reduction. Colors remain for color printers — this is pure redundancy, not
+// replacement. See plan 2026-04-18 Item 6 for rationale.
+const ROLE_GLYPHS = {
+  cashier: 'C',
+  backupCashier: 'B',
+  mens: 'M',
+  womens: 'W',
+  floorMonitor: 'F',
+  none: '',
+};
+const ROLE_BORDERS = {
+  cashier: { style: 'solid', width: '3px' },
+  backupCashier: { style: 'dashed', width: '3px' },
+  mens: { style: 'solid', width: '2px' },
+  womens: { style: 'dashed', width: '2px' },
+  floorMonitor: { style: 'dotted', width: '2.5px' },
+  none: { style: 'solid', width: '2px' },
+};
+
 // S64 Stage 7 — events carry meeting/PK entries per `${empId}-${date}` key.
 // Hours are union-counted (9-5 work + 3-5 PK = 8h). OT threshold uses totalHours
 // because all paid time counts under Ontario ESA.
@@ -53,17 +75,22 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     return { workHours, totalHours };
   };
 
+  // Announcement: italic body + "[!]" prefix + double top border. Reads as
+  // distinct from shift rows even after color drops to grey.
   const announcementHtml = (announcement && announcement.message) ? `
-    <div style="margin:15px 0;padding:15px;background:#faf7fb;border-radius:8px;border-left:4px solid #932378;">
-      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;letter-spacing:0.5px;">${cleanText(announcement.subject)}</h3>` : '<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;">Announcement</h3>'}
-      <div style="color:#0D0E22;font-size:11px;line-height:1.6;white-space:pre-wrap;">${cleanText(announcement.message)}</div>
+    <div style="margin:15px 0;padding:15px;background:#faf7fb;border-radius:8px;border-left:4px solid #932378;border-top:3px double #932378;">
+      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;letter-spacing:0.5px;">[!] ${cleanText(announcement.subject)}</h3>` : '<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;">[!] Announcement</h3>'}
+      <div style="color:#0D0E22;font-size:11px;line-height:1.6;white-space:pre-wrap;font-style:italic;">${cleanText(announcement.message)}</div>
     </div>
   ` : '';
 
   const makeWeekTable = (weekDates, weekNum) => {
     const headers = weekDates.map(d => {
       const hol = isStatHoliday(d);
-      return `<th style="padding:8px 4px;border:1px solid #cbd5e1;background:${hol ? '#fef3c7' : '#f1f5f9'};font-size:11px;text-align:center;width:11%;">
+      // Holiday: heavy black top border + "HOL" caption in addition to yellow bg,
+      // so the marker survives greyscale printing.
+      return `<th style="padding:8px 4px;border:1px solid #cbd5e1;${hol ? 'border-top:3px solid #000;' : ''}background:${hol ? '#fef3c7' : '#f1f5f9'};font-size:11px;text-align:center;width:11%;">
+        ${hol ? `<div style="font-size:7px;font-weight:700;color:#000;letter-spacing:1px;">HOL</div>` : ''}
         <div style="font-weight:600;color:${hol ? '#92400e' : '#334155'};text-transform:uppercase;font-size:9px;">${getDayNameShort(d)}</div>
         <div style="font-size:16px;font-weight:700;color:#0f172a;">${d.getDate()}</div>
       </th>`;
@@ -102,8 +129,11 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         // Whitelist color to hex-only so CSS injection is impossible even if a role color is ever sourced from user input.
         const rawColor = role?.color || '#64748b';
         const roleColor = /^#[0-9a-fA-F]{3,8}$/.test(rawColor) ? rawColor : '#64748b';
-        return `<td style="padding:5px;border:2.5px solid ${roleColor};background:#ffffff;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:${roleColor};margin-bottom:2px;">${roleName}</div>
+        const roleBorder = ROLE_BORDERS[shift.role] || ROLE_BORDERS.none;
+        const glyph = ROLE_GLYPHS[shift.role] || '';
+        const glyphPrefix = glyph ? `${glyph}: ` : '';
+        return `<td style="padding:5px;border:${roleBorder.width} ${roleBorder.style} ${roleColor};background:#ffffff;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:${roleColor};margin-bottom:2px;">${glyphPrefix}${roleName}</div>
           <div style="font-size:9px;color:#0D0E22;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
           <div style="font-size:8px;color:#475569;">${shift.hours}h</div>
           ${shift.task ? `<div style="font-size:7px;color:#d97706;margin-top:2px;line-height:1.3;word-break:break-word;">★ ${cleanText(shift.task)}</div>` : ''}
@@ -114,15 +144,20 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       const { workHours, totalHours } = calcWeekHours(emp.id, weekDates);
       // Ontario ESA: OT kicks in at 44h. All paid time counts, so use totalHours for coloring.
       const hoursColor = totalHours >= 44 ? '#ef4444' : totalHours >= 40 ? '#d97706' : '#475569';
+      // Greyscale redundancy: OT (>=44) is bold + trailing asterisk; near-OT (40-43) is bold.
+      const isOT = totalHours >= 44;
+      const isNearOT = totalHours >= 40 && totalHours < 44;
+      const hoursWeight = (isOT || isNearOT) ? '800' : '600';
+      const otMarker = isOT ? '*' : '';
       const hasExtras = totalHours > workHours + 0.01;
       const hoursDisplay = totalHours > 0
-        ? (hasExtras ? `${totalHours.toFixed(1)}h <span style="font-size:8px;color:#64748b;font-weight:500;">(${workHours.toFixed(1)} work)</span>` : `${totalHours.toFixed(1)}h`)
+        ? (hasExtras ? `${totalHours.toFixed(1)}h${otMarker} <span style="font-size:8px;color:#64748b;font-weight:500;">(${workHours.toFixed(1)} work)</span>` : `${totalHours.toFixed(1)}h${otMarker}`)
         : '—';
 
       return `<tr style="page-break-inside:avoid;">
         <td style="padding:8px;border:1px solid #cbd5e1;background:#ffffff;">
           <div style="font-weight:600;font-size:11px;color:#0D0E22;">${cleanText(emp.name)}</div>
-          <div style="font-size:10px;color:${hoursColor};font-weight:600;">${hoursDisplay}</div>
+          <div style="font-size:10px;color:${hoursColor};font-weight:${hoursWeight};">${hoursDisplay}</div>
         </td>
         ${cells}
       </tr>`;
@@ -152,10 +187,13 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     `;
   };
 
+  // Legend shows the letter glyph alongside the color swatch so B&W readers can
+  // map M:/W:/C:/B:/F: prefixes back to role names.
   const legendItems = ROLES.filter(r => r.id !== 'none').map(r => {
     const c = /^#[0-9a-fA-F]{3,8}$/.test(r.color) ? r.color : '#64748b';
+    const g = ROLE_GLYPHS[r.id] || '';
     return `<span style="margin-right:15px;font-size:10px;display:inline-flex;align-items:center;gap:5px;">
-      <span style="display:inline-block;width:12px;height:12px;background:${c};border-radius:3px;"></span>
+      <span style="display:inline-block;width:14px;height:14px;background:${c};border-radius:3px;color:#fff;font-weight:700;font-size:9px;text-align:center;line-height:14px;">${g}</span>
       <span style="color:#334155;">${escapeHtml(r.fullName)}</span>
     </span>`;
   }).join('');

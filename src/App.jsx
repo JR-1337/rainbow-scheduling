@@ -2,7 +2,8 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet } from './MobileEmployeeView';
 import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, MobileEmployeeQuickView, MobileAdminBottomNav } from './MobileAdminView';
 import { parseLocalDate, escapeHtml } from './utils/format';
-import { computeDayUnionHours, computeConsecutiveWorkDayStreak } from './utils/timemath';
+import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
+import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
 import { buildEmailContent } from './email/build';
 import { getAuthToken, setAuthToken, clearAuth, getCachedUser, setCachedUser, setOnAuthFailure, handleAuthError } from './auth';
@@ -1274,6 +1275,40 @@ export default function App() {
     }
   };
 
+  // Autofill PK across a whole week: loop days, per-day default times (Sat 10:00-10:45,
+  // others 18:00-20:00), eligible full-timers by availability window. Sequential apiCalls
+  // because Apps Script write-lock contention on parallel bulkCreatePKEvent is likely.
+  const handleAutofillPKWeek = async (weekDates, weekNum) => {
+    await guardedMutation('Autofilling PK week', async () => {
+      const byDay = weekDates.map(d => {
+        const dateStr = toDateKey(d);
+        const { start, end } = getPKDefaultTimes(dateStr);
+        const eligibleIds = fullTimeEmployees
+          .filter(emp => availabilityCoversWindow(emp.availability, dateStr, start, end).eligible)
+          .map(emp => emp.id);
+        return { dateStr, start, end, eligibleIds };
+      });
+      let createdTotal = 0;
+      let skippedDays = 0;
+      for (let i = 0; i < byDay.length; i++) {
+        const { dateStr, start, end, eligibleIds } = byDay[i];
+        if (eligibleIds.length === 0) { skippedDays++; continue; }
+        showToast('saving', `PK day ${i + 1} of ${byDay.length}...`, 30000);
+        const result = await apiCall('bulkCreatePKEvent', {
+          date: dateStr, startTime: start, endTime: end, note: '', employeeIds: eligibleIds,
+        });
+        if (result.success) {
+          createdTotal += (result.data?.created?.length || 0);
+        }
+      }
+      const msg = skippedDays > 0
+        ? `PK autofilled: ${createdTotal} shifts, ${skippedDays} day(s) skipped (no eligible)`
+        : `PK autofilled: ${createdTotal} shifts across week ${weekNum}`;
+      showToast('success', msg);
+      if (currentUser?.email) await loadDataFromBackend(currentUser.email);
+    });
+  };
+
   // S62 — Bulk PK: one modal, one save. Backend createPKEvent is already in Code.gs (v2.21.0).
   const handleBulkPK = async (payload) => {
     await guardedMutation('Scheduling PK', async () => {
@@ -1876,7 +1911,7 @@ export default function App() {
       date: dateStr,
       startTime: avail.start || STORE_HOURS[dayName].open,
       endTime: avail.end || STORE_HOURS[dayName].close,
-      role: 'none',
+      role: employee.defaultSection || 'none',
       task: '',
       // S61 — explicit so `allShiftKeys` and the backend key both agree on 'work'
       type: 'work',
@@ -1965,20 +2000,25 @@ export default function App() {
       } else {
         total = autoPopulateWeek(week1) + autoPopulateWeek(week2);
       }
-      if (total > 0) showToast('success', `Added ${total} shifts for full-time employees`);
-      else showToast('warning', 'No shifts added — check that full-time employees have availability set');
+      const weekLabel = week ? `Week ${week}` : 'this period';
+      if (total > 0) showToast('success', `Added ${total} shifts to ${weekLabel} — click SAVE to persist`);
+      else showToast('warning', `No shifts added to ${weekLabel} — check that full-time employees have availability set`);
     } else if (type === 'populate-week' && employee) {
       const count = autoPopulateWeek(weekDates, [employee]);
-      if (count > 0) showToast('success', `Added ${count} shifts for ${employee.name}`);
-      else showToast('warning', `No shifts added — ${employee.name} may not have availability set for this week`);
+      if (count > 0) showToast('success', `Added ${count} shifts for ${employee.name} (Week ${week}) — click SAVE to persist`);
+      else showToast('warning', `No shifts added — ${employee.name} may not have availability set for Week ${week}`);
     } else if (type === 'clear-week' && employee) {
       const count = clearWeekShifts(weekDates, [employee]);
       showToast('success', `Removed ${count} shifts for ${employee.name}`);
     } else if (type === 'clear-all') {
       const count = clearWeekShifts(weekDates);
       showToast('success', `Removed ${count} shifts for full-time employees`);
+    } else if (type === 'autofill-pk-week') {
+      setAutoPopulateConfirm(null);
+      handleAutofillPKWeek(weekDates, week);
+      return;
     }
-    
+
     setAutoPopulateConfirm(null);
   };
   
@@ -3524,6 +3564,18 @@ export default function App() {
                     <BookOpen size={10} />
                     Schedule PK
                   </button>
+
+                  {/* Bulk PK autofill for the active week. Secondary (outline) variant keeps
+                      it one notch below the primary "Schedule PK" per button-hierarchy rule. */}
+                  <button
+                    onClick={() => setAutoPopulateConfirm({ type: 'autofill-pk-week', week: activeWeek })}
+                    className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 hover:opacity-80"
+                    style={{ backgroundColor: 'transparent', color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}` }}
+                    aria-label={`Autofill PK for week ${activeWeek}`}
+                  >
+                    <BookOpen size={10} />
+                    Autofill Wk {activeWeek}
+                  </button>
                 </div>
               )}
               
@@ -3596,17 +3648,9 @@ export default function App() {
                   );
                 })}</div>
                 
-                {/* Deleted employees with historical shifts */}
-                {deletedWithShifts.length > 0 && (
-                  <>
-                    <div className="px-2 py-1 flex items-center gap-2" style={{ backgroundColor: THEME.bg.tertiary }}>
-                      <div className="flex-1 h-px" style={{ backgroundColor: THEME.border.default }} />
-                      <span className="text-xs" style={{ color: THEME.text.muted }}>Former Staff (History)</span>
-                      <div className="flex-1 h-px" style={{ backgroundColor: THEME.border.default }} />
-                    </div>
-                    {deletedWithShifts.map(e => <EmployeeRow key={e.id} employee={e} dates={currentDates} shifts={shifts} events={events} onCellClick={() => {}} getEmployeeHours={getEmpHours} onEdit={() => {}} isDeleted onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={true} />)}
-                  </>
-                )}
+                {/* Former Staff (deleted employees with shifts) removed from the
+                    main grid per Sarvi (2026-04-18). Records + shift data are
+                    preserved in the backend; restore via Manage Staff if needed. */}
               </div>
               
               {/* Legend */}
@@ -3629,39 +3673,46 @@ export default function App() {
                 )}
               </div>
               
-              {/* Hidden Staff Section - Inactive employees and hidden admins */}
+              {/* Hidden Staff Section - Inactive employees and hidden admins.
+                  Collapsed by default per plan Item 8 (progressive disclosure --
+                  tertiary info shouldn't compete with the primary grid). */}
               {hiddenStaff.length > 0 && (
-                <div className="mt-2 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.subtle}` }}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <UserX size={12} style={{ color: THEME.text.muted }} />
-                    <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>Hidden from Schedule ({hiddenStaff.length})</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {hiddenStaff.map(emp => (
-                      <div key={emp.id} className="flex items-center gap-2 px-2 py-1 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
-                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: emp.isAdmin ? THEME.accent.purple + '30' : THEME.bg.elevated, color: emp.isAdmin ? THEME.accent.purple : THEME.text.muted }}>
-                          {emp.name.charAt(0)}
+                <div className="mt-2">
+                  <CollapsibleSection
+                    title="Hidden from Schedule"
+                    icon={UserX}
+                    iconColor={THEME.text.muted}
+                    badge={hiddenStaff.length}
+                    badgeColor={THEME.text.muted}
+                    defaultOpen={false}
+                  >
+                    <div className="flex flex-wrap gap-2">
+                      {hiddenStaff.map(emp => (
+                        <div key={emp.id} className="flex items-center gap-2 px-2 py-1 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
+                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: emp.isAdmin ? THEME.accent.purple + '30' : THEME.bg.elevated, color: emp.isAdmin ? THEME.accent.purple : THEME.text.muted }}>
+                            {emp.name.charAt(0)}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-medium flex items-center gap-1" style={{ color: THEME.text.primary }}>
+                              {emp.name}
+                              {emp.isAdmin && <Shield size={8} style={{ color: THEME.accent.purple }} />}
+                            </span>
+                            <span className="text-xs" style={{ color: THEME.text.muted }}>
+                              {!emp.active ? 'Inactive' : 'Hidden Admin'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => { setEditingEmp(emp); setEmpFormOpen(true); }}
+                            className="p-1 rounded hover:opacity-80"
+                            style={{ backgroundColor: THEME.bg.elevated }}
+                            title="Edit Employee"
+                          >
+                            <Edit3 size={10} style={{ color: THEME.text.muted }} />
+                          </button>
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs font-medium flex items-center gap-1" style={{ color: THEME.text.primary }}>
-                            {emp.name}
-                            {emp.isAdmin && <Shield size={8} style={{ color: THEME.accent.purple }} />}
-                          </span>
-                          <span className="text-xs" style={{ color: THEME.text.muted }}>
-                            {!emp.active ? 'Inactive' : 'Hidden Admin'}
-                          </span>
-                        </div>
-                        <button 
-                          onClick={() => { setEditingEmp(emp); setEmpFormOpen(true); }}
-                          className="p-1 rounded hover:opacity-80"
-                          style={{ backgroundColor: THEME.bg.elevated }}
-                          title="Edit Employee"
-                        >
-                          <Edit3 size={10} style={{ color: THEME.text.muted }} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </CollapsibleSection>
                 </div>
               )}
               
@@ -3853,25 +3904,28 @@ export default function App() {
               {autoPopulateConfirm.type === 'populate-week' && `Auto-Fill Week ${autoPopulateConfirm.week} for ${autoPopulateConfirm.employee?.name}?`}
               {autoPopulateConfirm.type === 'clear-week' && `Clear Week ${autoPopulateConfirm.week} for ${autoPopulateConfirm.employee?.name}?`}
               {autoPopulateConfirm.type === 'clear-all' && `Clear All Full-Time Shifts for Week ${autoPopulateConfirm.week}?`}
+              {autoPopulateConfirm.type === 'autofill-pk-week' && `Autofill PK for Week ${autoPopulateConfirm.week}?`}
             </p>
-            
+
             <p className="text-xs mb-4" style={{ color: THEME.text.secondary }}>
-              {autoPopulateConfirm.type.includes('populate') 
-                ? 'Some shifts already exist and will be preserved. Only empty days will be filled based on availability.'
-                : 'This will remove the selected shifts. You can undo by not saving changes.'
+              {autoPopulateConfirm.type === 'autofill-pk-week'
+                ? 'Saturday uses 10:00-10:45 (pre-open). Other days use 18:00-20:00 (post-close). Eligible full-timers only. Days that already have PK are preserved.'
+                : autoPopulateConfirm.type.includes('populate')
+                  ? 'Some shifts already exist and will be preserved. Only empty days will be filled based on availability.'
+                  : 'This will remove the selected shifts. You can undo by not saving changes.'
               }
             </p>
-            
+
             <div className="flex justify-center gap-2">
               <GradientButton variant="secondary" small onClick={() => setAutoPopulateConfirm(null)}>
                 Cancel
               </GradientButton>
-              <GradientButton 
-                small 
+              <GradientButton
+                small
                 danger={autoPopulateConfirm.type.includes('clear')}
                 onClick={handleAutoPopulateConfirm}
               >
-                {autoPopulateConfirm.type.includes('clear') ? 'Clear Shifts' : 'Auto-Fill'}
+                {autoPopulateConfirm.type.includes('clear') ? 'Clear Shifts' : autoPopulateConfirm.type === 'autofill-pk-week' ? 'Autofill PK' : 'Auto-Fill'}
               </GradientButton>
             </div>
           </div>

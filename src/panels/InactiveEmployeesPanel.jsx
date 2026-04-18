@@ -51,12 +51,24 @@ export const InactiveEmployeesPanel = ({ isOpen, onClose, employees, onReactivat
               <p className="text-xs mb-2" style={{ color: THEME.text.muted }}>These employees' past shifts are preserved on the schedule.</p>
               <div className="space-y-1">
                 {deletedEmps.map(emp => (
-                  <div key={emp.id} className="p-2 rounded-lg flex items-center justify-between opacity-60" style={{ backgroundColor: THEME.bg.tertiary }}>
-                    <div className="flex items-center gap-2">
+                  <div key={emp.id} className="p-2 rounded-lg flex items-center justify-between" style={{ backgroundColor: THEME.bg.tertiary }}>
+                    {/* Opacity is applied to the identity region only so the Restore
+                        button does not read as disabled (opacity on the parent row
+                        attenuates interactive affordance -- see plan Item 10). */}
+                    <div className="flex items-center gap-2 opacity-60">
                       <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}>{emp.name.charAt(0)}</div>
                       <p className="text-xs" style={{ color: THEME.text.muted }}>{emp.name}</p>
                     </div>
-                    <button onClick={() => onReactivate(emp.id)} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary }}>Restore</button>
+                    {/* Restore is a recoverable administrative action: tonal OTR brand
+                        blue (not green 'go', not red 'danger'). Full opacity so it
+                        reads clearly as clickable on the attenuated row. */}
+                    <button
+                      onClick={() => onReactivate(emp.id)}
+                      className="px-2 py-1 rounded text-xs font-medium hover:opacity-80"
+                      style={{ backgroundColor: 'rgba(4, 83, 163, 0.20)', color: '#60A5FA', border: '1px solid rgba(4, 83, 163, 0.40)' }}
+                    >
+                      Restore
+                    </button>
                   </div>
                 ))}
               </div>
