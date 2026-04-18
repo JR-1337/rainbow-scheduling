@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRightLeft, X, AlertCircle, ChevronRight, ChevronLeft, Check, Loader } from 'lucide-react';
-import { THEME, TYPE } from '../theme';
+import { ArrowRightLeft, AlertCircle, ChevronRight, ChevronLeft, Check, Loader } from 'lucide-react';
+import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
 import { toDateKey, formatDate, formatTimeDisplay, getDayNameShort } from '../App';
+import { AdaptiveModal } from '../components/AdaptiveModal';
 
 export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shifts, shiftSwaps, timeOffRequests = [], shiftOffers = [] }) => {
   const [step, setStep] = useState(1);
@@ -23,15 +24,6 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
       setError('');
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
 
   const safeShifts = shifts || {};
   const safeShiftSwaps = shiftSwaps || [];
@@ -176,19 +168,40 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
     return role ? role.color : THEME.roles.none;
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label="Swap Shifts" onClick={onClose}>
-      <div className="max-w-md w-full rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
-        <div className="px-4 py-3 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.accent.purple}20, ${THEME.bg.secondary})` }}>
-          <h2 className="font-semibold flex items-center gap-2" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>
-            <ArrowRightLeft size={16} style={{ color: THEME.accent.purple }} />
-            Swap Shifts
-          </h2>
-          <button onClick={onClose} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
-        </div>
+  const footer = !hasPendingSwap ? (
+    <div className="flex justify-end gap-2">
+      <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary }}>
+        Cancel
+      </button>
+      <button
+        onClick={handleSubmit}
+        disabled={!selectedMyShift || !selectedPartner || !selectedTheirShift || isSubmitting}
+        className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1"
+        style={{
+          background: selectedMyShift && selectedPartner && selectedTheirShift ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated,
+          color: selectedMyShift && selectedPartner && selectedTheirShift ? 'white' : THEME.text.muted,
+          opacity: (!selectedMyShift || !selectedPartner || !selectedTheirShift || isSubmitting) ? 0.5 : 1
+        }}
+      >
+        {isSubmitting ? <Loader size={12} className="animate-spin" /> : <ArrowRightLeft size={12} />}
+        Request Swap
+      </button>
+    </div>
+  ) : null;
 
-        <div className="p-4 space-y-4 overflow-y-auto flex-1">
-          {hasPendingSwap ? (
+  return (
+    <AdaptiveModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Swap Shifts"
+      icon={ArrowRightLeft}
+      iconColor={THEME.accent.purple}
+      headerGradient={`linear-gradient(135deg, ${THEME.accent.purple}20, ${THEME.bg.secondary})`}
+      ariaLabel="Swap Shifts"
+      bodyClassName="space-y-4"
+      footer={footer}
+    >
+      {hasPendingSwap ? (
             <div className="p-4 rounded-lg text-center" style={{ backgroundColor: THEME.status.warning + '15', border: `1px solid ${THEME.status.warning}30` }}>
               <AlertCircle size={24} style={{ color: THEME.status.warning, margin: '0 auto 8px' }} />
               <p className="text-sm font-medium mb-1" style={{ color: THEME.status.warning }}>One swap at a time</p>
@@ -397,29 +410,6 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
           )}
           </>
           )}
-        </div>
-
-        {!hasPendingSwap && (
-          <div className="px-4 py-3 flex justify-end gap-2 flex-shrink-0" style={{ borderTop: `1px solid ${THEME.border.subtle}`, backgroundColor: THEME.bg.tertiary }}>
-            <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary }}>
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!selectedMyShift || !selectedPartner || !selectedTheirShift || isSubmitting}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1"
-              style={{
-                background: selectedMyShift && selectedPartner && selectedTheirShift ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated,
-                color: selectedMyShift && selectedPartner && selectedTheirShift ? 'white' : THEME.text.muted,
-                opacity: (!selectedMyShift || !selectedPartner || !selectedTheirShift || isSubmitting) ? 0.5 : 1
-              }}
-            >
-              {isSubmitting ? <Loader size={12} className="animate-spin" /> : <ArrowRightLeft size={12} />}
-              Request Swap
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+    </AdaptiveModal>
   );
 };

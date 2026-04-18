@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { User, X, AlertCircle, Check, Shield, Loader, Send } from 'lucide-react';
-import { THEME, TYPE } from '../theme';
+import { User, AlertCircle, Check, Shield, Loader, Send } from 'lucide-react';
+import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
 import { toDateKey, formatDate, formatDateLong, formatTimeDisplay, getDayNameShort } from '../App';
+import { AdaptiveModal } from '../components/AdaptiveModal';
 
 export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shifts, shiftOffers, timeOffRequests = [], shiftSwaps = [] }) => {
   const [selectedShift, setSelectedShift] = useState(null);
@@ -19,15 +20,6 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
       setError('');
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
 
   const safeShifts = shifts || {};
   const safeShiftOffers = shiftOffers || [];
@@ -156,19 +148,40 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
     return role ? role.color : THEME.roles.none;
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)', paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom) + 1rem)' }} role="dialog" aria-modal="true" aria-label="Take My Shift" onClick={onClose}>
-      <div className="max-w-md w-full rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col modal-content active" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
-        <div className="px-4 py-3 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.accent.pink}20, ${THEME.bg.secondary})` }}>
-          <h2 className="font-semibold flex items-center gap-2" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>
-            <User size={16} style={{ color: THEME.accent.pink }} />
-            Take My Shift
-          </h2>
-          <button onClick={onClose} aria-label="Close dialog" className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ color: THEME.text.secondary }}><X size={16} /></button>
-        </div>
+  const footer = (
+    <div className="flex justify-end gap-2">
+      <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary }}>
+        Cancel
+      </button>
+      <button
+        onClick={handleSubmit}
+        disabled={!selectedShift || !selectedRecipient || isSubmitting}
+        className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1"
+        style={{
+          background: selectedShift && selectedRecipient ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated,
+          color: selectedShift && selectedRecipient ? 'white' : THEME.text.muted,
+          opacity: (!selectedShift || !selectedRecipient || isSubmitting) ? 0.5 : 1
+        }}
+      >
+        {isSubmitting ? <Loader size={12} className="animate-spin" /> : <Send size={12} />}
+        Send Offer
+      </button>
+    </div>
+  );
 
-        <div className="p-4 space-y-4 overflow-y-auto flex-1">
-          {hasPendingOffer ? (
+  return (
+    <AdaptiveModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Take My Shift"
+      icon={User}
+      iconColor={THEME.accent.pink}
+      headerGradient={`linear-gradient(135deg, ${THEME.accent.pink}20, ${THEME.bg.secondary})`}
+      ariaLabel="Take My Shift"
+      bodyClassName="space-y-4"
+      footer={footer}
+    >
+      {hasPendingOffer ? (
             <div className="p-4 rounded-lg text-center" style={{ backgroundColor: THEME.status.warning + '15', border: `1px solid ${THEME.status.warning}30` }}>
               <AlertCircle size={24} style={{ color: THEME.status.warning, margin: '0 auto 8px' }} />
               <p className="text-sm font-medium mb-1" style={{ color: THEME.status.warning }}>One request at a time</p>
@@ -290,27 +303,6 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
           )}
           </>
           )}
-        </div>
-
-        <div className="px-4 py-3 flex justify-end gap-2 flex-shrink-0" style={{ borderTop: `1px solid ${THEME.border.subtle}`, backgroundColor: THEME.bg.tertiary }}>
-          <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary }}>
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!selectedShift || !selectedRecipient || isSubmitting}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1"
-            style={{
-              background: selectedShift && selectedRecipient ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated,
-              color: selectedShift && selectedRecipient ? 'white' : THEME.text.muted,
-              opacity: (!selectedShift || !selectedRecipient || isSubmitting) ? 0.5 : 1
-            }}
-          >
-            {isSubmitting ? <Loader size={12} className="animate-spin" /> : <Send size={12} />}
-            Send Offer
-          </button>
-        </div>
-      </div>
-    </div>
+    </AdaptiveModal>
   );
 };
