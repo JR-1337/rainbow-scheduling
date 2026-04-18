@@ -7,7 +7,8 @@ import { THEME } from '../theme';
 //   secondary    — tertiary bg + subtle border. Neutral actions.
 //   ghost        — transparent bg. Text-only / close buttons.
 //   recoverable  — tonal blue (THEME.action.recoverable). Restore / undo.
-//   destructive  — tonal red (THEME.action.destructiveTonal). Remove / delete.
+//   destructive        — tonal red (THEME.action.destructiveTonal). Remove / delete.
+//   destructiveOutline — transparent bg with error-colored text + subtle border.
 // Sizes: sm = 36px, md = 44px, lg = 48px.
 
 const SIZES = {
@@ -47,6 +48,12 @@ const variantStyle = (variant) => {
         backgroundColor: THEME.action.destructiveTonal.bg,
         color: THEME.action.destructiveTonal.fg,
         border: `1px solid ${THEME.action.destructiveTonal.border}`,
+      };
+    case 'destructiveOutline':
+      return {
+        backgroundColor: THEME.bg.tertiary,
+        color: THEME.status.error,
+        border: `1px solid ${THEME.status.error}30`,
       };
     default:
       return {};

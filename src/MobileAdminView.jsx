@@ -144,12 +144,12 @@ export const MobileAdminDrawer = ({
             </Button>
           )}
           <Button
-            variant="secondary"
+            variant="destructiveOutline"
             size="md"
             leftIcon={LogOut}
             fullWidth
             onClick={() => { onLogout(); onClose(); }}
-            style={{ backgroundColor: THEME.bg.tertiary, color: THEME.status.error, border: `1px solid ${THEME.status.error}30`, justifyContent: 'flex-start', gap: 12 }}
+            style={{ justifyContent: 'flex-start', gap: 12 }}
           >
             Sign Out
           </Button>

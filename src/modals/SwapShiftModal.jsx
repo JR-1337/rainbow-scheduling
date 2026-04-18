@@ -33,9 +33,6 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
   const hasPendingTimeOff = safeTimeOffRequests.some(req =>
     req.email === currentUser?.email &&
     req.status === 'pending'
@@ -65,7 +62,7 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
         const keyEmpId = key.slice(0, -11);
         if (String(keyEmpId) !== String(empId)) return false;
         const shiftDate = parseLocalDate(dateStr);
-        return shiftDate >= tomorrow;
+        return shiftDate >= today;
       })
       .map(([key, shift]) => {
         const dateStr = key.slice(-10);
@@ -195,8 +192,8 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
       onClose={onClose}
       title="Swap Shifts"
       icon={ArrowRightLeft}
-      iconColor={THEME.accent.purple}
-      headerGradient={`linear-gradient(135deg, ${THEME.accent.purple}20, ${THEME.bg.secondary})`}
+      iconColor={THEME.modal.swap.accent}
+      headerGradient={`linear-gradient(135deg, ${THEME.modal.swap.accent}20, ${THEME.bg.secondary})`}
       ariaLabel="Swap Shifts"
       bodyClassName="space-y-4"
       footer={footer}
@@ -215,13 +212,13 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
                   style={{
-                    backgroundColor: step >= s ? THEME.accent.purple : THEME.bg.tertiary,
+                    backgroundColor: step >= s ? THEME.modal.swap.accent : THEME.bg.tertiary,
                     color: step >= s ? 'white' : THEME.text.muted
                   }}
                 >
                   {s}
                 </div>
-                {s < 3 && <div className="w-6 h-px" style={{ backgroundColor: step > s ? THEME.accent.purple : THEME.border.default }} />}
+                {s < 3 && <div className="w-6 h-px" style={{ backgroundColor: step > s ? THEME.modal.swap.accent : THEME.border.default }} />}
               </div>
             ))}
           </div>
@@ -249,8 +246,8 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
                         onClick={() => { setSelectedMyShift(shift); setStep(2); }}
                         className="w-full p-2 rounded-lg text-left transition-all flex items-center justify-between"
                         style={{
-                          backgroundColor: isSelected ? THEME.accent.purple + '20' : THEME.bg.tertiary,
-                          border: `1px solid ${isSelected ? THEME.accent.purple : THEME.border.subtle}`,
+                          backgroundColor: isSelected ? THEME.modal.swap.accent + '20' : THEME.bg.tertiary,
+                          border: `1px solid ${isSelected ? THEME.modal.swap.accent : THEME.border.subtle}`,
                         }}
                       >
                         <div className="flex items-center gap-2">
@@ -268,7 +265,7 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
                             </div>
                           </div>
                         </div>
-                        {isSelected && <Check size={14} style={{ color: THEME.accent.purple }} />}
+                        {isSelected && <Check size={14} style={{ color: THEME.modal.swap.accent }} />}
                       </button>
                     );
                   })}
@@ -280,7 +277,7 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
           {step === 2 && (
             <div>
               {selectedMyShift && (
-                <div className="mb-3 p-2 rounded-lg" style={{ backgroundColor: THEME.accent.purple + '10', border: `1px solid ${THEME.accent.purple}30` }}>
+                <div className="mb-3 p-2 rounded-lg" style={{ backgroundColor: THEME.modal.swap.accent + '10', border: `1px solid ${THEME.modal.swap.accent}30` }}>
                   <p className="text-xs" style={{ color: THEME.text.muted }}>Your shift:</p>
                   <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>
                     {getDayNameShort(parseLocalDate(selectedMyShift.dateStr))}, {formatDate(parseLocalDate(selectedMyShift.dateStr))} • {formatTimeDisplay(selectedMyShift.startTime)} – {formatTimeDisplay(selectedMyShift.endTime)}
@@ -346,7 +343,7 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
           {step === 3 && selectedPartner && (
             <div>
               {selectedMyShift && (
-                <div className="mb-3 p-2 rounded-lg" style={{ backgroundColor: THEME.accent.purple + '10', border: `1px solid ${THEME.accent.purple}30` }}>
+                <div className="mb-3 p-2 rounded-lg" style={{ backgroundColor: THEME.modal.swap.accent + '10', border: `1px solid ${THEME.modal.swap.accent}30` }}>
                   <p className="text-xs" style={{ color: THEME.text.muted }}>Your shift:</p>
                   <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>
                     {getDayNameShort(parseLocalDate(selectedMyShift.dateStr))}, {formatDate(parseLocalDate(selectedMyShift.dateStr))} • {formatTimeDisplay(selectedMyShift.startTime)} – {formatTimeDisplay(selectedMyShift.endTime)}
@@ -374,8 +371,8 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
                       onClick={() => handleSelectTheirShift(shift)}
                       className="w-full p-2 rounded-lg text-left transition-all flex items-center justify-between"
                       style={{
-                        backgroundColor: isSelected ? THEME.accent.purple + '20' : THEME.bg.tertiary,
-                        border: `1px solid ${isSelected ? THEME.accent.purple : THEME.border.subtle}`,
+                        backgroundColor: isSelected ? THEME.modal.swap.accent + '20' : THEME.bg.tertiary,
+                        border: `1px solid ${isSelected ? THEME.modal.swap.accent : THEME.border.subtle}`,
                       }}
                     >
                       <div className="flex items-center gap-2">
@@ -393,7 +390,7 @@ export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employe
                           </div>
                         </div>
                       </div>
-                      {isSelected && <Check size={14} style={{ color: THEME.accent.purple }} />}
+                      {isSelected && <Check size={14} style={{ color: THEME.modal.swap.accent }} />}
                     </button>
                   );
                 })}

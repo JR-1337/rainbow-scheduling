@@ -12,26 +12,23 @@ export const RequestTimeOffModal = ({ isOpen, onClose, onSelectType, currentUser
       name: 'Days Off',
       description: 'Request specific days or a block of time off',
       icon: Calendar,
-      available: true,
       color: THEME.accent.cyan,
     },
-    {
+    !isAdmin && {
       id: 'shift-swap',
       name: 'Shift Swap',
-      description: isAdmin ? 'Not available for admins' : 'Trade a shift with another employee',
+      description: 'Trade a shift with another employee',
       icon: Users,
-      available: !isAdmin,
-      color: THEME.accent.purple,
+      color: THEME.modal.swap.accent,
     },
-    {
+    !isAdmin && {
       id: 'shift-offer',
       name: 'Take My Shift',
-      description: isAdmin ? 'Not available for admins' : 'Give away your shift to someone else',
+      description: 'Give away your shift to someone else',
       icon: User,
-      available: !isAdmin,
-      color: THEME.accent.pink,
+      color: THEME.modal.offer.accent,
     },
-  ];
+  ].filter(Boolean);
 
   return (
     <AdaptiveModal
@@ -49,24 +46,19 @@ export const RequestTimeOffModal = ({ isOpen, onClose, onSelectType, currentUser
           return (
             <button
               key={type.id}
-              onClick={() => type.available && onSelectType(type.id)}
-              disabled={!type.available}
+              onClick={() => onSelectType(type.id)}
               className="w-full p-3 rounded-lg text-left transition-all flex items-start gap-3"
               style={{
-                backgroundColor: type.available ? THEME.bg.tertiary : THEME.bg.elevated,
-                border: `1px solid ${type.available ? type.color + '30' : THEME.border.subtle}`,
-                opacity: type.available ? 1 : 0.5,
-                cursor: type.available ? 'pointer' : 'not-allowed'
+                backgroundColor: THEME.bg.tertiary,
+                border: `1px solid ${type.color}30`,
+                cursor: 'pointer'
               }}
             >
               <div className="p-2 rounded-lg" style={{ backgroundColor: type.color + '20' }}>
-                <Icon size={16} style={{ color: type.available ? type.color : THEME.text.muted }} />
+                <Icon size={16} style={{ color: type.color }} />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium flex items-center gap-2" style={{ color: type.available ? THEME.text.primary : THEME.text.muted }}>
-                  {type.name}
-                  {!type.available && isAdmin && <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}>Employees Only</span>}
-                </p>
+                <p className="text-sm font-medium" style={{ color: THEME.text.primary }}>{type.name}</p>
                 <p className="text-xs mt-0.5" style={{ color: THEME.text.muted }}>{type.description}</p>
               </div>
             </button>

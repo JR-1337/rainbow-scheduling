@@ -29,9 +29,6 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
   const hasPendingTimeOff = safeTimeOffRequests.some(req =>
     req.email === currentUser?.email &&
     req.status === 'pending'
@@ -60,7 +57,7 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
       const empId = key.slice(0, -11);
       if (String(empId) !== String(currentUser?.id)) return false;
       const shiftDate = parseLocalDate(dateStr);
-      return shiftDate >= tomorrow;
+      return shiftDate >= today;
     })
     .map(([key, shift]) => {
       const dateStr = key.slice(-10);
@@ -175,8 +172,8 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
       onClose={onClose}
       title="Take My Shift"
       icon={User}
-      iconColor={THEME.accent.pink}
-      headerGradient={`linear-gradient(135deg, ${THEME.accent.pink}20, ${THEME.bg.secondary})`}
+      iconColor={THEME.modal.offer.accent}
+      headerGradient={`linear-gradient(135deg, ${THEME.modal.offer.accent}20, ${THEME.bg.secondary})`}
       ariaLabel="Take My Shift"
       bodyClassName="space-y-4"
       footer={footer}
@@ -209,8 +206,8 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
                       disabled={isOffered}
                       className="w-full p-2 rounded-lg text-left transition-all flex items-center justify-between"
                       style={{
-                        backgroundColor: isSelected ? THEME.accent.pink + '20' : THEME.bg.tertiary,
-                        border: `1px solid ${isSelected ? THEME.accent.pink : THEME.border.subtle}`,
+                        backgroundColor: isSelected ? THEME.modal.offer.accent + '20' : THEME.bg.tertiary,
+                        border: `1px solid ${isSelected ? THEME.modal.offer.accent : THEME.border.subtle}`,
                         opacity: isOffered ? 0.5 : 1,
                         cursor: isOffered ? 'not-allowed' : 'pointer'
                       }}
@@ -236,7 +233,7 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
                         </span>
                       )}
                       {isSelected && !isOffered && (
-                        <Check size={14} style={{ color: THEME.accent.pink }} />
+                        <Check size={14} style={{ color: THEME.modal.offer.accent }} />
                       )}
                     </button>
                   );
@@ -266,8 +263,8 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
                       disabled={alreadyWorks}
                       className="w-full p-2 rounded-lg text-left transition-all flex items-center justify-between"
                       style={{
-                        backgroundColor: isSelected ? THEME.accent.pink + '20' : alreadyWorks ? THEME.bg.elevated : THEME.bg.tertiary,
-                        border: `1px solid ${isSelected ? THEME.accent.pink : THEME.border.subtle}`,
+                        backgroundColor: isSelected ? THEME.modal.offer.accent + '20' : alreadyWorks ? THEME.bg.elevated : THEME.bg.tertiary,
+                        border: `1px solid ${isSelected ? THEME.modal.offer.accent : THEME.border.subtle}`,
                         opacity: alreadyWorks ? 0.5 : 1,
                         cursor: alreadyWorks ? 'not-allowed' : 'pointer',
                       }}
@@ -293,7 +290,7 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
                         </span>
                       )}
                       {isSelected && !alreadyWorks && (
-                        <Check size={14} style={{ color: THEME.accent.pink }} />
+                        <Check size={14} style={{ color: THEME.modal.offer.accent }} />
                       )}
                     </button>
                   );

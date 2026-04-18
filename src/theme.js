@@ -58,6 +58,12 @@ export const THEME = {
       border: '#F8717140',
     },
   },
+  // Fixed (non-rotating) identity colors for request modals — decoupled from
+  // OTR_ACCENT daily rotation so each modal keeps its own visual identity.
+  modal: {
+    swap:  { accent: '#7C3AED' },  // violet
+    offer: { accent: '#EC4899' },  // pink
+  },
   task: '#D97706',
   // S61 — Meeting + PK overlay entries are deliberately OFF the OTR accent rotation.
   // Fixed neutral greys so event pills read as "non-schedule" information on any
