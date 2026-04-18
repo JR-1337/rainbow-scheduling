@@ -13,9 +13,15 @@ body {
 }
 
 /* Suppress mobile browser pull-to-refresh so bottom-sheet drags and grid
-   scroll don't accidentally reload the page. */
-html, body {
+   scroll don't accidentally reload the page. Chrome Android needs this on
+   html AND body AND the root scroll container; we also set touch-action to
+   stop the browser intercepting the vertical swipe before the CSS rule fires. */
+html, body, #root {
+  overscroll-behavior: none;
   overscroll-behavior-y: none;
+}
+body {
+  touch-action: pan-x pan-y;
 }
 
 /* Login form — guaranteed to be in the compiled bundle */

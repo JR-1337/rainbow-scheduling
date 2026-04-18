@@ -3230,13 +3230,13 @@ export default function App() {
           isOpen={mobileAdminDrawerOpen}
           onClose={() => setMobileAdminDrawerOpen(false)}
           currentUser={currentUser}
-          onLogout={() => { clearAuth(); setCurrentUser(null); }}
-          onOpenChangePassword={() => setMobileAdminChangePasswordOpen(true)}
-          onOpenSettings={() => setSettingsOpen(true)}
-          onOpenOwnRequests={() => setAdminRequestModalOpen(true)}
-          onOpenPK={() => setPkModalOpen(true)}
-          onExportPDF={() => generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement, timeOffRequests, events)}
-          onOpenStaff={() => setMobileStaffPanelOpen(true)}
+          onLogout={() => { setMobileAdminDrawerOpen(false); clearAuth(); setCurrentUser(null); }}
+          onOpenChangePassword={() => { setMobileAdminDrawerOpen(false); setMobileAdminChangePasswordOpen(true); }}
+          onOpenSettings={() => { setMobileAdminDrawerOpen(false); setSettingsOpen(true); }}
+          onOpenOwnRequests={() => { setMobileAdminDrawerOpen(false); setAdminRequestModalOpen(true); }}
+          onOpenPK={() => { setMobileAdminDrawerOpen(false); setPkModalOpen(true); }}
+          onExportPDF={() => { setMobileAdminDrawerOpen(false); generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement, timeOffRequests, events); }}
+          onOpenStaff={() => { setMobileAdminDrawerOpen(false); setMobileStaffPanelOpen(true); }}
           pendingRequestCount={pendingRequestCount}
         />
 
