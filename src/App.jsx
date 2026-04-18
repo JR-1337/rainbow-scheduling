@@ -2055,12 +2055,13 @@ export default function App() {
       }
     }
     
-    // Optimistic update — capture prev so we can revert on API failure
+    // Optimistic update — capture prev so we can revert on API failure.
+    // Do NOT clear editingEmp here: if the save fails the modal stays open
+    // and must still read as "Edit Employee" (not flip to "Add Employee").
     const prevEmployees = employees;
     const wasEditing = !!editingEmp;
     if (editingEmp) setEmployees(employees.map(x => x.id === e.id ? e : x));
     else setEmployees([...employees, { ...e, active: true }]);
-    setEditingEmp(null);
 
     // Stringify availability for storage
     const employeeForApi = {
@@ -2075,10 +2076,12 @@ export default function App() {
     });
 
     if (result.success) {
+      setEditingEmp(null);
       showToast('success', wasEditing ? `${e.name} updated` : `${e.name} added`);
       return true;
     } else {
-      // Revert so the UI matches the server's rejection
+      // Revert so the UI matches the server's rejection; keep editingEmp
+      // so modal stays labelled "Edit Employee" while user retries.
       setEmployees(prevEmployees);
       showToast('error', result.error?.message || 'Failed to save employee');
       return false;
