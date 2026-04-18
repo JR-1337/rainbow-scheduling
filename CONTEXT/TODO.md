@@ -19,9 +19,7 @@ Rules:
 
 ## Active
 
-- Manual Sheet + Apps Script deploy -- next: add `defaultSection` column U to Employees tab, paste updated Code.gs, publish new deployment
-- Deploy Rainbow frontend -- next: `vercel --prod --yes` after build verify (not yet pushed)
-- Test Sarvi-batch end-to-end -- next: JR + Sarvi smoke 10 items per plan verification section
+- Test Sarvi-batch end-to-end -- next: JR + Sarvi smoke 10 items per plan verification section (frontend LIVE, Apps Script v2.22 LIVE)
 - Backup-cash role clarification -- next: JR asks Sarvi whether she wants a NEW role vs existing `backupCashier`
 - CF Worker SWR cache -- next: design KV cache key from `getAllData` payload; flip `API_URL` in src/App.jsx
 - Welcome email on new-employee create -- trigger in EmployeeFormModal create flow, send default emp-XXX password
@@ -40,10 +38,11 @@ Rules:
 
 ## Verification
 
-- Last validated: `npm run build` PASS at uncommitted working tree (2026-04-18)
-- Last validated: HEAD `1f073d7` == origin/main
+- Last validated: `npm run build` PASS (2026-04-18)
+- Last validated: HEAD `68615fe` pushed to origin/main; Rainbow prod LIVE at https://rainbow-scheduling.vercel.app
 - Last validated: pitch deck "two weeks" fix live at https://rainbow-pitch.vercel.app (2026-04-18)
-- Missing validation: Sarvi-batch 10 items not yet deployed to Rainbow prod; Apps Script `defaultSection` header not yet added to live Sheet
+- Last validated: Apps Script v2.22 deployed + Employees column U `defaultSection` added to live Sheet (2026-04-18 per JR)
+- Missing validation: Sarvi-batch 10 items not yet hands-on tested by JR + Sarvi
 - Missing validation: no automated test suite; manual Playwright smoke only
 - RISK: `defaultSection` column on live Sheet must be added before fresh employee saves lose the field (fallback to `'none'` is safe, so backward-compatible)
 - RISK: Apps Script v2.21.x still live; new `defaultSection` writes ignored until new deployment published

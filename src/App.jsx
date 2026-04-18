@@ -23,6 +23,7 @@ import { IncomingSwapsPanel } from './panels/IncomingSwapsPanel';
 import { ReceivedSwapsHistoryPanel } from './panels/ReceivedSwapsHistoryPanel';
 import { UnifiedRequestHistory } from './panels/UnifiedRequestHistory';
 import { InactiveEmployeesPanel } from './panels/InactiveEmployeesPanel';
+import { MobileStaffPanel } from './panels/MobileStaffPanel';
 import { ShiftEditorModal } from './modals/ShiftEditorModal';
 import { PKEventModal } from './modals/PKEventModal';
 import { RequestTimeOffModal } from './modals/RequestTimeOffModal';
@@ -1230,6 +1231,7 @@ export default function App() {
   
   // Mobile admin state
   const [mobileAdminDrawerOpen, setMobileAdminDrawerOpen] = useState(false);
+  const [mobileStaffPanelOpen, setMobileStaffPanelOpen] = useState(false);
   const [mobileAdminTab, setMobileAdminTab] = useState('schedule'); // 'schedule' | 'requests' | 'comms'
   const [mobileAdminChangePasswordOpen, setMobileAdminChangePasswordOpen] = useState(false);
   const [quickViewEmployee, setQuickViewEmployee] = useState(null);
@@ -2981,6 +2983,17 @@ export default function App() {
                       <Trash2 size={9} />
                       Clear Wk {activeWeek}
                     </button>
+                    <button
+                      onClick={() => {
+                        const weekDates = activeWeek === 1 ? week1 : week2;
+                        handleAutofillPKWeek(weekDates, activeWeek);
+                      }}
+                      className="px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1"
+                      style={{ backgroundColor: THEME.event.pkBg, color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}` }}
+                    >
+                      <BookOpen size={9} />
+                      PK Wk {activeWeek}
+                    </button>
                   </div>
                 )}
               </div>
@@ -3058,12 +3071,90 @@ export default function App() {
                   }
                 }}
                 onNameClick={(emp) => setQuickViewEmployee(emp)}
+                onHeaderClick={(date) => setEditingColumnDate(date)}
               />
+
+              {hiddenStaff.length > 0 && (
+                <div className="mt-3">
+                  <CollapsibleSection
+                    title="Hidden from Schedule"
+                    icon={UserX}
+                    iconColor={THEME.text.muted}
+                    badge={hiddenStaff.length}
+                    badgeColor={THEME.text.muted}
+                    defaultOpen={false}
+                  >
+                    <div className="flex flex-wrap gap-2">
+                      {hiddenStaff.map(emp => (
+                        <div key={emp.id} className="flex items-center gap-2 px-2 py-1 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
+                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: emp.isAdmin ? THEME.accent.purple + '30' : THEME.bg.elevated, color: emp.isAdmin ? THEME.accent.purple : THEME.text.muted }}>
+                            {emp.name.charAt(0)}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-medium flex items-center gap-1" style={{ color: THEME.text.primary }}>
+                              {emp.name}
+                              {emp.isAdmin && <Shield size={8} style={{ color: THEME.accent.purple }} />}
+                            </span>
+                            <span className="text-xs" style={{ color: THEME.text.muted }}>
+                              {!emp.active ? 'Inactive' : 'Hidden Admin'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                </div>
+              )}
             </>
           ) : mobileAdminTab === 'requests' ? (
             <div className="space-y-3">
+              {/* Admin's own requests (collapsed by default) */}
+              <CollapsibleSection
+                title="My Requests"
+                icon={User}
+                iconColor={THEME.accent.cyan}
+                badge={(
+                  timeOffRequests.filter(r => r.employeeEmail === currentUser?.email && r.status === 'pending').length
+                  + shiftOffers.filter(o => o.offererEmail === currentUser?.email && ['awaiting_recipient', 'awaiting_admin'].includes(o.status)).length
+                  + shiftSwaps.filter(s => s.initiatorEmail === currentUser?.email && ['awaiting_partner', 'awaiting_admin'].includes(s.status)).length
+                ) || undefined}
+                badgeColor={THEME.status.warning}
+                defaultOpen={false}
+              >
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="text-xs font-medium mb-2" style={{ color: THEME.text.secondary }}>Time Off</h4>
+                    <MyRequestsPanel
+                      requests={timeOffRequests}
+                      currentUserEmail={currentUser.email}
+                      onCancel={cancelTimeOffRequest}
+                    />
+                  </div>
+                  {shiftOffers.some(o => o.offererEmail === currentUser.email) && (
+                    <div>
+                      <h4 className="text-xs font-medium mb-2" style={{ color: THEME.text.secondary }}>Take My Shift</h4>
+                      <MyShiftOffersPanel
+                        offers={shiftOffers}
+                        currentUserEmail={currentUser.email}
+                        onCancel={cancelShiftOffer}
+                      />
+                    </div>
+                  )}
+                  {shiftSwaps.some(s => s.initiatorEmail === currentUser.email) && (
+                    <div>
+                      <h4 className="text-xs font-medium mb-2" style={{ color: THEME.text.secondary }}>Shift Swaps</h4>
+                      <MySwapsPanel
+                        swaps={shiftSwaps}
+                        currentUserEmail={currentUser.email}
+                        onCancel={cancelSwapRequest}
+                      />
+                    </div>
+                  )}
+                </div>
+              </CollapsibleSection>
+
               {/* Time Off */}
-              <CollapsibleSection 
+              <CollapsibleSection
                 title="Time Off Requests" icon={Calendar} iconColor={THEME.accent.cyan}
                 badge={timeOffRequests.filter(r => r.status === 'pending').length || undefined}
                 badgeColor={THEME.status.warning}
@@ -3124,7 +3215,19 @@ export default function App() {
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenOwnRequests={() => setAdminRequestModalOpen(true)}
           onOpenPK={() => setPkModalOpen(true)}
+          onExportPDF={() => generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement, timeOffRequests, events)}
+          onOpenStaff={() => setMobileStaffPanelOpen(true)}
           pendingRequestCount={pendingRequestCount}
+        />
+
+        <MobileStaffPanel
+          isOpen={mobileStaffPanelOpen}
+          onClose={() => setMobileStaffPanelOpen(false)}
+          employees={employees}
+          onEdit={(emp) => { setEditingEmp(emp); setEmpFormOpen(true); }}
+          onAdd={() => { setEditingEmp(null); setEmpFormOpen(true); }}
+          onReactivate={reactivateEmployee}
+          onDelete={deleteEmployee}
         />
 
         {/* Bottom Tab Bar (Phase 6) */}
@@ -3216,6 +3319,31 @@ export default function App() {
           onSchedule={handleBulkPK}
           employees={employees}
         />
+
+        {/* Employee Form Modal (mobile admin: reached via MobileStaffPanel) */}
+        <EmployeeFormModal
+          isOpen={empFormOpen}
+          onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }}
+          onSave={saveEmployee}
+          onDelete={deleteEmployee}
+          employee={editingEmp}
+          currentUser={currentUser}
+          showToast={showToast}
+          suggestedPassword={editingEmp ? undefined : `emp-${String(employees.length + 1).padStart(3, '0')}`}
+        />
+
+        {/* Column Header Editor (mobile admin: tap day header in Edit Mode) */}
+        {editingColumnDate && (
+          <ColumnHeaderEditor
+            date={editingColumnDate}
+            storeHours={getStoreHoursForDate(editingColumnDate)}
+            target={getStaffingTarget(editingColumnDate)}
+            storeHoursOverrides={storeHoursOverrides}
+            staffingTargetOverrides={staffingTargetOverrides}
+            onSave={saveColumnOverrides}
+            onClose={() => setEditingColumnDate(null)}
+          />
+        )}
 
         {/* Auto-populate confirmation modal */}
         {autoPopulateConfirm && (

@@ -2,7 +2,16 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.21.0 (S61: Meetings + PK shift types — orthogonal `type` field, bulk PK endpoint, offer/swap work-only guards)
+ * Version: 2.22.0 (Sarvi post-demo batch: Employees tab gains `defaultSection` column U for autofill)
+ *
+ * Changes in v2.22.0:
+ * - Employees tab gains column U: `defaultSection` (values mens|womens|cashier|backupCashier|floorMonitor|none, default 'none').
+ *   Frontend autofill's `createShiftFromAvailability` uses `employee.defaultSection || 'none'`
+ *   instead of hardcoding 'none'. Backend changes: `createEmployeesTab` headers array updated;
+ *   `saveEmployee` is header-driven so no row-mapper change needed. Back-compat: missing
+ *   column falls through to 'none'.
+ * - Manual step (one-time, live Sheet): add header `defaultSection` to column U of Employees tab.
+ *   Done on live Sheet 2026-04-18 per JR; redeployed as v2.22.
  *
  * Changes in v2.21.0:
  * - Shifts tab gains two new columns: `type` ('work' | 'meeting' | 'pk') and `note`.

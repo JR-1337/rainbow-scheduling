@@ -11,7 +11,7 @@ import React, { useState, useMemo } from 'react';
 import {
   ChevronLeft, ChevronRight, X, Calendar, Star, Eye, LogOut, Shield,
   Loader, ArrowRightLeft, ArrowRight, Bell, Menu, Key, Settings,
-  Check, ClipboardList, MessageSquare, User, Save, Mail, AlertCircle, Edit3, BookOpen
+  Check, ClipboardList, MessageSquare, User, Save, Mail, AlertCircle, Edit3, BookOpen, FileText, Users
 } from 'lucide-react';
 
 import {
@@ -27,7 +27,7 @@ import { EVENT_TYPES } from './constants';
 // ═══════════════════════════════════════════════════════════════════════════════
 export const MobileAdminDrawer = ({
   isOpen, onClose, currentUser, onLogout,
-  onOpenChangePassword, onOpenSettings, onOpenOwnRequests, onOpenPK,
+  onOpenChangePassword, onOpenSettings, onOpenOwnRequests, onOpenPK, onExportPDF, onOpenStaff,
   pendingRequestCount = 0
 }) => {
   if (!isOpen) return null;
@@ -82,6 +82,17 @@ export const MobileAdminDrawer = ({
               Schedule PK
             </button>
           )}
+          {/* Staff */}
+          {onOpenStaff && (
+            <button
+              onClick={() => { onOpenStaff(); onClose(); }}
+              className="w-full px-4 py-2.5 text-sm font-medium rounded-lg flex items-center gap-3"
+              style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}` }}
+            >
+              <Users size={16} />
+              Staff
+            </button>
+          )}
           {/* Admin Settings */}
           {onOpenSettings && (
             <button
@@ -93,18 +104,19 @@ export const MobileAdminDrawer = ({
               Admin Settings
             </button>
           )}
+          {/* Export Schedule PDF */}
+          {onExportPDF && (
+            <button
+              onClick={() => { onExportPDF(); onClose(); }}
+              className="w-full px-4 py-2.5 text-sm font-medium rounded-lg flex items-center gap-3"
+              style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}` }}
+            >
+              <FileText size={16} />
+              Export Schedule PDF
+            </button>
+          )}
         </div>
-        
-        {/* Info */}
-        <div className="p-3" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
-          <div className="p-3 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
-            <p className="text-xs font-semibold mb-1.5" style={{ color: THEME.text.muted }}>MOBILE VIEW</p>
-            <p className="text-xs" style={{ color: THEME.text.secondary, lineHeight: 1.5 }}>
-              Employee management and PDF export are available on desktop.
-            </p>
-          </div>
-        </div>
-        
+
         {/* Change Password + Logout */}
         <div className="p-3 space-y-2">
           {onOpenChangePassword && (
@@ -139,7 +151,7 @@ export const MobileAdminScheduleGrid = ({
   employees, shifts, events = {}, dates, loggedInUser, getEmployeeHours,
   timeOffRequests = [], getScheduledCount, getStaffingTarget,
   staffingTargetOverrides = {}, storeHoursOverrides = {},
-  isEditMode = false, onCellClick, onNameClick
+  isEditMode = false, onCellClick, onNameClick, onHeaderClick
 }) => {
   const scrollContainerRef = React.useRef(null);
   const NAME_COL_WIDTH = 72;
@@ -211,14 +223,18 @@ export const MobileAdminScheduleGrid = ({
                 const overTarget = scheduled > target;
                 const hasOverride = !!storeHoursOverrides[dateStr] || staffingTargetOverrides[dateStr] !== undefined;
                 
+                const canEditHeader = isEditMode && !isPast && typeof onHeaderClick === 'function';
                 return (
-                  <th key={i} style={{ 
-                    position: 'sticky', top: 0, zIndex: 20,
-                    width: CELL_WIDTH, minWidth: CELL_WIDTH, height: HEADER_HEIGHT,
-                    backgroundColor: isToday ? THEME.accent.purple + '20' : hol ? THEME.status.warning + '15' : THEME.bg.tertiary,
-                    borderBottom: isToday ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : `1px solid ${THEME.border.default}`,
-                    padding: '2px', textAlign: 'center'
-                  }}>
+                  <th key={i}
+                    onClick={canEditHeader ? () => onHeaderClick(date) : undefined}
+                    style={{
+                      position: 'sticky', top: 0, zIndex: 20,
+                      width: CELL_WIDTH, minWidth: CELL_WIDTH, height: HEADER_HEIGHT,
+                      backgroundColor: isToday ? THEME.accent.purple + '20' : hol ? THEME.status.warning + '15' : THEME.bg.tertiary,
+                      borderBottom: isToday ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : `1px solid ${THEME.border.default}`,
+                      padding: '2px', textAlign: 'center',
+                      cursor: canEditHeader ? 'pointer' : 'default',
+                    }}>
                     <p className="font-semibold" style={{ color: isToday ? THEME.accent.purple : hol ? THEME.status.warning : THEME.text.primary, fontSize: '10px' }}>
                       {getDayName(date).slice(0, 3)}
                     </p>
