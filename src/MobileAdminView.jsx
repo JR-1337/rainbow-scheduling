@@ -21,6 +21,7 @@ import {
 
 import { MobileScheduleGrid } from './MobileEmployeeView';
 import { EVENT_TYPES } from './constants';
+import { Button } from './components/Button';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN MOBILE HAMBURGER DRAWER
@@ -63,80 +64,95 @@ export const MobileAdminDrawer = ({
         {/* Quick Actions */}
         <div className="p-3 space-y-2" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
           {/* Own Shift Changes */}
-          <button
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={Calendar}
+            fullWidth
             onClick={() => { onOpenOwnRequests(); onClose(); }}
-            className="w-full px-4 py-3 text-sm font-medium rounded-lg flex items-center gap-3 hover:opacity-90"
-            style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}
+            className="hover:opacity-90"
+            style={{ justifyContent: 'flex-start', gap: 12 }}
           >
-            <Calendar size={16} />
             My Shift Changes
-          </button>
+          </Button>
           {/* Schedule PK (bulk) */}
           {onOpenPK && (
-            <button
+            <Button
+              variant="secondary"
+              size="md"
+              leftIcon={BookOpen}
+              fullWidth
               onClick={() => { onOpenPK(); onClose(); }}
-              className="w-full px-4 py-2.5 text-sm font-medium rounded-lg flex items-center gap-3"
-              style={{ backgroundColor: THEME.event.pkBg, color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}` }}
+              style={{ backgroundColor: THEME.event.pkBg, color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}`, justifyContent: 'flex-start', gap: 12 }}
             >
-              <BookOpen size={16} />
               Schedule PK
-            </button>
+            </Button>
           )}
           {/* Staff */}
           {onOpenStaff && (
-            <button
+            <Button
+              variant="secondary"
+              size="md"
+              leftIcon={Users}
+              fullWidth
               onClick={() => { onOpenStaff(); onClose(); }}
-              className="w-full px-4 py-2.5 text-sm font-medium rounded-lg flex items-center gap-3"
-              style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}` }}
+              style={{ justifyContent: 'flex-start', gap: 12 }}
             >
-              <Users size={16} />
               Staff
-            </button>
+            </Button>
           )}
           {/* Admin Settings */}
           {onOpenSettings && (
-            <button
+            <Button
+              variant="secondary"
+              size="md"
+              leftIcon={Settings}
+              fullWidth
               onClick={() => { onOpenSettings(); onClose(); }}
-              className="w-full px-4 py-2.5 text-sm font-medium rounded-lg flex items-center gap-3"
-              style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}` }}
+              style={{ justifyContent: 'flex-start', gap: 12 }}
             >
-              <Settings size={16} />
               Admin Settings
-            </button>
+            </Button>
           )}
           {/* Export Schedule PDF */}
           {onExportPDF && (
-            <button
+            <Button
+              variant="secondary"
+              size="md"
+              leftIcon={FileText}
+              fullWidth
               onClick={() => { onExportPDF(); onClose(); }}
-              className="w-full px-4 py-2.5 text-sm font-medium rounded-lg flex items-center gap-3"
-              style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}` }}
+              style={{ justifyContent: 'flex-start', gap: 12 }}
             >
-              <FileText size={16} />
               Export Schedule PDF
-            </button>
+            </Button>
           )}
         </div>
 
         {/* Change Password + Logout */}
         <div className="p-3 space-y-2">
           {onOpenChangePassword && (
-            <button
+            <Button
+              variant="secondary"
+              size="md"
+              leftIcon={Key}
+              fullWidth
               onClick={() => { onOpenChangePassword(); onClose(); }}
-              className="w-full px-4 py-2.5 text-sm font-medium rounded-lg flex items-center gap-3"
-              style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}` }}
+              style={{ justifyContent: 'flex-start', gap: 12 }}
             >
-              <Key size={16} />
               Change Password
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={LogOut}
+            fullWidth
             onClick={() => { onLogout(); onClose(); }}
-            className="w-full px-4 py-3 text-sm font-medium rounded-lg flex items-center gap-3"
-            style={{ backgroundColor: THEME.bg.tertiary, color: THEME.status.error, border: `1px solid ${THEME.status.error}30` }}
+            style={{ backgroundColor: THEME.bg.tertiary, color: THEME.status.error, border: `1px solid ${THEME.status.error}30`, justifyContent: 'flex-start', gap: 12 }}
           >
-            <LogOut size={16} />
             Sign Out
-          </button>
+          </Button>
         </div>
       </div>
     </div>

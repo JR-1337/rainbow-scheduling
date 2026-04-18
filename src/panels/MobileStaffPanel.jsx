@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { UserCheck, Trash2, Plus, Edit3, Shield } from 'lucide-react';
 import { THEME } from '../App';
 import { MobileBottomSheet } from '../MobileEmployeeView';
+import { Button } from '../components/Button';
 
 export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, onReactivate, onDelete }) => {
   const [filter, setFilter] = useState('active');
@@ -71,49 +72,49 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
               </div>
               <div className="flex gap-1 flex-shrink-0">
                 {filter === 'active' && (
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    leftIcon={Edit3}
+                    iconSize={14}
                     onClick={() => onEdit(emp)}
-                    className="px-3 rounded-lg flex items-center gap-1 text-xs font-medium"
-                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}`, minHeight: 44 }}
                     aria-label={`Edit ${emp.name}`}
+                    style={{ backgroundColor: THEME.bg.elevated }}
                   >
-                    <Edit3 size={14} />
                     Edit
-                  </button>
+                  </Button>
                 )}
                 {filter === 'inactive' && (
                   <>
-                    <button
+                    <Button
+                      variant="recoverable"
+                      size="md"
                       onClick={() => onReactivate(emp.id)}
-                      className="px-3 rounded-lg text-xs font-medium"
-                      style={{ backgroundColor: THEME.status.success + '20', color: THEME.status.success, minHeight: 44 }}
+                      style={{ backgroundColor: THEME.status.success + '20', color: THEME.status.success, border: 'none' }}
                     >
                       Reactivate
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="md"
+                      leftIcon={Trash2}
+                      iconSize={14}
                       onClick={() => onDelete(emp.id)}
-                      className="px-3 rounded-lg text-xs font-medium flex items-center gap-1"
-                      style={{ backgroundColor: THEME.status.error + '20', color: THEME.status.error, minHeight: 44 }}
                       aria-label={`Remove ${emp.name}`}
+                      style={{ backgroundColor: THEME.status.error + '20', border: 'none' }}
                     >
-                      <Trash2 size={14} />
                       Remove
-                    </button>
+                    </Button>
                   </>
                 )}
                 {filter === 'deleted' && (
-                  <button
+                  <Button
+                    variant="recoverable"
+                    size="md"
                     onClick={() => onReactivate(emp.id)}
-                    className="px-3 rounded-lg text-xs font-medium"
-                    style={{
-                      backgroundColor: THEME.action.recoverable.bg,
-                      color: THEME.action.recoverable.fg,
-                      border: `1px solid ${THEME.action.recoverable.border}`,
-                      minHeight: 44,
-                    }}
                   >
                     Restore
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -129,18 +130,16 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
             paddingBottom: 'env(safe-area-inset-bottom)',
           }}
         >
-          <button
+          <Button
+            variant="primary"
+            size="lg"
+            leftIcon={Plus}
+            fullWidth
             onClick={onAdd}
-            className="w-full px-4 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold"
-            style={{
-              background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
-              color: THEME.accent.text,
-              minHeight: 48,
-            }}
+            style={{ fontWeight: 600 }}
           >
-            <Plus size={16} />
             Add Employee
-          </button>
+          </Button>
         </div>
       )}
     </MobileBottomSheet>
