@@ -18,6 +18,41 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-18 -- MobileStaffPanel is a bottom-sheet, not a centered Modal
+Decision: `src/panels/MobileStaffPanel.jsx` renders via `MobileBottomSheet` (imported directly from `./MobileEmployeeView`, not App re-export). Z-150 anchored to bottom. 44px min touch targets on chips + action buttons. Safe-area-inset-bottom applied to list padding and sticky Add button.
+Rationale: Audit item #14. Z-hack to raise EmployeeFormModal above a centered staff modal was rejected in favor of a proper mobile pattern. Sheet conversion + later drawer-close + form-reopen-on-close combo yields correct stacking without z-games.
+Confidence: H - JR phone-smoked on 7a13cab LIVE (2026-04-18)
+
+## 2026-04-18 -- MobileAdminDrawer auto-closes on any action tap
+Decision: `src/App.jsx:3233+` every drawer handler (`onOpenStaff`, `onOpenSettings`, `onOpenOwnRequests`, `onOpenPK`, `onOpenChangePassword`, `onExportPDF`, `onLogout`) first calls `setMobileAdminDrawerOpen(false)` before triggering its action.
+Rationale: Drawer is z-200 (top of stack). Leaving it open blocked the z-150 staff sheet and z-100 form behind it; taps fell through to the drawer. Auto-close is standard mobile nav pattern and removes the stacking concern entirely.
+Confidence: H - JR phone-confirmed 2026-04-18
+
+## 2026-04-18 -- EmployeeFormModal reopens Staff bottom-sheet via ref+effect, not state flag
+Decision: `src/App.jsx:1255+` uses `reopenStaffAfterFormRef = useRef(false)` set true in `onEdit`/`onAdd`, watched by `useEffect` on `empFormOpen`. When form closes, effect fires, flag clears, sheet reopens.
+Rationale: Initial state-flag approach (`reopenStaffAfterForm` + inline onClose) did not reliably fire after the close-commit. Ref+effect decouples from setState batching and inline-closure timing.
+Confidence: H - JR phone-confirmed "works" on 7a13cab (2026-04-18)
+
+## 2026-04-18 -- save/delete/reactivate employee revert optimistic state on API failure
+Decision: `saveEmployee`, `deleteEmployee`, `reactivateEmployee` capture `prevEmployees = employees` before the optimistic `setEmployees`. On `!result.success`, revert via `setEmployees(prevEmployees)`, return `false`. Also: `setEditingEmp(null)` only runs on success, so EmployeeFormModal stays labelled "Edit Employee" while user retries.
+Rationale: Prior code showed error toast but kept the optimistic UI change, giving the user a false "it worked" signal. Also flipped modal title to "Add Employee" on save-failure retry. Both confirmed by JR phone-smoke.
+Confidence: H - JR phone-confirmed revert behavior on 7a13cab (2026-04-18)
+
+## 2026-04-18 -- THEME.action.recoverable and THEME.action.destructiveTonal tokens
+Decision: `src/theme.js` adds `action: { recoverable: {bg, fg, border}, destructiveTonal: {bg, fg, border} }`. Recoverable = brand-blue tonal (OTR primary at 20%/40% + `#60A5FA` text). DestructiveTonal = status.error tonal.
+Rationale: Restore-button color was inlined as hardcoded `rgba(4,83,163,0.20)` / `#60A5FA` in two panels. Token unifies the "recoverable administrative" affordance per DECISIONS 2026-04-18 Restore button tonal-blue + opacity restructure. Destructive tonal added for future unification of the Remove pattern.
+Confidence: H - migrated in `MobileStaffPanel.jsx` + `InactiveEmployeesPanel.jsx` on f1a5397 (2026-04-18)
+
+## 2026-04-18 -- MobileBottomSheet pill handle is tap-to-close (not drag-to-dismiss)
+Decision: `src/MobileEmployeeView.jsx:610+` pill handle is wrapped in a 48x20 button that fires `onClose` on tap. Visual pill unchanged (40x4 rounded bar, muted at 40% alpha).
+Rationale: Pill suggests drag-to-dismiss affordance. JR noticed the mismatch; drag-gesture is non-trivial and not currently needed. Tap-to-close matches the visual cue without adding gesture code. X-in-corner still works as secondary close.
+Confidence: H - JR phone-confirmed (2026-04-18)
+
+## 2026-04-18 -- Pull-to-refresh stays native; do NOT suppress overscroll-behavior
+Decision: `src/index.css` carries no `overscroll-behavior` or `touch-action` lock on html/body/#root. Native Chrome pull-to-refresh stays enabled.
+Rationale: Suppression was introduced then reverted same session (commits `e01c2e5` -> `ea4b81c`). JR confirmed the refresh prompt was not interfering with any intentional gesture; killing it removed useful behavior.
+Confidence: H - reverted and re-confirmed 2026-04-18
+
 ## 2026-04-18 -- PDF greyscale redundant encoding for B&W break-room printer
 Decision: `src/pdf/generate.js` encodes role/OT/holiday/announcement on a non-hue channel in addition to color. Role: letter-glyph prefix (`C:`, `B:`, `M:`, `W:`, `F:`) + per-role border style (solid/dashed/dotted, 2-3px). OT (>=44h): bold + trailing `*`. Near-OT (40-43h): bold. Holiday: heavy black top border + "HOL" caption. Announcement: italic body + `[!]` glyph + double top border.
 Rationale: Break-room printer is B&W; hue-only encoding collapses into indistinguishable grey. Per `color.md` §8 "contrast > specific hue" + `applied-accessibility.md` §2 "make it right in black and white" + WCAG 1.4.1. Colors retained for color printers -- pure redundancy.

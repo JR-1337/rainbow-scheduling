@@ -20,14 +20,15 @@ Rules:
 ## Active
 
 - Test Sarvi-batch end-to-end -- next: JR + Sarvi smoke 10 items per plan verification section (frontend LIVE, Apps Script v2.22 LIVE)
-- Mobile admin parity smoke -- next: JR phone smoke the 7-item checklist from mobile-parity deploy (`dc2866f`)
-- Adversarial audit Phase C smoke -- next: JR phone smoke bottom-sheet staff panel, 44px targets, column-header Edit3 affordance (post-commit f1a5397)
-- Adversarial audit Phase D -- next: Button.jsx variants, AdaptiveModal primitive, icon-scale sweep (risky; defer until after Phase C smoke)
+- Phase A+B+C save-failure smoke -- next: JR Wi-Fi-off test save/delete failure paths on phone; edit-modal must stay on "Edit" (not "Add"), state must revert on failure (post-commit 7a13cab LIVE)
+- Adversarial audit Phase D -- next: Button.jsx variants, AdaptiveModal primitive, icon-scale sweep; NOT until Phase A-C verified
+- Adversarial audit Phase E -- next: unused-import sweep (per LESSONS: mechanical only), App.jsx extraction multi-session, plaintext-password branch removal
 - Backup-cash role clarification -- next: JR asks Sarvi whether she wants a NEW role vs existing `backupCashier`
 - CF Worker SWR cache -- next: design KV cache key from `getAllData` payload; flip `API_URL` in src/App.jsx
 - Welcome email on new-employee create -- trigger in EmployeeFormModal create flow, send default emp-XXX password
 - Schedule-change notifications to Sarvi -- notify when non-Sarvi-or-JR edits schedule; hook after each Code.gs write handler
 - Payroll aggregator path 1 -- blocked by demo go-ahead; see Blocked
+- [PARKED, do not surface] Staff-cell action menu -- move Fill Wk / Clear Wk / PK-week controls into each employee's "Staff" cell on the schedule; add a dropdown of all staff so admin can bulk-book or clear an entire week for one picked employee from that menu. Also investigate current Fill Wk / Clear Wk behavior -- JR wants full-fill to cover everyone. Raised 2026-04-18, explore later, do not ask
 
 ## Blocked
 
@@ -41,8 +42,9 @@ Rules:
 
 ## Verification
 
-- Last validated: `npm run build` PASS (2026-04-18)
-- Last validated: HEAD `68615fe` pushed to origin/main; Rainbow prod LIVE at https://rainbow-scheduling.vercel.app
+- Last validated: `npm run build` PASS on 7a13cab (2026-04-18)
+- Last validated: HEAD `7a13cab` pushed to origin/main; Rainbow prod LIVE at https://rainbow-scheduling.vercel.app (bundle index-BeNVZ0AR.js confirmed via curl)
+- Last validated: Phase A+B+C shipped; JR phone-confirmed: #1 badge increments, #4 reactivate, Staff bottom-sheet renders, 44px targets, safe-area, #8 column-header pencil, Edit-form stacking above drawer, Staff-reopen on form close (ref+effect 7a13cab)
 - Last validated: pitch deck "two weeks" fix live at https://rainbow-pitch.vercel.app (2026-04-18)
 - Last validated: Apps Script v2.22 deployed + Employees column U `defaultSection` added to live Sheet (2026-04-18 per JR)
 - Missing validation: Sarvi-batch 10 items not yet hands-on tested by JR + Sarvi
@@ -52,6 +54,7 @@ Rules:
 
 ## Completed
 
+- [2026-04-18] Adversarial audit Phase A+B+C shipped (`2914ec7`, `f1a5397`, `da944be`, `e01c2e5`, `ec93666`, `3a161cb`, `4ee85d0`, `ea4b81c`, `7a13cab`) -- badge field, save/delete/reactivate return+revert, MobileStaffPanel as bottom-sheet, 44px touch targets, safe-area padding, column-header pencil + mobile editor bottom-sheet, tokenize recoverable color, drawer auto-close on action, tap-to-close pill, employee form reopens staff sheet on close
 - [2026-04-18] Sarvi batch 10 items shipped (plan `so-sarvi-gave-me-quizzical-perlis.md`) -- pitch deck 3-wk typo fix (LIVE), PK Saturday 10-10:45 default, bulk Autofill PK Week button, employee defaultSection field, PDF greyscale redundant encoding (glyph + border style + bold/asterisk), Restore button tonal-blue fix, Hidden-from-Schedule collapsed by default, Former Staff removed from grid, autofill toast enhanced with week context
 - [2026-04-17] CONTEXT migration committed (`1f073d7`) -- docs/* -> CONTEXT/*, thin Claude + Cursor adapters
 - [2026-04-14] S65 PDF Contact Admin filter (`4477325`) -- verified in generate.js; PRIMARY_CONTACT_EMAIL in src/constants.js

@@ -179,6 +179,26 @@ Affirmations: 0
 
 ## Workflow and process
 
+## [PROJECT] -- Push and confirm deploy before handing JR a phone-smoke checklist
+Lesson: After any commit JR will phone-test, `git push origin main` AND state "pushed, Vercel redeploys in ~60s, hard-refresh first". Never hand over test steps while prod serves old bundle.
+Context: 2026-04-18 -- shipped Phase A+B+C locally, wrote 9-step checklist, JR tested on prod (still old code), results for items 5/8/9 were false negatives, wasted his time and trust.
+Affirmations: 0
+
+## [PROJECT] -- Hard-refresh is not always enough; verify bundle hash from view-source
+Lesson: When JR reports "not working" after a fresh-looking reload, curl the prod URL for the current `index-*.js` hash and tell him to open `view-source:` on his phone and search for it. If absent, browser cache is the cause; if present, real bug to hunt.
+Context: 2026-04-18 -- Staff-reopen fix was deployed and verified live (curl matched local build), but JR's phone still served a cached bundle. Hard-refresh instructions alone did not evict it.
+Affirmations: 0
+
+## [PROJECT] -- Optimistic updates must capture prev state and revert on API failure
+Lesson: Every `setEmployees(...)` / `setShifts(...)` / `setX(...)` that precedes an `apiCall` must capture `const prevX = X;` before the mutation. On `!result.success`: `setX(prevX)` AND `showToast('error', ...)` AND `return false`. Showing an error toast while leaving the optimistic change in place gives the user a false-positive signal.
+Context: Employee save/delete/reactivate flows pre-2026-04-18 showed error but kept UI in post-save state. JR caught this during Wi-Fi-off smoke. Pattern applies to any new mutation path.
+Affirmations: 0
+
+## [PROJECT] -- Modal close-handler side effects go in useEffect on open-flag, not inline onClose
+Lesson: For "do X when the modal finishes closing" (e.g. reopen parent sheet, reset another piece of state), use `useEffect(() => { if (!open && flagRef.current) { flagRef.current = false; doX(); } }, [open])` with a ref-held flag set when the modal opened. Do NOT put the logic inline in the Modal's onClose alongside the `setOpen(false)` call.
+Context: 2026-04-18 -- inline onClose with a state flag for reopening MobileStaffPanel after EmployeeFormModal close did not reliably fire. Ref+effect fixed it. Suspected batched-state / stale-closure timing.
+Affirmations: 0
+
 ## [PROJECT] -- Follow approved plan verbatim
 Lesson: Do not ask "bundle or split?" or "what's next?" mid-execution. If ambiguous, re-read plan file; do not re-ask JR.
 Context: Plan sign-off removes decisions from the loop. Re-asking wastes context and erodes trust.
