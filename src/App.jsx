@@ -15,6 +15,7 @@ import { useUnsavedWarning } from './hooks/useUnsavedWarning';
 import { useDismissOnOutside } from './hooks/useDismissOnOutside';
 import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
+import { useAnnouncements } from './hooks/useAnnouncements';
 import { EmployeeRow } from './components/EmployeeRow';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
@@ -208,72 +209,16 @@ export default function App() {
   
   // Helper to check if current period is in edit mode (defaults to true for new periods)
   const isCurrentPeriodEditMode = editModeByPeriod[periodIndex] ?? true;
-  const [announcements, setAnnouncements] = useState({}); // Keyed by periodStartDate (YYYY-MM-DD)
-  const [savingAnnouncement, setSavingAnnouncement] = useState(false);
-  
-  // Get periodStartDate string for current period (must be calculated inline since startDate isn't available yet)
-  const getCurrentPeriodStartDate = () => {
+
+  const currentPeriodStartDate = (() => {
     const sd = new Date(PAY_PERIOD_START.getFullYear(), PAY_PERIOD_START.getMonth(), PAY_PERIOD_START.getDate() + (periodIndex * 14));
     return toDateKey(sd);
-  };
-  
-  // Get/set announcement for current period using startDate as key
-  const currentPeriodStartDate = getCurrentPeriodStartDate();
-  const currentAnnouncement = announcements[currentPeriodStartDate] || { subject: '', message: '' };
-  const setCurrentAnnouncement = (ann) => setAnnouncements(prev => ({ ...prev, [currentPeriodStartDate]: ann }));
-  
-  // Save announcement to backend
-  const saveAnnouncement = async (announcement) => {
-    if (!currentUser?.email) return;
-    
-    const periodStartDate = getCurrentPeriodStartDate();
-    // If both subject and message are empty, delete instead of save
-    if (!announcement.subject && !announcement.message) {
-      await clearAnnouncement();
-      return;
-    }
-    
-    setSavingAnnouncement(true);
-    const result = await apiCall('saveAnnouncement', {
-      periodStartDate: periodStartDate,
-      subject: announcement.subject,
-      message: announcement.message
-    });
-    
-    if (result.success) {
-      // Update local state with the saved announcement (includes id and updatedAt)
-      setAnnouncements(prev => ({
-        ...prev,
-        [periodStartDate]: result.data.announcement
-      }));
-    } else {
-      alert('Failed to save announcement: ' + (result.error?.message || 'Unknown error'));
-    }
-    setSavingAnnouncement(false);
-  };
-  
-  // Clear/delete announcement from backend
-  const clearAnnouncement = async () => {
-    if (!currentUser?.email) return;
-    
-    const periodStartDate = getCurrentPeriodStartDate();
-    // Always try to delete - backend will handle if not found
-    setSavingAnnouncement(true);
-    const result = await apiCall('deleteAnnouncement', {
-      periodStartDate: periodStartDate
-    });
-    
-    if (!result.success) {
-      // NOT_FOUND is fine - means there was nothing to delete
-    }
-    setSavingAnnouncement(false);
-    
-    // Clear local state
-    setAnnouncements(prev => ({
-      ...prev,
-      [periodStartDate]: { subject: '', message: '' }
-    }));
-  };
+  })();
+  const {
+    currentAnnouncement, setCurrentAnnouncement,
+    saveAnnouncement, clearAnnouncement, savingAnnouncement,
+    setAnnouncements,
+  } = useAnnouncements({ periodStartDate: currentPeriodStartDate, userEmail: currentUser?.email });
   
   const [inactivePanelOpen, setInactivePanelOpen] = useState(false);
   const [tooltipData, setTooltipData] = useState(null);
