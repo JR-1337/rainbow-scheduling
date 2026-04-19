@@ -17,6 +17,11 @@ Rules:
 - ASCII operators only.
 -->
 
+## [PROJECT] -- PDF HTML must declare UTF-8 charset AND avoid em-dashes
+Lesson: The PDF printout is consumed in Safari (Sarvi's iPad). Any generated HTML opened via Blob must ship `<meta charset="utf-8">` AND use `type: 'text/html;charset=utf-8'` on the Blob, otherwise old Safari falls back to Latin-1 and multi-byte UTF-8 chars (em-dash, bullet) render as garbage glyphs. Belt-and-braces: keep em-dashes out of PDF source entirely; use ASCII hyphens. Also: iOS Safari ignores `<a download>` on blob URLs and saves the raw blob as `*.blob`. Popup-blocked fallback must navigate the current tab to the blob URL instead of forcing a download.
+Context: 2026-04-19 (`c002046`) -- Sarvi reported an "ae" glyph in the PDF banner and exports saving as `.blob` files. Root cause triple: no charset meta + em-dash in dateline + `<a download>` fallback on iOS Safari.
+Affirmations: 0
+
 ## [PROJECT] -- Hardcoded <option> ranges silently truncate widened data
 Lesson: When a form <select> has a fixed Array.from length for options (e.g. hours 6-19), any data value outside that range falls back to the first option on render and re-saves as the wrong value. Always size option lists to cover migration-widened ranges with headroom.
 Context: 2026-04-19 -- EmployeeFormModal availability/defaultShift dropdowns capped at 19:00. v2.24.0 widener wrote 20:00 to Mon-Fri end. Playwright smoke showed Sadie's Mon end as 06:00 in the UI even though the sheet had 20:00. Saving would have silently truncated back to 06:00. Fix: extend range to 22:00 (length 17).

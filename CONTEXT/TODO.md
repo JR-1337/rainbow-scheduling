@@ -47,17 +47,18 @@ Rules:
 - Missing validation: Sarvi iPad white-screen fixes not retested yet (theme.js localStorage guard + plugin-legacy)
 - Missing validation: new Backup Cash role not smoked on prod (ShiftEditorModal picker, EmployeeFormModal defaultSection, PDF legend glyph 'B')
 - Missing validation: PDF employee-facing hours removal not smoked on prod (generate + print a test PDF)
+- Missing validation: PDF UTF-8 charset + em-dash sweep + iOS `.blob` download fix not retested on Sarvi's iPad (shipped `c002046`)
 - Missing validation: Sarvi-batch 10 items not yet hands-on tested by JR + Sarvi
 - Missing validation: no automated test suite; manual Playwright smoke only
 
 ## Completed
 
+- [2026-04-19] PDF encoding + iOS Safari export fixes shipped (`c002046`). (a) Added `<meta charset="utf-8">` + `text/html;charset=utf-8` Blob MIME; without charset declared, old Safari fell back to Latin-1 and rendered em-dashes as garbage glyphs (the "ae" symbol Sarvi reported). (b) Swept all `—` out of `src/pdf/generate.js` -> ASCII `-`. (c) Popup-blocked fallback: was `<a download="...html">.click()` which iOS Safari ignored and saved as `*.blob`; now navigates current tab to the blob URL (HTML has its own in-page Print button).
 - [2026-04-19] PDF hours + OT asterisks removed from employee-facing printout (`e7bc416`). Left-column row now shows employee name only; `calcWeekHours` + `computeDayUnionHours` import + legend `* / **` entry all dropped. ESA OT surface lives in admin web UI, not the employee PDF.
 - [2026-04-19] iPad white-screen fixes shipped (`35288f5`, `2362575`). Fix 1: `theme.js` localStorage.getItem wrapped in try/catch (was unguarded at module-init; Safari Private Browsing SecurityError crashed the bundle before React mounted). Fix 2: added `@vitejs/plugin-legacy@5` with `targets: ['ios >= 11', 'safari >= 11']` + `modernPolyfills: true` — modern bundle unchanged (477 kB), legacy bundle (495 kB) + polyfills (83 kB) lazy-loaded via nomodule on old Safari. Pending Sarvi retest.
 - [2026-04-19] EmployeeFormModal mobile overlapping rows fixed (`8a517bf`). Three rows (Employment Type, Active/Inactive pill, Admin pill) switched from `flex items-center justify-between` to `flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-0`. Active + Admin pair also stacks vertically at <640px instead of splitting narrow row in half.
 - [2026-04-19] New `Backup Cash` role shipped + existing `backupCashier` display renamed to `Cashier 2` (`b0c5704`). constants.js adds `{ id: 'backupCash', name: 'Backup', fullName: 'Backup Cash' }`; theme.js roles.backupCash `#D08BC3` (cash-family purple, lighter than existing); pdf/generate.js glyph `backupCashier` 'B' -> '2', new `backupCash: 'B'` + dotted 3px border; Code.gs defaultSection enum comment updated. All pickers data-driven off ROLES so ShiftEditorModal, EmployeeFormModal defaultSection, and PDF legend flow through.
 - [2026-04-19] Schedule-change notifications to Sarvi shipped (backend v2.25.0). New `sendScheduleChangeNotification_(caller, summary)` called at success tail of `saveShift` and `batchSaveShifts`. Short-circuits when caller.email matches CONFIG.ADMIN_EMAIL (Sarvi) OR caller.isOwner === true (JR), so their own edits stay silent. PK bulk + announcement + live-periods + staffing-targets edits intentionally NOT notified per scope decision (shift writes only). One email per action (no batching). JR must redeploy Apps Script to v2.25.0 for this to go live. Playwright smoke of 3 handoff items (Auto-Fill defaultShift precedence, PK Select-eligible 19 of 24, mobile 502x800 form render) all PASS — decouple plan fully verified on prod.
-- [2026-04-19] Per-day defaults decouple + availability widening shipped (`3460c69` + 7 predecessors). Employees col N `defaultShift` (JSON per-day `{start,end}`); Auto-Fill prefers defaultShift, falls back to availability; `availability.available` stays the gate. Apps Script v2.24.0 deployed.
 
 <!-- TEMPLATE
 ## Active
