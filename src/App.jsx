@@ -11,7 +11,6 @@ import { hasApprovedTimeOffForDate } from './utils/requests';
 import { CollapsibleSection } from './components/CollapsibleSection';
 import { LoginScreen } from './components/LoginScreen';
 import { ColumnHeaderEditor } from './components/ColumnHeaderEditor';
-import { useUnsavedWarning } from './hooks/useUnsavedWarning';
 import { EmployeeRow } from './components/EmployeeRow';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
@@ -179,7 +178,13 @@ export default function App() {
   const [unsaved, setUnsaved] = useState(false);
   const [published, setPublished] = useState(false);
 
-  useUnsavedWarning(unsaved);
+  // Warn before refresh/close when there are unsaved schedule changes
+  useEffect(() => {
+    if (!unsaved) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [unsaved]);
   const [activeWeek, setActiveWeek] = useState(1);
   const [activeTab, setActiveTab] = useState('schedule'); // 'schedule', 'comms', or 'requests'
   
