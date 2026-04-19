@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Check } from 'lucide-react';
 import { THEME, TYPE } from '../theme';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -63,6 +63,47 @@ export const TimePicker = ({ value, onChange, label }) => {
           {['00', '15', '30', '45'].map(min => <option key={min} value={min}>:{min}</option>)}
         </select>
       </div>
+    </div>
+  );
+};
+
+export const TooltipButton = ({ children, onClick, variant = 'secondary', disabled = false, tooltip }) => {
+  const [show, setShow] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef(null);
+
+  useEffect(() => {
+    if (show && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 6, left: rect.left + rect.width / 2 });
+    }
+  }, [show]);
+
+  return (
+    <div className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      <button ref={btnRef} onClick={onClick} disabled={disabled}
+        className="px-2 py-1 text-xs rounded-lg font-medium transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+        style={{
+          background: variant === 'primary' ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated,
+          border: variant === 'secondary' ? `1px solid ${THEME.border.default}` : 'none',
+          color: variant === 'primary' ? '#FFFFFF' : THEME.text.primary
+        }}>
+        {children}
+      </button>
+      {show && tooltip && (
+        <div className="fixed px-2 py-1 rounded text-xs whitespace-nowrap" style={{
+          top: pos.top,
+          left: pos.left,
+          transform: 'translateX(-50%)',
+          backgroundColor: THEME.tooltip.bg,
+          border: `1px solid ${THEME.tooltip.border}`,
+          color: THEME.text.primary,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          zIndex: 99999
+        }}>
+          {tooltip}
+        </div>
+      )}
     </div>
   );
 };

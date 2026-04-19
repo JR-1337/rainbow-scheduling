@@ -4,7 +4,7 @@ import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, Mo
 import { parseLocalDate, escapeHtml } from './utils/format';
 import { toDateKey, getDayName, getDayNameShort, formatDate, formatDateLong, formatMonthWord, getWeekNumber, formatTimeDisplay, formatTimeShort, calculateHours, parseTime } from './utils/date';
 import { STAT_HOLIDAY_HOURS, STORE_HOURS, isStatHoliday } from './utils/storeHours';
-import { Modal, GradientButton } from './components/primitives';
+import { Modal, GradientButton, TooltipButton } from './components/primitives';
 import { haptic, AnimatedNumber, ScheduleSkeleton, TaskStarTooltip, GradientBackground } from './components/uiKit';
 import { CURRENT_PERIOD_INDEX, getPayPeriodDates } from './utils/payPeriod';
 import { hasApprovedTimeOffForDate } from './utils/requests';
@@ -144,47 +144,7 @@ const getAvailabilityShading = (avail, storeHours) => {
 
 // TaskStarTooltip moved to src/components/uiKit.jsx
 
-// Button with tooltip
-const TooltipButton = ({ children, onClick, variant = 'secondary', disabled = false, tooltip }) => {
-  const [show, setShow] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const btnRef = useRef(null);
-  
-  useEffect(() => {
-    if (show && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 6, left: rect.left + rect.width / 2 });
-    }
-  }, [show]);
-  
-  return (
-    <div className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
-      <button ref={btnRef} onClick={onClick} disabled={disabled}
-        className="px-2 py-1 text-xs rounded-lg font-medium transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-        style={{
-          background: variant === 'primary' ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated,
-          border: variant === 'secondary' ? `1px solid ${THEME.border.default}` : 'none',
-          color: variant === 'primary' ? '#FFFFFF' : THEME.text.primary
-        }}>
-        {children}
-      </button>
-      {show && tooltip && (
-        <div className="fixed px-2 py-1 rounded text-xs whitespace-nowrap" style={{ 
-          top: pos.top, 
-          left: pos.left, 
-          transform: 'translateX(-50%)',
-          backgroundColor: THEME.tooltip.bg, 
-          border: `1px solid ${THEME.tooltip.border}`, 
-          color: THEME.text.primary,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 99999
-        }}>
-          {tooltip}
-        </div>
-      )}
-    </div>
-  );
-};
+// TooltipButton moved to src/components/primitives.jsx
 
 
 
