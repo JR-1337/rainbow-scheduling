@@ -8,7 +8,20 @@ import { STORE_HOURS } from '../utils/storeHours';
 
 export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null, currentUser = null, showToast, suggestedPassword = '' }) => {
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-  const defaultAvail = days.reduce((a, d) => ({ ...a, [d]: { available: true, start: STORE_HOURS[d].open, end: STORE_HOURS[d].close } }), {});
+  // v2.24.0: default availability is wider than store hours so PK windows
+  // (Sat 10:00-10:45, weekday 18:00-20:00) fit without re-running the widener
+  // per new hire. Auto-Fill still books defaultShift hours (or store hours)
+  // via createShiftFromAvailability — availability is only the eligibility gate.
+  const PK_FRIENDLY_DEFAULTS = {
+    monday:    { start: '10:00', end: '20:00' },
+    tuesday:   { start: '10:00', end: '20:00' },
+    wednesday: { start: '10:00', end: '20:00' },
+    thursday:  { start: '10:00', end: '20:00' },
+    friday:    { start: '10:00', end: '20:00' },
+    saturday:  { start: '10:00', end: '19:00' },
+    sunday:    { start: STORE_HOURS.sunday.open, end: STORE_HOURS.sunday.close }
+  };
+  const defaultAvail = days.reduce((a, d) => ({ ...a, [d]: { available: true, start: PK_FRIENDLY_DEFAULTS[d].start, end: PK_FRIENDLY_DEFAULTS[d].end } }), {});
   const [formData, setFormData] = useState(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', availability: defaultAvail });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [password, setPassword] = useState(suggestedPassword);
