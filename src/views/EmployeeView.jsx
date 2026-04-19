@@ -3,9 +3,9 @@ import { ChevronLeft, ChevronRight, Bell, Calendar, Eye, Key, Loader, LogOut, Sh
 import {
   THEME, ROLES, ROLES_BY_ID,
   getStoreHoursForDate,
-  CollapsibleSection,
 } from '../App';
 import { GradientBackground, AnimatedNumber, haptic, Logo, TaskStarTooltip } from '../components/uiKit';
+import { CollapsibleSection } from '../components/CollapsibleSection';
 import { CURRENT_PERIOD_INDEX } from '../utils/payPeriod';
 import { toDateKey, getWeekNumber, formatDate, formatTimeDisplay, formatTimeShort, getDayName } from '../utils/date';
 import { isStatHoliday } from '../utils/storeHours';

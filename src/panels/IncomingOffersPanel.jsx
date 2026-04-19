@@ -4,7 +4,7 @@ import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
 import { AdminRequestModal } from '../modals/AdminRequestModal';
-import { CollapsibleSection } from '../App';
+import { CollapsibleSection } from '../components/CollapsibleSection';
 import { getDayNameShort, formatDate, formatTimeDisplay } from '../utils/date';
 
 export const IncomingOffersPanel = ({ offers, currentUserEmail, onAccept, onReject }) => {

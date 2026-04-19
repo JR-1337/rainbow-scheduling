@@ -3,7 +3,7 @@ import { ArrowRightLeft, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
-import { CollapsibleSection } from '../App';
+import { CollapsibleSection } from '../components/CollapsibleSection';
 import { SWAP_STATUS_COLORS, SWAP_STATUS_LABELS } from '../constants';
 import { getDayNameShort, formatDate } from '../utils/date';
 

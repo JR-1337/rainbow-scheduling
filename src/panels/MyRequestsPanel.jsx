@@ -3,7 +3,7 @@ import { Calendar, Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { THEME } from '../theme';
 import { REQUEST_STATUS_COLORS } from '../constants';
 import { parseLocalDate } from '../utils/format';
-import { CollapsibleSection } from '../App';
+import { CollapsibleSection } from '../components/CollapsibleSection';
 
 export const MyRequestsPanel = ({ requests, currentUserEmail, onCancel, notificationCount, onOpen }) => {
   const [sortDir, setSortDir] = useState('desc');
