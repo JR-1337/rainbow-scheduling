@@ -19,6 +19,7 @@ import { useAnnouncements } from './hooks/useAnnouncements';
 import { useGuardedMutation } from './hooks/useGuardedMutation';
 import { useTooltip } from './hooks/useTooltip';
 import { EmployeeRow } from './components/EmployeeRow';
+import { MobileScheduleActionSheet } from './components/MobileScheduleActionSheet';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
@@ -236,6 +237,7 @@ export default function App() {
   useDismissOnOutside(adminMenuRef, adminMenuOpen, () => setAdminMenuOpen(false));
   const [adminDaysOffModalOpen, setAdminDaysOffModalOpen] = useState(false);
   const [pkModalOpen, setPkModalOpen] = useState(false);
+  const [mobileActionSheetOpen, setMobileActionSheetOpen] = useState(false);
   const [autoPopulateConfirm, setAutoPopulateConfirm] = useState(null); // { type: 'populate-all' | 'populate-week' | 'clear-week' | 'clear-all', employee?: obj, week?: 1|2 }
   
   // Mobile admin state
@@ -2004,43 +2006,15 @@ export default function App() {
                 <Edit3 size={12} style={{ color: THEME.status.warning, flexShrink: 0 }} />
                 <span className="text-xs font-medium" style={{ color: THEME.status.warning }}>Edit Mode</span>
                 {fullTimeEmployees.length > 0 && (
-                  <div className="flex items-center gap-1.5 ml-auto">
+                  <div className="flex items-center ml-auto">
                     <button
-                      onClick={() => {
-                        const weekDates = activeWeek === 1 ? week1 : week2;
-                        const hasExisting = fullTimeEmployees.some(e => employeeHasShiftsInWeek(e, weekDates));
-                        if (hasExisting) {
-                          setAutoPopulateConfirm({ type: 'populate-all', week: activeWeek });
-                        } else {
-                          const count = autoPopulateWeek(weekDates);
-                          if (count > 0) showToast('success', `Added ${count} shifts for full-time employees`);
-                          else showToast('warning', 'No shifts added — check availability');
-                        }
-                      }}
-                      className="px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1"
-                      style={{ backgroundColor: THEME.accent.blue, color: 'white' }}
+                      onClick={() => setMobileActionSheetOpen(true)}
+                      className="px-3 rounded text-xs font-semibold flex items-center gap-1"
+                      style={{ minHeight: 32, backgroundColor: THEME.accent.blue, color: 'white' }}
+                      aria-label={`Schedule actions for week ${activeWeek}`}
                     >
-                      <Zap size={9} />
-                      Fill Wk {activeWeek}
-                    </button>
-                    <button
-                      onClick={() => setAutoPopulateConfirm({ type: 'clear-all', week: activeWeek })}
-                      className="px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1"
-                      style={{ backgroundColor: THEME.status.error + '20', color: THEME.status.error }}
-                    >
-                      <Trash2 size={9} />
-                      Clear Wk {activeWeek}
-                    </button>
-                    <button
-                      onClick={() => {
-                        const weekDates = activeWeek === 1 ? week1 : week2;
-                        handleAutofillPKWeek(weekDates, activeWeek);
-                      }}
-                      className="px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1"
-                      style={{ backgroundColor: THEME.event.pkBg, color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}` }}
-                    >
-                      <BookOpen size={9} />
-                      PK Wk {activeWeek}
+                      <Zap size={11} />
+                      Actions
                     </button>
                   </div>
                 )}
@@ -2395,6 +2369,22 @@ export default function App() {
 
         {/* Auto-populate confirm modal (shared with desktop branch via const confirmModal) */}
         {confirmModal}
+
+        {/* Mobile schedule Actions sheet (two-level: root -> fill/clear/pk -> pick) */}
+        <MobileScheduleActionSheet
+          isOpen={mobileActionSheetOpen}
+          onClose={() => setMobileActionSheetOpen(false)}
+          activeWeek={activeWeek}
+          week1={week1}
+          week2={week2}
+          fullTimeEmployees={fullTimeEmployees}
+          employeeHasShiftsInWeek={employeeHasShiftsInWeek}
+          autoPopulateWeek={autoPopulateWeek}
+          setAutoPopulateConfirm={setAutoPopulateConfirm}
+          showToast={showToast}
+          handleAutofillPKWeek={handleAutofillPKWeek}
+          onOpenPKModal={() => setPkModalOpen(true)}
+        />
 
         {/* Toast */}
         {toast && (
