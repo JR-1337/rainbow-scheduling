@@ -13,8 +13,9 @@ import {
 
 import {
   THEME, TYPE, ROLES, ROLES_BY_ID,
-  getStoreHoursForDate, GradientBackground, haptic
+  getStoreHoursForDate
 } from './App';
+import { GradientBackground, haptic } from './components/uiKit';
 import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } from './utils/date';
 import { isStatHoliday } from './utils/storeHours';
 import { useFocusTrap } from './hooks/useFocusTrap';

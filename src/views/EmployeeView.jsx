@@ -3,11 +3,10 @@ import { ChevronLeft, ChevronRight, Bell, Calendar, Eye, Key, Loader, LogOut, Sh
 import {
   THEME, ROLES, ROLES_BY_ID,
   getStoreHoursForDate,
-  GradientBackground,
-  AnimatedNumber, CollapsibleSection,
-  haptic,
-  CURRENT_PERIOD_INDEX, Logo, TaskStarTooltip,
+  CollapsibleSection,
+  CURRENT_PERIOD_INDEX,
 } from '../App';
+import { GradientBackground, AnimatedNumber, haptic, Logo, TaskStarTooltip } from '../components/uiKit';
 import { toDateKey, getWeekNumber, formatDate, formatTimeDisplay, formatTimeShort, getDayName } from '../utils/date';
 import { isStatHoliday } from '../utils/storeHours';
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet, MobileAlertsSheet, computeAlertItems } from '../MobileEmployeeView';
