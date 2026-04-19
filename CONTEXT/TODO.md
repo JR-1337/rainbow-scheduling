@@ -21,7 +21,7 @@ Rules:
 
 - Test Sarvi-batch end-to-end -- next: JR + Sarvi smoke 10 items per plan verification section (frontend LIVE, Apps Script v2.22 LIVE)
 - Phase A+B+C save-failure smoke -- next: JR Wi-Fi-off test save/delete failure paths on phone; edit-modal must stay on "Edit" (not "Add"), state must revert on failure (post-commit 7a13cab LIVE)
-- Adversarial audit Phase E -- next: continue cracking open App() body. Cuts 18-21 shipped (useToast, useAnnouncements, useGuardedMutation, useTooltip). App.jsx 3120 -> 3070 lines after this session's bug fixes. Sub-area 6 still parked.
+- Adversarial audit Phase E -- next: continue App() body extraction. This session (2026-04-19) shipped cuts 1-12 of loadDataFromBackend + employee/shift/request helpers. App.jsx 3044 -> 2606 (-438 lines, -14%). New files: `utils/apiTransforms.js`, `utils/employees.js`, `utils/scheduleOps.js`, `modals/AutoPopulateConfirmModal.jsx`, `components/LoadingScreen.jsx`. Sub-area 6 (Context provider) still parked.
 - Bug 4 (PK default 10am-10am for some people) -- next: JR repro steps needed. Could not reproduce via Playwright; getPKDefaultTimes only returns Sat 10:00-10:45 or 18:00-20:00; suspect old PK rows in spreadsheet OR ShiftEditor seed for cell-click PK. Ask JR which employee + which day.
 - Bug 5 (top-nav PK saves to sheet but doesn't show in UI) -- next: handleBulkPK calls loadDataFromBackend on success; events flow through eventsObj keyed `${employeeId}-${dateStr}`. Need JR repro: which week was active, which employees, did they appear after page hard-refresh?
 - CF Worker SWR cache -- next: design KV cache key from `getAllData` payload; flip `API_URL` in src/App.jsx
@@ -43,6 +43,8 @@ Rules:
 - Last validated: `npm run build` PASS at HEAD `9f8ada2` pushed to origin/main; modern bundle 477 kB, legacy bundle + polyfills emitted for old Safari
 - Last validated: Apps Script v2.25.0 LIVE; schedule-change notifications fire for non-Sarvi/non-JR admin edits
 - Last validated: 3 decouple smokes PASS on prod 2026-04-19 (Auto-Fill defaultShift precedence, PK Select-eligible 19/24, mobile 502x800 form render)
+- Last validated: Phase E cuts 1-12 each smoke-green on localhost Playwright (login + schedule render + zero console errors) before commit-and-push; 12 commits pushed to origin/main 2026-04-19
+- Missing validation: cut 8 (applyShiftMutation) + cut 10 (shift transfer/swap helpers) live admin-action paths not exercised by render-smoke -- offer approve/revoke and swap approve need live-test before prod trust
 - Missing validation: Sarvi iPad white-screen fixes not retested yet (theme.js localStorage guard + plugin-legacy)
 - Missing validation: new Backup Cash role not smoked on prod (ShiftEditorModal picker, EmployeeFormModal defaultSection, PDF legend glyph 'B')
 - Missing validation: PDF employee-facing hours removal not smoked on prod (generate + print a test PDF)
