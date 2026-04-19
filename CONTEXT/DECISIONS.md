@@ -18,6 +18,11 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-18 -- App.jsx pure-extract phase shipped via ship-merge-verify cadence
+Decision: Phase E sub-area 4 split into 7 small cuts, each commit-merge-push to main individually rather than stacked on a feature branch. Modules created: `src/utils/{storeHours,payPeriod,requests,api}.js`, `src/components/{primitives,uiKit,CollapsibleSection}.jsx`, `src/hooks/useFocusTrap.js`. Status maps appended to existing `src/constants.js`. App.jsx 4147 -> 3702 lines.
+Rationale: Stacked cuts widen the gap between repo and prod -- if a regression appears in cut N, blame is ambiguous across cuts 1..N. JR raised this mid-session after we had already shipped cut 1 + cut 2 to a branch. Adopted ship-merge-verify per cut going forward; cuts 3-7 followed the new rhythm directly on main. Saved as global rule `~/.claude/rules/plan-time-knowledge.md`: "Plan-time knowledge does not survive to execution time."
+Confidence: H -- verified 2026-04-18: HEAD `eba776f` on origin/main, build PASS, JR live-smoked cuts 1+2 (clean). Cuts 3-7 are import-path-only moves; rollup catches any unresolved import at build time, so functional risk is low.
+
 ## 2026-04-18 -- Date helpers extracted to src/utils/date.js
 Decision: Created `src/utils/date.js` with 11 pure date/time helpers (toDateKey, getDayName, getDayNameShort, formatDate, formatDateLong, formatMonthWord, getWeekNumber, formatTimeDisplay, formatTimeShort, calculateHours + private parseTime). Migrated 21 import sites off `./App` onto `./utils/date`. App.jsx no longer re-exports any date helpers. `isStatHoliday` and `getStoreHoursForDate` deliberately stayed in App.jsx because they read module-level mutable refs (`_storeHoursOverrides`, `_staffingTargetOverrides`) that are part of a separate parked refactor (audit item 6).
 Rationale: Phase E audit item 28 — strip the App.jsx barrel role for utility code so the eventual App.jsx extraction has less surface to negotiate. Functions chosen by purity (no closures over module state). Bundle byte-identical confirms tree-shaking already handled the indirection.
