@@ -2,7 +2,15 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.24.0 (per-day defaultShift column N; one-shot availability widener for PK)
+ * Version: 2.25.0 (schedule-change notifications to Sarvi on saveShift + batchSaveShifts)
+ *
+ * Changes in v2.25.0:
+ * - `sendScheduleChangeNotification_(caller, summary)`: emails CONFIG.ADMIN_EMAIL when
+ *   a non-owner admin other than Sarvi saves a shift or runs a bulk schedule save.
+ *   Short-circuits if caller is Sarvi (email match) or the Owner (isOwner === true),
+ *   so Sarvi and JR's own edits stay silent. Called at the success tail of
+ *   `saveShift` and `batchSaveShifts`. PK bulk + announcement + live-periods edits
+ *   stay silent per scope decision.
  *
  * Changes in v2.24.0:
  * - Employees tab gains column N: `defaultShift` (JSON per-day {start,end}). Auto-Fill prefers
@@ -1632,6 +1640,9 @@ function saveShift(payload) {
     appendRow(CONFIG.TABS.SHIFTS, shift);
   }
 
+  sendScheduleChangeNotification_(auth.employee,
+    `Single shift save: employee ${shift.employeeId} on ${shiftDate} (${shift.start || ''}-${shift.end || ''}).`);
+
   return { success: true, data: { shift } };
 }
 
@@ -1831,7 +1842,12 @@ function batchSaveShifts(payload) {
       );
     }
 
-    return { success: true, data: { savedCount: shifts.length, deletedCount: Math.max(0, deletedCount) } };
+    const savedCount = shifts.length;
+    const deletedCountSafe = Math.max(0, deletedCount);
+    sendScheduleChangeNotification_(auth.employee,
+      `Bulk schedule save: ${savedCount} shift(s) written, ${deletedCountSafe} removed.`);
+
+    return { success: true, data: { savedCount, deletedCount: deletedCountSafe } };
   } finally {
     lock.releaseLock();
   }
@@ -2027,6 +2043,21 @@ function sendEmail(to, subject, body) {
     Logger.log(`Failed to send email to ${to}: ${error.toString()}`);
     return { success: false, error: error.toString() };
   }
+}
+
+// v2.25.0: Notify Sarvi when a non-owner admin other than herself edits the
+// schedule. Skips silently for Sarvi (email match) and the Owner (JR).
+function sendScheduleChangeNotification_(caller, summary) {
+  if (!caller) return;
+  const callerEmail = String(caller.email || '').toLowerCase();
+  const adminEmail = String(CONFIG.ADMIN_EMAIL || '').toLowerCase();
+  if (callerEmail && callerEmail === adminEmail) return;
+  if (caller.isOwner === true) return;
+  const callerName = caller.name || caller.email || 'Unknown admin';
+  sendEmail(CONFIG.ADMIN_EMAIL,
+    `Schedule edited by ${callerName}`,
+    `${callerName} just saved changes to the schedule.\n\n${summary}\n\nReview in the scheduling app.`
+  );
 }
 
 // ----- TIME OFF -----
