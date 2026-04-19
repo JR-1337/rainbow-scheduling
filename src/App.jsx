@@ -22,7 +22,7 @@ import { EmployeeRow } from './components/EmployeeRow';
 import { MobileScheduleActionSheet } from './components/MobileScheduleActionSheet';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
-import { normalizeAnnouncements } from './utils/apiTransforms';
+import { normalizeAnnouncements, partitionRequests } from './utils/apiTransforms';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -445,28 +445,7 @@ export default function App() {
       setPublishedShifts(publishedObj);
       setPublishedEvents(publishedEventsObj);
       
-      // Process requests into the 3 types with field mapping
-      // Backend uses employeeName/employeeEmail/requestId, frontend uses different names
-      const timeOff = (requests || []).filter(r => r.requestType === 'time_off').map(r => ({
-        ...r,
-        name: r.employeeName || r.name,
-        email: r.employeeEmail || r.email
-      }));
-      
-      const offers = (requests || []).filter(r => r.requestType === 'shift_offer').map(o => ({
-        ...o,
-        offerId: o.requestId || o.offerId,
-        offererName: o.employeeName || o.offererName,
-        offererEmail: o.employeeEmail || o.offererEmail
-      }));
-      
-      const swaps = (requests || []).filter(r => r.requestType === 'shift_swap').map(s => ({
-        ...s,
-        swapId: s.requestId || s.swapId,
-        initiatorName: s.employeeName || s.initiatorName,
-        initiatorEmail: s.employeeEmail || s.initiatorEmail
-      }));
-      
+      const { timeOff, offers, swaps } = partitionRequests(requests);
       setTimeOffRequests(timeOff);
       setShiftOffers(offers);
       setShiftSwaps(swaps);
