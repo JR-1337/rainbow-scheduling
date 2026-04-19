@@ -24,7 +24,7 @@ import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides
 import { apiCall } from './utils/api';
 import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents, filterToLivePeriods } from './utils/apiTransforms';
 import { getFutureShiftDates, formatFutureShiftsBlockMessage, serializeEmployeeForApi } from './utils/employees';
-import { createShiftFromAvailability } from './utils/scheduleOps';
+import { createShiftFromAvailability, applyShiftMutation } from './utils/scheduleOps';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -915,33 +915,10 @@ export default function App() {
   // entries live in `events[k]` (array; one entry per type). Delete is type-aware
   // and only wipes the matching entry.
   const saveShift = (s) => {
-    const k = `${s.employeeId}-${s.date}`;
-    const type = s.type || 'work';
-    const label = type === 'meeting' ? 'Meeting' : type === 'pk' ? 'PK event' : 'Shift';
-    if (s.deleted) {
-      if (type === 'work') {
-        const n = { ...shifts };
-        delete n[k];
-        setShifts(n);
-      } else {
-        const n = { ...events };
-        const arr = (n[k] || []).filter(e => (e.type || 'work') !== type);
-        if (arr.length > 0) n[k] = arr; else delete n[k];
-        setEvents(n);
-      }
-      showToast('success', `${label} removed — click SAVE to keep changes`);
-    } else {
-      if (type === 'work') {
-        setShifts({ ...shifts, [k]: s });
-      } else {
-        const n = { ...events };
-        const arr = (n[k] || []).filter(e => (e.type || 'work') !== type);
-        arr.push(s);
-        n[k] = arr;
-        setEvents(n);
-      }
-      showToast('success', `${label} updated — click SAVE to keep changes`);
-    }
+    const { nextShifts, nextEvents, label, deleted, touched } = applyShiftMutation(shifts, events, s);
+    if (touched === 'shifts') setShifts(nextShifts);
+    else setEvents(nextEvents);
+    showToast('success', `${label} ${deleted ? 'removed' : 'updated'} — click SAVE to keep changes`);
     setUnsaved(true);
     setPublished(false);
   };
