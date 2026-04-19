@@ -18,6 +18,16 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-18 -- One-time data scrubs ship as editor-only functions in Code.gs
+Decision: `listTestEmployees` + `purgeTestEmployees` live in `backend/Code.gs` (commit `2b4e5d4`) but are not wired to `handleRequest` dispatch. Invocation == Apps Script editor only. Same pattern as existing `clearAllData` at Code.gs:2338.
+Rationale: Destructive cross-sheet ops (Employees + Shifts + ShiftChanges) should require Apps-Script-editor access, not an HTTP handler. Editor access is already limited to JR/Sarvi; HTTP handler would require admin-auth-plus-confirmation plumbing for a one-time job. Version control via git preserves audit trail without expanding the attack surface.
+Confidence: H -- verified 2026-04-18: `listTestEmployees` not registered in `handleRequest` action map (grep); only invocable from editor.
+
+## 2026-04-18 -- PDF XSS sweep is complete; no further action needed
+Decision: Item 10 in `~/.claude/plans/adversarial-audit-fix-plan.md` ("Partial PDF XSS surface remains") is closed. All 7 user-writable interpolations in `src/pdf/generate.js` already wrapped in `cleanText` (== `escapeHtml(stripEmoji(s))`). Role color has regex hex whitelist at generate.js:131. `src/email/build.js` emits plain text mail (no HTML parse).
+Rationale: LESSONS note "escape applied to only 5 sites" was stale at the time of the audit -- a prior commit had already expanded the sweep. Verified by grepping every `${...}` in generate.js and classifying each as user-writable / code-controlled.
+Confidence: H -- verified 2026-04-18 by exhaustive grep audit; commit `51ea778` documents the audit in CONTEXT/TODO.md Completed.
+
 ## 2026-04-18 -- Request modals use fixed (non-rotating) identity colors
 Decision: `src/theme.js` exports `THEME.modal.swap.accent = '#7C3AED'` (violet) and `THEME.modal.offer.accent = '#EC4899'` (pink). `SwapShiftModal` + `OfferShiftModal` use these instead of `THEME.accent.purple` / `THEME.accent.pink` (which are aliased to rotating `OTR_ACCENT`). Submit-button brand gradient (blue -> rotating purple) preserved as primary-action convention.
 Rationale: Playwright smoke 2026-04-18 revealed modal headers lost their visual identity on rotation days (e.g. "pink" offer modal rendered orange when OTR accent rotated to orange). Fixed modal identity colors are orthogonal to the daily brand rotation.
