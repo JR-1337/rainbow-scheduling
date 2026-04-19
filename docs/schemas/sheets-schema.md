@@ -2,13 +2,14 @@
 
 CRITICAL: These column headers are exact. Do not rename, reorder, or omit fields.
 
-## Employees Tab (21 columns, A-U)
+## Employees Tab (22 columns, A-V)
 
 ```
-id | name | email | password | phone | address | dob | active | isAdmin | isOwner | showOnSchedule | deleted | availability | counterPointId | adpNumber | rateOfPay | employmentType | passwordHash | passwordSalt | passwordChanged | defaultSection
+id | name | email | password | phone | address | dob | active | isAdmin | isOwner | showOnSchedule | deleted | availability | defaultShift | counterPointId | adpNumber | rateOfPay | employmentType | passwordHash | passwordSalt | passwordChanged | defaultSection
 ```
 
 - `availability`: JSON string - `{ "sunday": { "available": true, "start": "11:00", "end": "18:00" }, ... }`
+- `defaultShift` (col N, v2.24.0): JSON string - `{ "monday": { "start": "12:00", "end": "18:00" }, ... }`. Per-day `{start,end}` hours Auto-Fill books. Missing/empty day = fall back to availability for that day. Decoupled from `availability` so widening availability for PK eligibility does not change Auto-Fill output.
 - `employmentType`: `"full-time"` | `"part-time"` | `""`
 - `counterPointId`, `adpNumber`: Reserved for future POS/payroll integration - exist in schema, HIDDEN from UI, do not remove
 - `password`: Legacy plaintext column. Sheets may store as number - always use `String()` for comparisons. After S36, populated only for accounts that haven't logged in since the migration OR for admin-reset accounts (so admin UI can display the default). Cleared on any user-initiated password change.
