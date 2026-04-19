@@ -1461,64 +1461,25 @@ export default function App() {
 
           {/* Row 3: Action buttons right-aligned — schedule-context only */}
           {(mobileAdminTab === 'schedule' || mobileAdminTab === 'mine') && (
-          <div className="flex items-center justify-end px-3 pb-2 gap-1.5">
-            {isCurrentPeriodEditMode ? (
-              unsaved ? (
-                <button
-                  onClick={saveSchedule}
-                  disabled={scheduleSaving}
-                  className="px-2.5 py-1 rounded-md font-bold flex items-center gap-1 disabled:opacity-50"
-                  style={{
-                    fontSize: '10px',
-                    background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
-                    color: '#fff',
-                    boxShadow: `0 0 8px ${THEME.accent.blue}40`
-                  }}
-                >
-                  {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Saving</> : <><Save size={10} /> Save</>}
-                </button>
-              ) : (
-                <button
-                  onClick={toggleEditMode}
-                  disabled={scheduleSaving}
-                  className="px-2 py-0.5 rounded-md font-semibold flex items-center gap-1 disabled:opacity-50"
-                  style={{
-                    fontSize: '10px',
-                    backgroundColor: THEME.status.success + '20',
-                    color: THEME.status.success,
-                    border: `1px solid ${THEME.status.success}40`
-                  }}
-                >
-                  {scheduleSaving ? <><Loader size={10} className="animate-spin" /> Live</> : <><Eye size={10} /> Go Live</>}
-                </button>
-              )
-            ) : (
-              <>
-                <button
-                  onClick={toggleEditMode}
-                  disabled={scheduleSaving}
-                  className="px-2 py-0.5 rounded-md font-medium flex items-center gap-1 disabled:opacity-50"
-                  style={{
-                    fontSize: '10px',
-                    backgroundColor: THEME.status.warning + '20',
-                    color: THEME.status.warning,
-                    border: `1px solid ${THEME.status.warning}40`
-                  }}
-                >
-                  <Edit3 size={10} /> Edit
-                </button>
-                <button
-                  onClick={() => setEmailOpen(true)}
-                  className="px-2 py-0.5 rounded-md font-medium flex items-center gap-1"
-                  style={{
-                    fontSize: '10px',
-                    background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
-                    color: '#fff'
-                  }}
-                >
-                  <Mail size={10} /> Publish
-                </button>
-              </>
+          <div className="flex items-center justify-end px-3 pb-2 gap-1.5 flex-wrap">
+            <ScheduleStateButton
+              isEditMode={isCurrentPeriodEditMode}
+              unsaved={unsaved}
+              scheduleSaving={scheduleSaving}
+              onSave={saveSchedule}
+              onToggleEdit={toggleEditMode}
+            />
+            {!isCurrentPeriodEditMode && (
+              <button
+                onClick={() => setEmailOpen(true)}
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                style={{
+                  background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
+                  color: '#fff'
+                }}
+              >
+                <Mail size={11} /> Publish
+              </button>
             )}
           </div>
           )}
