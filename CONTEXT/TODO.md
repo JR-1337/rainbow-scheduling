@@ -40,7 +40,7 @@ Rules:
 
 ## Verification
 
-- Last validated: `npm run build` PASS at HEAD `d2414eb` pushed to origin/main; modern bundle 477 kB, legacy bundle + polyfills emitted for old Safari
+- Last validated: `npm run build` PASS at HEAD `9f8ada2` pushed to origin/main; modern bundle 477 kB, legacy bundle + polyfills emitted for old Safari
 - Last validated: Apps Script v2.25.0 LIVE; schedule-change notifications fire for non-Sarvi/non-JR admin edits
 - Last validated: 3 decouple smokes PASS on prod 2026-04-19 (Auto-Fill defaultShift precedence, PK Select-eligible 19/24, mobile 502x800 form render)
 - Missing validation: Sarvi iPad white-screen fixes not retested yet (theme.js localStorage guard + plugin-legacy)
@@ -53,6 +53,7 @@ Rules:
 
 ## Completed
 
+- [2026-04-19] Default store hours Mon/Tue/Wed open 10:00 -> 11:00 (`9f8ada2`). Close stays 18:00, Thu-Sat and Sun unchanged. Safe to change now that Auto-Fill reads per-employee `defaultShift` (fallback availability) rather than store hours; Mon/Tue/Wed store-open no longer affects booked hours.
 - [2026-04-19] PDF role-encoding redesign shipped (`b189db5` -> `3e735d9` -> `2480a61` -> `d2414eb`). Iterated three systems with JR. Settled on: uniform 1px grey grid; monogram glyph (C1 / C2 / B / M / W / F) anchored top-left of each cell via absolute-position span; role name styled by family (cash = BOLD UPPERCASE letter-spaced, section = medium title case, monitor = italic); Floor Monitor is the ONLY role with a 2px ink perimeter — thicker border wins under `border-collapse` so monitor visibly owns its cell edges. Legend chip mirrors the cell treatment.
 - [2026-04-19] PDF encoding + iOS Safari export fixes shipped (`c002046`). (a) Added `<meta charset="utf-8">` + `text/html;charset=utf-8` Blob MIME; without charset declared, old Safari fell back to Latin-1 and rendered em-dashes as garbage glyphs (the "ae" symbol Sarvi reported). (b) Swept all `—` out of `src/pdf/generate.js` -> ASCII `-`. (c) Popup-blocked fallback: was `<a download="...html">.click()` which iOS Safari ignored and saved as `*.blob`; now navigates current tab to the blob URL (HTML has its own in-page Print button).
 - [2026-04-19] PDF hours + OT asterisks removed from employee-facing printout (`e7bc416`). Left-column row now shows employee name only; `calcWeekHours` + `computeDayUnionHours` import + legend `* / **` entry all dropped. ESA OT surface lives in admin web UI, not the employee PDF.

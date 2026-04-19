@@ -15,8 +15,8 @@ First reply: 1-2 short sentences plus a one-line `Pass-forward:` and exactly 1 d
 ## State
 
 - Project path: `/home/johnrichmond007/APPS/RAINBOW Scheduling APP/`
-- Branch: `main`, HEAD `d2414eb`, clean, in sync with origin (everything pushed)
-- Prod frontend: Vercel deploying `d2414eb`; local build bundle `index-C9EPa6T-.js`
+- Branch: `main`, HEAD `9f8ada2`, clean, in sync with origin (everything pushed)
+- Prod frontend: Vercel deploying `9f8ada2`; local build bundle `index-ByNp5-5W.js`
 - Apps Script: v2.25.0 LIVE (no backend redeploy this session)
 - `src/App.jsx`: 3044 lines. `backend/Code.gs`: 2382 lines. Build: `npm run build` PASS
 - Active focus: Sarvi retest (iPad white-screen fixes + PDF encoding + PDF role encoding) -> welcome-email wiring / audit Phase E / bug repros
@@ -28,12 +28,13 @@ First reply: 1-2 short sentences plus a one-line `Pass-forward:` and exactly 1 d
 3. Shipped iPad white-screen fixes (`35288f5`, `2362575`): theme.js L18 unguarded `localStorage.getItem` at module-init wrapped in try/catch (Safari Private Browsing throws SecurityError -> blank React mount); added `@vitejs/plugin-legacy@5` targeting iOS 11+ / Safari 11+ with `modernPolyfills: true`. Modern bundle unchanged; legacy bundle + polyfills lazy-loaded via nomodule on old Safari only.
 4. Added new `Backup Cash` role + renamed existing `backupCashier` display to "Cashier 2" (`b0c5704`). ROLES in `src/constants.js` now 7 entries; all 3 pickers (ShiftEditorModal cell-tap, EmployeeFormModal defaultSection, PDF legend) are data-driven.
 5. Fixed EmployeeFormModal mobile overlapping rows (`8a517bf`). Employment Type, Active/Inactive, Admin pills all stack label-above-control at <640px via `flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-0`. Active+Admin pair also stacks vertically on mobile.
-6. Iterated 4 PDF role-encoding designs with JR (`b189db5` -> `3e735d9` -> `2480a61` -> `d2414eb`). Landed on System 2: uniform 1px grey grid; monogram glyph at top-left (absolute-position span); role name styled by family (cash = BOLD UPPERCASE letter-spaced; section = medium title case; monitor = italic); Floor Monitor is the only role with a 2px ink perimeter so it visibly "owns" its cell edges under border-collapse. Glyphs locked to C1 / C2 / B / M / W / F.
-7. Decanting check:
+6. Changed default store hours Mon/Tue/Wed open 10:00 -> 11:00 (`9f8ada2`). Close stays 18:00; Thu-Sat and Sun unchanged. Safe now that Auto-Fill reads per-employee `defaultShift` -- store hours no longer affect booked hours on those days. `src/utils/storeHours.js` STORE_HOURS const only.
+7. Iterated 4 PDF role-encoding designs with JR (`b189db5` -> `3e735d9` -> `2480a61` -> `d2414eb`). Landed on System 2: uniform 1px grey grid; monogram glyph at top-left (absolute-position span); role name styled by family (cash = BOLD UPPERCASE letter-spaced; section = medium title case; monitor = italic); Floor Monitor is the only role with a 2px ink perimeter so it visibly "owns" its cell edges under border-collapse. Glyphs locked to C1 / C2 / B / M / W / F.
+8. Decanting check:
    - Working assumption: table `border-collapse: collapse` is the default for this PDF. Any per-cell border styling competes with neighbors; thicker wins. Future role-designs that want to use perimeter styling must account for this, or use inset decoration instead.
    - Near-miss: Tried a 3-family border-style system (solid/dashed/dotted) across cash roles; JR rejected -- they read as three separate visual categories. Tried an inset left-stripe system; JR rejected -- didn't like the left bar.
    - Naive next move caution: do not reintroduce border styles (dashed/dotted) on any cash role. Family grouping now lives in typography only. Cash family is visually unified via BOLD UPPERCASE, not via stroke patterns.
-8. Audit: skipped (no adapter writes; TODO + LESSONS writes were after Step 2 per the spec's skip rule).
+9. Audit: skipped (no adapter writes; TODO + LESSONS writes were after Step 2 per the spec's skip rule).
 
 ## Hot Files
 
@@ -80,11 +81,11 @@ See `CONTEXT/TODO.md#Blocked`. Top-of-mind carrying forward:
 ## Verify On Start
 
 - `git status` -- expect clean
-- `git log --oneline -6` -- top should be `d2414eb`, `2480a61`, `3e735d9`, `b189db5`, `80d805f`, `c002046`
+- `git log --oneline -8` -- top should be `9f8ada2`, `7401202`, `d2414eb`, `2480a61`, `3e735d9`, `b189db5`, `80d805f`, `c002046`
 - `git rev-list --left-right --count origin/main...HEAD` -- expect `0 0` (synced)
 - `npm run build` -- PASS; modern bundle ~477 kB, legacy bundle ~495 kB, polyfills ~83 kB
 - `wc -l src/App.jsx backend/Code.gs` -- expect 3044 and 2382
-- `curl -s https://rainbow-scheduling.vercel.app/ | grep -oE 'index-[A-Za-z0-9_-]+\.js'` -- check bundle hash; expect `index-C9EPa6T-.js` or newer post-deploy
+- `curl -s https://rainbow-scheduling.vercel.app/ | grep -oE 'index-[A-Za-z0-9_-]+\.js'` -- check bundle hash; expect `index-ByNp5-5W.js` or newer post-deploy
 - Ask JR: Sarvi retest results from iPad (white-screen + PDF export + role encoding)? Then welcome-email or audit Phase E?
 
 ## Next Step Prompt
