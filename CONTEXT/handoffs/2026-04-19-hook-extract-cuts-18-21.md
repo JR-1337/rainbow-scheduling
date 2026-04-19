@@ -8,16 +8,16 @@ Rules: filename YYYY-MM-DD-{short-slug}.md; required sections per HANDOFF_PROMPT
 
 ## Session Greeting
 
-Read `CONTEXT/TODO.md`, `CONTEXT/DECISIONS.md` (top entry still 2026-04-18 cuts 15-17), `CONTEXT/ARCHITECTURE.md`, then this file. This session shipped 4 hook-extract cuts (useToast, useAnnouncements, useGuardedMutation, useTooltip) autonomously per JR directive "do as many as you can on your own". One latent orphan caught by the new post-cut grep sweep discipline: cut 18 extracted useToast but `setToast` was still used at 4 bulk-save progress call sites; fix exposed setToast from the hook. App.jsx 3207 -> 3120 (-87, -2.7%). NOT yet smoked by JR.
+Read `CONTEXT/TODO.md`, `CONTEXT/DECISIONS.md` (top entry still 2026-04-18 cuts 15-17), `CONTEXT/ARCHITECTURE.md`, then this file. This session shipped 4 hook-extract cuts (useToast, useAnnouncements, useGuardedMutation, useTooltip) autonomously per JR directive "do as many as you can on your own". One latent orphan caught by the new post-cut grep sweep discipline: cut 18 extracted useToast but `setToast` was still used at 4 bulk-save progress call sites; fix exposed setToast from the hook. App.jsx 3207 -> 3120 (-87, -2.7%). JR confirmed prod renders clean 2026-04-19.
 
-First reply: short sentence + 1 direct question. Default next step = JR desktop+mobile smoke at prod bundle, then if clean continue App() body extraction (targets below).
+First reply: short sentence + 1 direct question. Default next step = handler-factory cut to collapse the 22 guardedMutation call sites (see Next Step Prompt below).
 
 ## State
 
 - Project root: `/home/johnrichmond007/APPS/RAINBOW Scheduling APP/`
 - Branch: main, HEAD `c959852` == origin/main (0 ahead, 0 behind before handoff commit)
 - Working tree: handoff ceremony writes only
-- Prod: LIVE. Curl at session end returned `index-B202b1aE.js` (matches the post-cut-18-fix build; cuts 19-21 may still be deploying on Vercel). Expect hash to rotate after build completes.
+- Prod: LIVE and smoke-confirmed by JR 2026-04-19 (no white screen, mobile + desktop render clean at HEAD).
 - Apps Script: v2.23.0 LIVE (unchanged this session)
 - Build: `npm run build` PASS at HEAD (~465.74 kB; 465.06 -> 465.74 across cuts 18-21)
 - App.jsx: 3120 lines (was 3207 at session start, -87 / -2.7%)
@@ -91,14 +91,12 @@ See `CONTEXT/TODO.md#Blocked`. Top-of-mind:
 
 ## Next Step Prompt
 
-Default: wait for JR smoke of cuts 18-21 on prod. If clean, continue App() body extraction. Suggested next targets (order of independence):
+Prod confirmed clean at HEAD. Three real candidates, in order of value:
 
-1. **Combine L208-209 store-hours sync effects** into `useSyncOverridesToModule` -- trivial, saves 2 lines, mostly naming value.
-2. **`useReopenStaffPanelOnFormClose(empFormOpen, setMobileStaffPanelOpen)`** -- extracts the 6-line effect at L248-254. Self-contained.
-3. **`useBootstrapOnRestoredUser`** -- extracts the did-bootstrap-ref effect at L327-334. Self-contained (needs loadDataFromBackend + currentUser).
-4. **After the small ones**: consider whether handler clusters (approve/deny/revoke trios for offer/swap/timeoff at L1193-1745) can collapse into a single `makeStatusMutationHandler` factory. That would save ~100 lines but requires JR alignment on the abstraction shape first.
-5. **LAST**: loadDataFromBackend + handleLogin -- these need a prop/context strategy, not a hook wrap.
+1. **Handler-factory cut (biggest win, ~100 lines)**: the 22 `guardedMutation('X', async () => { apiCall(...); if (success) showToast('success', ...); else showToast('error', ...); ... })` blocks at L1193-1745 share a shape. A `makeStatusMutationHandler({ label, action, payload, onSuccess, successMsg, errorMsg })` factory could collapse most of them. Needs JR alignment on the abstraction shape BEFORE writing -- some handlers do post-success state updates that don't all fit one pattern.
+2. **Small hook cleanups (low value, safe)**: combine L208-209 sync effects; extract L248-254 reopen-staff-panel effect; extract L327-334 bootstrap effect. Each saves 2-6 lines. Only worth it if JR wants App.jsx line count below 3100 for psychological reasons.
+3. **Sub-area 6 (parked)**: replace `src/utils/storeHoursOverrides.js` module-level refs with a Context provider. Own branch. Higher risk, biggest architectural cleanup.
 
-If JR reports a white screen, FIRST MOVE is to ask him to open devtools and paste the first red console error. Then diagnose the specific undefined ident; do NOT revert cuts blindly.
+Non-extraction work queued in TODO.md Active: backup-cash role clarification (Sarvi), welcome email on new-employee create, schedule-change notifications to Sarvi, CF Worker SWR cache (blocked on JR green-light), payroll aggregator path 1 (blocked on Sarvi discovery).
 
 If JR opens a new topic instead, follow him.
