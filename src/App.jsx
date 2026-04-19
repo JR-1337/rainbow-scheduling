@@ -22,7 +22,7 @@ import { EmployeeRow } from './components/EmployeeRow';
 import { MobileScheduleActionSheet } from './components/MobileScheduleActionSheet';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
-import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi } from './utils/apiTransforms';
+import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents } from './utils/apiTransforms';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -316,55 +316,7 @@ export default function App() {
       
       setEmployees(parseEmployeesFromApi(empData));
       
-      // Convert shifts array to keyed object { "empId-date": shiftData }
-      // Also fix date/time formats from Google Sheets
-      // S61 — Partition by `type`: work entries land in `shiftsObj`,
-      // meeting/pk entries land in `eventsObj` (array per cell).
-      const shiftsObj = {};
-      const eventsObj = {};
-      (shiftData || []).forEach(shift => {
-        // Fix date format - Sheets returns ISO timestamp, we need YYYY-MM-DD
-        let dateStr = shift.date;
-        if (dateStr && dateStr.includes('T')) {
-          dateStr = dateStr.split('T')[0];
-        }
-        
-        // Fix time format - Sheets returns weird Excel dates like "1899-12-30T15:00:00.000Z"
-        // We need just "HH:MM"
-        let startTime = shift.startTime;
-        let endTime = shift.endTime;
-        
-        if (startTime && startTime.includes('T')) {
-          // Extract time portion from ISO string
-          const timePart = startTime.split('T')[1];
-          if (timePart) {
-            startTime = timePart.substring(0, 5); // "15:00:00.000Z" -> "15:00"
-          }
-        }
-        
-        if (endTime && endTime.includes('T')) {
-          const timePart = endTime.split('T')[1];
-          if (timePart) {
-            endTime = timePart.substring(0, 5);
-          }
-        }
-        
-        const fixedShift = {
-          ...shift,
-          date: dateStr,
-          startTime: startTime,
-          endTime: endTime,
-          hours: calculateHours(startTime, endTime) // Calculate hours from times
-        };
-        
-        const key = `${fixedShift.employeeId}-${dateStr}`;
-        const shiftType = fixedShift.type || 'work';
-        if (shiftType === 'work') {
-          shiftsObj[key] = fixedShift;
-        } else {
-          (eventsObj[key] = eventsObj[key] || []).push(fixedShift);
-        }
-      });
+      const { shiftsObj, eventsObj } = partitionShiftsAndEvents(shiftData);
       setShifts(shiftsObj);
       setEvents(eventsObj);
       
