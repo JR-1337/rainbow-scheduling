@@ -64,10 +64,16 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees }) => {
     setOverrides(prev => ({ ...prev, [id]: nextChecked }));
   };
 
+  // Check every eligible candidate without disturbing manual selections on
+  // ineligible rows. Old behavior set ineligibles to false explicitly, which
+  // surprised users who had manually opted someone in — they read it as a
+  // deselect. This only ever adds checks.
   const selectAllEligible = () => {
-    const next = {};
-    candidates.forEach(c => { next[c.id] = c.eligible; });
-    setOverrides(next);
+    setOverrides(prev => {
+      const next = { ...prev };
+      candidates.forEach(c => { if (c.eligible) next[c.id] = true; });
+      return next;
+    });
   };
 
   const clearAll = () => {
