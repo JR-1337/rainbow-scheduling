@@ -30,14 +30,14 @@ Rules:
 
 ## Key Files
 
-- `src/App.jsx` (~3228) -- main App component, state, shared exports
+- `src/App.jsx` (~3207) -- main App component, state, shared exports
 - `src/views/EmployeeView.jsx` -- extracted employee desktop/mobile view
 - `src/MobileEmployeeView.jsx` -- mobile components: MobileAlertsSheet, MobileBottomNav, MobileBottomSheet
 - `src/MobileAdminView.jsx` -- admin mobile view
 - `src/theme.js` -- THEME / TYPE / OTR accent palette
 - `src/constants.js` -- ROLES / ROLES_BY_ID / REQUEST_STATUS_COLORS / OFFER/SWAP_STATUS_COLORS+LABELS / EVENT_TYPES / PRIMARY_CONTACT_EMAIL
 - `src/components/` -- LoginScreen, ColumnHeaderEditor, ScheduleCell, EmployeeRow, CollapsibleSection, primitives (Modal/GradientButton/Input/Checkbox/TimePicker/TooltipButton), uiKit (haptic/AnimatedNumber/StaffingBar/ScheduleSkeleton/TaskStarTooltip/GradientBackground/Logo), Button, AdaptiveModal
-- `src/hooks/useFocusTrap.js`
+- `src/hooks/` -- useFocusTrap, useUnsavedWarning, useDismissOnOutside, useAuth
 - `src/panels/` -- admin + employee list panels
 - `src/modals/` -- request/offer/swap/settings/password/shift-editor modals
 - `src/auth.js` -- stateless HMAC session token + cached user + auth-failure callback

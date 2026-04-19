@@ -18,6 +18,12 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-18 -- App.jsx hook-extract cuts 15-17 + 3 latent missing-import fixes
+Decision: Continued sub-area 4 into App() body via custom hooks. Extracted `useUnsavedWarning`, `useDismissOnOutside(ref, isOpen, onDismiss)`, `useAuth(showToast)` to `src/hooks/`. useAuth bundles currentUser state + AUTH_EXPIRED auto-bounce effect; showToast captured via ref so effect deps stay []. App.jsx 3228 -> 3207 (-21). Mid-session, three latent missing-import bugs surfaced (PAY_PERIOD_START, Logo, StaffingBar) -- all from prior Phase E sub-area 4 cuts (1-7), not from cuts 15-17. Fixed each in a single import-line patch.
+Rationale: Hooks extract effect/state pairs cleanly without prop-threading through giant trees. The useAuth showToast-via-ref pattern dodges the useState-setter dependency problem. The latent bugs reveal that `npm run build` PASS does NOT prove runtime safety -- Vite/ESBuild treats undefined identifiers as global lookups; ReferenceError only fires on rendered code paths. Mobile-only smoke missed both desktop-only references (Logo header, StaffingBar in admin grid).
+Confidence: H -- verified 2026-04-18: HEAD `5c8272a` on origin/main, build PASS, bundle index-D5G7145f.js LIVE, JR confirmed mobile + desktop working.
+Carryover: Cuts 18 (useToast) + 19 (useAnnouncements) were drafted, shipped, then reverted during the white-screen panic. They are recoverable from git history (`f9ded92`, `9910851`) if next session wants to retry. New rules to apply going forward: (a) ask for browser console error BEFORE rolling back, (b) smoke desktop AND mobile after extraction cuts, (c) grep App.jsx for orphaned references after every "moved to" extraction.
+
 ## 2026-04-18 -- App.jsx component carve-out phase shipped (cuts 8-14)
 Decision: Continued sub-area 4 with 7 more ship-merge-verify cuts on main. Extracted real components (LoginScreen, ColumnHeaderEditor, TooltipButton, ScheduleCell+getAvailabilityShading, EmployeeRow) plus relocated the parked `getStoreHoursForDate` + override refs to `src/utils/storeHoursOverrides.js` (re-exported from App.jsx so 6 legacy importers keep working). Dead `REQUEST_STATUS` + `OFFER_STATUS` enums dropped. App.jsx 3702 -> 3228 lines.
 Rationale: Standalone top-of-file extraction surface fully exhausted with this batch. The override-ref relocation is mechanical (no behavior change) but unblocks EmployeeRow extraction and isolates the parked smell to one file -- the sub-area-6 Context refactor now has a single owner module to replace.
