@@ -36,15 +36,19 @@ const ROLE_GLYPHS = {
   floorMonitor: 'F',
   none: '',
 };
-// Border style remains the role's redundant channel (solid/dashed/dotted +
-// width); color is fixed to ink so it prints crisply without ink-heavy fills.
+// Borders grouped by role family so within-family differentiation is carried
+// by the letter glyph, not by switching border styles. Uniform 1.5px width
+// keeps the printout quieter than prior 3px lines.
+// cash family (C / 2 / B): solid
+// section family (mens / womens): dashed
+// monitor: dotted
 const ROLE_BORDERS = {
-  cashier: { style: 'solid', width: '3px' },
-  backupCashier: { style: 'dashed', width: '3px' },
-  backupCash: { style: 'dotted', width: '3px' },
-  mens: { style: 'solid', width: '2px' },
-  womens: { style: 'dashed', width: '2px' },
-  floorMonitor: { style: 'dotted', width: '2.5px' },
+  cashier: { style: 'solid', width: '1.5px' },
+  backupCashier: { style: 'solid', width: '1.5px' },
+  backupCash: { style: 'solid', width: '1.5px' },
+  mens: { style: 'dashed', width: '1.5px' },
+  womens: { style: 'dashed', width: '1.5px' },
+  floorMonitor: { style: 'dotted', width: '1.5px' },
   none: { style: 'solid', width: '1px' },
 };
 
