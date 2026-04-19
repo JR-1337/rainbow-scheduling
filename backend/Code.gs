@@ -2362,6 +2362,12 @@ function clearAllData() {
  * the function in a follow-up commit after verification (per one-shot
  * hygiene pattern, same as backfillPasswordHashes).
  */
+// Public wrapper so the editor dropdown shows this one-shot. Delete alongside
+// widenAvailabilityForPK_ in the follow-up cleanup commit.
+function runWidenAvailabilityForPK() {
+  return widenAvailabilityForPK_();
+}
+
 function widenAvailabilityForPK_() {
   const PK_WINDOWS = {
     monday:    { end: '20:00' },
