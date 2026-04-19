@@ -291,9 +291,14 @@ export default function App() {
       });
       let createdTotal = 0;
       let skippedDays = 0;
+      const skippedWindows = new Set();
       for (let i = 0; i < byDay.length; i++) {
         const { dateStr, start, end, eligibleIds } = byDay[i];
-        if (eligibleIds.length === 0) { skippedDays++; continue; }
+        if (eligibleIds.length === 0) {
+          skippedDays++;
+          skippedWindows.add(`${start}-${end}`);
+          continue;
+        }
         showToast('saving', `PK day ${i + 1} of ${byDay.length}...`, 30000);
         const result = await apiCall('bulkCreatePKEvent', {
           date: dateStr, startTime: start, endTime: end, note: '', employeeIds: eligibleIds,
@@ -302,10 +307,14 @@ export default function App() {
           createdTotal += (result.data?.created?.length || 0);
         }
       }
-      const msg = skippedDays > 0
-        ? `PK autofilled: ${createdTotal} shifts, ${skippedDays} day(s) skipped (no eligible)`
-        : `PK autofilled: ${createdTotal} shifts across week ${weekNum}`;
-      showToast('success', msg);
+      if (createdTotal === 0 && skippedDays > 0) {
+        const windowsList = Array.from(skippedWindows).join(', ');
+        showToast('error', `No eligible staff for PK (${windowsList}) in week ${weekNum}. Check availability or use "Schedule a PK..." to pick a custom time.`, 8000);
+      } else if (skippedDays > 0) {
+        showToast('success', `PK autofilled: ${createdTotal} shifts, ${skippedDays} day(s) had no eligible staff.`);
+      } else {
+        showToast('success', `PK autofilled: ${createdTotal} shifts across week ${weekNum}`);
+      }
       if (currentUser?.email) await loadDataFromBackend(currentUser.email);
     });
   };
