@@ -37,11 +37,6 @@ Lesson: On mobile, `AdaptiveModal` defers to `MobileBottomSheet({ title })` whic
 Context: Observed during 2026-04-18 re-verify; fine for current UX but documented so future AdaptiveModal work doesn't assume symmetric props.
 Affirmations: 0
 
-## [PROJECT] -- Reactivate and re-inactivate Alex Kim is the canonical smoke pattern for employee-side flows
-Lesson: Admin cannot exercise OfferShift/SwapShift (filtered to non-admin). To smoke them, reactivate an inactive test account, sign in, smoke, sign out, re-edit to Inactive. Alex Kim / `emp.001@example.com` / `emp-001` is the standing test account.
-Context: Playwright re-verify 2026-04-18 required this dance.
-Affirmations: 0
-
 ## Apps Script and Sheets platform
 
 ## [PROJECT] -- Sheets stores numeric-looking passwords as numbers

@@ -18,8 +18,13 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-18 -- Test-employee scrub executed; purge functions removed
+Decision: Ran `purgeTestEmployees` from Apps Script editor. 20 `@example.com` employees + 50 shifts deleted from the live Sheet. Then removed `listTestEmployees` / `purgeTestEmployees` / `_findTestEmployees_` from `backend/Code.gs` and from the live editor. Also deleted `backend/seed-demo-data.gs` and scrubbed the 5 legacy Emma/Liam/Olivia/Noah/Ava seed rows from `createEmployeesTab`. Stale Alex Kim smoke-pattern lesson removed from LESSONS.md.
+Rationale: One-time cleanup per Sarvi request. Keeping the purge functions around invites accidental re-run. `clearAllData` stays because it has general utility; this one didn't.
+Confidence: H -- verified 2026-04-18 via Drive MCP `getAllData` read: 24 employees, 79 shifts, 0 `@example.com` rows.
+
 ## 2026-04-18 -- One-time data scrubs ship as editor-only functions in Code.gs
-Decision: `listTestEmployees` + `purgeTestEmployees` live in `backend/Code.gs` (commit `2b4e5d4`) but are not wired to `handleRequest` dispatch. Invocation == Apps Script editor only. Same pattern as existing `clearAllData` at Code.gs:2338.
+Decision: `listTestEmployees` + `purgeTestEmployees` lived in `backend/Code.gs` as editor-only functions (not wired to `handleRequest`). Superseded by removal entry above after the one-time scrub completed. Same pattern as existing `clearAllData` at Code.gs:2338.
 Rationale: Destructive cross-sheet ops (Employees + Shifts + ShiftChanges) should require Apps-Script-editor access, not an HTTP handler. Editor access is already limited to JR/Sarvi; HTTP handler would require admin-auth-plus-confirmation plumbing for a one-time job. Version control via git preserves audit trail without expanding the attack surface.
 Confidence: H -- verified 2026-04-18: `listTestEmployees` not registered in `handleRequest` action map (grep); only invocable from editor.
 
