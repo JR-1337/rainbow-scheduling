@@ -7,7 +7,7 @@ import { STAT_HOLIDAY_HOURS, STORE_HOURS, isStatHoliday } from './utils/storeHou
 import { Modal, GradientButton, TooltipButton } from './components/primitives';
 import { haptic, AnimatedNumber, ScheduleSkeleton, TaskStarTooltip, GradientBackground, Logo, StaffingBar } from './components/uiKit';
 import { PAY_PERIOD_START, CURRENT_PERIOD_INDEX, getPayPeriodDates } from './utils/payPeriod';
-import { hasApprovedTimeOffForDate } from './utils/requests';
+import { hasApprovedTimeOffForDate, matchesOfferId, matchesSwapId, errorMsg } from './utils/requests';
 import { CollapsibleSection } from './components/CollapsibleSection';
 import { LoginScreen } from './components/LoginScreen';
 import { LoadingScreen, ErrorScreen } from './components/LoadingScreen';
@@ -288,7 +288,7 @@ export default function App() {
     await guardedMutation('Scheduling PK', async () => {
       const result = await apiCall('bulkCreatePKEvent', payload);
       if (!result.success) {
-        showToast('error', result.error?.message || 'Failed to schedule PK');
+        showToast('error', errorMsg(result, 'Failed to schedule PK'));
         return;
       }
       const { created = [], skipped = [] } = result.data || {};
@@ -358,7 +358,7 @@ export default function App() {
       setIsLoadingData(false);
       return true;
     } else {
-      setLoadError(result.error?.message || 'Failed to load data');
+      setLoadError(errorMsg(result, 'Failed to load data'));
       setIsLoadingData(false);
       return false;
     }
@@ -417,7 +417,7 @@ export default function App() {
         const partial = d && d.totalChunks > 1 && d.failedChunks < d.totalChunks;
         const msg = partial
           ? `NOT PUBLISHED — ${d.totalChunks - d.failedChunks} of ${d.totalChunks} batches saved. Click Publish again to retry.`
-          : (saveResult.error?.message || 'Failed to save schedule — schedule is NOT published');
+          : (errorMsg(saveResult, 'Failed to save schedule — schedule is NOT published'));
         showToast('error', msg);
         setScheduleSaving(false);
         return;
@@ -504,7 +504,7 @@ export default function App() {
       const d = saveResult.data;
       const msg = (d && d.totalChunks > 1 && d.failedChunks < d.totalChunks)
         ? `Schedule save incomplete: ${d.totalChunks - d.failedChunks} of ${d.totalChunks} batches saved. Please retry.`
-        : (saveResult.error?.message || 'Failed to save');
+        : (errorMsg(saveResult, 'Failed to save'));
       showToast('error', msg);
       // unsaved flag intentionally NOT cleared — user can retry
     }
@@ -767,7 +767,7 @@ export default function App() {
       // Revert so the UI matches the server's rejection; keep editingEmp
       // so modal stays labelled "Edit Employee" while user retries.
       setEmployees(prevEmployees);
-      showToast('error', result.error?.message || 'Failed to save employee');
+      showToast('error', errorMsg(result, 'Failed to save employee'));
       return false;
     }
   };
@@ -797,7 +797,7 @@ export default function App() {
       return true;
     } else {
       setEmployees(prevEmployees);
-      showToast('error', result.error?.message || 'Failed to remove employee');
+      showToast('error', errorMsg(result, 'Failed to remove employee'));
       return false;
     }
   };
@@ -823,7 +823,7 @@ export default function App() {
       return true;
     } else {
       setEmployees(prevEmployees);
-      showToast('error', result.error?.message || 'Failed to reactivate employee');
+      showToast('error', errorMsg(result, 'Failed to reactivate employee'));
       return false;
     }
   };
@@ -856,7 +856,7 @@ export default function App() {
       }));
       showToast('success', 'Request cancelled');
     } else {
-      showToast('error', result.error?.message || 'Failed to cancel request');
+      showToast('error', errorMsg(result, 'Failed to cancel request'));
     }
     });
   };
@@ -883,7 +883,7 @@ export default function App() {
       setTimeOffRequests(prev => [...prev, serverRequest]);
       showToast('success', 'Request sent — Sarvi has been notified');
     } else {
-      showToast('error', result.error?.message || 'Failed to submit request');
+      showToast('error', errorMsg(result, 'Failed to submit request'));
     }
     });
   };
@@ -912,7 +912,7 @@ export default function App() {
       setShiftOffers(prev => [...prev, serverOffer]);
       showToast('success', 'Offer sent — waiting for recipient response');
     } else {
-      showToast('error', result.error?.message || 'Failed to submit offer');
+      showToast('error', errorMsg(result, 'Failed to submit offer'));
     }
     });
   };
@@ -926,14 +926,14 @@ export default function App() {
 
     if (result.success) {
       setShiftOffers(prev => prev.map(offer => {
-        if ((offer.offerId === offerId || offer.requestId === offerId) && ['awaiting_recipient', 'awaiting_admin'].includes(offer.status)) {
+        if ((matchesOfferId(offer, offerId)) && ['awaiting_recipient', 'awaiting_admin'].includes(offer.status)) {
           return { ...offer, status: 'cancelled', cancelledTimestamp: new Date().toISOString() };
         }
         return offer;
       }));
       showToast('success', 'Offer cancelled');
     } else {
-      showToast('error', result.error?.message || 'Failed to cancel offer');
+      showToast('error', errorMsg(result, 'Failed to cancel offer'));
     }
     });
   };
@@ -947,14 +947,14 @@ export default function App() {
 
     if (result.success) {
       setShiftOffers(prev => prev.map(offer => {
-        if ((offer.offerId === offerId || offer.requestId === offerId) && offer.status === 'awaiting_recipient') {
+        if ((matchesOfferId(offer, offerId)) && offer.status === 'awaiting_recipient') {
           return { ...offer, status: 'awaiting_admin', recipientRespondedTimestamp: new Date().toISOString() };
         }
         return offer;
       }));
       showToast('success', 'Offer accepted - awaiting admin approval');
     } else {
-      showToast('error', result.error?.message || 'Failed to accept offer');
+      showToast('error', errorMsg(result, 'Failed to accept offer'));
     }
     });
   };
@@ -969,21 +969,21 @@ export default function App() {
 
     if (result.success) {
       setShiftOffers(prev => prev.map(offer => {
-        if ((offer.offerId === offerId || offer.requestId === offerId) && offer.status === 'awaiting_recipient') {
+        if ((matchesOfferId(offer, offerId)) && offer.status === 'awaiting_recipient') {
           return { ...offer, status: 'recipient_rejected', recipientNote: note || '', recipientRespondedTimestamp: new Date().toISOString() };
         }
         return offer;
       }));
       showToast('success', 'Offer declined');
     } else {
-      showToast('error', result.error?.message || 'Failed to decline offer');
+      showToast('error', errorMsg(result, 'Failed to decline offer'));
     }
     });
   };
 
   // Approve a shift offer (admin action) - reassign the shift
   const approveShiftOffer = async (offerId) => {
-    const offer = shiftOffers.find(o => (o.offerId === offerId || o.requestId === offerId) && o.status === 'awaiting_admin');
+    const offer = shiftOffers.find(o => (matchesOfferId(o, offerId)) && o.status === 'awaiting_admin');
     if (!offer) return;
     await guardedMutation('Approving offer', async () => {
     const result = await apiCall('approveShiftOffer', {
@@ -997,14 +997,14 @@ export default function App() {
         setShifts(prev => transferShiftBetweenEmployees(prev, offerer, recipient, offer.shiftDate));
       }
       setShiftOffers(prev => prev.map(o => {
-        if (o.offerId === offerId || o.requestId === offerId) {
+        if (matchesOfferId(o, offerId)) {
           return { ...o, status: 'approved', adminDecidedTimestamp: new Date().toISOString(), adminDecidedBy: currentUser?.email || '' };
         }
         return o;
       }));
       showToast('success', 'Offer approved — moved to Settled history');
     } else {
-      showToast('error', result.error?.message || 'Failed to approve offer');
+      showToast('error', errorMsg(result, 'Failed to approve offer'));
     }
     });
   };
@@ -1019,21 +1019,21 @@ export default function App() {
     
     if (result.success) {
       setShiftOffers(prev => prev.map(offer => {
-        if ((offer.offerId === offerId || offer.requestId === offerId) && offer.status === 'awaiting_admin') {
+        if ((matchesOfferId(offer, offerId)) && offer.status === 'awaiting_admin') {
           return { ...offer, status: 'rejected', adminNote: note || '', adminDecidedTimestamp: new Date().toISOString(), adminDecidedBy: currentUser?.email || '' };
         }
         return offer;
       }));
       showToast('success', 'Offer rejected — moved to Settled history');
     } else {
-      showToast('error', result.error?.message || 'Failed to reject offer');
+      showToast('error', errorMsg(result, 'Failed to reject offer'));
     }
     });
   };
 
   // Revoke an approved shift offer (admin action) - reverts the shift back to original owner
   const revokeShiftOffer = async (offerId) => {
-    const offer = shiftOffers.find(o => (o.offerId === offerId || o.requestId === offerId) && o.status === 'approved');
+    const offer = shiftOffers.find(o => (matchesOfferId(o, offerId)) && o.status === 'approved');
     if (!offer) return;
 
     const shiftDate = parseLocalDate(offer.shiftDate);
@@ -1056,14 +1056,14 @@ export default function App() {
         setShifts(prev => transferShiftBetweenEmployees(prev, recipient, offerer, offer.shiftDate));
       }
       setShiftOffers(prev => prev.map(o => {
-        if (o.offerId === offerId || o.requestId === offerId) {
+        if (matchesOfferId(o, offerId)) {
           return { ...o, status: 'revoked', revokedTimestamp: new Date().toISOString(), revokedBy: currentUser?.email || '' };
         }
         return o;
       }));
       showToast('success', 'Offer approval revoked');
     } else {
-      showToast('error', result.error?.message || 'Failed to revoke offer');
+      showToast('error', errorMsg(result, 'Failed to revoke offer'));
     }
     });
   };
@@ -1104,7 +1104,7 @@ export default function App() {
       setShiftSwaps(prev => [...prev, serverSwap]);
       showToast('success', `Swap sent to ${swap.partnerName} — waiting for response`);
     } else {
-      showToast('error', result.error?.message || 'Failed to submit swap request');
+      showToast('error', errorMsg(result, 'Failed to submit swap request'));
     }
     });
   };
@@ -1118,14 +1118,14 @@ export default function App() {
 
     if (result.success) {
       setShiftSwaps(prev => prev.map(swap => {
-        if ((swap.swapId === swapId || swap.requestId === swapId) && ['awaiting_partner', 'awaiting_admin'].includes(swap.status)) {
+        if ((matchesSwapId(swap, swapId)) && ['awaiting_partner', 'awaiting_admin'].includes(swap.status)) {
           return { ...swap, status: 'cancelled' };
         }
         return swap;
       }));
       showToast('success', 'Swap request cancelled');
     } else {
-      showToast('error', result.error?.message || 'Failed to cancel swap');
+      showToast('error', errorMsg(result, 'Failed to cancel swap'));
     }
     });
   };
@@ -1139,14 +1139,14 @@ export default function App() {
 
     if (result.success) {
       setShiftSwaps(prev => prev.map(swap => {
-        if ((swap.swapId === swapId || swap.requestId === swapId) && swap.status === 'awaiting_partner') {
+        if ((matchesSwapId(swap, swapId)) && swap.status === 'awaiting_partner') {
           return { ...swap, status: 'awaiting_admin', partnerRespondedTimestamp: new Date().toISOString() };
         }
         return swap;
       }));
       showToast('success', 'Swap accepted - awaiting admin approval');
     } else {
-      showToast('error', result.error?.message || 'Failed to accept swap');
+      showToast('error', errorMsg(result, 'Failed to accept swap'));
     }
     });
   };
@@ -1161,21 +1161,21 @@ export default function App() {
 
     if (result.success) {
       setShiftSwaps(prev => prev.map(swap => {
-        if ((swap.swapId === swapId || swap.requestId === swapId) && swap.status === 'awaiting_partner') {
+        if ((matchesSwapId(swap, swapId)) && swap.status === 'awaiting_partner') {
           return { ...swap, status: 'partner_rejected', partnerNote: note || '', partnerRespondedTimestamp: new Date().toISOString() };
         }
         return swap;
       }));
       showToast('success', 'Swap request declined');
     } else {
-      showToast('error', result.error?.message || 'Failed to decline swap');
+      showToast('error', errorMsg(result, 'Failed to decline swap'));
     }
     });
   };
 
   // Approve a swap request (admin action) - swap both shifts
   const approveSwapRequest = async (swapId) => {
-    const swap = shiftSwaps.find(s => (s.swapId === swapId || s.requestId === swapId) && s.status === 'awaiting_admin');
+    const swap = shiftSwaps.find(s => (matchesSwapId(s, swapId)) && s.status === 'awaiting_admin');
     if (!swap) return;
     await guardedMutation('Approving swap', async () => {
     const result = await apiCall('approveSwapRequest', {
@@ -1190,14 +1190,14 @@ export default function App() {
       }
       
       setShiftSwaps(prev => prev.map(s => {
-        if (s.swapId === swapId || s.requestId === swapId) {
+        if (matchesSwapId(s, swapId)) {
           return { ...s, status: 'approved', adminDecidedTimestamp: new Date().toISOString(), adminDecidedBy: currentUser?.email || '' };
         }
         return s;
       }));
       showToast('success', 'Swap approved — moved to Settled history');
     } else {
-      showToast('error', result.error?.message || 'Failed to approve swap');
+      showToast('error', errorMsg(result, 'Failed to approve swap'));
     }
     });
   };
@@ -1212,21 +1212,21 @@ export default function App() {
     
     if (result.success) {
       setShiftSwaps(prev => prev.map(swap => {
-        if ((swap.swapId === swapId || swap.requestId === swapId) && swap.status === 'awaiting_admin') {
+        if ((matchesSwapId(swap, swapId)) && swap.status === 'awaiting_admin') {
           return { ...swap, status: 'rejected', adminNote: note || '', adminDecidedTimestamp: new Date().toISOString(), adminDecidedBy: currentUser?.email || '' };
         }
         return swap;
       }));
       showToast('success', 'Swap rejected — moved to Settled history');
     } else {
-      showToast('error', result.error?.message || 'Failed to reject swap');
+      showToast('error', errorMsg(result, 'Failed to reject swap'));
     }
     });
   };
 
   // Revoke an approved swap request (admin action) - swap shifts back
   const revokeSwapRequest = async (swapId) => {
-    const swap = shiftSwaps.find(s => (s.swapId === swapId || s.requestId === swapId) && s.status === 'approved');
+    const swap = shiftSwaps.find(s => (matchesSwapId(s, swapId)) && s.status === 'approved');
     if (!swap) return;
 
     const initiatorDate = parseLocalDate(swap.initiatorShiftDate);
@@ -1269,14 +1269,14 @@ export default function App() {
       }
       
       setShiftSwaps(prev => prev.map(s => {
-        if (s.swapId === swapId || s.requestId === swapId) {
+        if (matchesSwapId(s, swapId)) {
           return { ...s, status: 'revoked', revokedTimestamp: new Date().toISOString(), revokedBy: currentUser?.email || '' };
         }
         return s;
       }));
       showToast('success', 'Swap approval revoked');
     } else {
-      showToast('error', result.error?.message || 'Failed to revoke swap');
+      showToast('error', errorMsg(result, 'Failed to revoke swap'));
     }
     });
   };
@@ -1298,7 +1298,7 @@ export default function App() {
       }));
       showToast('success', 'Approved — moved to Settled history');
     } else {
-      showToast('error', result.error?.message || 'Failed to approve request');
+      showToast('error', errorMsg(result, 'Failed to approve request'));
     }
     });
   };
@@ -1320,7 +1320,7 @@ export default function App() {
       }));
       showToast('success', 'Denied — moved to Settled history');
     } else {
-      showToast('error', result.error?.message || 'Failed to deny request');
+      showToast('error', errorMsg(result, 'Failed to deny request'));
     }
     });
   };
@@ -1356,7 +1356,7 @@ export default function App() {
       }));
       showToast('success', 'Approval revoked');
     } else {
-      showToast('error', result.error?.message || 'Failed to revoke request');
+      showToast('error', errorMsg(result, 'Failed to revoke request'));
     }
     });
   };
