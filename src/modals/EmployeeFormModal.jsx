@@ -125,7 +125,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
             </select>
           </div>
 
-          <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: formData.employmentType === 'full-time' ? THEME.accent.blue + '15' : THEME.bg.tertiary }}>
+          <div className="mt-2 p-1.5 rounded-lg flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-0" style={{ backgroundColor: formData.employmentType === 'full-time' ? THEME.accent.blue + '15' : THEME.bg.tertiary }}>
             <span className="text-xs flex items-center gap-1" style={{ color: formData.employmentType === 'full-time' ? THEME.accent.blue : THEME.text.secondary }}>
               <Clock size={12} />
               Employment Type
@@ -148,8 +148,8 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
 
           {employee && (
             <>
-              <div className="mt-2 flex gap-2">
-                <div className="flex-1 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: formData.active ? THEME.status.success + '15' : THEME.status.warning + '15' }}>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                <div className="flex-1 p-1.5 rounded-lg flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-0" style={{ backgroundColor: formData.active ? THEME.status.success + '15' : THEME.status.warning + '15' }}>
                   <span className="text-xs flex items-center gap-1" style={{ color: formData.active ? THEME.status.success : THEME.status.warning }}>
                     {formData.active ? <UserCheck size={12} /> : <UserX size={12} />}
                     {formData.active ? 'Active' : 'Inactive'}
@@ -159,7 +159,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                   </button>
                 </div>
 
-                <div className="flex-1 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: formData.isAdmin ? THEME.accent.purple + '15' : THEME.bg.tertiary }}>
+                <div className="flex-1 p-1.5 rounded-lg flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-0" style={{ backgroundColor: formData.isAdmin ? THEME.accent.purple + '15' : THEME.bg.tertiary }}>
                   <span className="text-xs flex items-center gap-1" style={{ color: formData.isAdmin ? THEME.accent.purple : THEME.text.muted }}>
                     <Shield size={12} />
                     {formData.isOwner ? 'Owner' : formData.isAdmin ? 'Admin' : 'Staff'}
