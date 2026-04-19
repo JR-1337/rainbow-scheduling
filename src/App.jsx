@@ -1827,6 +1827,52 @@ export default function App() {
     return (<>{sweepOverlay}<EmployeeView employees={employees} shifts={publishedShifts} events={publishedEvents} dates={dates} periodInfo={{ startDate, endDate }} currentUser={currentUser} onLogout={() => { clearAuth(); setCurrentUser(null); }} timeOffRequests={timeOffRequests} onCancelRequest={cancelTimeOffRequest} onSubmitRequest={submitTimeOffRequest} shiftOffers={shiftOffers} onSubmitOffer={submitShiftOffer} onCancelOffer={cancelShiftOffer} onAcceptOffer={acceptShiftOffer} onRejectOffer={rejectShiftOffer} shiftSwaps={shiftSwaps} onSubmitSwap={submitSwapRequest} onCancelSwap={cancelSwapRequest} onAcceptSwap={acceptSwapRequest} onRejectSwap={rejectSwapRequest} periodIndex={periodIndex} onPeriodChange={setPeriodIndex} isEditMode={isCurrentPeriodEditMode} announcement={currentAnnouncement} /></>);
   }
 
+  // Shared auto-populate confirm modal — rendered from both mobile and desktop
+  // branch returns so mobile Clear/Fill/PK-autofill actually mount a confirm UI.
+  const confirmModal = autoPopulateConfirm && (
+    <Modal isOpen onClose={() => setAutoPopulateConfirm(null)} title="Confirm Action" size="sm">
+      <div className="text-center py-2">
+        <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
+          style={{ backgroundColor: autoPopulateConfirm.type.includes('clear') ? THEME.status.error + '20' : THEME.accent.blue + '20' }}>
+          {autoPopulateConfirm.type.includes('clear')
+            ? <Trash2 size={24} style={{ color: THEME.status.error }} />
+            : <Zap size={24} style={{ color: THEME.accent.blue }} />
+          }
+        </div>
+
+        <p className="text-sm font-medium mb-2" style={{ color: THEME.text.primary }}>
+          {autoPopulateConfirm.type === 'populate-all' && `Auto-Fill All Full-Time for Week ${autoPopulateConfirm.week}?`}
+          {autoPopulateConfirm.type === 'populate-week' && `Auto-Fill Week ${autoPopulateConfirm.week} for ${autoPopulateConfirm.employee?.name}?`}
+          {autoPopulateConfirm.type === 'clear-week' && `Clear Week ${autoPopulateConfirm.week} for ${autoPopulateConfirm.employee?.name}?`}
+          {autoPopulateConfirm.type === 'clear-all' && `Clear All Full-Time Shifts for Week ${autoPopulateConfirm.week}?`}
+          {autoPopulateConfirm.type === 'autofill-pk-week' && `Autofill PK for Week ${autoPopulateConfirm.week}?`}
+        </p>
+
+        <p className="text-xs mb-4" style={{ color: THEME.text.secondary }}>
+          {autoPopulateConfirm.type === 'autofill-pk-week'
+            ? 'Saturday uses 10:00-10:45 (pre-open). Other days use 18:00-20:00 (post-close). Eligible full-timers only. Days that already have PK are preserved.'
+            : autoPopulateConfirm.type.includes('populate')
+              ? 'Some shifts already exist and will be preserved. Only empty days will be filled based on availability.'
+              : 'This will remove the selected shifts. You can undo by not saving changes.'
+          }
+        </p>
+
+        <div className="flex justify-center gap-2">
+          <GradientButton variant="secondary" small onClick={() => setAutoPopulateConfirm(null)}>
+            Cancel
+          </GradientButton>
+          <GradientButton
+            small
+            danger={autoPopulateConfirm.type.includes('clear')}
+            onClick={handleAutoPopulateConfirm}
+          >
+            {autoPopulateConfirm.type.includes('clear') ? 'Clear Shifts' : autoPopulateConfirm.type === 'autofill-pk-week' ? 'Autofill PK' : 'Auto-Fill'}
+          </GradientButton>
+        </div>
+      </div>
+    </Modal>
+  );
+
   // ═══════════════════════════════════════════════════════════════════════════
   // MOBILE ADMIN VIEW
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2332,7 +2378,8 @@ export default function App() {
           />
         )}
 
-        {/* Auto-populate confirm modal lives at App root (search "Auto-populate confirmation modal" below) — duplicate inline modal removed because it stacked on top of the full-featured one and rendered blank for per-employee actions, which read as "autofill/clear does nothing for individual employees". */}
+        {/* Auto-populate confirm modal (shared with desktop branch via const confirmModal) */}
+        {confirmModal}
 
         {/* Toast */}
         {toast && (
@@ -2955,50 +3002,8 @@ export default function App() {
         shifts={shifts}
       />
       
-      {/* Auto-populate confirmation modal */}
-      {autoPopulateConfirm && (
-        <Modal isOpen onClose={() => setAutoPopulateConfirm(null)} title="Confirm Action" size="sm">
-          <div className="text-center py-2">
-            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" 
-              style={{ backgroundColor: autoPopulateConfirm.type.includes('clear') ? THEME.status.error + '20' : THEME.accent.blue + '20' }}>
-              {autoPopulateConfirm.type.includes('clear') 
-                ? <Trash2 size={24} style={{ color: THEME.status.error }} />
-                : <Zap size={24} style={{ color: THEME.accent.blue }} />
-              }
-            </div>
-            
-            <p className="text-sm font-medium mb-2" style={{ color: THEME.text.primary }}>
-              {autoPopulateConfirm.type === 'populate-all' && `Auto-Fill All Full-Time for Week ${autoPopulateConfirm.week}?`}
-              {autoPopulateConfirm.type === 'populate-week' && `Auto-Fill Week ${autoPopulateConfirm.week} for ${autoPopulateConfirm.employee?.name}?`}
-              {autoPopulateConfirm.type === 'clear-week' && `Clear Week ${autoPopulateConfirm.week} for ${autoPopulateConfirm.employee?.name}?`}
-              {autoPopulateConfirm.type === 'clear-all' && `Clear All Full-Time Shifts for Week ${autoPopulateConfirm.week}?`}
-              {autoPopulateConfirm.type === 'autofill-pk-week' && `Autofill PK for Week ${autoPopulateConfirm.week}?`}
-            </p>
-
-            <p className="text-xs mb-4" style={{ color: THEME.text.secondary }}>
-              {autoPopulateConfirm.type === 'autofill-pk-week'
-                ? 'Saturday uses 10:00-10:45 (pre-open). Other days use 18:00-20:00 (post-close). Eligible full-timers only. Days that already have PK are preserved.'
-                : autoPopulateConfirm.type.includes('populate')
-                  ? 'Some shifts already exist and will be preserved. Only empty days will be filled based on availability.'
-                  : 'This will remove the selected shifts. You can undo by not saving changes.'
-              }
-            </p>
-
-            <div className="flex justify-center gap-2">
-              <GradientButton variant="secondary" small onClick={() => setAutoPopulateConfirm(null)}>
-                Cancel
-              </GradientButton>
-              <GradientButton
-                small
-                danger={autoPopulateConfirm.type.includes('clear')}
-                onClick={handleAutoPopulateConfirm}
-              >
-                {autoPopulateConfirm.type.includes('clear') ? 'Clear Shifts' : autoPopulateConfirm.type === 'autofill-pk-week' ? 'Autofill PK' : 'Auto-Fill'}
-              </GradientButton>
-            </div>
-          </div>
-        </Modal>
-      )}
+      {/* Auto-populate confirmation modal (shared with mobile branch) */}
+      {confirmModal}
       
       {/* Toast Notification - fixed position at top center, ABOVE modals */}
       {toast && (
