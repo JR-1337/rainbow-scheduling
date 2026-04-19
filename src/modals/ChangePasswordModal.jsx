@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Key, Loader, Check } from 'lucide-react';
 import { THEME } from '../theme';
-import { Modal, GradientButton, apiCall } from '../App';
+import { apiCall } from '../App';
+import { Modal, GradientButton } from '../components/primitives';
 
 export const ChangePasswordModal = ({ isOpen, onClose, currentUser, isFirstLogin = false, onSuccess, defaultPassword = '' }) => {
   const [currentPassword, setCurrentPassword] = useState('');

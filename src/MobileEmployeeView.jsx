@@ -13,10 +13,11 @@ import {
 
 import {
   THEME, TYPE, ROLES, ROLES_BY_ID,
-  getStoreHoursForDate, GradientBackground, haptic, useFocusTrap
+  getStoreHoursForDate, GradientBackground, haptic
 } from './App';
 import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } from './utils/date';
 import { isStatHoliday } from './utils/storeHours';
+import { useFocusTrap } from './hooks/useFocusTrap';
 import { EVENT_TYPES } from './constants';
 import { computeDayUnionHours } from './utils/timemath';
 

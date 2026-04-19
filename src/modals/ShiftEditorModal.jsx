@@ -3,7 +3,8 @@ import { Star, Trash2, Check, AlertTriangle, Plus } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES, EVENT_TYPES } from '../constants';
 import { getPKDefaultTimes } from '../utils/eventDefaults';
-import { getStoreHoursForDate, Modal, TimePicker, GradientButton, AnimatedNumber } from '../App';
+import { getStoreHoursForDate, AnimatedNumber } from '../App';
+import { Modal, TimePicker, GradientButton } from '../components/primitives';
 import { toDateKey, formatDateLong, calculateHours } from '../utils/date';
 import { isStatHoliday } from '../utils/storeHours';
 

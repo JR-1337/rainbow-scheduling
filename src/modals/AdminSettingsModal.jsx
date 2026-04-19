@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Users, Key, Save, Loader, Check } from 'lucide-react';
 import { THEME } from '../theme';
-import { Modal, GradientButton, apiCall } from '../App';
+import { apiCall } from '../App';
+import { Modal, GradientButton } from '../components/primitives';
 
 export const AdminSettingsModal = ({ isOpen, onClose, currentUser, staffingTargets, onStaffingTargetsChange, showToast }) => {
   const [activeTab, setActiveTab] = useState('targets');

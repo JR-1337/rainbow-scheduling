@@ -1,6 +1,6 @@
 import { UserCheck, UserX, Trash2 } from 'lucide-react';
 import { THEME } from '../theme';
-import { Modal } from '../App';
+import { Modal } from '../components/primitives';
 
 export const InactiveEmployeesPanel = ({ isOpen, onClose, employees, onReactivate, onDelete }) => {
   const inactiveEmps = employees.filter(e => !e.active && !e.deleted && !e.isOwner);
