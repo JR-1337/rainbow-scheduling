@@ -13,13 +13,14 @@ import { LoginScreen } from './components/LoginScreen';
 import { ColumnHeaderEditor } from './components/ColumnHeaderEditor';
 import { useUnsavedWarning } from './hooks/useUnsavedWarning';
 import { useDismissOnOutside } from './hooks/useDismissOnOutside';
+import { useAuth } from './hooks/useAuth';
 import { EmployeeRow } from './components/EmployeeRow';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
-import { getAuthToken, setAuthToken, clearAuth, getCachedUser, setCachedUser, setOnAuthFailure, handleAuthError } from './auth';
+import { getAuthToken, setAuthToken, clearAuth, setCachedUser, handleAuthError } from './auth';
 import { OTR, THEME, TYPE } from './theme';
 import { ROLES, ROLES_BY_ID, EVENT_TYPES } from './constants';
 import { AdminTimeOffPanel } from './panels/AdminTimeOffPanel';
@@ -160,11 +161,6 @@ const DEFAULT_STAFFING_TARGETS = {
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function App() {
-  // S37: if a session token + cached user survived the page refresh, start signed in.
-  // First protected apiCall will expire-bounce the user to login if the token is stale.
-  const [currentUser, setCurrentUser] = useState(() => {
-    return getAuthToken() ? getCachedUser() : null;
-  });
   const isMobileAdmin = useIsMobile();
   const [employees, setEmployees] = useState([]);
   const [periodIndex, setPeriodIndex] = useState(CURRENT_PERIOD_INDEX);
@@ -198,6 +194,9 @@ export default function App() {
     if (announcer) announcer.textContent = message;
     setTimeout(() => setToast(null), duration);
   };
+
+  // S37: persisted session restore + AUTH_EXPIRED auto-bounce to login.
+  const [currentUser, setCurrentUser] = useAuth(showToast);
   
   // Edit Mode: Per-period tracking - each pay period can be independently LIVE or in Edit Mode
   // Key = periodIndex, Value = true (edit mode) or false (live/locked)
@@ -329,15 +328,6 @@ export default function App() {
   useEffect(() => {
     setPeriodIndex(CURRENT_PERIOD_INDEX);
   }, [currentUser?.id]);
-
-  // S37: auto-bounce to login on AUTH_EXPIRED / AUTH_INVALID from any apiCall.
-  useEffect(() => {
-    setOnAuthFailure(() => {
-      setCurrentUser(null);
-      showToast('warning', 'Session expired. Please log in again.', 4000);
-    });
-    return () => setOnAuthFailure(null);
-  }, []);
 
   // S37: if we restored a user from localStorage on mount, fire the normal data-load.
   // If the token is stale, loadDataFromBackend will surface AUTH_EXPIRED and the
