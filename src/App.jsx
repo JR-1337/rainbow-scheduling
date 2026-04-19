@@ -339,7 +339,12 @@ export default function App() {
           typeof emp.availability === 'string'
             ? (() => { try { return JSON.parse(emp.availability); } catch { return null; } })()
             : emp.availability
-        )
+        ),
+        // v2.24.0: per-day {start,end} for Auto-Fill. Absence = fall back to
+        // availability. Missing column / bad JSON = null (feature-flag-safe).
+        defaultShift: typeof emp.defaultShift === 'string' && emp.defaultShift
+          ? (() => { try { return JSON.parse(emp.defaultShift); } catch { return null; } })()
+          : (emp.defaultShift && typeof emp.defaultShift === 'object' ? emp.defaultShift : null)
       }));
       setEmployees(parsedEmployees);
       
@@ -1016,6 +1021,7 @@ export default function App() {
     const employeeForApi = {
       ...e,
       availability: typeof e.availability === 'object' ? JSON.stringify(e.availability) : e.availability,
+      defaultShift: e.defaultShift && typeof e.defaultShift === 'object' ? JSON.stringify(e.defaultShift) : (e.defaultShift || ''),
       ...(e.password ? { password: e.password } : {})
     };
 
@@ -1069,7 +1075,8 @@ export default function App() {
       ...emp,
       deleted: true,
       active: false,
-      availability: typeof emp.availability === 'object' ? JSON.stringify(emp.availability) : emp.availability
+      availability: typeof emp.availability === 'object' ? JSON.stringify(emp.availability) : emp.availability,
+      defaultShift: emp.defaultShift && typeof emp.defaultShift === 'object' ? JSON.stringify(emp.defaultShift) : (emp.defaultShift || '')
     };
 
     // Call API to persist
@@ -1101,7 +1108,8 @@ export default function App() {
       ...emp,
       active: true,
       deleted: false,
-      availability: typeof emp.availability === 'object' ? JSON.stringify(emp.availability) : emp.availability
+      availability: typeof emp.availability === 'object' ? JSON.stringify(emp.availability) : emp.availability,
+      defaultShift: emp.defaultShift && typeof emp.defaultShift === 'object' ? JSON.stringify(emp.defaultShift) : (emp.defaultShift || '')
     };
 
     // Call API to persist
