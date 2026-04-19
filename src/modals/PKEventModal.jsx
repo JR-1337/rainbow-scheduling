@@ -59,6 +59,7 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees, activeWee
   const fullTimers = candidates.filter(c => c.type === 'full');
   const partTimers = candidates.filter(c => c.type !== 'full');
   const checkedCount = candidates.filter(c => c.checked).length;
+  const eligibleCount = candidates.filter(c => c.eligible).length;
 
   const toggle = (id, nextChecked) => {
     setOverrides(prev => ({ ...prev, [id]: nextChecked }));
@@ -140,8 +141,8 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees, activeWee
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Schedule Product Knowledge" size="lg">
-      {/* Date + time row */}
-      <div className="grid grid-cols-3 gap-2 mb-1">
+      {/* Date + time row — stacks on mobile so the two time pickers (each 2 selects wide) aren't squeezed */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-1">
         <div>
           <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Date</label>
           <input
@@ -194,10 +195,12 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees, activeWee
           <button
             type="button"
             onClick={selectAllEligible}
-            className="px-2 py-0.5 rounded text-xs hover:opacity-80"
+            disabled={eligibleCount === 0}
+            title={eligibleCount === 0 ? 'No one is eligible for this date/time — check each person manually or widen the window' : undefined}
+            className="px-2 py-0.5 rounded text-xs hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
           >
-            Select eligible
+            Select eligible ({eligibleCount})
           </button>
           <button
             type="button"
