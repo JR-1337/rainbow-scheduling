@@ -1,7 +1,7 @@
 // PDF GENERATION - Pure-grayscale output. Rainbow's break-room printer is B&W,
 // so every channel carries info without hue: role = letter glyph + border style,
 // Holiday = "HOL" + heavy black border, announcement =
-// double border + italic. No hex hues anywhere — only black/white/grey shades.
+// double border + italic. No hex hues anywhere - only black/white/grey shades.
 import {
   ROLES,
   ROLES_BY_ID,
@@ -48,7 +48,7 @@ const ROLE_BORDERS = {
   none: { style: 'solid', width: '1px' },
 };
 
-// S64 Stage 7 — events carry meeting/PK entries per `${empId}-${date}` key.
+// S64 Stage 7 - events carry meeting/PK entries per `${empId}-${date}` key.
 export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = [], events = {}) => {
   const week1 = dates.slice(0, 7);
   const week2 = dates.slice(7, 14);
@@ -99,7 +99,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         const dateStr = toDateKey(date);
         const shift = shifts[`${emp.id}-${dateStr}`];
         const dayEvents = (events[`${emp.id}-${dateStr}`] || []).filter(ev => EVENT_TYPES[ev.type]);
-        // Approved time-off wins over events — an employee on time-off shouldn't
+        // Approved time-off wins over events - an employee on time-off shouldn't
         // show a meeting/PK card even if one was scheduled before the request was approved.
         if (!shift && hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests)) {
           return `<td style="padding:6px;border:1px dashed ${G.border};background:${G.fill};text-align:center;">
@@ -111,7 +111,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
           return `<td style="padding:6px;border:1px solid ${G.border};background:${G.fill};"></td>`;
         }
         if (!shift) {
-          // Event-only day — banded fill + ink border.
+          // Event-only day - banded fill + ink border.
           return `<td style="padding:5px;border:2px solid ${G.ink};background:${G.fillZebra};text-align:center;">
             ${eventBadgeHtml(dayEvents)}
           </td>`;
@@ -152,7 +152,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       <div class="wk-block" style="margin-bottom:25px;">
         <div style="background:${G.ink};padding:10px 15px;border-radius:4px 4px 0 0;">
           <h3 style="margin:0;color:#ffffff;font-size:14px;font-weight:700;">Week ${weekNum}</h3>
-          <p style="margin:2px 0 0;color:#dddddd;font-size:11px;">${formatDate(weekDates[0])} — ${formatDate(weekDates[6])}</p>
+          <p style="margin:2px 0 0;color:#dddddd;font-size:11px;">${formatDate(weekDates[0])} - ${formatDate(weekDates[6])}</p>
         </div>
         <table style="width:100%;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
           <thead style="display:table-header-group;"><tr><th style="padding:8px;border:1px solid ${G.border};background:${G.fillZebra};width:15%;font-size:10px;text-align:left;color:${G.text};text-transform:uppercase;">Employee</th>${headers}</tr></thead>
@@ -184,8 +184,10 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   const printedAt = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
   const html = `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Rainbow Schedule - Week ${weekNum1} & ${weekNum2}</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@400;600&display=swap" rel="stylesheet">
   <style>
@@ -212,7 +214,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       <span style="color:${G.ink};font-size:24px;letter-spacing:4px;font-weight:700;">RAINBOW</span>
     </div>
     <p style="margin:8px 0 0;font-size:12px;"><span style="color:${G.ink};font-weight:700;">Staff Schedule</span></p>
-    <p style="margin:5px 0 0;color:${G.textMuted};font-size:11px;">Week ${weekNum1} & ${weekNum2} • ${formatMonthWord(periodInfo.startDate)} ${periodInfo.startDate.getDate()} — ${formatMonthWord(periodInfo.endDate)} ${periodInfo.endDate.getDate()}, ${periodInfo.startDate.getFullYear()}</p>
+    <p style="margin:5px 0 0;color:${G.textMuted};font-size:11px;">Week ${weekNum1} & ${weekNum2} • ${formatMonthWord(periodInfo.startDate)} ${periodInfo.startDate.getDate()} - ${formatMonthWord(periodInfo.endDate)} ${periodInfo.endDate.getDate()}, ${periodInfo.startDate.getFullYear()}</p>
   </div>
 
   ${announcementHtml}
@@ -225,21 +227,20 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   </div>
   ${adminContactsHtml}
   <div style="margin-top:20px;padding-top:12px;border-top:1px solid ${G.border};text-align:center;font-size:9px;color:${G.textFaint};">
-    Printed ${printedAt} • This is a snapshot — live schedule at rainbow-scheduling.vercel.app
+    Printed ${printedAt} • This is a snapshot - live schedule at rainbow-scheduling.vercel.app
   </div>
 </body>
 </html>`;
 
-  const blob = new Blob([html], { type: 'text/html' });
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const printWindow = window.open(url, '_blank', 'width=1100,height=750');
   if (!printWindow) {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Rainbow-Schedule-Week${weekNum1}-${weekNum2}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // iOS Safari popup-blocked path. Do NOT fall back to <a download>:
+    // Safari iOS ignores the download attr on blob URLs and saves the
+    // raw blob as "*.blob". Navigate the current tab instead -- the
+    // document has its own in-page Print button.
+    window.location.href = url;
   }
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 };
