@@ -14,6 +14,7 @@ import { ColumnHeaderEditor } from './components/ColumnHeaderEditor';
 import { useUnsavedWarning } from './hooks/useUnsavedWarning';
 import { useDismissOnOutside } from './hooks/useDismissOnOutside';
 import { useAuth } from './hooks/useAuth';
+import { useToast } from './hooks/useToast';
 import { EmployeeRow } from './components/EmployeeRow';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
@@ -184,16 +185,7 @@ export default function App() {
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [loadError, setLoadError] = useState(null);
   
-  // Toast notification state for save operations
-  const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
-  
-  // Helper to show toast with auto-dismiss
-  const showToast = (type, message, duration = 3000) => {
-    setToast({ type, message });
-    const announcer = typeof document !== 'undefined' && document.getElementById('status-announcer');
-    if (announcer) announcer.textContent = message;
-    setTimeout(() => setToast(null), duration);
-  };
+  const { toast, showToast } = useToast();
 
   // S37: persisted session restore + AUTH_EXPIRED auto-bounce to login.
   const [currentUser, setCurrentUser] = useAuth(showToast);
