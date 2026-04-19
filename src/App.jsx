@@ -2335,51 +2335,7 @@ export default function App() {
           />
         )}
 
-        {/* Auto-populate confirmation modal */}
-        {autoPopulateConfirm && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} role="dialog" aria-modal="true" aria-label="Confirm Auto-Populate" onClick={() => setAutoPopulateConfirm(null)}>
-            <div className="max-w-xs w-full rounded-xl overflow-hidden shadow-2xl modal-content active" style={{ backgroundColor: THEME.bg.secondary }} onClick={e => e.stopPropagation()}>
-              <div className="text-center p-4">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
-                  style={{ backgroundColor: autoPopulateConfirm.type.includes('clear') ? THEME.status.error + '20' : THEME.accent.blue + '20' }}>
-                  {autoPopulateConfirm.type.includes('clear')
-                    ? <Trash2 size={24} style={{ color: THEME.status.error }} />
-                    : <Zap size={24} style={{ color: THEME.accent.blue }} />
-                  }
-                </div>
-                <p className="text-sm font-medium mb-2" style={{ color: THEME.text.primary }}>
-                  {autoPopulateConfirm.type === 'populate-all' && (autoPopulateConfirm.week ? `Auto-Fill Full-Time for Week ${autoPopulateConfirm.week}?` : 'Auto-Fill All Full-Time Employees?')}
-                  {autoPopulateConfirm.type === 'clear-all' && `Clear All Full-Time Shifts for Week ${autoPopulateConfirm.week}?`}
-                </p>
-                <p className="text-xs mb-4" style={{ color: THEME.text.secondary }}>
-                  {autoPopulateConfirm.type.includes('populate')
-                    ? 'Some shifts already exist and will be preserved. Only empty days will be filled based on availability.'
-                    : 'This will remove the selected shifts. You can undo by not saving changes.'
-                  }
-                </p>
-                <div className="flex justify-center gap-2">
-                  <button
-                    onClick={() => setAutoPopulateConfirm(null)}
-                    className="px-4 py-2 rounded-lg text-xs font-medium"
-                    style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}` }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAutoPopulateConfirm}
-                    className="px-4 py-2 rounded-lg text-xs font-medium"
-                    style={{
-                      backgroundColor: autoPopulateConfirm.type.includes('clear') ? THEME.status.error : THEME.accent.blue,
-                      color: 'white'
-                    }}
-                  >
-                    {autoPopulateConfirm.type.includes('clear') ? 'Clear Shifts' : 'Auto-Fill'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Auto-populate confirm modal lives at App root (search "Auto-populate confirmation modal" below) — duplicate inline modal removed because it stacked on top of the full-featured one and rendered blank for per-employee actions, which read as "autofill/clear does nothing for individual employees". */}
 
         {/* Toast */}
         {toast && (
@@ -2673,27 +2629,24 @@ export default function App() {
 
                   <div className="w-px h-4" style={{ backgroundColor: THEME.border.default }} />
 
-                  {/* S62 — Schedule PK (bulk). Neutral palette per Stage 3 rule (events != accent colors). */}
-                  <button
-                    onClick={() => setPkModalOpen(true)}
-                    className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 hover:opacity-80"
+                  {/* PK menu: single entry point for both manual scheduling and bulk autofill,
+                      mirroring the Auto-Fill / Clear dropdown shape next to it. */}
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      e.target.value = '';
+                      if (val === '__schedule__') setPkModalOpen(true);
+                      else if (val === '__autofill__') setAutoPopulateConfirm({ type: 'autofill-pk-week', week: activeWeek });
+                    }}
+                    className="px-2 py-1 rounded text-xs font-medium outline-none"
                     style={{ backgroundColor: THEME.event.pkBg, color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}` }}
+                    aria-label={`PK actions for week ${activeWeek}`}
                   >
-                    <BookOpen size={10} />
-                    Schedule PK
-                  </button>
-
-                  {/* Bulk PK autofill for the active week. Secondary (outline) variant keeps
-                      it one notch below the primary "Schedule PK" per button-hierarchy rule. */}
-                  <button
-                    onClick={() => setAutoPopulateConfirm({ type: 'autofill-pk-week', week: activeWeek })}
-                    className="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 hover:opacity-80"
-                    style={{ backgroundColor: 'transparent', color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}` }}
-                    aria-label={`Autofill PK for week ${activeWeek}`}
-                  >
-                    <BookOpen size={10} />
-                    Autofill Wk {activeWeek}
-                  </button>
+                    <option value="">📚 PK Week {activeWeek}...</option>
+                    <option value="__schedule__">Schedule a PK...</option>
+                    <option value="__autofill__">Autofill all eligible (week)</option>
+                  </select>
                 </div>
               )}
               
