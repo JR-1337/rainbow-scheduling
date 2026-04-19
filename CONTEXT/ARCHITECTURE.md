@@ -23,7 +23,7 @@ Rules:
 ## Components
 
 - Frontend -- React 18 + Vite + Tailwind + Lucide -- `src/`
-- Backend -- Google Apps Script -- `backend/Code.gs` (~2200 lines, v2.21.0 live)
+- Backend -- Google Apps Script -- `backend/Code.gs` (~2350 lines, v2.24.0 live)
 - Data -- Google Sheets (5 tabs) -- schema in `docs/schemas/sheets-schema.md`
 - Deploy -- Vercel auto on push (frontend) + Apps Script manual (backend)
 - Email -- MailApp as "OTR Scheduling"
@@ -66,6 +66,13 @@ Rules:
 - Save button cycle: SAVE (blue) -> GO LIVE (green) -> EDIT (yellow)
 - Publish: publishedShifts + publishedEvents = LIVE periods only; employees never see drafts
 - Non-work entries (meeting, pk) blocked from offer/swap via `INVALID_SHIFT_TYPE`
+
+## Employee Shape
+
+- `availability.{day} = {available, start, end}` -- PK eligibility gate + fallback for Auto-Fill hours
+- `defaultShift.{day} = {start, end}` (v2.24.0, col N) -- per-day hours Auto-Fill books; absent day = fall back to availability
+- `defaultSection` (col V) -- role seed for Auto-Fill
+- Decouple: widening availability for PK eligibility no longer changes Auto-Fill output
 
 ## Shift State
 

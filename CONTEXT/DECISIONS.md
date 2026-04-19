@@ -18,6 +18,15 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-19 -- Per-day defaultShift decouples Auto-Fill from availability (v2.24.0)
+Decision: New Employees column N `defaultShift` (JSON per-day `{start,end}`). Auto-Fill (`createShiftFromAvailability`) reads defaultShift first; missing day falls back to `availability`. `availability.available` stays the gate. One-shot editor-only `widenAvailabilityForPK_()` widened Sat start to 10:00 and M-F end to 20:00 on already-available days so PK windows pass `availabilityCoversWindow`; Sunday untouched; never turned off-days on. Also: EmployeeFormModal's new-employee default availability widened to match (Mon-Fri 10:00-20:00, Sat 10:00-19:00, Sun store hours) so future hires are PK-eligible without re-running the widener.
+Rationale: JR's three-concept model (store hours vs availability vs default booked hours) was collapsed into two in the code -- Auto-Fill read availability for its shift hours, so widening availability for PK eligibility also changed what Auto-Fill booked. Decouple solves that without breaking the eligibility gate. Feature-flag deploy: frontend tolerates missing column, so backend redeploy was not gating.
+Confidence: H -- widener ran 2026-04-19 on live sheet: scanned 24, changedEmployees 20, changedDayEntries 94. Dan + Scott skipped (no availability stored). Build PASS at HEAD `3460c69`; v2.24.0 deployed live.
+Rejected alternatives:
+- Backend enforcement that defaultShift subset-of availability -- JR wants UI hints, not backend rejects. saveEmployee stays permissive.
+- Widening Sunday -- no Sunday PK windows; JR explicit.
+- Turning off-days on during widening -- never.
+
 ## 2026-04-18 -- App.jsx hook-extract cuts 15-17 + 3 latent missing-import fixes
 Decision: Continued sub-area 4 into App() body via custom hooks. Extracted `useUnsavedWarning`, `useDismissOnOutside(ref, isOpen, onDismiss)`, `useAuth(showToast)` to `src/hooks/`. useAuth bundles currentUser state + AUTH_EXPIRED auto-bounce effect; showToast captured via ref so effect deps stay []. App.jsx 3228 -> 3207 (-21). Mid-session, three latent missing-import bugs surfaced (PAY_PERIOD_START, Logo, StaffingBar) -- all from prior Phase E sub-area 4 cuts (1-7), not from cuts 15-17. Fixed each in a single import-line patch.
 Rationale: Hooks extract effect/state pairs cleanly without prop-threading through giant trees. The useAuth showToast-via-ref pattern dodges the useState-setter dependency problem. The latent bugs reveal that `npm run build` PASS does NOT prove runtime safety -- Vite/ESBuild treats undefined identifiers as global lookups; ReferenceError only fires on rendered code paths. Mobile-only smoke missed both desktop-only references (Logo header, StaffingBar in admin grid).
