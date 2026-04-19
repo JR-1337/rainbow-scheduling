@@ -235,10 +235,10 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                     {av.available ? (
                       <div className="space-y-1">
                         <select value={av.start} onChange={e => updateTime(d, 'start', e.target.value)} className="w-full px-0.5 py-0.5 rounded text-center" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary, fontSize: '9px' }}>
-                          {Array.from({ length: 14 }, (_, i) => i + 6).map(h => <option key={h} value={`${h.toString().padStart(2, '0')}:00`}>{h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}</option>)}
+                          {Array.from({ length: 17 }, (_, i) => i + 6).map(h => <option key={h} value={`${h.toString().padStart(2, '0')}:00`}>{h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}</option>)}
                         </select>
                         <select value={av.end} onChange={e => updateTime(d, 'end', e.target.value)} className="w-full px-0.5 py-0.5 rounded text-center" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary, fontSize: '9px' }}>
-                          {Array.from({ length: 14 }, (_, i) => i + 6).map(h => <option key={h} value={`${h.toString().padStart(2, '0')}:00`}>{h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}</option>)}
+                          {Array.from({ length: 17 }, (_, i) => i + 6).map(h => <option key={h} value={`${h.toString().padStart(2, '0')}:00`}>{h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}</option>)}
                         </select>
                       </div>
                     ) : (
@@ -273,11 +273,11 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                     <div className="space-y-1">
                       <select value={startVal} onChange={e => updateDefaultTime(d, 'start', e.target.value)} className="w-full px-0.5 py-0.5 rounded text-center" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: startVal ? THEME.text.primary : THEME.text.muted, fontSize: '9px' }}>
                         <option value="">—</option>
-                        {Array.from({ length: 14 }, (_, i) => i + 6).map(h => <option key={h} value={`${h.toString().padStart(2, '0')}:00`}>{h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}</option>)}
+                        {Array.from({ length: 17 }, (_, i) => i + 6).map(h => <option key={h} value={`${h.toString().padStart(2, '0')}:00`}>{h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}</option>)}
                       </select>
                       <select value={endVal} onChange={e => updateDefaultTime(d, 'end', e.target.value)} className="w-full px-0.5 py-0.5 rounded text-center" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: endVal ? THEME.text.primary : THEME.text.muted, fontSize: '9px' }}>
                         <option value="">—</option>
-                        {Array.from({ length: 14 }, (_, i) => i + 6).map(h => <option key={h} value={`${h.toString().padStart(2, '0')}:00`}>{h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}</option>)}
+                        {Array.from({ length: 17 }, (_, i) => i + 6).map(h => <option key={h} value={`${h.toString().padStart(2, '0')}:00`}>{h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}</option>)}
                       </select>
                       {ds && (
                         <button onClick={() => clearDefault(d)} className="w-full rounded text-center" style={{ fontSize: '9px', color: THEME.text.muted, backgroundColor: 'transparent' }}>clear</button>
