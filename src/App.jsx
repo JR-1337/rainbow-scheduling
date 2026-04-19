@@ -12,6 +12,7 @@ import { CollapsibleSection } from './components/CollapsibleSection';
 import { LoginScreen } from './components/LoginScreen';
 import { ColumnHeaderEditor } from './components/ColumnHeaderEditor';
 import { useUnsavedWarning } from './hooks/useUnsavedWarning';
+import { useDismissOnOutside } from './hooks/useDismissOnOutside';
 import { EmployeeRow } from './components/EmployeeRow';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
@@ -293,14 +294,7 @@ export default function App() {
   const [welcomeSweep, setWelcomeSweep] = useState(false);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const adminMenuRef = useRef(null);
-  useEffect(() => {
-    if (!adminMenuOpen) return;
-    const onDoc = (e) => { if (adminMenuRef.current && !adminMenuRef.current.contains(e.target)) setAdminMenuOpen(false); };
-    const onKey = (e) => { if (e.key === 'Escape') setAdminMenuOpen(false); };
-    document.addEventListener('mousedown', onDoc);
-    document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
-  }, [adminMenuOpen]);
+  useDismissOnOutside(adminMenuRef, adminMenuOpen, () => setAdminMenuOpen(false));
   const [adminDaysOffModalOpen, setAdminDaysOffModalOpen] = useState(false);
   const [pkModalOpen, setPkModalOpen] = useState(false);
   const [autoPopulateConfirm, setAutoPopulateConfirm] = useState(null); // { type: 'populate-all' | 'populate-week' | 'clear-week' | 'clear-all', employee?: obj, week?: 1|2 }
