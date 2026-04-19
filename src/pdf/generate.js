@@ -36,21 +36,22 @@ const ROLE_GLYPHS = {
   floorMonitor: 'F',
   none: '',
 };
-// Borders grouped by role family so within-family differentiation is carried
-// by the letter glyph, not by switching border styles. Uniform 1.5px width
-// keeps the printout quieter than prior 3px lines.
-// cash family (C / 2 / B): solid
-// section family (mens / womens): dashed
-// monitor: dotted
-const ROLE_BORDERS = {
-  cashier: { style: 'solid', width: '1.5px' },
-  backupCashier: { style: 'solid', width: '1.5px' },
-  backupCash: { style: 'solid', width: '1.5px' },
-  mens: { style: 'dashed', width: '1.5px' },
-  womens: { style: 'dashed', width: '1.5px' },
-  floorMonitor: { style: 'dotted', width: '1.5px' },
-  none: { style: 'solid', width: '1px' },
+// Inset-stripe system. Each cell's perimeter stays uniform 1px grey (the
+// grid) so neighboring cells never fight. The role signal is a solid black
+// stripe drawn INSIDE the cell against its left padding via inset box-shadow.
+// Stripe width groups the family; the letter glyph differentiates within.
+// cash (C / 2 / B): 4px   |   section (M / W): 2px
+// monitor (F): 1px        |   none: 0
+const ROLE_STRIPE_PX = {
+  cashier: 4,
+  backupCashier: 4,
+  backupCash: 4,
+  mens: 2,
+  womens: 2,
+  floorMonitor: 1,
+  none: 0,
 };
+const stripeShadow = (px) => px > 0 ? `box-shadow: inset ${px}px 0 0 ${G.ink};` : '';
 
 // S64 Stage 7 - events carry meeting/PK entries per `${empId}-${date}` key.
 export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = [], events = {}) => {
@@ -122,10 +123,11 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         }
         const role = ROLES_BY_ID[shift.role];
         const roleName = role?.name || 'Shift';
-        const roleBorder = ROLE_BORDERS[shift.role] || ROLE_BORDERS.none;
+        const stripePx = ROLE_STRIPE_PX[shift.role] || 0;
         const glyph = ROLE_GLYPHS[shift.role] || '';
         const glyphPrefix = glyph ? `${glyph}: ` : '';
-        return `<td style="padding:5px;border:${roleBorder.width} ${roleBorder.style} ${G.ink};background:${G.fill};text-align:center;">
+        const stripePad = stripePx > 0 ? `padding-left:${5 + stripePx + 2}px;` : '';
+        return `<td style="padding:5px;${stripePad}border:1px solid ${G.border};background:${G.fill};text-align:center;${stripeShadow(stripePx)}">
           <div style="font-size:10px;font-weight:800;color:${G.ink};margin-bottom:2px;">${glyphPrefix}${roleName}</div>
           <div style="font-size:9px;color:${G.text};">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
           <div style="font-size:8px;color:${G.textMuted};">${shift.hours}h</div>
@@ -166,14 +168,13 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     `;
   };
 
-  // Legend: glyph in an ink-bordered box (no fill colors). Border style mirrors
-  // the cell border the role uses, so the legend doubles as a key for the
-  // dashed/solid/dotted pattern.
+  // Legend: chip mirrors the cell's inset stripe + glyph, so the key
+  // matches the real cell treatment at a glance.
   const legendItems = ROLES.filter(r => r.id !== 'none').map(r => {
     const g = ROLE_GLYPHS[r.id] || '';
-    const b = ROLE_BORDERS[r.id] || ROLE_BORDERS.none;
+    const px = ROLE_STRIPE_PX[r.id] || 0;
     return `<span style="margin-right:15px;font-size:10px;display:inline-flex;align-items:center;gap:5px;">
-      <span style="display:inline-block;width:16px;height:16px;border:${b.width} ${b.style} ${G.ink};color:${G.ink};font-weight:800;font-size:9px;text-align:center;line-height:14px;background:${G.fill};">${g}</span>
+      <span style="display:inline-block;width:18px;height:16px;border:1px solid ${G.border};${stripeShadow(px)}color:${G.ink};font-weight:800;font-size:9px;text-align:center;line-height:14px;background:${G.fill};padding-left:${px + 2}px;box-sizing:border-box;">${g}</span>
       <span style="color:${G.text};">${escapeHtml(r.fullName)}</span>
     </span>`;
   }).join('');
