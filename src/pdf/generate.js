@@ -1,6 +1,6 @@
 // PDF GENERATION - Pure-grayscale output. Rainbow's break-room printer is B&W,
 // so every channel carries info without hue: role = letter glyph + border style,
-// OT = bold + asterisk, holiday = "HOL" + heavy black border, announcement =
+// Holiday = "HOL" + heavy black border, announcement =
 // double border + italic. No hex hues anywhere — only black/white/grey shades.
 import {
   ROLES,
@@ -10,7 +10,6 @@ import { toDateKey, getWeekNumber, getDayNameShort, formatDate, formatMonthWord,
 import { isStatHoliday } from '../utils/storeHours';
 import { hasApprovedTimeOffForDate } from '../utils/requests';
 import { EVENT_TYPES, PRIMARY_CONTACT_EMAIL } from '../constants';
-import { computeDayUnionHours } from '../utils/timemath';
 import { escapeHtml, stripEmoji } from '../utils/format';
 
 const cleanText = (s) => escapeHtml(stripEmoji(s));
@@ -50,8 +49,6 @@ const ROLE_BORDERS = {
 };
 
 // S64 Stage 7 — events carry meeting/PK entries per `${empId}-${date}` key.
-// Hours are union-counted (9-5 work + 3-5 PK = 8h). OT threshold uses totalHours
-// because all paid time counts under Ontario ESA.
 export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = [], events = {}) => {
   const week1 = dates.slice(0, 7);
   const week2 = dates.slice(7, 14);
@@ -70,20 +67,6 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   const adminContacts = primaryContact
     ? [primaryContact]
     : employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
-
-  const calcWeekHours = (empId, weekDates) => {
-    let workHours = 0;
-    let totalHours = 0;
-    weekDates.forEach(d => {
-      const k = `${empId}-${toDateKey(d)}`;
-      const s = shifts[k];
-      const evs = (events[k] || []).filter(ev => EVENT_TYPES[ev.type]);
-      if (s) workHours += s.hours || 0;
-      const combined = [s, ...evs].filter(Boolean);
-      if (combined.length > 0) totalHours += computeDayUnionHours(combined);
-    });
-    return { workHours, totalHours };
-  };
 
   // Announcement: italic body + "[!]" prefix + heavy left bar + double top border.
   const announcementHtml = (announcement && announcement.message) ? `
@@ -147,21 +130,9 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         </td>`;
       }).join('');
 
-      const { workHours, totalHours } = calcWeekHours(emp.id, weekDates);
-      // Ontario ESA: OT kicks in at 44h. Hue removed — emphasis carried by weight + asterisk.
-      const isOT = totalHours >= 44;
-      const isNearOT = totalHours >= 40 && totalHours < 44;
-      const hoursWeight = (isOT || isNearOT) ? '800' : '600';
-      const otMarker = isOT ? '**' : isNearOT ? '*' : '';
-      const hasExtras = totalHours > workHours + 0.01;
-      const hoursDisplay = totalHours > 0
-        ? (hasExtras ? `${totalHours.toFixed(1)}h${otMarker} <span style="font-size:8px;color:${G.textFaint};font-weight:500;">(${workHours.toFixed(1)} work)</span>` : `${totalHours.toFixed(1)}h${otMarker}`)
-        : '—';
-
       return `<tr style="page-break-inside:avoid;">
         <td style="padding:8px;border:1px solid ${G.border};background:${G.fill};">
           <div style="font-weight:700;font-size:11px;color:${G.ink};">${cleanText(emp.name)}</div>
-          <div style="font-size:10px;color:${G.ink};font-weight:${hoursWeight};">${hoursDisplay}</div>
         </td>
         ${cells}
       </tr>`;
@@ -250,7 +221,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 
   <div style="margin-top:20px;padding:12px 15px;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
     <div style="margin-bottom:6px;font-weight:700;font-size:9px;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;">Legend</div>
-    <div>${legendItems}<span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="color:${G.ink};font-weight:700;">★</span><span style="color:${G.text};">Has Task</span></span><span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="display:inline-block;padding:1px 6px;border:1px dashed ${G.border};font-weight:800;color:${G.ink};font-size:8px;letter-spacing:1px;">OFF</span><span style="color:${G.text};">Approved Time Off</span></span><span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;"><span style="color:${G.ink};font-weight:800;">* / **</span><span style="color:${G.text};">40h+ / 44h+ (OT)</span></span></div>
+    <div>${legendItems}<span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="color:${G.ink};font-weight:700;">★</span><span style="color:${G.text};">Has Task</span></span><span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="display:inline-block;padding:1px 6px;border:1px dashed ${G.border};font-weight:800;color:${G.ink};font-size:8px;letter-spacing:1px;">OFF</span><span style="color:${G.text};">Approved Time Off</span></span></div>
   </div>
   ${adminContactsHtml}
   <div style="margin-top:20px;padding-top:12px;border-top:1px solid ${G.border};text-align:center;font-size:9px;color:${G.textFaint};">
