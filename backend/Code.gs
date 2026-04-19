@@ -2,7 +2,24 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.22.0 (Sarvi post-demo batch: Employees tab gains `defaultSection` column U for autofill)
+ * Version: 2.23.0 (S67: hash-only auth — plaintext fallback removed from login + changePassword)
+ *
+ * Changes in v2.23.0:
+ * - login: hash-only authentication. Plaintext fallback + on-login migrate path
+ *   removed. All 24 active rows backfilled to hash 2026-04-18 via the one-time
+ *   editor-only `backfillPasswordHashes` (subsequently deleted). New rows missing
+ *   `passwordHash`/`passwordSalt` return AUTH_FAILED.
+ * - changePassword: hash-only check for currentPassword. Removed plaintext +
+ *   ID-as-default fallback paths.
+ * - resetPassword: now writes hash + salt directly (alongside the plaintext
+ *   column kept for admin "default password" display). Previously cleared the
+ *   hash and relied on the next login to re-migrate; that path no longer
+ *   exists, so the reset would otherwise lock the user out.
+ * - saveEmployee: new-hire path computes hash + salt for the default password
+ *   so first login works without going through migration.
+ * - Plaintext `password` column kept on Employees for admin display only;
+ *   never read by the auth path. Future hardening: drop the column entirely
+ *   once admin UI displays the password from the resetPassword response only.
  *
  * Changes in v2.22.0:
  * - Employees tab gains column U: `defaultSection` (values mens|womens|cashier|backupCashier|floorMonitor|none, default 'none').
@@ -559,37 +576,22 @@ function login(payload) {
     return { success: false, error: { code: 'AUTH_FAILED', message: 'Account is inactive. Please contact your administrator.' } };
   }
 
-  // S36 dual-check: hash first (post-migration), fall back to plaintext (pre-migration)
-  // and migrate on successful plaintext login.
+  // S67: hash-only auth. Backfill 2026-04-18 ensured every active row has
+  // passwordHash + passwordSalt. New employees and admin resets write the
+  // hash directly. Plaintext fallback removed.
   const pwStr = String(password);
-  let authOk = false;
-  let migrateNow = false;
 
-  if (employee.passwordHash && employee.passwordSalt) {
-    authOk = constantTimeEq_(
-      hashPassword_(String(employee.passwordSalt), pwStr),
-      String(employee.passwordHash)
-    );
-  }
-
-  if (!authOk && employee.password !== undefined && employee.password !== '' && String(employee.password) === pwStr) {
-    authOk = true;
-    migrateNow = true;
-  }
-
-  if (!authOk) {
+  if (!employee.passwordHash || !employee.passwordSalt) {
     return { success: false, error: { code: 'AUTH_FAILED', message: 'Invalid email or password' } };
   }
 
-  if (migrateNow) {
-    const salt = generateSalt_();
-    const hash = hashPassword_(salt, pwStr);
-    updateRow(CONFIG.TABS.EMPLOYEES, employee._rowIndex, {
-      passwordHash: hash,
-      passwordSalt: salt
-    });
-    employee.passwordHash = hash;
-    employee.passwordSalt = salt;
+  const authOk = constantTimeEq_(
+    hashPassword_(String(employee.passwordSalt), pwStr),
+    String(employee.passwordHash)
+  );
+
+  if (!authOk) {
+    return { success: false, error: { code: 'AUTH_FAILED', message: 'Invalid email or password' } };
   }
 
   const token = createToken_(employee);
@@ -643,29 +645,14 @@ function changePassword(payload) {
   }
 
   if (emailToChange === callerEmail) {
-    // Dual-check current password: hash first, then plaintext, then ID-as-default fallback.
-    const currentStr = String(currentPassword);
-    let currentOk = false;
-
-    if (employee.passwordHash && employee.passwordSalt) {
-      currentOk = constantTimeEq_(
-        hashPassword_(String(employee.passwordSalt), currentStr),
-        String(employee.passwordHash)
-      );
+    // S67: hash-only check for current password.
+    if (!employee.passwordHash || !employee.passwordSalt) {
+      return { success: false, error: { code: 'AUTH_FAILED', message: 'Current password is incorrect' } };
     }
-    if (!currentOk && employee.password !== undefined && employee.password !== '' &&
-        String(employee.password) === currentStr) {
-      currentOk = true;
-    }
-    if (!currentOk) {
-      const storedIsDefault = employee.password !== '' && (
-        String(employee.password) === String(employee.id) ||
-        /^emp-\d{3}$/.test(String(employee.password))
-      );
-      if (storedIsDefault && String(employee.id) === currentStr) {
-        currentOk = true;
-      }
-    }
+    const currentOk = constantTimeEq_(
+      hashPassword_(String(employee.passwordSalt), String(currentPassword)),
+      String(employee.passwordHash)
+    );
     if (!currentOk) {
       return { success: false, error: { code: 'AUTH_FAILED', message: 'Current password is incorrect' } };
     }
@@ -714,13 +701,15 @@ function resetPassword(payload) {
   const sequenceNum = employee._rowIndex - 1;
   const newPassword = `emp-${String(sequenceNum).padStart(3, '0')}`;
 
-  // S36: admin reset writes plaintext (so admin UI can display it) and clears any
-  // existing hash/salt — next login will re-migrate to hash via the dual-check path.
+  // S67: write hash + salt directly. Plaintext column kept so admin UI can
+  // display the default password until the user changes it.
   // S41.3: clear passwordChanged so the user gets the default-password prompt again.
+  const salt = generateSalt_();
+  const hash = hashPassword_(salt, newPassword);
   updateRow(CONFIG.TABS.EMPLOYEES, employee._rowIndex, {
     password: newPassword,
-    passwordHash: '',
-    passwordSalt: '',
+    passwordHash: hash,
+    passwordSalt: salt,
     passwordChanged: false
   });
 
@@ -1652,10 +1641,18 @@ function saveEmployee(payload) {
     const { password, _rowIndex, ...updateFields } = employee;
     updateRow(CONFIG.TABS.EMPLOYEES, existingEmployee._rowIndex, updateFields);
   } else {
-    // New employee — use provided password or fall back to employee ID
+    // New employee — use provided password or fall back to employee ID.
+    // S67: hash + salt written immediately so the user can log in via the
+    // hash-only auth path. Plaintext column kept for admin "default password"
+    // display until the user changes it.
+    const plaintextPw = employee.password || employee.id;
+    const salt = generateSalt_();
+    const hash = hashPassword_(salt, String(plaintextPw));
     const employeeToSave = {
       ...employee,
-      password: employee.password || employee.id
+      password: plaintextPw,
+      passwordHash: hash,
+      passwordSalt: salt
     };
     appendRow(CONFIG.TABS.EMPLOYEES, employeeToSave);
   }
