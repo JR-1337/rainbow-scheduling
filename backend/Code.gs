@@ -2,7 +2,20 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.23.0 (S67: hash-only auth — plaintext fallback removed from login + changePassword)
+ * Version: 2.24.0 (per-day defaultShift column N; one-shot availability widener for PK)
+ *
+ * Changes in v2.24.0:
+ * - Employees tab gains column N: `defaultShift` (JSON per-day {start,end}). Auto-Fill prefers
+ *   defaultShift; falls back to availability when the day entry is missing. Decouples default
+ *   booked hours from availability so widening availability for PK eligibility no longer
+ *   changes what Auto-Fill produces. `saveEmployee` is header-driven — no row-mapper change.
+ * - Editor-only `widenAvailabilityForPK_()`: widens Sat start to 10:00 and M–F end to 20:00
+ *   on already-available days so PK windows (Sat 10:00–10:45, weekday 18:00–20:00) pass the
+ *   existing `availabilityCoversWindow` eligibility gate. Sunday untouched. Never turns an
+ *   off-day on. NOT registered in handleRequest; run from the Apps Script editor, then the
+ *   function gets removed in a follow-up commit (mirror of `backfillPasswordHashes` hygiene).
+ * - Manual step (one-time, live Sheet): add header `defaultShift` to column N of Employees tab
+ *   (existing columns N–U shift one right). Frontend tolerates missing column.
  *
  * Changes in v2.23.0:
  * - login: hash-only authentication. Plaintext fallback + on-login migrate path
@@ -2198,7 +2211,7 @@ function createEmployeesTab(ss) {
   if (!sheet) sheet = ss.insertSheet(TAB_NAME);
   sheet.clear();
 
-  const headers = ['id', 'name', 'email', 'password', 'phone', 'address', 'dob', 'active', 'isAdmin', 'isOwner', 'showOnSchedule', 'deleted', 'availability', 'counterPointId', 'adpNumber', 'rateOfPay', 'employmentType', 'passwordHash', 'passwordSalt', 'passwordChanged', 'defaultSection'];
+  const headers = ['id', 'name', 'email', 'password', 'phone', 'address', 'dob', 'active', 'isAdmin', 'isOwner', 'showOnSchedule', 'deleted', 'availability', 'defaultShift', 'counterPointId', 'adpNumber', 'rateOfPay', 'employmentType', 'passwordHash', 'passwordSalt', 'passwordChanged', 'defaultSection'];
   const avail = JSON.stringify({
     sunday: { available: true, start: '11:00', end: '18:00' },
     monday: { available: true, start: '11:00', end: '18:00' },
@@ -2336,3 +2349,85 @@ function clearAllData() {
   Logger.log('Data cleared. Employees and Settings preserved.');
 }
 
+/**
+ * One-shot editor-only helper (v2.24.0). Widens availability windows so PK
+ * windows fit within already-available days.
+ *   Sat:   start = min(start, 10:00)
+ *   M–F:   end   = max(end,   20:00)
+ *   Sun:   untouched
+ * Never turns an off-day on (skips when available !== true).
+ * String compare on 'HH:MM' is lexicographic-safe for zero-padded 24h times.
+ *
+ * Not registered in handleRequest. Run from the Apps Script editor; delete
+ * the function in a follow-up commit after verification (per one-shot
+ * hygiene pattern, same as backfillPasswordHashes).
+ */
+function widenAvailabilityForPK_() {
+  const PK_WINDOWS = {
+    monday:    { end: '20:00' },
+    tuesday:   { end: '20:00' },
+    wednesday: { end: '20:00' },
+    thursday:  { end: '20:00' },
+    friday:    { end: '20:00' },
+    saturday:  { start: '10:00' }
+  };
+
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.TABS.EMPLOYEES);
+  if (!sheet) { Logger.log('❌ Employees tab not found'); return; }
+
+  const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
+  let scanned = 0;
+  let changedEmployees = 0;
+  let changedDayEntries = 0;
+
+  employees.forEach(emp => {
+    if (emp.deleted === true || emp.deleted === 'TRUE') return;
+    if (emp.active === false || emp.active === 'FALSE') return;
+    if (emp.isOwner === true || emp.isOwner === 'TRUE') return;
+    scanned++;
+
+    let avail;
+    try {
+      avail = emp.availability ? JSON.parse(emp.availability) : null;
+    } catch (e) {
+      Logger.log('⚠️  ' + emp.name + ': availability parse failed; skipping');
+      return;
+    }
+    if (!avail || typeof avail !== 'object') {
+      Logger.log('⚠️  ' + emp.name + ': no availability; skipping');
+      return;
+    }
+
+    let empChanged = false;
+    Object.keys(PK_WINDOWS).forEach(day => {
+      const dayAvail = avail[day];
+      if (!dayAvail || dayAvail.available !== true) return;
+      const want = PK_WINDOWS[day];
+      const before = dayAvail.start + '–' + dayAvail.end;
+      let thisChanged = false;
+      if (want.start && dayAvail.start > want.start) {
+        dayAvail.start = want.start;
+        thisChanged = true;
+      }
+      if (want.end && dayAvail.end < want.end) {
+        dayAvail.end = want.end;
+        thisChanged = true;
+      }
+      if (thisChanged) {
+        Logger.log('  ' + emp.name + ' | ' + day + ' | ' + before + ' → ' + dayAvail.start + '–' + dayAvail.end);
+        changedDayEntries++;
+        empChanged = true;
+      }
+    });
+
+    if (empChanged) {
+      updateCell(CONFIG.TABS.EMPLOYEES, emp._rowIndex, 'availability', JSON.stringify(avail));
+      changedEmployees++;
+    }
+  });
+
+  const summary = { scanned: scanned, changedEmployees: changedEmployees, changedDayEntries: changedDayEntries };
+  Logger.log('✅ widenAvailabilityForPK_ done: ' + JSON.stringify(summary));
+  return summary;
+}
