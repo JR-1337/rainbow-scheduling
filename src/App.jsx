@@ -927,12 +927,9 @@ export default function App() {
     const emps = targetEmployees || fullTimeEmployees;
     const newShifts = { ...shifts };
     let addedCount = 0;
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
 
     emps.forEach(emp => {
       weekDates.forEach(date => {
-        if (date < todayStart) return;
         const dateStr = toDateKey(date);
         const key = `${emp.id}-${dateStr}`;
 
