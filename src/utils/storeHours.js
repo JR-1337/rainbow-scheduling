@@ -9,9 +9,9 @@ import { toDateKey } from './date';
 
 export const STORE_HOURS = {
   sunday: { open: '11:00', close: '18:00' },
-  monday: { open: '10:00', close: '18:00' },
-  tuesday: { open: '10:00', close: '18:00' },
-  wednesday: { open: '10:00', close: '18:00' },
+  monday: { open: '11:00', close: '18:00' },
+  tuesday: { open: '11:00', close: '18:00' },
+  wednesday: { open: '11:00', close: '18:00' },
   thursday: { open: '11:00', close: '19:00' },
   friday: { open: '11:00', close: '19:00' },
   saturday: { open: '11:00', close: '19:00' },
