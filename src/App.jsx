@@ -17,6 +17,7 @@ import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
 import { useAnnouncements } from './hooks/useAnnouncements';
 import { useGuardedMutation } from './hooks/useGuardedMutation';
+import { useTooltip } from './hooks/useTooltip';
 import { EmployeeRow } from './components/EmployeeRow';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
@@ -222,7 +223,8 @@ export default function App() {
   } = useAnnouncements({ periodStartDate: currentPeriodStartDate, userEmail: currentUser?.email });
   
   const [inactivePanelOpen, setInactivePanelOpen] = useState(false);
-  const [tooltipData, setTooltipData] = useState(null);
+  // tooltipData + handleShowTooltip + handleHideTooltip moved to hooks/useTooltip.js
+  const { tooltipData, handleShowTooltip, handleHideTooltip } = useTooltip();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [timeOffRequests, setTimeOffRequests] = useState([]);
   const [shiftOffers, setShiftOffers] = useState([]);
@@ -1747,21 +1749,6 @@ export default function App() {
   const pendingSwapsCount = shiftSwaps.filter(s => s.status === 'awaiting_admin').length;
   const pendingRequestCount = pendingTimeOffCount + pendingOffersCount + pendingSwapsCount;
   
-  // Tooltip handlers — useCallback so EmployeeRow memoization holds across parent re-renders
-  const handleShowTooltip = useCallback((employee, hours, triggerRef, isDeleted) => {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      let left = rect.right + 8;
-      if (left + 240 > window.innerWidth - 20) left = rect.left - 248;
-      let top = rect.top;
-      if (top < 10) top = 10;
-      if (top + 250 > window.innerHeight) top = window.innerHeight - 260;
-      setTooltipData({ employee, hours, isDeleted, pos: { top, left } });
-    }
-  }, []);
-
-  const handleHideTooltip = useCallback(() => setTooltipData(null), []);
-
   // Grid cell click handler — stable ref keeps EmployeeRow memo effective
   const handleCellClick = useCallback((emp, d, s) => {
     setEditingShift({ employee: emp, date: d, shift: s });
