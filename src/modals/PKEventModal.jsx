@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { BookOpen, Check, Users } from 'lucide-react';
-import { Modal, TimePicker, GradientButton, toDateKey } from '../App';
+import { Modal, TimePicker, GradientButton } from '../App';
+import { toDateKey } from '../utils/date';
 import { THEME } from '../theme';
 import { availabilityCoversWindow } from '../utils/timemath';
 import { getPKDefaultTimes } from '../utils/eventDefaults';

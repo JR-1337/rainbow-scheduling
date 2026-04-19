@@ -3,7 +3,7 @@ import { User, AlertCircle, Check, Shield, Loader, Send } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
-import { toDateKey, formatDate, formatDateLong, formatTimeDisplay, getDayNameShort } from '../App';
+import { toDateKey, formatDate, formatDateLong, formatTimeDisplay, getDayNameShort } from '../utils/date';
 import { AdaptiveModal } from '../components/AdaptiveModal';
 
 export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shifts, shiftOffers, timeOffRequests = [], shiftSwaps = [] }) => {

@@ -18,6 +18,17 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-18 -- Date helpers extracted to src/utils/date.js
+Decision: Created `src/utils/date.js` with 11 pure date/time helpers (toDateKey, getDayName, getDayNameShort, formatDate, formatDateLong, formatMonthWord, getWeekNumber, formatTimeDisplay, formatTimeShort, calculateHours + private parseTime). Migrated 21 import sites off `./App` onto `./utils/date`. App.jsx no longer re-exports any date helpers. `isStatHoliday` and `getStoreHoursForDate` deliberately stayed in App.jsx because they read module-level mutable refs (`_storeHoursOverrides`, `_staffingTargetOverrides`) that are part of a separate parked refactor (audit item 6).
+Rationale: Phase E audit item 28 — strip the App.jsx barrel role for utility code so the eventual App.jsx extraction has less surface to negotiate. Functions chosen by purity (no closures over module state). Bundle byte-identical confirms tree-shaking already handled the indirection.
+Confidence: H -- verified 2026-04-18 build PASS, bundle 465.08 kB unchanged.
+
+## 2026-04-18 -- Hash-only auth (S67, v2.23.0)
+Decision: Removed plaintext-password fallback from `login` and `changePassword` in `backend/Code.gs`. Hash check is the only path. `resetPassword` and `saveEmployee` now write `passwordHash` + `passwordSalt` directly so newly created/reset accounts can log in immediately (previously they relied on next-login migration which no longer exists). Plaintext `password` column kept for admin "default password" display only; auth path never reads it.
+Rationale: Phase E audit item 30. Pre-audit via Drive MCP found 19/24 active rows lacked `passwordHash` (never logged in). Used the same one-shot editor-paste pattern as the test-employee scrub: wrote `backfillPasswordHashes`, JR ran it, all 24 rows backfilled, then removed both the function and the plaintext fallback branches.
+Confidence: H -- verified 2026-04-18 via Drive MCP read: 24/24 rows have passwordHash + passwordSalt.
+Pending: JR must paste new Code.gs into live Apps Script editor and bump deployment to v2.23 for the change to take effect on the live web app.
+
 ## 2026-04-18 -- Test-employee scrub executed; purge functions removed
 Decision: Ran `purgeTestEmployees` from Apps Script editor. 20 `@example.com` employees + 50 shifts deleted from the live Sheet. Then removed `listTestEmployees` / `purgeTestEmployees` / `_findTestEmployees_` from `backend/Code.gs` and from the live editor. Also deleted `backend/seed-demo-data.gs` and scrubbed the 5 legacy Emma/Liam/Olivia/Noah/Ava seed rows from `createEmployeesTab`. Stale Alex Kim smoke-pattern lesson removed from LESSONS.md.
 Rationale: One-time cleanup per Sarvi request. Keeping the purge functions around invites accidental re-run. `clearAllData` stays because it has general utility; this one didn't.

@@ -3,7 +3,8 @@ import { Star, Trash2, Check, AlertTriangle, Plus } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES, EVENT_TYPES } from '../constants';
 import { getPKDefaultTimes } from '../utils/eventDefaults';
-import { toDateKey, isStatHoliday, getStoreHoursForDate, formatDateLong, Modal, TimePicker, GradientButton, AnimatedNumber, calculateHours } from '../App';
+import { isStatHoliday, getStoreHoursForDate, Modal, TimePicker, GradientButton, AnimatedNumber } from '../App';
+import { toDateKey, formatDateLong, calculateHours } from '../utils/date';
 
 const getDefaultBookingTimes = (date) => {
   const storeHours = getStoreHoursForDate(date);

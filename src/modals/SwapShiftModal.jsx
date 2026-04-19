@@ -3,7 +3,7 @@ import { ArrowRightLeft, AlertCircle, ChevronRight, ChevronLeft, Check, Loader }
 import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
-import { toDateKey, formatDate, formatTimeDisplay, getDayNameShort } from '../App';
+import { toDateKey, formatDate, formatTimeDisplay, getDayNameShort } from '../utils/date';
 import { AdaptiveModal } from '../components/AdaptiveModal';
 
 export const SwapShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shifts, shiftSwaps, timeOffRequests = [], shiftOffers = [] }) => {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Calendar, X, AlertCircle, ChevronLeft, ChevronRight, Loader, Check } from 'lucide-react';
 import { THEME, TYPE } from '../theme';
 import { parseLocalDate } from '../utils/format';
-import { toDateKey } from '../App';
+import { toDateKey } from '../utils/date';
 
 export const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRequests = [], shiftOffers = [], shiftSwaps = [], shifts = {} }) => {
   const [selectedDates, setSelectedDates] = useState([]);

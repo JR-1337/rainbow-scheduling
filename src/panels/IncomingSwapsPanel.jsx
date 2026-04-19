@@ -4,7 +4,8 @@ import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
 import { AdminRequestModal } from '../modals/AdminRequestModal';
-import { CollapsibleSection, getDayNameShort, formatDate, formatTimeDisplay } from '../App';
+import { CollapsibleSection } from '../App';
+import { getDayNameShort, formatDate, formatTimeDisplay } from '../utils/date';
 
 export const IncomingSwapsPanel = ({ swaps, currentUserEmail, onAccept, onReject }) => {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);

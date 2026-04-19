@@ -1,12 +1,6 @@
 // EMAIL BUILDER - Individual employee emails (plaintext body sent via MailApp)
-import {
-  ROLES_BY_ID,
-  toDateKey,
-  getWeekNumber,
-  formatMonthWord,
-  formatDateLong,
-  formatTimeDisplay,
-} from '../App';
+import { ROLES_BY_ID } from '../App';
+import { toDateKey, getWeekNumber, formatMonthWord, formatDateLong, formatTimeDisplay } from '../utils/date';
 import { EVENT_TYPES } from '../constants';
 import { computeDayUnionHours } from '../utils/timemath';
 

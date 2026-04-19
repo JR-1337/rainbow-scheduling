@@ -4,7 +4,8 @@ import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
 import { AdminRequestModal } from '../modals/AdminRequestModal';
-import { SWAP_STATUS_COLORS, SWAP_STATUS_LABELS, getDayNameShort, formatDate, formatTimeDisplay } from '../App';
+import { SWAP_STATUS_COLORS, SWAP_STATUS_LABELS } from '../App';
+import { getDayNameShort, formatDate, formatTimeDisplay } from '../utils/date';
 
 export const AdminShiftSwapsPanel = ({ swaps, onApprove, onReject, onRevoke, currentAdminEmail }) => {
   const [filter, setFilter] = useState('awaiting_admin');

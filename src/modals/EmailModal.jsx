@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Send, Check } from 'lucide-react';
 import { THEME } from '../theme';
 import { buildEmailContent } from '../email/build';
-import { Modal, GradientButton, Checkbox, toDateKey, getWeekNumber, formatMonthWord } from '../App';
+import { Modal, GradientButton, Checkbox } from '../App';
+import { toDateKey, getWeekNumber, formatMonthWord } from '../utils/date';
 
 export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, dates, periodInfo, announcement, onComplete }) => {
   const emailableEmps = employees

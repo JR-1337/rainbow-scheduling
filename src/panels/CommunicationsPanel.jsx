@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { MessageSquare, Eye, AlertCircle, Check, Loader, Save } from 'lucide-react';
 import { THEME } from '../theme';
-import { getWeekNumber, toDateKey } from '../App';
+import { getWeekNumber, toDateKey } from '../utils/date';
 
 export const CommunicationsPanel = ({ employees, shifts, dates, periodInfo, adminContacts, announcement, onAnnouncementChange, onSave, onClear, isEditMode, isSaving }) => {
   const weekNum1 = getWeekNumber(dates[0]);

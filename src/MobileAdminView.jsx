@@ -15,9 +15,10 @@ import {
 } from 'lucide-react';
 
 import {
-  THEME, TYPE, ROLES, ROLES_BY_ID, toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber,
+  THEME, TYPE, ROLES, ROLES_BY_ID,
   getStoreHoursForDate, isStatHoliday, GradientBackground, haptic
 } from './App';
+import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } from './utils/date';
 
 import { MobileScheduleGrid } from './MobileEmployeeView';
 import { EVENT_TYPES } from './constants';

@@ -4,7 +4,8 @@ import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
 import { AdminRequestModal } from '../modals/AdminRequestModal';
-import { OFFER_STATUS_COLORS, OFFER_STATUS_LABELS, getDayNameShort, formatDate, formatTimeDisplay } from '../App';
+import { OFFER_STATUS_COLORS, OFFER_STATUS_LABELS } from '../App';
+import { getDayNameShort, formatDate, formatTimeDisplay } from '../utils/date';
 
 export const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentAdminEmail }) => {
   const [filter, setFilter] = useState('awaiting_admin');
