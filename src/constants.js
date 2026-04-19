@@ -42,3 +42,47 @@ export const REQUEST_STATUS_COLORS = {
   cancelled: THEME.text.muted,
   revoked: '#F97316',
 };
+
+export const OFFER_STATUS_COLORS = {
+  awaiting_recipient: '#8B5CF6',
+  recipient_rejected: THEME.text.muted,
+  awaiting_admin: THEME.status.warning,
+  approved: THEME.status.success,
+  rejected: THEME.status.error,
+  cancelled: THEME.text.muted,
+  expired: THEME.text.muted,
+  revoked: '#F97316',
+};
+
+export const OFFER_STATUS_LABELS = {
+  awaiting_recipient: 'Awaiting Reply',
+  recipient_rejected: 'Declined by Recipient',
+  awaiting_admin: 'Awaiting Admin',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  cancelled: 'Cancelled',
+  expired: 'Expired',
+  revoked: 'Revoked',
+};
+
+export const SWAP_STATUS_COLORS = {
+  awaiting_partner: '#8B5CF6',
+  partner_rejected: THEME.text.muted,
+  awaiting_admin: THEME.status.warning,
+  approved: THEME.status.success,
+  rejected: THEME.status.error,
+  cancelled: THEME.text.muted,
+  expired: THEME.text.muted,
+  revoked: '#F97316',
+};
+
+export const SWAP_STATUS_LABELS = {
+  awaiting_partner: 'Awaiting Reply',
+  partner_rejected: 'Declined by Partner',
+  awaiting_admin: 'Awaiting Admin',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  cancelled: 'Cancelled',
+  expired: 'Expired',
+  revoked: 'Revoked',
+};

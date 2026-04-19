@@ -3,7 +3,8 @@ import { ArrowRightLeft, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
-import { CollapsibleSection, SWAP_STATUS_COLORS, SWAP_STATUS_LABELS } from '../App';
+import { CollapsibleSection } from '../App';
+import { SWAP_STATUS_COLORS, SWAP_STATUS_LABELS } from '../constants';
 import { getDayNameShort, formatDate } from '../utils/date';
 
 export const ReceivedSwapsHistoryPanel = ({ swaps, currentUserEmail, notificationCount, onOpen }) => {

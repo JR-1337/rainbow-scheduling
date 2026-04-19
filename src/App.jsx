@@ -321,63 +321,8 @@ const OFFER_STATUS = {
   REVOKED: 'revoked',                         // Admin revoked after approval (terminal)
 };
 
-export const OFFER_STATUS_COLORS = {
-  awaiting_recipient: '#8B5CF6',  // Purple - waiting on recipient
-  recipient_rejected: THEME.text.muted,
-  awaiting_admin: THEME.status.warning,  // Yellow - needs admin attention
-  approved: THEME.status.success,
-  rejected: THEME.status.error,
-  cancelled: THEME.text.muted,
-  expired: THEME.text.muted,
-  revoked: '#F97316',  // Orange - revoked
-};
-
-export const OFFER_STATUS_LABELS = {
-  awaiting_recipient: 'Awaiting Reply',
-  recipient_rejected: 'Declined by Recipient',
-  awaiting_admin: 'Awaiting Admin',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  cancelled: 'Cancelled',
-  expired: 'Expired',
-  revoked: 'Revoked',
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SHIFT SWAP - Status constants and sample data
-// ═══════════════════════════════════════════════════════════════════════════════
-const SWAP_STATUS = {
-  AWAITING_PARTNER: 'awaiting_partner',    // Waiting for Employee B to respond
-  PARTNER_REJECTED: 'partner_rejected',    // B declined the swap (terminal)
-  AWAITING_ADMIN: 'awaiting_admin',        // B accepted, admin reviewing
-  APPROVED: 'approved',                     // Admin approved, shifts swapped (terminal)
-  REJECTED: 'rejected',                     // Admin rejected (terminal)
-  CANCELLED: 'cancelled',                   // Initiator cancelled before resolution (terminal)
-  EXPIRED: 'expired',                       // One of the shift dates passed while pending (terminal)
-  REVOKED: 'revoked',                       // Admin revoked after approval (terminal)
-};
-
-export const SWAP_STATUS_COLORS = {
-  awaiting_partner: '#8B5CF6',  // Purple - waiting on partner
-  partner_rejected: THEME.text.muted,
-  awaiting_admin: THEME.status.warning,  // Yellow - needs admin attention
-  approved: THEME.status.success,
-  rejected: THEME.status.error,
-  cancelled: THEME.text.muted,
-  expired: THEME.text.muted,
-  revoked: '#F97316',  // Orange
-};
-
-export const SWAP_STATUS_LABELS = {
-  awaiting_partner: 'Awaiting Reply',
-  partner_rejected: 'Declined by Partner',
-  awaiting_admin: 'Awaiting Admin',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  cancelled: 'Cancelled',
-  expired: 'Expired',
-  revoked: 'Revoked',
-};
+// OFFER_STATUS_COLORS / LABELS, SWAP_STATUS_COLORS / LABELS moved to src/constants.js
+// Unused SWAP_STATUS enum dropped (was internal-only, no references).
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // UTILS

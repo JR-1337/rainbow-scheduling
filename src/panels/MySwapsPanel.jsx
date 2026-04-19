@@ -3,7 +3,7 @@ import { Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
-import { SWAP_STATUS_COLORS, SWAP_STATUS_LABELS } from '../App';
+import { SWAP_STATUS_COLORS, SWAP_STATUS_LABELS } from '../constants';
 import { getDayNameShort, formatDate } from '../utils/date';
 
 export const MySwapsPanel = ({ swaps, currentUserEmail, onCancel }) => {

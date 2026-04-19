@@ -3,7 +3,8 @@ import { ArrowRight, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
-import { CollapsibleSection, OFFER_STATUS_COLORS, OFFER_STATUS_LABELS } from '../App';
+import { CollapsibleSection } from '../App';
+import { OFFER_STATUS_COLORS, OFFER_STATUS_LABELS } from '../constants';
 import { getDayNameShort, formatDate, formatTimeDisplay } from '../utils/date';
 
 export const ReceivedOffersHistoryPanel = ({ offers, currentUserEmail, notificationCount, onOpen }) => {

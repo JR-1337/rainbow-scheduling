@@ -3,7 +3,8 @@ import { Clock, ChevronDown, ChevronUp, X, Calendar, ArrowRight, ArrowRightLeft,
 import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
-import { CollapsibleSection, OFFER_STATUS_COLORS, OFFER_STATUS_LABELS, SWAP_STATUS_COLORS, SWAP_STATUS_LABELS } from '../App';
+import { CollapsibleSection } from '../App';
+import { OFFER_STATUS_COLORS, OFFER_STATUS_LABELS, SWAP_STATUS_COLORS, SWAP_STATUS_LABELS } from '../constants';
 import { formatTimeDisplay } from '../utils/date';
 
 export const UnifiedRequestHistory = ({
