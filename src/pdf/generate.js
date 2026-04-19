@@ -2,10 +2,10 @@
 import {
   ROLES,
   ROLES_BY_ID,
-  isStatHoliday,
   hasApprovedTimeOffForDate,
 } from '../App';
 import { toDateKey, getWeekNumber, getDayNameShort, formatDate, formatMonthWord, formatTimeShort } from '../utils/date';
+import { isStatHoliday } from '../utils/storeHours';
 import { EVENT_TYPES, PRIMARY_CONTACT_EMAIL } from '../constants';
 import { computeDayUnionHours } from '../utils/timemath';
 import { escapeHtml, stripEmoji } from '../utils/format';

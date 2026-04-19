@@ -16,9 +16,10 @@ import {
 
 import {
   THEME, TYPE, ROLES, ROLES_BY_ID,
-  getStoreHoursForDate, isStatHoliday, GradientBackground, haptic
+  getStoreHoursForDate, GradientBackground, haptic
 } from './App';
 import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } from './utils/date';
+import { isStatHoliday } from './utils/storeHours';
 
 import { MobileScheduleGrid } from './MobileEmployeeView';
 import { EVENT_TYPES } from './constants';

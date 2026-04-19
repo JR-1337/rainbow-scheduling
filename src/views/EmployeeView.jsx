@@ -2,13 +2,14 @@ import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Bell, Calendar, Eye, Key, Loader, LogOut, Shield, Star, User, ArrowRight, ArrowRightLeft } from 'lucide-react';
 import {
   THEME, ROLES, ROLES_BY_ID,
-  isStatHoliday, getStoreHoursForDate,
+  getStoreHoursForDate,
   GradientBackground,
   AnimatedNumber, CollapsibleSection,
   haptic,
   CURRENT_PERIOD_INDEX, Logo, TaskStarTooltip,
 } from '../App';
 import { toDateKey, getWeekNumber, formatDate, formatTimeDisplay, formatTimeShort, getDayName } from '../utils/date';
+import { isStatHoliday } from '../utils/storeHours';
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet, MobileAlertsSheet, computeAlertItems } from '../MobileEmployeeView';
 import { EVENT_TYPES } from '../constants';
 import { MyShiftOffersPanel } from '../panels/MyShiftOffersPanel';

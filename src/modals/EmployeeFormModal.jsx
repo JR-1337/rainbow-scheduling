@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Trash2, Loader, UserCheck, UserX, Shield, Clock, Key, Check } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES } from '../constants';
-import { Modal, GradientButton, Input, apiCall, STORE_HOURS } from '../App';
+import { Modal, GradientButton, Input, apiCall } from '../App';
+import { STORE_HOURS } from '../utils/storeHours';
 
 export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null, currentUser = null, showToast, suggestedPassword = '' }) => {
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];

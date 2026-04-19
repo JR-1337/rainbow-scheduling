@@ -3,6 +3,7 @@ import { useIsMobile, MobileMySchedule, MobileBottomSheet } from './MobileEmploy
 import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, MobileEmployeeQuickView, MobileAdminBottomNav } from './MobileAdminView';
 import { parseLocalDate, escapeHtml } from './utils/format';
 import { toDateKey, getDayName, getDayNameShort, formatDate, formatDateLong, formatMonthWord, getWeekNumber, formatTimeDisplay, formatTimeShort, calculateHours, parseTime } from './utils/date';
+import { STAT_HOLIDAY_HOURS, STORE_HOURS, isStatHoliday } from './utils/storeHours';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -278,14 +279,7 @@ const chunkedBatchSave = async (payload, onProgress) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════════════════════════════════════════
-export const STORE_HOURS = {
-  sunday: { open: '11:00', close: '18:00' }, monday: { open: '10:00', close: '18:00' },
-  tuesday: { open: '10:00', close: '18:00' }, wednesday: { open: '10:00', close: '18:00' },
-  thursday: { open: '11:00', close: '19:00' }, friday: { open: '11:00', close: '19:00' },
-  saturday: { open: '11:00', close: '19:00' },
-};
-const STAT_HOLIDAY_HOURS = { open: '12:00', close: '17:00' };
-const STAT_HOLIDAYS_2026 = ['2026-01-01','2026-02-16','2026-04-03','2026-05-18','2026-07-01','2026-08-03','2026-09-07','2026-10-12','2026-12-25','2026-12-26'];
+// STORE_HOURS, STAT_HOLIDAY_HOURS, STAT_HOLIDAYS_2026 moved to src/utils/storeHours.js
 
 // Daily staffing targets - defaults (overridden by Settings tab if configured)
 const DEFAULT_STAFFING_TARGETS = {
@@ -389,7 +383,7 @@ export const SWAP_STATUS_LABELS = {
 // UTILS
 // ═══════════════════════════════════════════════════════════════════════════════
 // Pure date/time helpers moved to src/utils/date.js
-export const isStatHoliday = (date) => STAT_HOLIDAYS_2026.includes(toDateKey(date));
+// isStatHoliday moved to src/utils/storeHours.js
 
 // Module-level override refs (synced from component state via useEffect)
 // This avoids threading overrides as props through every child component
