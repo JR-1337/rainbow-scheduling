@@ -24,6 +24,7 @@ import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides
 import { apiCall } from './utils/api';
 import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents, filterToLivePeriods } from './utils/apiTransforms';
 import { getFutureShiftDates, formatFutureShiftsBlockMessage, serializeEmployeeForApi } from './utils/employees';
+import { createShiftFromAvailability } from './utils/scheduleOps';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -715,36 +716,6 @@ export default function App() {
   // Auto-populate shift for an employee on a date.
   // v2.24.0: prefer per-day defaultShift; fall back to availability window.
   // availability.available stays the gate — never books a day the employee is off.
-  const createShiftFromAvailability = (employee, date) => {
-    const dayName = getDayName(date).toLowerCase();
-    const avail = employee.availability?.[dayName];
-
-    // If not available on this day, skip
-    if (!avail || !avail.available) return null;
-
-    const ds = employee.defaultShift?.[dayName];
-    const dsStart = ds && ds.start ? ds.start : null;
-    const dsEnd = ds && ds.end ? ds.end : null;
-
-    const startTime = dsStart || avail.start || STORE_HOURS[dayName].open;
-    const endTime = dsEnd || avail.end || STORE_HOURS[dayName].close;
-
-    const dateStr = toDateKey(date);
-    return {
-      employeeId: employee.id,
-      employeeName: employee.name,
-      date: dateStr,
-      startTime,
-      endTime,
-      role: employee.defaultSection || 'none',
-      task: '',
-      // S61 — explicit so `allShiftKeys` and the backend key both agree on 'work'
-      type: 'work',
-      note: '',
-      hours: calculateHours(startTime, endTime)
-    };
-  };
-  
   // Check if employee has shifts in a week
   const employeeHasShiftsInWeek = (employee, weekDates) => {
     return weekDates.some(date => {
