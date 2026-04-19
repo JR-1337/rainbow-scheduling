@@ -16,6 +16,7 @@ import { useDismissOnOutside } from './hooks/useDismissOnOutside';
 import { useAuth } from './hooks/useAuth';
 import { useToast } from './hooks/useToast';
 import { useAnnouncements } from './hooks/useAnnouncements';
+import { useGuardedMutation } from './hooks/useGuardedMutation';
 import { EmployeeRow } from './components/EmployeeRow';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
@@ -270,20 +271,8 @@ export default function App() {
   // If the token is stale, loadDataFromBackend will surface AUTH_EXPIRED and the
   // callback above will bounce us to the login screen.
   const didBootstrapRef = useRef(false);
-  // S41.2: guard against double-submit on admin approve/deny/revoke/cancel actions.
-  // Apps Script round-trip is 2-3s; impatient users click twice, second click hits
-  // backend after status already moved and gets a misleading red error toast.
-  const actionBusyRef = useRef(false);
-  const guardedMutation = async (label, fn) => {
-    if (actionBusyRef.current) return; // silent: second click while first is in-flight
-    actionBusyRef.current = true;
-    showToast('saving', `${label}…`, 30000); // stays until fn's own showToast replaces it
-    try {
-      await fn();
-    } finally {
-      actionBusyRef.current = false;
-    }
-  };
+  // guardedMutation moved to hooks/useGuardedMutation.js
+  const guardedMutation = useGuardedMutation(showToast);
 
   // Autofill PK across a whole week: loop days, per-day default times (Sat 10:00-10:45,
   // others 18:00-20:00), eligible full-timers by availability window. Sequential apiCalls
