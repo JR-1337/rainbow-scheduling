@@ -36,7 +36,7 @@ Rules:
 - `src/MobileAdminView.jsx` -- admin mobile view
 - `src/theme.js` -- THEME / TYPE / OTR accent palette
 - `src/constants.js` -- ROLES / ROLES_BY_ID / REQUEST_STATUS_COLORS / OFFER/SWAP_STATUS_COLORS+LABELS / EVENT_TYPES / PRIMARY_CONTACT_EMAIL
-- `src/components/` -- LoginScreen, ColumnHeaderEditor, ScheduleCell, EmployeeRow, CollapsibleSection, primitives (Modal/GradientButton/Input/Checkbox/TimePicker/TooltipButton), uiKit (haptic/AnimatedNumber/StaffingBar/ScheduleSkeleton/TaskStarTooltip/GradientBackground/Logo), Button, AdaptiveModal
+- `src/components/` -- LoginScreen, ColumnHeaderEditor, ScheduleCell, EmployeeRow, CollapsibleSection, primitives (Modal/GradientButton/Input/Checkbox/TimePicker/TooltipButton), uiKit (haptic/AnimatedNumber/StaffingBar/ScheduleSkeleton/TaskStarTooltip/GradientBackground/Logo), Button, AdaptiveModal, MobileScheduleActionSheet
 - `src/hooks/` -- useFocusTrap, useUnsavedWarning, useDismissOnOutside, useAuth, useToast, useAnnouncements, useGuardedMutation, useTooltip
 - `src/panels/` -- admin + employee list panels
 - `src/modals/` -- request/offer/swap/settings/password/shift-editor modals

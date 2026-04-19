@@ -17,6 +17,11 @@ Rules:
 - ASCII operators only.
 -->
 
+## [PROJECT] -- Render shared overlays at App root, not inside branch returns
+Lesson: Modals, toasts, action sheets and any other overlay shared between the mobile-admin early-return branch and the desktop return must be defined once (e.g. `const confirmModal = ...` before the branch) and rendered from both branches. If only one branch mounts it, state updates from the other branch silently no-op and the feature reads as broken.
+Context: Shipped 2026-04-19: the auto-populate confirm `<Modal>` lived only in the desktop return. Mobile Clear Wk / Fill Wk-with-existing / PK-autofill-confirm all dispatched `setAutoPopulateConfirm({...})` but nothing mounted. Fix 1 extracted the JSX into a shared const referenced from both returns.
+Affirmations: 0
+
 ## [PROJECT] -- Tokens aliased to OTR_ACCENT rotate daily; modal identity must not use them
 Lesson: `THEME.accent.blue/pink/purple` are aliased to `OTR_ACCENT.primary/dark` and rotate. Anything that should carry a fixed visual identity (e.g. per-modal accent) must use a separate static token.
 Context: Shipping SwapShiftModal and OfferShiftModal using `THEME.accent.purple/pink` made their headers rotate to blue/orange on non-matching days. Added `THEME.modal.swap.accent` + `THEME.modal.offer.accent` to decouple.
