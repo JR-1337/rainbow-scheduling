@@ -12,6 +12,7 @@ import { CollapsibleSection } from './components/CollapsibleSection';
 import { LoginScreen } from './components/LoginScreen';
 import { ColumnHeaderEditor } from './components/ColumnHeaderEditor';
 import { ScheduleCell } from './components/ScheduleCell';
+import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
@@ -39,6 +40,7 @@ import { RequestDaysOffModal } from './modals/RequestDaysOffModal';
 import { EmailModal } from './modals/EmailModal';
 import { EmployeeView } from './views/EmployeeView';
 export { parseLocalDate, escapeHtml, THEME, TYPE, ROLES, ROLES_BY_ID };
+export { getStoreHoursForDate } from './utils/storeHoursOverrides';
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
   User, Users, Phone, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, EyeOff, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu, BookOpen
@@ -84,20 +86,8 @@ const DEFAULT_STAFFING_TARGETS = {
 // Pure date/time helpers moved to src/utils/date.js
 // isStatHoliday moved to src/utils/storeHours.js
 
-// Module-level override refs (synced from component state via useEffect)
-// This avoids threading overrides as props through every child component
-let _storeHoursOverrides = {}; // { "2026-02-14": { open: "10:00", close: "21:00" } }
-let _staffingTargetOverrides = {}; // { "2026-02-14": 12 }
-
-export const getStoreHoursForDate = (date) => {
-  const dateStr = toDateKey(date);
-  // Per-date override takes priority
-  if (_storeHoursOverrides[dateStr]) return _storeHoursOverrides[dateStr];
-  // Then stat holiday defaults
-  if (isStatHoliday(date)) return STAT_HOLIDAY_HOURS;
-  // Then weekly defaults
-  return STORE_HOURS[getDayName(date)];
-};
+// getStoreHoursForDate + override refs moved to src/utils/storeHoursOverrides.js
+// Re-exported below for backward compat with importers that still target ./App.
 // getPayPeriodDates moved to src/utils/payPeriod.js
 // parseTime, formatTimeDisplay, formatTimeShort, calculateHours moved to src/utils/date.js
 
@@ -270,8 +260,8 @@ export default function App() {
   const [editingColumnDate, setEditingColumnDate] = useState(null); // Date object for column header popover
   
   // Sync overrides to module-level refs (so getStoreHoursForDate works outside component)
-  useEffect(() => { _storeHoursOverrides = storeHoursOverrides; }, [storeHoursOverrides]);
-  useEffect(() => { _staffingTargetOverrides = staffingTargetOverrides; }, [staffingTargetOverrides]);
+  useEffect(() => { syncStoreHoursOverrides(storeHoursOverrides); }, [storeHoursOverrides]);
+  useEffect(() => { syncStaffingTargetOverrides(staffingTargetOverrides); }, [staffingTargetOverrides]);
   
   // Helper to check if current period is in edit mode (defaults to true for new periods)
   const isCurrentPeriodEditMode = editModeByPeriod[periodIndex] ?? true;
