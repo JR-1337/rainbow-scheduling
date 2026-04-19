@@ -2338,3 +2338,58 @@ function clearAllData() {
   if (changes && changes.getLastRow() > 1) { changes.deleteRows(2, changes.getLastRow() - 1); Logger.log('Cleared ShiftChanges'); }
   Logger.log('Data cleared. Employees and Settings preserved.');
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PASSWORD HASH BACKFILL (one-time, run from Apps Script editor)
+// For each Employee row with a plaintext `password` but empty `passwordHash`,
+// generate salt + hash and write them. Plaintext column is left intact so the
+// existing dual-check login path keeps working until the plaintext branches
+// are removed in a follow-up commit.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function backfillPasswordHashes() {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.TABS.EMPLOYEES);
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(String);
+  const pwIdx = headers.indexOf('password');
+  const hashIdx = headers.indexOf('passwordHash');
+  const saltIdx = headers.indexOf('passwordSalt');
+  const nameIdx = headers.indexOf('name');
+  const emailIdx = headers.indexOf('email');
+
+  if (pwIdx === -1 || hashIdx === -1 || saltIdx === -1) {
+    Logger.log('ERROR: Employees sheet missing password / passwordHash / passwordSalt columns.');
+    return;
+  }
+
+  let backfilled = 0;
+  let skipped = 0;
+  const skippedRows = [];
+
+  for (let i = 1; i < values.length; i++) {
+    const plaintext = String(values[i][pwIdx] || '');
+    const existingHash = String(values[i][hashIdx] || '');
+    const name = String(values[i][nameIdx] || '');
+    const email = String(values[i][emailIdx] || '');
+
+    if (existingHash) { skipped++; continue; }
+    if (!plaintext) { skipped++; skippedRows.push(name + ' (' + email + ') — no plaintext, no hash'); continue; }
+
+    const salt = generateSalt_();
+    const hash = hashPassword_(salt, plaintext);
+    sheet.getRange(i + 1, hashIdx + 1).setValue(hash);
+    sheet.getRange(i + 1, saltIdx + 1).setValue(salt);
+    backfilled++;
+    Logger.log('Backfilled: ' + name + ' (' + email + ')');
+  }
+
+  Logger.log('');
+  Logger.log('=== Backfill complete ===');
+  Logger.log('Backfilled: ' + backfilled);
+  Logger.log('Skipped (already hashed or no plaintext): ' + skipped);
+  if (skippedRows.length > 0) {
+    Logger.log('Rows with neither hash nor plaintext (cannot log in until reset):');
+    skippedRows.forEach(r => Logger.log('  ' + r));
+  }
+}
