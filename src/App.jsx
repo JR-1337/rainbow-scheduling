@@ -75,33 +75,8 @@ const DEFAULT_STAFFING_TARGETS = {
 
 // PAY_PERIOD_START, CURRENT_PERIOD_INDEX, getPayPeriodDates moved to src/utils/payPeriod.js
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TIME OFF REQUEST - Status constants and sample data
-// ═══════════════════════════════════════════════════════════════════════════════
-const REQUEST_STATUS = {
-  PENDING: 'pending',
-  APPROVED: 'approved',
-  DENIED: 'denied',
-  CANCELLED: 'cancelled',
-  REVOKED: 'revoked'
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SHIFT OFFER (Give Away) - Status constants and sample data
-// ═══════════════════════════════════════════════════════════════════════════════
-const OFFER_STATUS = {
-  AWAITING_RECIPIENT: 'awaiting_recipient',  // Waiting for Employee B to respond
-  RECIPIENT_REJECTED: 'recipient_rejected',  // B declined (terminal)
-  AWAITING_ADMIN: 'awaiting_admin',          // B accepted, admin reviewing
-  APPROVED: 'approved',                       // Admin approved, shift reassigned (terminal)
-  REJECTED: 'rejected',                       // Admin rejected transfer (terminal)
-  CANCELLED: 'cancelled',                     // A cancelled before resolution (terminal)
-  EXPIRED: 'expired',                         // Shift date passed while pending (terminal)
-  REVOKED: 'revoked',                         // Admin revoked after approval (terminal)
-};
-
-// OFFER_STATUS_COLORS / LABELS, SWAP_STATUS_COLORS / LABELS moved to src/constants.js
-// Unused SWAP_STATUS enum dropped (was internal-only, no references).
+// REQUEST_STATUS, OFFER_STATUS, SWAP_STATUS enums removed (zero references).
+// Color/label maps live in src/constants.js.
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // UTILS
