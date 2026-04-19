@@ -17,6 +17,16 @@ Rules:
 - ASCII operators only.
 -->
 
+## [PROJECT] -- Hardcoded <option> ranges silently truncate widened data
+Lesson: When a form <select> has a fixed Array.from length for options (e.g. hours 6-19), any data value outside that range falls back to the first option on render and re-saves as the wrong value. Always size option lists to cover migration-widened ranges with headroom.
+Context: 2026-04-19 -- EmployeeFormModal availability/defaultShift dropdowns capped at 19:00. v2.24.0 widener wrote 20:00 to Mon-Fri end. Playwright smoke showed Sadie's Mon end as 06:00 in the UI even though the sheet had 20:00. Saving would have silently truncated back to 06:00. Fix: extend range to 22:00 (length 17).
+Affirmations: 0
+
+## [PROJECT] -- Trailing-underscore functions are hidden from Apps Script editor dropdown
+Lesson: Apps Script functions ending with `_` are filtered out of the editor's function-name dropdown in the new editor UI. For one-shot migrations that need to be picked from the dropdown, provide a public wrapper (no underscore) that calls the underscore version.
+Context: 2026-04-19 -- `widenAvailabilityForPK_` invisible in dropdown; added `runWidenAvailabilityForPK` wrapper. Both deleted after the one-shot ran.
+Affirmations: 0
+
 ## [PROJECT] -- Render shared overlays at App root, not inside branch returns
 Lesson: Modals, toasts, action sheets and any other overlay shared between the mobile-admin early-return branch and the desktop return must be defined once (e.g. `const confirmModal = ...` before the branch) and rendered from both branches. If only one branch mounts it, state updates from the other branch silently no-op and the feature reads as broken.
 Context: Shipped 2026-04-19: the auto-populate confirm `<Modal>` lived only in the desktop return. Mobile Clear Wk / Fill Wk-with-existing / PK-autofill-confirm all dispatched `setAutoPopulateConfirm({...})` but nothing mounted. Fix 1 extracted the JSX into a shared const referenced from both returns.
