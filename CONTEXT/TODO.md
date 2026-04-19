@@ -21,7 +21,7 @@ Rules:
 
 - Test Sarvi-batch end-to-end -- next: JR + Sarvi smoke 10 items per plan verification section (frontend LIVE, Apps Script v2.22 LIVE)
 - Phase A+B+C save-failure smoke -- next: JR Wi-Fi-off test save/delete failure paths on phone; edit-modal must stay on "Edit" (not "Add"), state must revert on failure (post-commit 7a13cab LIVE)
-- Adversarial audit Phase E -- next: App.jsx extraction multi-session, plaintext-password branch removal, PDF XSS escape sweep (unused-import sweep DONE)
+- Adversarial audit Phase E -- next: App.jsx extraction multi-session, plaintext-password branch removal (unused-import sweep DONE; PDF XSS sweep verified already-complete)
 - Backup-cash role clarification -- next: JR asks Sarvi whether she wants a NEW role vs existing `backupCashier`
 - CF Worker SWR cache -- next: design KV cache key from `getAllData` payload; flip `API_URL` in src/App.jsx
 - Welcome email on new-employee create -- trigger in EmployeeFormModal create flow, send default emp-XXX password
@@ -55,6 +55,7 @@ Rules:
 
 ## Completed
 
+- [2026-04-18] Phase E sub-area 3 verified: PDF XSS escape sweep. Audited every `${...}` in src/pdf/generate.js. All 7 user-writable interpolations (announcement.subject/message, ev.note, shift.task, emp.name, r.fullName, a.name, a.email) already wrapped in cleanText / escapeHtml. Role color has regex hex whitelist at L131. email/build.js is plain-text mail, not HTML. No code change needed; LESSONS note "5 sites" was stale.
 - [2026-04-18] Phase E sub-area 1: unused-import sweep -- 27 stray `import React` (Vite auto-JSX-runtime makes them dead) + 15 dead named imports in App.jsx (features migrated to `src/views/EmployeeView.jsx` + panel files; App.jsx retained stale imports). 28 files, bundle byte-identical (465.06 kB) confirming prior tree-shaking. Programmatic cross-check via `/tmp/unused-imports.mjs`; manual per-import verification against App.jsx body and codebase references.
 - [2026-04-18] Phase D follow-ups shipped (`b0851f8`) -- THEME.modal.{swap,offer} fixed non-rotating accent tokens; Offer/Swap switched off rotating accents; shift filter `>= today` not `>= tomorrow`; RequestTimeOffModal hides admin-blocked types (no longer disabled with Employees Only badge); Button.jsx destructiveOutline variant; Sign Out button migrated to new variant. Playwright re-verified on prod bundle index-pisXMHns.js.
 - [2026-04-18] Adversarial audit Phase D shipped (`ab1cb58`, `e64838b`, `41f2f28`) -- new src/components/Button.jsx (5 variants x 3 sizes), 13 migrations in MobileStaffPanel + MobileAdminDrawer; new src/components/AdaptiveModal.jsx (mobile bottom-sheet / desktop centered card, headerGradient + footer + headerExtra slots), 3 modal migrations (RequestTimeOff, OfferShift, SwapShift); icon scale sweep to 12/14/16/20 in MobileAdminView. Playwright smoked on prod bundle index-BAi60peB.js.
