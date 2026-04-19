@@ -22,6 +22,7 @@ import { EmployeeRow } from './components/EmployeeRow';
 import { MobileScheduleActionSheet } from './components/MobileScheduleActionSheet';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
+import { normalizeAnnouncements } from './utils/apiTransforms';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -470,25 +471,9 @@ export default function App() {
       setShiftOffers(offers);
       setShiftSwaps(swaps);
       
-      // Load announcements from backend
       const { announcements: loadedAnnouncements } = result.data;
       if (loadedAnnouncements && Array.isArray(loadedAnnouncements)) {
-        // Convert array to object keyed by periodStartDate (YYYY-MM-DD)
-        const announcementsObj = {};
-        loadedAnnouncements.forEach(ann => {
-          // Normalize the date to YYYY-MM-DD
-          const dateKey = ann.periodStartDate ? String(ann.periodStartDate).split('T')[0] : null;
-          if (dateKey) {
-            announcementsObj[dateKey] = {
-              id: ann.id,
-              periodStartDate: dateKey,
-              subject: ann.subject || '',
-              message: ann.message || '',
-              updatedAt: ann.updatedAt
-            };
-          }
-        });
-        setAnnouncements(announcementsObj);
+        setAnnouncements(normalizeAnnouncements(loadedAnnouncements));
       }
       
       // Load staffing targets from backend (falls back to DEFAULT_STAFFING_TARGETS)
