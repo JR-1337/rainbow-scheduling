@@ -15,7 +15,8 @@ export const OTR = {
   ],
 };
 
-const _prevAccent = parseInt(localStorage.getItem('otr-accent') || '-1', 10);
+let _prevAccent = -1;
+try { _prevAccent = parseInt(localStorage.getItem('otr-accent') || '-1', 10); } catch {}
 const _accentIdx = (_prevAccent + 1) % OTR.accents.length;
 try { localStorage.setItem('otr-accent', _accentIdx); } catch {}
 export const OTR_ACCENT = OTR.accents[_accentIdx];
