@@ -22,7 +22,7 @@ import { EmployeeRow } from './components/EmployeeRow';
 import { MobileScheduleActionSheet } from './components/MobileScheduleActionSheet';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
-import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents } from './utils/apiTransforms';
+import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents, filterToLivePeriods } from './utils/apiTransforms';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -320,46 +320,11 @@ export default function App() {
       setShifts(shiftsObj);
       setEvents(eventsObj);
       
-      // Load live periods from backend BEFORE filtering published shifts
       const { livePeriods: loadedLivePeriods } = result.data;
-      const editModeObj = {};
+      const { publishedShifts: publishedObj, publishedEvents: publishedEventsObj, editModeObj } =
+        filterToLivePeriods(shiftsObj, eventsObj, loadedLivePeriods, PAY_PERIOD_START);
       if (loadedLivePeriods && Array.isArray(loadedLivePeriods)) {
-        loadedLivePeriods.forEach(pIndex => {
-          editModeObj[pIndex] = false; // LIVE = not in edit mode
-        });
         setEditModeByPeriod(editModeObj);
-      }
-      
-      // Build publishedShifts: ONLY include shifts from LIVE periods
-      // Non-live periods are drafts that employees should not see
-      const publishedObj = {};
-      const publishedEventsObj = {};
-      if (loadedLivePeriods && loadedLivePeriods.length > 0) {
-        // Build a Set of all dates that belong to LIVE periods
-        const liveDates = new Set();
-        loadedLivePeriods.forEach(pIndex => {
-          const pStart = new Date(PAY_PERIOD_START.getFullYear(), PAY_PERIOD_START.getMonth(), PAY_PERIOD_START.getDate() + (pIndex * 14));
-          for (let d = 0; d < 14; d++) {
-            const dt = new Date(pStart.getFullYear(), pStart.getMonth(), pStart.getDate() + d);
-            liveDates.add(toDateKey(dt));
-          }
-        });
-        // Only copy shifts whose date falls within a live period
-        Object.entries(shiftsObj).forEach(([key, shift]) => {
-          const shiftDate = key.split('-').slice(-3).join('-'); // emp-id-YYYY-MM-DD → YYYY-MM-DD
-          // More robust: use the shift's date field
-          const dateStr = shift.date || shiftDate;
-          if (liveDates.has(dateStr)) {
-            publishedObj[key] = shift;
-          }
-        });
-        // S61 — mirror for meeting/pk overlay entries
-        Object.entries(eventsObj).forEach(([key, arr]) => {
-          const firstDate = (arr && arr[0] && arr[0].date) || key.split('-').slice(-3).join('-');
-          if (liveDates.has(firstDate)) {
-            publishedEventsObj[key] = arr;
-          }
-        });
       }
       setPublishedShifts(publishedObj);
       setPublishedEvents(publishedEventsObj);
