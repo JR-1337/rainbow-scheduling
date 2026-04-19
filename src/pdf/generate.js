@@ -36,22 +36,28 @@ const ROLE_GLYPHS = {
   floorMonitor: 'F',
   none: '',
 };
-// Inset-stripe system. Each cell's perimeter stays uniform 1px grey (the
-// grid) so neighboring cells never fight. The role signal is a solid black
-// stripe drawn INSIDE the cell against its left padding via inset box-shadow.
-// Stripe width groups the family; the letter glyph differentiates within.
-// cash (C / 2 / B): 4px   |   section (M / W): 2px
-// monitor (F): 1px        |   none: 0
-const ROLE_STRIPE_PX = {
-  cashier: 4,
-  backupCashier: 4,
-  backupCash: 4,
-  mens: 2,
-  womens: 2,
-  floorMonitor: 1,
-  none: 0,
+// Monogram + typography system. Cell perimeter stays uniform 1px grey (the
+// grid). Role signal lives entirely in the content: a large letter glyph
+// stamped at top-left, plus a family-scoped type treatment on the role name.
+// cash (C / 2 / B):      BOLD UPPERCASE
+// section (M / W):       Medium Title Case
+// monitor (F):           Italic
+// none:                  plain
+const ROLE_FAMILY = {
+  cashier: 'cash',
+  backupCashier: 'cash',
+  backupCash: 'cash',
+  mens: 'section',
+  womens: 'section',
+  floorMonitor: 'monitor',
+  none: 'none',
 };
-const stripeShadow = (px) => px > 0 ? `box-shadow: inset ${px}px 0 0 ${G.ink};` : '';
+const roleNameStyle = (family) => {
+  if (family === 'cash')    return 'font-weight:800;text-transform:uppercase;letter-spacing:0.5px;';
+  if (family === 'section') return 'font-weight:600;';
+  if (family === 'monitor') return 'font-weight:500;font-style:italic;';
+  return 'font-weight:500;';
+};
 
 // S64 Stage 7 - events carry meeting/PK entries per `${empId}-${date}` key.
 export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = [], events = {}) => {
@@ -123,12 +129,11 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         }
         const role = ROLES_BY_ID[shift.role];
         const roleName = role?.name || 'Shift';
-        const stripePx = ROLE_STRIPE_PX[shift.role] || 0;
+        const family = ROLE_FAMILY[shift.role] || 'none';
         const glyph = ROLE_GLYPHS[shift.role] || '';
-        const glyphPrefix = glyph ? `${glyph}: ` : '';
-        const stripePad = stripePx > 0 ? `padding-left:${5 + stripePx + 2}px;` : '';
-        return `<td style="padding:5px;${stripePad}border:1px solid ${G.border};background:${G.fill};text-align:center;${stripeShadow(stripePx)}">
-          <div style="font-size:10px;font-weight:800;color:${G.ink};margin-bottom:2px;">${glyphPrefix}${roleName}</div>
+        return `<td style="padding:5px;border:1px solid ${G.border};background:${G.fill};text-align:center;position:relative;">
+          ${glyph ? `<span style="position:absolute;top:2px;left:4px;font-size:14px;font-weight:800;color:${G.ink};line-height:1;">${glyph}</span>` : ''}
+          <div style="font-size:10px;color:${G.ink};margin-bottom:2px;${roleNameStyle(family)}">${roleName}</div>
           <div style="font-size:9px;color:${G.text};">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
           <div style="font-size:8px;color:${G.textMuted};">${shift.hours}h</div>
           ${shift.task ? `<div style="font-size:7px;color:${G.ink};font-weight:700;margin-top:2px;line-height:1.3;word-break:break-word;">★ ${cleanText(shift.task)}</div>` : ''}
@@ -168,14 +173,13 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     `;
   };
 
-  // Legend: chip mirrors the cell's inset stripe + glyph, so the key
-  // matches the real cell treatment at a glance.
+  // Legend: monogram glyph + family-typed role name, matching cell treatment.
   const legendItems = ROLES.filter(r => r.id !== 'none').map(r => {
     const g = ROLE_GLYPHS[r.id] || '';
-    const px = ROLE_STRIPE_PX[r.id] || 0;
+    const family = ROLE_FAMILY[r.id] || 'none';
     return `<span style="margin-right:15px;font-size:10px;display:inline-flex;align-items:center;gap:5px;">
-      <span style="display:inline-block;width:18px;height:16px;border:1px solid ${G.border};${stripeShadow(px)}color:${G.ink};font-weight:800;font-size:9px;text-align:center;line-height:14px;background:${G.fill};padding-left:${px + 2}px;box-sizing:border-box;">${g}</span>
-      <span style="color:${G.text};">${escapeHtml(r.fullName)}</span>
+      <span style="display:inline-block;width:16px;font-weight:800;font-size:13px;color:${G.ink};text-align:center;">${g}</span>
+      <span style="color:${G.text};${roleNameStyle(family)}">${escapeHtml(r.fullName)}</span>
     </span>`;
   }).join('');
 
