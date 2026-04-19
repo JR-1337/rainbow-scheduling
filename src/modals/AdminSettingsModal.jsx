@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Key, Save, Loader, Check } from 'lucide-react';
 import { THEME } from '../theme';
-import { apiCall } from '../App';
+import { apiCall } from '../utils/api';
 import { Modal, GradientButton } from '../components/primitives';
 
 export const AdminSettingsModal = ({ isOpen, onClose, currentUser, staffingTargets, onStaffingTargetsChange, showToast }) => {

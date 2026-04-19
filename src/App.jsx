@@ -9,6 +9,7 @@ import { haptic, AnimatedNumber, ScheduleSkeleton, TaskStarTooltip, GradientBack
 import { CURRENT_PERIOD_INDEX, getPayPeriodDates } from './utils/payPeriod';
 import { hasApprovedTimeOffForDate } from './utils/requests';
 import { CollapsibleSection } from './components/CollapsibleSection';
+import { apiCall } from './utils/api';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -52,159 +53,9 @@ import {
 // ═══════════════════════════════════════════════════════════════════════════════
 // API CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
-const API_URL = 'https://script.google.com/macros/s/AKfycbxSDWA1uOnemfu2N33y3za7a2hreJIUddgCgQi4X32ObbWKeXHyQms7wxy2NyGw7gWbXA/exec';
+// API_URL, apiCall, chunkedBatchSave moved to src/utils/api.js
 
-/**
- * Make API call to Google Apps Script backend
- * Uses GET with URL parameters (workaround for POST issues with Apps Script)
- * @param {string} action - The action name (e.g., 'login', 'submitTimeOffRequest')
- * @param {object} payload - The data to send
- * @returns {Promise<{success: boolean, data?: any, error?: {code: string, message: string}}>}
- */
-export const apiCall = async (action, payload = {}, onProgress) => {
-  // S37: auto-attach session token (if present) to every payload so no caller
-  // has to pass `callerEmail`. Login/public endpoints are unaffected because
-  // the backend only reads `token` when verifyAuth is invoked.
-  const token = getAuthToken();
-  const authedPayload = token ? { ...payload, token } : payload;
-  try {
-    const payloadJson = JSON.stringify(authedPayload);
-    // Encode payload as JSON in URL parameter
-    const params = new URLSearchParams({ action, payload: payloadJson });
-    const url = `${API_URL}?${params.toString()}`;
-
-    let result = null;
-
-    // Check URL length - browsers/servers typically limit to ~8000 chars
-    // If too long, try POST first, fall back to chunked GET
-    if (url.length > 6000) {
-      try {
-        // Apps Script POST: use text/plain to avoid CORS preflight
-        const postResponse = await fetch(API_URL, {
-          method: 'POST',
-          redirect: 'follow',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action, payload: authedPayload })
-        });
-        const postText = await postResponse.text();
-        try {
-          const parsed = JSON.parse(postText);
-          if (parsed.success !== undefined) result = parsed;
-        } catch (e) { /* POST failed or returned HTML redirect, fall through */ }
-      } catch (e) { /* POST failed, fall through to chunked GET */ }
-
-      // Fallback: chunk the shifts array into smaller batches
-      if (!result && action === 'batchSaveShifts' && authedPayload.shifts?.length > 10) {
-        result = await chunkedBatchSave(authedPayload, onProgress);
-      }
-    }
-
-    if (!result) {
-      const response = await fetch(url, {
-        method: 'GET',
-        redirect: 'follow'
-      });
-      const text = await response.text();
-      try {
-        result = JSON.parse(text);
-      } catch (parseError) {
-        result = {
-          success: false,
-          error: { code: 'PARSE_ERROR', message: 'Invalid response from server' }
-        };
-      }
-    }
-
-    // S37: centralized auth-failure handling. If the backend reports expired
-    // or invalid token, wipe state and let the registered callback bounce the
-    // user back to login.
-    if (result && result.success === false && result.error?.code) {
-      handleAuthError(result.error.code);
-    }
-    return result;
-  } catch (error) {
-    return {
-      success: false,
-      error: { code: 'NETWORK_ERROR', message: 'Unable to connect to server. Please try again.' }
-    };
-  }
-};
-
-// Chunk large batchSaveShifts into multiple smaller GET requests
-const chunkedBatchSave = async (payload, onProgress) => {
-  // S37: `token` is already injected into `payload` by apiCall before it
-  // delegates here. `callerEmail` is retained for back-compat with the legacy
-  // fallback path in backend verifyAuth; it will be undefined on post-S37
-  // payloads and the backend will resolve auth from the token instead.
-  const { shifts, periodDates, callerEmail, token } = payload;
-  const CHUNK_SIZE = 15; // 15 shifts per request stays under URL limits (~4500 chars)
-  let totalSaved = 0;
-  let lastError = null;
-  let failedChunks = 0;
-  const totalChunks = Math.ceil(shifts.length / CHUNK_SIZE);
-  
-  // Build all shift keys for the full period (needed for delete logic on last chunk)
-  // S61 — 3-tuple form `${empId}-${date}-${type}` matches backend `keyOf`. Missing/empty
-  // type defaults to 'work' to stay bit-identical to existing data (backend also defaults).
-  const allShiftKeys = shifts.map(s => `${s.employeeId}-${s.date}-${s.type || 'work'}`);
-  
-  for (let i = 0; i < shifts.length; i += CHUNK_SIZE) {
-    const chunk = shifts.slice(i, i + CHUNK_SIZE);
-    const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
-    const isLastChunk = (i + CHUNK_SIZE) >= shifts.length;
-    
-    // Report progress
-    if (onProgress) onProgress(i + chunk.length, shifts.length, chunkNum, totalChunks);
-    
-    const chunkPayload = {
-      ...(token ? { token } : {}),
-      ...(callerEmail ? { callerEmail } : {}),
-      shifts: chunk,
-      // Only send periodDates on last chunk (triggers cleanup of deleted shifts)
-      // Also send allShiftKeys so backend knows which shifts to keep
-      periodDates: isLastChunk ? periodDates : [],
-      ...(isLastChunk ? { allShiftKeys } : {})
-    };
-    
-    const params = new URLSearchParams({
-      action: 'batchSaveShifts',
-      payload: JSON.stringify(chunkPayload)
-    });
-    
-    try {
-      const response = await fetch(`${API_URL}?${params.toString()}`, {
-        method: 'GET',
-        redirect: 'follow'
-      });
-      const text = await response.text();
-      const result = JSON.parse(text);
-      
-      if (result.success) {
-        totalSaved += result.data?.savedCount || chunk.length;
-      } else {
-        lastError = result.error;
-        failedChunks += 1;
-      }
-    } catch (err) {
-      lastError = { code: 'NETWORK_ERROR', message: err.message };
-      failedChunks += 1;
-    }
-  }
-
-  if (lastError) {
-    // Any chunk failure = partial/total save failure. Callers must retain unsaved state.
-    return {
-      success: false,
-      error: lastError,
-      data: { savedCount: totalSaved, totalChunks, failedChunks }
-    };
-  }
-
-  return {
-    success: true,
-    data: { savedCount: totalSaved, totalChunks, failedChunks: 0 }
-  };
-};
+// apiCall + chunkedBatchSave moved to src/utils/api.js
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONFIG
