@@ -23,6 +23,7 @@ import { MobileScheduleActionSheet } from './components/MobileScheduleActionShee
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
 import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents, filterToLivePeriods } from './utils/apiTransforms';
+import { getFutureShiftDates, formatFutureShiftsBlockMessage, serializeEmployeeForApi } from './utils/employees';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -845,40 +846,23 @@ export default function App() {
     setAutoPopulateConfirm(null);
   };
   
-  const saveEmployee = async (e) => { 
-    // Check for future shifts if setting to inactive
+  const saveEmployee = async (e) => {
     if (editingEmp && !e.active && editingEmp.active) {
-      const today = toDateKey(new Date());
-      const futureShifts = Object.entries(shifts)
-        .filter(([key, shift]) => shift.employeeId === e.id && shift.date > today)
-        .map(([key, shift]) => shift.date);
-      
+      const futureShifts = getFutureShiftDates(e.id, shifts);
       if (futureShifts.length > 0) {
-        const sortedDates = futureShifts.sort();
-        const formattedDates = sortedDates.slice(0, 5).map(d => {
-          const date = parseLocalDate(d);
-          return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        }).join(', ');
-        const moreText = sortedDates.length > 5 ? ` and ${sortedDates.length - 5} more` : '';
-        
-        showToast('error', `Cannot deactivate: ${e.name} has ${futureShifts.length} future shift(s): ${formattedDates}${moreText}. Remove or reassign shifts first.`, 8000);
-        return false; // Return false to indicate failure
+        showToast('error', formatFutureShiftsBlockMessage('deactivate', e.name, futureShifts), 8000);
+        return false;
       }
     }
-    
-    // Optimistic update — capture prev so we can revert on API failure.
-    // Do NOT clear editingEmp here: if the save fails the modal stays open
-    // and must still read as "Edit Employee" (not flip to "Add Employee").
+
+    // Do NOT clear editingEmp: if save fails modal stays open and labelled "Edit".
     const prevEmployees = employees;
     const wasEditing = !!editingEmp;
     if (editingEmp) setEmployees(employees.map(x => x.id === e.id ? e : x));
     else setEmployees([...employees, { ...e, active: true }]);
 
-    // Stringify availability for storage
     const employeeForApi = {
-      ...e,
-      availability: typeof e.availability === 'object' ? JSON.stringify(e.availability) : e.availability,
-      defaultShift: e.defaultShift && typeof e.defaultShift === 'object' ? JSON.stringify(e.defaultShift) : (e.defaultShift || ''),
+      ...serializeEmployeeForApi(e),
       ...(e.password ? { password: e.password } : {})
     };
 
@@ -900,41 +884,20 @@ export default function App() {
     }
   };
   
-  // Mark as deleted instead of removing - preserves shift history
   const deleteEmployee = async (id) => {
     const emp = employees.find(e => e.id === id);
     if (!emp) return false;
-    
-    // Check for future shifts
-    const today = toDateKey(new Date());
-    const futureShifts = Object.entries(shifts)
-      .filter(([key, shift]) => shift.employeeId === id && shift.date > today)
-      .map(([key, shift]) => shift.date);
-    
+
+    const futureShifts = getFutureShiftDates(id, shifts);
     if (futureShifts.length > 0) {
-      const sortedDates = futureShifts.sort();
-      const formattedDates = sortedDates.slice(0, 5).map(d => {
-        const date = parseLocalDate(d);
-        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      }).join(', ');
-      const moreText = sortedDates.length > 5 ? ` and ${sortedDates.length - 5} more` : '';
-      
-      showToast('error', `Cannot remove: ${emp.name} has ${futureShifts.length} future shift(s): ${formattedDates}${moreText}. Remove or reassign shifts first.`, 8000);
-      return false; // Return false to indicate failure
+      showToast('error', formatFutureShiftsBlockMessage('remove', emp.name, futureShifts), 8000);
+      return false;
     }
-    
-    // Optimistic update — capture prev so we can revert on API failure
+
     const prevEmployees = employees;
     setEmployees(employees.map(e => e.id === id ? { ...e, deleted: true, active: false } : e));
 
-    // Stringify availability for storage
-    const employeeForApi = {
-      ...emp,
-      deleted: true,
-      active: false,
-      availability: typeof emp.availability === 'object' ? JSON.stringify(emp.availability) : emp.availability,
-      defaultShift: emp.defaultShift && typeof emp.defaultShift === 'object' ? JSON.stringify(emp.defaultShift) : (emp.defaultShift || '')
-    };
+    const employeeForApi = serializeEmployeeForApi(emp, { deleted: true, active: false });
 
     // Call API to persist
     const result = await apiCall('saveEmployee', {
@@ -960,14 +923,7 @@ export default function App() {
     const prevEmployees = employees;
     setEmployees(employees.map(e => e.id === id ? { ...e, active: true, deleted: false } : e));
 
-    // Stringify availability for storage
-    const employeeForApi = {
-      ...emp,
-      active: true,
-      deleted: false,
-      availability: typeof emp.availability === 'object' ? JSON.stringify(emp.availability) : emp.availability,
-      defaultShift: emp.defaultShift && typeof emp.defaultShift === 'object' ? JSON.stringify(emp.defaultShift) : (emp.defaultShift || '')
-    };
+    const employeeForApi = serializeEmployeeForApi(emp, { active: true, deleted: false });
 
     // Call API to persist
     const result = await apiCall('saveEmployee', {

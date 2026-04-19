@@ -1,0 +1,30 @@
+import { toDateKey } from './date';
+import { parseLocalDate } from './format';
+
+export function getFutureShiftDates(employeeId, shiftsObj) {
+  const today = toDateKey(new Date());
+  return Object.values(shiftsObj)
+    .filter(shift => shift.employeeId === employeeId && shift.date > today)
+    .map(shift => shift.date)
+    .sort();
+}
+
+export function formatFutureShiftsBlockMessage(verb, name, futureDates) {
+  const formatted = futureDates.slice(0, 5).map(d => {
+    const date = parseLocalDate(d);
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }).join(', ');
+  const moreText = futureDates.length > 5 ? ` and ${futureDates.length - 5} more` : '';
+  return `Cannot ${verb}: ${name} has ${futureDates.length} future shift(s): ${formatted}${moreText}. Remove or reassign shifts first.`;
+}
+
+export function serializeEmployeeForApi(emp, overrides = {}) {
+  const merged = { ...emp, ...overrides };
+  return {
+    ...merged,
+    availability: typeof merged.availability === 'object' ? JSON.stringify(merged.availability) : merged.availability,
+    defaultShift: merged.defaultShift && typeof merged.defaultShift === 'object'
+      ? JSON.stringify(merged.defaultShift)
+      : (merged.defaultShift || '')
+  };
+}
