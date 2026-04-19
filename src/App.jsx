@@ -11,6 +11,7 @@ import { hasApprovedTimeOffForDate, matchesOfferId, matchesSwapId, errorMsg } fr
 import { CollapsibleSection } from './components/CollapsibleSection';
 import { LoginScreen } from './components/LoginScreen';
 import { LoadingScreen, ErrorScreen } from './components/LoadingScreen';
+import ScheduleStateButton from './components/ScheduleStateButton';
 import { ColumnHeaderEditor } from './components/ColumnHeaderEditor';
 import { useUnsavedWarning } from './hooks/useUnsavedWarning';
 import { useDismissOnOutside } from './hooks/useDismissOnOutside';
@@ -1967,55 +1968,13 @@ export default function App() {
             
             {/* Save / Go Live / Edit - Three-state button */}
             <div className="h-8 w-px" style={{ backgroundColor: THEME.border.default }} />
-            {isCurrentPeriodEditMode ? (
-              unsaved ? (
-                /* Unsaved changes → Save button — bright and prominent */
-                <button
-                  onClick={saveSchedule}
-                  disabled={scheduleSaving}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                  style={{
-                    background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`,
-                    color: THEME.accent.text,
-                    boxShadow: `0 0 12px ${THEME.accent.blue}50`
-                  }}
-                  title="Save changes (schedule stays hidden from employees)"
-                >
-                  {scheduleSaving ? <><div className="rainbow-spinner" style={{width:12,height:12,borderWidth:2}} /><span>SAVING...</span></> : <><Save size={12} /><span>SAVE</span></>}
-                </button>
-              ) : (
-                /* Saved / clean → Go Live button */
-                <button
-                  onClick={toggleEditMode}
-                  disabled={scheduleSaving}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                  style={{
-                    backgroundColor: THEME.status.success + '20',
-                    color: THEME.status.success,
-                    border: `1px solid ${THEME.status.success}50`
-                  }}
-                  title="Publish schedule — employees will see it"
-                >
-                  {scheduleSaving ? <><Loader size={12} className="animate-spin" /><span>GOING LIVE...</span></> : <><Eye size={12} /><span>GO LIVE</span></>}
-                </button>
-              )
-            ) : (
-              /* Currently LIVE → Edit button */
-              <button
-                onClick={toggleEditMode}
-                disabled={scheduleSaving}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                style={{
-                  backgroundColor: THEME.status.warning + '20',
-                  color: THEME.status.warning,
-                  border: `1px solid ${THEME.status.warning}50`
-                }}
-                title="Go to edit mode (employees won't see changes)"
-              >
-                <Edit3 size={12} />
-                <span>GO EDIT</span>
-              </button>
-            )}
+            <ScheduleStateButton
+              isEditMode={isCurrentPeriodEditMode}
+              unsaved={unsaved}
+              scheduleSaving={scheduleSaving}
+              onSave={saveSchedule}
+              onToggleEdit={toggleEditMode}
+            />
           </div>
           
           <div className="flex items-center gap-2">
