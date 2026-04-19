@@ -185,7 +185,7 @@ export default function App() {
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [loadError, setLoadError] = useState(null);
   
-  const { toast, showToast } = useToast();
+  const { toast, setToast, showToast } = useToast();
 
   // S37: persisted session restore + AUTH_EXPIRED auto-bounce to login.
   const [currentUser, setCurrentUser] = useAuth(showToast);

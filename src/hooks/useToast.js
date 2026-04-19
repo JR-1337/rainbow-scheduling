@@ -10,5 +10,5 @@ export function useToast() {
     setTimeout(() => setToast(null), duration);
   };
 
-  return { toast, showToast };
+  return { toast, setToast, showToast };
 }
