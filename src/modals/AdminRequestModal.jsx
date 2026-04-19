@@ -1,4 +1,3 @@
-import React from 'react';
 import { X } from 'lucide-react';
 import { useIsMobile, MobileBottomSheet } from '../MobileEmployeeView';
 import { THEME, TYPE } from '../theme';

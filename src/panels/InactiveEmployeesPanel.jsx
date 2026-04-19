@@ -1,4 +1,3 @@
-import React from 'react';
 import { UserCheck, UserX, Trash2 } from 'lucide-react';
 import { THEME } from '../theme';
 import { Modal } from '../App';

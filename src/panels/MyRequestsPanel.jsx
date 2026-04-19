@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Calendar, Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { THEME } from '../theme';
 import { REQUEST_STATUS_COLORS } from '../constants';

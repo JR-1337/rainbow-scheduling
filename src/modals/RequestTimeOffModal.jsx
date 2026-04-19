@@ -1,4 +1,3 @@
-import React from 'react';
 import { Calendar, Users, User } from 'lucide-react';
 import { THEME } from '../theme';
 import { AdaptiveModal } from '../components/AdaptiveModal';

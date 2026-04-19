@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Key, Loader, Check } from 'lucide-react';
 import { THEME } from '../theme';
 import { Modal, GradientButton, apiCall } from '../App';

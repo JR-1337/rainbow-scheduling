@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { MessageSquare, Eye, AlertCircle, Check, Loader, Save } from 'lucide-react';
 import { THEME } from '../theme';
 import { getWeekNumber, toDateKey } from '../App';

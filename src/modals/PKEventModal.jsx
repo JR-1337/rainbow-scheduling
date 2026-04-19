@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { BookOpen, Check, Users } from 'lucide-react';
 import { Modal, TimePicker, GradientButton, toDateKey } from '../App';
 import { THEME } from '../theme';

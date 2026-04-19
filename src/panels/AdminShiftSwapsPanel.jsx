@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Clock, ChevronDown, ChevronUp, X, Check, ArrowRightLeft } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';

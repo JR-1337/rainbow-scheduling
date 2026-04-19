@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Send, Check } from 'lucide-react';
 import { THEME } from '../theme';
 import { buildEmailContent } from '../email/build';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, X, AlertCircle, ChevronLeft, ChevronRight, Loader, Check } from 'lucide-react';
 import { THEME, TYPE } from '../theme';
 import { parseLocalDate } from '../utils/format';

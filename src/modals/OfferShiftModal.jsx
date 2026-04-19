@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { User, AlertCircle, Check, Shield, Loader, Send } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES_BY_ID } from '../constants';
