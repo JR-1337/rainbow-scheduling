@@ -4,9 +4,9 @@ import {
   THEME, ROLES, ROLES_BY_ID,
   getStoreHoursForDate,
   CollapsibleSection,
-  CURRENT_PERIOD_INDEX,
 } from '../App';
 import { GradientBackground, AnimatedNumber, haptic, Logo, TaskStarTooltip } from '../components/uiKit';
+import { CURRENT_PERIOD_INDEX } from '../utils/payPeriod';
 import { toDateKey, getWeekNumber, formatDate, formatTimeDisplay, formatTimeShort, getDayName } from '../utils/date';
 import { isStatHoliday } from '../utils/storeHours';
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet, MobileAlertsSheet, computeAlertItems } from '../MobileEmployeeView';

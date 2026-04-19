@@ -6,6 +6,8 @@ import { toDateKey, getDayName, getDayNameShort, formatDate, formatDateLong, for
 import { STAT_HOLIDAY_HOURS, STORE_HOURS, isStatHoliday } from './utils/storeHours';
 import { Modal, GradientButton } from './components/primitives';
 import { haptic, AnimatedNumber, ScheduleSkeleton, TaskStarTooltip, GradientBackground } from './components/uiKit';
+import { CURRENT_PERIOD_INDEX, getPayPeriodDates } from './utils/payPeriod';
+import { hasApprovedTimeOffForDate } from './utils/requests';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -216,12 +218,7 @@ const DEFAULT_STAFFING_TARGETS = {
 
 // toDateKey moved to src/utils/date.js
 
-const PAY_PERIOD_START = new Date(2026, 0, 26); // January 26, 2026 (Monday) - using local timezone
-export const CURRENT_PERIOD_INDEX = (() => {
-  const today = new Date(); today.setHours(0,0,0,0);
-  const start = new Date(PAY_PERIOD_START.getFullYear(), PAY_PERIOD_START.getMonth(), PAY_PERIOD_START.getDate());
-  return Math.max(0, Math.floor((today - start) / (14 * 24 * 60 * 60 * 1000)));
-})();
+// PAY_PERIOD_START, CURRENT_PERIOD_INDEX, getPayPeriodDates moved to src/utils/payPeriod.js
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIME OFF REQUEST - Status constants and sample data
@@ -271,16 +268,7 @@ export const getStoreHoursForDate = (date) => {
   // Then weekly defaults
   return STORE_HOURS[getDayName(date)];
 };
-const getPayPeriodDates = (periodIndex) => {
-  const startDate = new Date(PAY_PERIOD_START.getFullYear(), PAY_PERIOD_START.getMonth(), PAY_PERIOD_START.getDate() + (periodIndex * 14));
-  const endDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + 13);
-  const dates = [];
-  for (let i = 0; i < 14; i++) { 
-    const d = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i); 
-    dates.push(d); 
-  }
-  return { startDate, endDate, dates };
-};
+// getPayPeriodDates moved to src/utils/payPeriod.js
 // parseTime, formatTimeDisplay, formatTimeShort, calculateHours moved to src/utils/date.js
 
 const getAvailabilityShading = (avail, storeHours) => {
@@ -352,14 +340,7 @@ const TooltipButton = ({ children, onClick, variant = 'secondary', disabled = fa
 // SCHEDULE CELL
 // ═══════════════════════════════════════════════════════════════════════════════
 // Check if employee has approved time off for a specific date
-export const hasApprovedTimeOffForDate = (employeeEmail, dateStr, timeOffRequests) => {
-  if (!timeOffRequests || !employeeEmail) return false;
-  return timeOffRequests.some(req => 
-    req.email === employeeEmail && 
-    req.status === 'approved' && 
-    req.datesRequested.split(',').includes(dateStr)
-  );
-};
+// hasApprovedTimeOffForDate moved to src/utils/requests.js
 
 const ScheduleCell = React.memo(({ shift, events = [], date, onClick, availability, storeHours, isDeleted = false, hasApprovedTimeOff = false, isLocked = false }) => {
   const [showTask, setShowTask] = useState(false);
