@@ -6,7 +6,7 @@ import { toDateKey, getDayName, getDayNameShort, formatDate, formatDateLong, for
 import { STAT_HOLIDAY_HOURS, STORE_HOURS, isStatHoliday } from './utils/storeHours';
 import { Modal, GradientButton, TooltipButton } from './components/primitives';
 import { haptic, AnimatedNumber, ScheduleSkeleton, TaskStarTooltip, GradientBackground } from './components/uiKit';
-import { CURRENT_PERIOD_INDEX, getPayPeriodDates } from './utils/payPeriod';
+import { PAY_PERIOD_START, CURRENT_PERIOD_INDEX, getPayPeriodDates } from './utils/payPeriod';
 import { hasApprovedTimeOffForDate } from './utils/requests';
 import { CollapsibleSection } from './components/CollapsibleSection';
 import { LoginScreen } from './components/LoginScreen';
