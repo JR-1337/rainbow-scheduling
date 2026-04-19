@@ -10,6 +10,7 @@ import { PAY_PERIOD_START, CURRENT_PERIOD_INDEX, getPayPeriodDates } from './uti
 import { hasApprovedTimeOffForDate } from './utils/requests';
 import { CollapsibleSection } from './components/CollapsibleSection';
 import { LoginScreen } from './components/LoginScreen';
+import { LoadingScreen, ErrorScreen } from './components/LoadingScreen';
 import { ColumnHeaderEditor } from './components/ColumnHeaderEditor';
 import { useUnsavedWarning } from './hooks/useUnsavedWarning';
 import { useDismissOnOutside } from './hooks/useDismissOnOutside';
@@ -1392,53 +1393,16 @@ export default function App() {
     </div>
   );
 
-  // Show loading screen while fetching data (skeleton + persistent reassurance overlay)
-  if (isLoadingData) {
-    return (
-      <>
-        {sweepOverlay}
-        <div className="min-h-screen relative" style={{ backgroundColor: THEME.bg.primary, fontFamily: "'Inter', sans-serif" }} role="status" aria-live="polite" aria-label="Loading schedule">
-          <div className="pt-8" style={{ backgroundColor: THEME.bg.secondary }}>
-            <ScheduleSkeleton />
-          </div>
-          <div className="fixed inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 150 }}>
-            <div className="flex flex-col items-center gap-3 px-6 py-5 rounded-2xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, boxShadow: THEME.shadow.card }}>
-              <div className="rainbow-spinner" style={{ width: 28, height: 28, borderWidth: 3 }} />
-              <p className="text-sm font-medium" style={{ color: THEME.text.primary }}>Loading your schedule…</p>
-              <p className="text-xs italic" style={{ color: THEME.text.muted }}>This can take a moment on first sign-in.</p>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
-  
-  // Show error if data load failed
+  if (isLoadingData) return <LoadingScreen overlay={sweepOverlay} />;
+
   if (loadError) {
     return (
-      <>
-        {sweepOverlay}
-      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: THEME.bg.primary }}>
-        <div className="text-center max-w-md">
-          <AlertCircle size={32} className="mx-auto mb-4" style={{ color: THEME.status.error }} />
-          <p className="mb-4" style={{ color: '#FFFFFF' }}>{loadError}</p>
-          <button 
-            onClick={() => loadDataFromBackend(currentUser.email)}
-            className="px-4 py-2 rounded-lg text-sm"
-            style={{ backgroundColor: THEME.accent.purple, color: '#fff' }}
-          >
-            Try Again
-          </button>
-          <button 
-            onClick={() => { clearAuth(); setCurrentUser(null); setLoadError(null); }}
-            className="ml-2 px-4 py-2 rounded-lg text-sm"
-            style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary }}
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-      </>
+      <ErrorScreen
+        overlay={sweepOverlay}
+        message={loadError}
+        onRetry={() => loadDataFromBackend(currentUser.email)}
+        onLogout={() => { clearAuth(); setCurrentUser(null); setLoadError(null); }}
+      />
     );
   }
 
