@@ -1,0 +1,19 @@
+- generic [ref=e2129]:
+  - link "Skip to schedule" [ref=e2131] [cursor=pointer]:
+    - /url: "#main-content"
+  - banner [ref=e2133]:
+    - generic [ref=e2134]:
+      - generic [ref=e2135]
+      - generic [ref=e2155]
+  - main [ref=e2179]:
+    - generic [ref=e2180]:
+      - generic [ref=e2181]
+      - generic [ref=e2198]
+      - generic [ref=e2210]
+      - generic [ref=e3154]
+      - button "Hidden from Schedule 2" [ref=e3196] [cursor=pointer]
+      - button "My Time Off Requests" [ref=e3209] [cursor=pointer]
+  - dialog "Schedule Product Knowledge" [ref=e3216]:
+    - generic [ref=e3217]:
+      - generic [ref=e3218]
+      - generic [ref=e3224]

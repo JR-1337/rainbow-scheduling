@@ -278,49 +278,6 @@ export default function App() {
   // guardedMutation moved to hooks/useGuardedMutation.js
   const guardedMutation = useGuardedMutation(showToast);
 
-  // Autofill PK across a whole week: loop days, per-day default times (Sat 10:00-10:45,
-  // others 18:00-20:00), eligible full-timers by availability window. Sequential apiCalls
-  // because Apps Script write-lock contention on parallel bulkCreatePKEvent is likely.
-  const handleAutofillPKWeek = async (weekDates, weekNum) => {
-    await guardedMutation('Autofilling PK week', async () => {
-      const byDay = weekDates.map(d => {
-        const dateStr = toDateKey(d);
-        const { start, end } = getPKDefaultTimes(dateStr);
-        const eligibleIds = fullTimeEmployees
-          .filter(emp => availabilityCoversWindow(emp.availability, dateStr, start, end).eligible)
-          .map(emp => emp.id);
-        return { dateStr, start, end, eligibleIds };
-      });
-      let createdTotal = 0;
-      let skippedDays = 0;
-      const skippedWindows = new Set();
-      for (let i = 0; i < byDay.length; i++) {
-        const { dateStr, start, end, eligibleIds } = byDay[i];
-        if (eligibleIds.length === 0) {
-          skippedDays++;
-          skippedWindows.add(`${start}-${end}`);
-          continue;
-        }
-        showToast('saving', `PK day ${i + 1} of ${byDay.length}...`, 30000);
-        const result = await apiCall('bulkCreatePKEvent', {
-          date: dateStr, startTime: start, endTime: end, note: '', employeeIds: eligibleIds,
-        });
-        if (result.success) {
-          createdTotal += (result.data?.created?.length || 0);
-        }
-      }
-      if (createdTotal === 0 && skippedDays > 0) {
-        const windowsList = Array.from(skippedWindows).join(', ');
-        showToast('error', `No eligible staff for PK (${windowsList}) in week ${weekNum}. Check availability or use "Schedule a PK..." to pick a custom time.`, 8000);
-      } else if (skippedDays > 0) {
-        showToast('success', `PK autofilled: ${createdTotal} shifts, ${skippedDays} day(s) had no eligible staff.`);
-      } else {
-        showToast('success', `PK autofilled: ${createdTotal} shifts across week ${weekNum}`);
-      }
-      if (currentUser?.email) await loadDataFromBackend(currentUser.email);
-    });
-  };
-
   // S62 — Bulk PK: one modal, one save. Backend createPKEvent is already in Code.gs (v2.21.0).
   const handleBulkPK = async (payload) => {
     await guardedMutation('Scheduling PK', async () => {
@@ -1021,10 +978,6 @@ export default function App() {
     } else if (type === 'clear-all') {
       const count = clearWeekShifts(weekDates);
       showToast('success', `Removed ${count} shifts for full-time employees`);
-    } else if (type === 'autofill-pk-week') {
-      setAutoPopulateConfirm(null);
-      handleAutofillPKWeek(weekDates, week);
-      return;
     }
 
     setAutoPopulateConfirm(null);
@@ -1862,15 +1815,12 @@ export default function App() {
           {autoPopulateConfirm.type === 'populate-week' && `Auto-Fill Week ${autoPopulateConfirm.week} for ${autoPopulateConfirm.employee?.name}?`}
           {autoPopulateConfirm.type === 'clear-week' && `Clear Week ${autoPopulateConfirm.week} for ${autoPopulateConfirm.employee?.name}?`}
           {autoPopulateConfirm.type === 'clear-all' && `Clear All Full-Time Shifts for Week ${autoPopulateConfirm.week}?`}
-          {autoPopulateConfirm.type === 'autofill-pk-week' && `Autofill PK for Week ${autoPopulateConfirm.week}?`}
         </p>
 
         <p className="text-xs mb-4" style={{ color: THEME.text.secondary }}>
-          {autoPopulateConfirm.type === 'autofill-pk-week'
-            ? 'Saturday uses 10:00-10:45 (pre-open). Other days use 18:00-20:00 (post-close). Eligible full-timers only. Days that already have PK are preserved.'
-            : autoPopulateConfirm.type.includes('populate')
-              ? 'Some shifts already exist and will be preserved. Only empty days will be filled based on availability.'
-              : 'This will remove the selected shifts. You can undo by not saving changes.'
+          {autoPopulateConfirm.type.includes('populate')
+            ? 'Some shifts already exist and will be preserved. Only empty days will be filled based on availability.'
+            : 'This will remove the selected shifts. You can undo by not saving changes.'
           }
         </p>
 
@@ -1883,7 +1833,7 @@ export default function App() {
             danger={autoPopulateConfirm.type.includes('clear')}
             onClick={handleAutoPopulateConfirm}
           >
-            {autoPopulateConfirm.type.includes('clear') ? 'Clear Shifts' : autoPopulateConfirm.type === 'autofill-pk-week' ? 'Autofill PK' : 'Auto-Fill'}
+            {autoPopulateConfirm.type.includes('clear') ? 'Clear Shifts' : 'Auto-Fill'}
           </GradientButton>
         </div>
       </div>
@@ -2340,6 +2290,9 @@ export default function App() {
           onClose={() => setPkModalOpen(false)}
           onSchedule={handleBulkPK}
           employees={employees}
+          activeWeek={activeWeek}
+          week1={week1}
+          week2={week2}
         />
 
         {/* Employee Form Modal (mobile admin: reached via MobileStaffPanel) */}
@@ -2382,7 +2335,6 @@ export default function App() {
           autoPopulateWeek={autoPopulateWeek}
           setAutoPopulateConfirm={setAutoPopulateConfirm}
           showToast={showToast}
-          handleAutofillPKWeek={handleAutofillPKWeek}
           onOpenPKModal={() => setPkModalOpen(true)}
         />
 
@@ -2678,24 +2630,16 @@ export default function App() {
 
                   <div className="w-px h-4" style={{ backgroundColor: THEME.border.default }} />
 
-                  {/* PK menu: single entry point for both manual scheduling and bulk autofill,
-                      mirroring the Auto-Fill / Clear dropdown shape next to it. */}
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      e.target.value = '';
-                      if (val === '__schedule__') setPkModalOpen(true);
-                      else if (val === '__autofill__') setAutoPopulateConfirm({ type: 'autofill-pk-week', week: activeWeek });
-                    }}
-                    className="px-2 py-1 rounded text-xs font-medium outline-none"
+                  {/* Single PK entry — always opens the modal; Saturday quick-pick lives inside. */}
+                  <button
+                    type="button"
+                    onClick={() => setPkModalOpen(true)}
+                    className="px-2 py-1 rounded text-xs font-medium hover:opacity-80"
                     style={{ backgroundColor: THEME.event.pkBg, color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}` }}
-                    aria-label={`PK actions for week ${activeWeek}`}
+                    aria-label={`Schedule PK`}
                   >
-                    <option value="">📚 PK Week {activeWeek}...</option>
-                    <option value="__schedule__">Schedule a PK...</option>
-                    <option value="__autofill__">Autofill all eligible (week)</option>
-                  </select>
+                    📚 Schedule PK
+                  </button>
                 </div>
               )}
               
@@ -2976,6 +2920,9 @@ export default function App() {
         onClose={() => setPkModalOpen(false)}
         onSchedule={handleBulkPK}
         employees={employees}
+        activeWeek={activeWeek}
+        week1={week1}
+        week2={week2}
       />
       {editingColumnDate && (
         <ColumnHeaderEditor

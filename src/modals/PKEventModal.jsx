@@ -6,7 +6,7 @@ import { THEME } from '../theme';
 import { availabilityCoversWindow } from '../utils/timemath';
 import { getPKDefaultTimes } from '../utils/eventDefaults';
 
-export const PKEventModal = ({ isOpen, onClose, onSchedule, employees }) => {
+export const PKEventModal = ({ isOpen, onClose, onSchedule, employees, activeWeek, week1, week2 }) => {
   const today = toDateKey(new Date());
   const initialPK = getPKDefaultTimes(today);
   const [date, setDate] = useState(today);
@@ -82,6 +82,18 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees }) => {
     setOverrides(next);
   };
 
+  // Quick-pick: jump to this week's Saturday at the 10:00-10:45 pre-open window.
+  // Uses the currently-viewed week (activeWeek from the schedule tabs).
+  const weekDates = activeWeek === 1 ? week1 : activeWeek === 2 ? week2 : null;
+  const saturdayDate = weekDates?.find(d => d instanceof Date && d.getDay() === 6);
+  const handleSaturdayQuickPick = () => {
+    if (!saturdayDate) return;
+    setDate(toDateKey(saturdayDate));
+    setStart('10:00');
+    setEnd('10:45');
+    setTimesUserSet(false);
+  };
+
   const handleSchedule = () => {
     const employeeIds = candidates.filter(c => c.checked).map(c => c.id);
     if (employeeIds.length === 0) return;
@@ -129,7 +141,7 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Schedule Product Knowledge" size="lg">
       {/* Date + time row */}
-      <div className="grid grid-cols-3 gap-2 mb-2">
+      <div className="grid grid-cols-3 gap-2 mb-1">
         <div>
           <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Date</label>
           <input
@@ -144,6 +156,20 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees }) => {
         <TimePicker value={start} onChange={(v) => { setStart(v); setTimesUserSet(true); }} label="Start" />
         <TimePicker value={end} onChange={(v) => { setEnd(v); setTimesUserSet(true); }} label="End" />
       </div>
+
+      {saturdayDate && (
+        <div className="mb-2">
+          <button
+            type="button"
+            onClick={handleSaturdayQuickPick}
+            className="px-2 py-1 rounded text-xs font-medium hover:opacity-80"
+            style={{ backgroundColor: THEME.event.pkBg, color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}` }}
+            title="Jump to this week's Saturday at the 10:00-10:45 pre-open window"
+          >
+            📅 Saturday ({toDateKey(saturdayDate).slice(5)}) · 10:00–10:45
+          </button>
+        </div>
+      )}
 
       {/* Note */}
       <div className="mb-2">

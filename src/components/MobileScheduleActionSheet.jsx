@@ -16,7 +16,6 @@ export const MobileScheduleActionSheet = ({
   autoPopulateWeek,
   setAutoPopulateConfirm,
   showToast,
-  handleAutofillPKWeek,
   onOpenPKModal,
 }) => {
   const [level, setLevel] = useState('root');
@@ -89,10 +88,9 @@ export const MobileScheduleActionSheet = ({
           />
           <Row
             icon={<BookOpen size={18} style={{ color: THEME.event.pkText }} />}
-            label={`PK Week ${activeWeek}`}
+            label="Schedule PK"
             accent={THEME.event.pkText}
-            onClick={() => setLevel('pk')}
-            trailing={<ChevronRight size={16} style={{ color: THEME.text.muted }} />}
+            onClick={() => fire(onOpenPKModal)}
           />
         </div>
       )}
@@ -152,22 +150,6 @@ export const MobileScheduleActionSheet = ({
         </div>
       )}
 
-      {level === 'pk' && (
-        <div>
-          <Row
-            icon={<BookOpen size={18} style={{ color: THEME.event.pkText }} />}
-            label="Schedule a PK..."
-            accent={THEME.event.pkText}
-            onClick={() => fire(onOpenPKModal)}
-          />
-          <Row
-            icon={<Zap size={18} style={{ color: THEME.event.pkText }} />}
-            label="Autofill all eligible (week)"
-            accent={THEME.event.pkText}
-            onClick={() => fire(() => setAutoPopulateConfirm({ type: 'autofill-pk-week', week: activeWeek }))}
-          />
-        </div>
-      )}
     </AdaptiveModal>
   );
 };

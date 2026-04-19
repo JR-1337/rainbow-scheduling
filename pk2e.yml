@@ -1,0 +1,787 @@
+- generic [ref=e2129]:
+  - link "Skip to schedule" [ref=e2131] [cursor=pointer]:
+    - /url: "#main-content"
+  - banner [ref=e2133]:
+    - generic [ref=e2134]:
+      - generic [ref=e2135]:
+        - generic [ref=e2136]:
+          - generic [ref=e2137]: OVER THE
+          - generic [ref=e2138]: RAINBOW
+        - generic [ref=e2140]:
+          - button "Previous pay period" [ref=e2141] [cursor=pointer]:
+            - img [ref=e2142]
+          - paragraph [ref=e2145]: Apr 20 – May 3
+          - button "Next pay period" [ref=e2146] [cursor=pointer]:
+            - img [ref=e2147]
+        - button "GO LIVE" [ref=e2150] [cursor=pointer]:
+          - img [ref=e2151]
+          - generic [ref=e2154]: GO LIVE
+      - generic [ref=e2155]:
+        - button [ref=e2158] [cursor=pointer]:
+          - img [ref=e2159]
+        - button "Publish" [ref=e2164] [cursor=pointer]:
+          - img [ref=e2165]
+          - text: Publish
+        - button "My Requests" [ref=e2168] [cursor=pointer]:
+          - img [ref=e2169]
+          - text: My Requests
+        - button "J JR Owner" [ref=e2172] [cursor=pointer]:
+          - generic [ref=e2173]: J
+          - generic [ref=e2174]:
+            - paragraph [ref=e2175]:
+              - img [ref=e2176]
+              - text: JR
+            - paragraph [ref=e2178]: Owner
+  - main [ref=e2179]:
+    - generic [ref=e2180]:
+      - generic [ref=e2181]:
+        - button "Week 17Apr 20–Apr 26" [ref=e2182] [cursor=pointer]:
+          - generic [ref=e2183]: Week 17
+          - generic [ref=e2184]: Apr 20–Apr 26
+        - button "Week 18Apr 27–May 3" [ref=e2185] [cursor=pointer]:
+          - generic [ref=e2186]: Week 18
+          - generic [ref=e2187]: Apr 27–May 3
+        - button "Announcements" [ref=e2188] [cursor=pointer]:
+          - img [ref=e2189]
+          - generic [ref=e2191]: Announcements
+        - button "Shift Changes" [ref=e2192] [cursor=pointer]:
+          - img [ref=e2193]
+          - generic [ref=e2196]: Shift Changes
+      - generic [ref=e2198]:
+        - generic [ref=e2199]:
+          - img [ref=e2200]
+          - generic [ref=e2203]: Full-Time (13)
+        - combobox "Auto-fill week 1" [ref=e2205]:
+          - option "⚡ Auto-Fill Week 1..." [selected]
+          - option "All Full-Timers"
+          - option "Sarvi"
+          - option "Alex Fowler"
+          - option "Gary Scott"
+          - option "Gellert Boloni"
+          - option "Natalie Sirkin"
+          - option "Nicole Seeley"
+          - option "Nona Kashi"
+          - option "Rafeena Santsarran"
+          - option "Rebecca Oteba"
+          - option "Sabrina"
+          - option "Sadie Kromm"
+          - option "Savannah Chen"
+          - option "Terry Collins"
+        - combobox "Clear week 1" [ref=e2207]:
+          - option "🗑 Clear Week 1..." [selected]
+          - option "All Full-Timers"
+        - combobox "PK actions for week 1" [ref=e2209]:
+          - option "📚 PK Week 1..." [selected]
+          - option "Schedule a PK..."
+          - option "Autofill all eligible (week)"
+      - generic [ref=e2210]:
+        - generic [ref=e2211]:
+          - generic [ref=e2212]: Employee
+          - generic "Click to edit hours & target" [ref=e2213] [cursor=pointer]:
+            - paragraph [ref=e2214]: mon
+            - paragraph [ref=e2215]: "20"
+            - paragraph [ref=e2216]: 10a-6p
+            - paragraph [ref=e2217]:
+              - text: "0"
+              - generic [ref=e2218]: /10
+          - generic "Click to edit hours & target" [ref=e2221] [cursor=pointer]:
+            - paragraph [ref=e2222]: tue
+            - paragraph [ref=e2223]: "21"
+            - paragraph [ref=e2224]: 10a-6p
+            - paragraph [ref=e2225]:
+              - text: "0"
+              - generic [ref=e2226]: /10
+          - generic "Click to edit hours & target" [ref=e2229] [cursor=pointer]:
+            - paragraph [ref=e2230]: wed
+            - paragraph [ref=e2231]: "22"
+            - paragraph [ref=e2232]: 10a-6p
+            - paragraph [ref=e2233]:
+              - text: "0"
+              - generic [ref=e2234]: /10
+          - generic "Click to edit hours & target" [ref=e2237] [cursor=pointer]:
+            - paragraph [ref=e2238]: thu
+            - paragraph [ref=e2239]: "23"
+            - paragraph [ref=e2240]: 11a-7p
+            - paragraph [ref=e2241]:
+              - text: "0"
+              - generic [ref=e2242]: /12
+          - generic "Click to edit hours & target" [ref=e2245] [cursor=pointer]:
+            - paragraph [ref=e2246]: fri
+            - paragraph [ref=e2247]: "24"
+            - paragraph [ref=e2248]: 11a-7p
+            - paragraph [ref=e2249]:
+              - text: "0"
+              - generic [ref=e2250]: /12
+          - generic "Click to edit hours & target" [ref=e2253] [cursor=pointer]:
+            - paragraph [ref=e2254]: sat
+            - paragraph [ref=e2255]: "25"
+            - paragraph [ref=e2256]: 11a-7p
+            - paragraph [ref=e2257]:
+              - text: "0"
+              - generic [ref=e2258]: /20
+          - generic "Click to edit hours & target" [ref=e2261] [cursor=pointer]:
+            - paragraph [ref=e2262]: sun
+            - paragraph [ref=e2263]: "26"
+            - paragraph [ref=e2264]: 11a-6p
+            - paragraph [ref=e2265]:
+              - text: "0"
+              - generic [ref=e2266]: /18
+        - generic [ref=e2269]:
+          - generic [ref=e2270]:
+            - generic [ref=e2272]:
+              - generic [ref=e2273]: S
+              - generic [ref=e2274]:
+                - paragraph [ref=e2275]: Sarvi
+                - paragraph [ref=e2276]
+              - button [ref=e2278] [cursor=pointer]:
+                - img [ref=e2279]
+            - generic "Product Knowledge 12p-2p" [ref=e2283] [cursor=pointer]:
+              - generic [ref=e2284]: PK
+              - generic [ref=e2285]: 12p-2p
+            - img [ref=e2289] [cursor=pointer]
+            - img [ref=e2293] [cursor=pointer]
+            - img [ref=e2297] [cursor=pointer]
+            - img [ref=e2301] [cursor=pointer]
+            - img [ref=e2305] [cursor=pointer]
+            - generic [ref=e2307] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2309]
+          - generic [ref=e2310]:
+            - generic [ref=e2312]:
+              - generic [ref=e2313]: AF
+              - generic [ref=e2314]:
+                - paragraph [ref=e2315]: Alex Fowler
+                - paragraph [ref=e2316]
+              - button [ref=e2318] [cursor=pointer]:
+                - img [ref=e2319]
+            - generic "Product Knowledge 12p-2p" [ref=e2323] [cursor=pointer]:
+              - generic [ref=e2324]: PK
+              - generic [ref=e2325]: 12p-2p
+            - img [ref=e2329] [cursor=pointer]
+            - img [ref=e2333] [cursor=pointer]
+            - img [ref=e2337] [cursor=pointer]
+            - img [ref=e2341] [cursor=pointer]
+            - img [ref=e2345] [cursor=pointer]
+            - img [ref=e2349] [cursor=pointer]
+          - generic [ref=e2350]:
+            - generic [ref=e2352]:
+              - generic [ref=e2353]: GS
+              - generic [ref=e2354]:
+                - paragraph [ref=e2355]: Gary Scott
+                - paragraph [ref=e2356]
+              - button [ref=e2358] [cursor=pointer]:
+                - img [ref=e2359]
+            - generic "Product Knowledge 12p-2p" [ref=e2363] [cursor=pointer]:
+              - generic [ref=e2364]: PK
+              - generic [ref=e2365]: 12p-2p
+            - img [ref=e2369] [cursor=pointer]
+            - img [ref=e2373] [cursor=pointer]
+            - img [ref=e2377] [cursor=pointer]
+            - img [ref=e2381] [cursor=pointer]
+            - img [ref=e2385] [cursor=pointer]
+            - img [ref=e2389] [cursor=pointer]
+          - generic [ref=e2390]:
+            - generic [ref=e2392]:
+              - generic [ref=e2393]: GB
+              - generic [ref=e2394]:
+                - paragraph [ref=e2395]: Gellert Boloni
+                - paragraph [ref=e2396]
+              - button [ref=e2398] [cursor=pointer]:
+                - img [ref=e2399]
+            - generic "Product Knowledge 12p-2p" [ref=e2403] [cursor=pointer]:
+              - generic [ref=e2404]: PK
+              - generic [ref=e2405]: 12p-2p
+            - img [ref=e2409] [cursor=pointer]
+            - img [ref=e2413] [cursor=pointer]
+            - img [ref=e2417] [cursor=pointer]
+            - generic [ref=e2419] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2421]
+            - img [ref=e2425] [cursor=pointer]
+            - img [ref=e2429] [cursor=pointer]
+          - generic [ref=e2430]:
+            - generic [ref=e2432]:
+              - generic [ref=e2433]: NS
+              - generic [ref=e2434]:
+                - paragraph [ref=e2435]: Natalie Sirkin
+                - paragraph [ref=e2436]
+              - button [ref=e2438] [cursor=pointer]:
+                - img [ref=e2439]
+            - generic "Product Knowledge 12p-2p" [ref=e2443] [cursor=pointer]:
+              - generic [ref=e2444]: PK
+              - generic [ref=e2445]: 12p-2p
+            - img [ref=e2449] [cursor=pointer]
+            - img [ref=e2453] [cursor=pointer]
+            - img [ref=e2457] [cursor=pointer]
+            - img [ref=e2461] [cursor=pointer]
+            - img [ref=e2465] [cursor=pointer]
+            - img [ref=e2469] [cursor=pointer]
+          - generic [ref=e2470]:
+            - generic [ref=e2472]:
+              - generic [ref=e2473]: NS
+              - generic [ref=e2474]:
+                - paragraph [ref=e2475]: Nicole Seeley
+                - paragraph [ref=e2476]
+              - button [ref=e2478] [cursor=pointer]:
+                - img [ref=e2479]
+            - generic "Product Knowledge 12p-2p" [ref=e2483] [cursor=pointer]:
+              - generic [ref=e2484]: PK
+              - generic [ref=e2485]: 12p-2p
+            - img [ref=e2489] [cursor=pointer]
+            - img [ref=e2493] [cursor=pointer]
+            - img [ref=e2497] [cursor=pointer]
+            - img [ref=e2501] [cursor=pointer]
+            - img [ref=e2505] [cursor=pointer]
+            - generic [ref=e2507] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2509]
+          - generic [ref=e2510]:
+            - generic [ref=e2512]:
+              - generic [ref=e2513]: NK
+              - generic [ref=e2514]:
+                - paragraph [ref=e2515]: Nona Kashi
+                - paragraph [ref=e2516]
+              - button [ref=e2518] [cursor=pointer]:
+                - img [ref=e2519]
+            - generic "Product Knowledge 12p-2p" [ref=e2523] [cursor=pointer]:
+              - generic [ref=e2524]: PK
+              - generic [ref=e2525]: 12p-2p
+            - img [ref=e2529] [cursor=pointer]
+            - img [ref=e2533] [cursor=pointer]
+            - img [ref=e2537] [cursor=pointer]
+            - img [ref=e2541] [cursor=pointer]
+            - img [ref=e2545] [cursor=pointer]
+            - generic [ref=e2547] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2549]
+          - generic [ref=e2550]:
+            - generic [ref=e2552]:
+              - generic [ref=e2553]: RS
+              - generic [ref=e2554]:
+                - paragraph [ref=e2555]: Rafeena Santsarran
+                - paragraph [ref=e2556]
+              - button [ref=e2558] [cursor=pointer]:
+                - img [ref=e2559]
+            - generic "Product Knowledge 12p-2p" [ref=e2563] [cursor=pointer]:
+              - generic [ref=e2564]: PK
+              - generic [ref=e2565]: 12p-2p
+            - img [ref=e2569] [cursor=pointer]
+            - img [ref=e2573] [cursor=pointer]
+            - generic [ref=e2575] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2577]
+            - generic [ref=e2579] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2581]
+            - img [ref=e2585] [cursor=pointer]
+            - img [ref=e2589] [cursor=pointer]
+          - generic [ref=e2590]:
+            - generic [ref=e2592]:
+              - generic [ref=e2593]: RO
+              - generic [ref=e2594]:
+                - paragraph [ref=e2595]: Rebecca Oteba
+                - paragraph [ref=e2596]
+              - button [ref=e2598] [cursor=pointer]:
+                - img [ref=e2599]
+            - generic "Product Knowledge 12p-2p" [ref=e2603] [cursor=pointer]:
+              - generic [ref=e2604]: PK
+              - generic [ref=e2605]: 12p-2p
+            - img [ref=e2609] [cursor=pointer]
+            - img [ref=e2613] [cursor=pointer]
+            - generic [ref=e2615] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2617]
+            - generic [ref=e2619] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2621]
+            - img [ref=e2625] [cursor=pointer]
+            - img [ref=e2629] [cursor=pointer]
+          - generic [ref=e2630]:
+            - generic [ref=e2632]:
+              - generic [ref=e2633]: S
+              - generic [ref=e2634]:
+                - paragraph [ref=e2635]: Sabrina
+                - paragraph [ref=e2636]
+              - button [ref=e2638] [cursor=pointer]:
+                - img [ref=e2639]
+            - generic "Product Knowledge 12p-2p" [ref=e2643] [cursor=pointer]:
+              - generic [ref=e2644]: PK
+              - generic [ref=e2645]: 12p-2p
+            - img [ref=e2649] [cursor=pointer]
+            - img [ref=e2653] [cursor=pointer]
+            - img [ref=e2657] [cursor=pointer]
+            - img [ref=e2661] [cursor=pointer]
+            - img [ref=e2665] [cursor=pointer]
+            - img [ref=e2669] [cursor=pointer]
+          - generic [ref=e2670]:
+            - generic [ref=e2672]:
+              - generic [ref=e2673]: SK
+              - generic [ref=e2674]:
+                - paragraph [ref=e2675]: Sadie Kromm
+                - paragraph [ref=e2676]
+              - button [ref=e2678] [cursor=pointer]:
+                - img [ref=e2679]
+            - generic "Product Knowledge 12p-2p" [ref=e2683] [cursor=pointer]:
+              - generic [ref=e2684]: PK
+              - generic [ref=e2685]: 12p-2p
+            - img [ref=e2689] [cursor=pointer]
+            - img [ref=e2693] [cursor=pointer]
+            - img [ref=e2697] [cursor=pointer]
+            - img [ref=e2701] [cursor=pointer]
+            - img [ref=e2705] [cursor=pointer]
+            - img [ref=e2709] [cursor=pointer]
+          - generic [ref=e2710]:
+            - generic [ref=e2712]:
+              - generic [ref=e2713]: SC
+              - generic [ref=e2714]:
+                - paragraph [ref=e2715]: Savannah Chen
+                - paragraph [ref=e2716]
+              - button [ref=e2718] [cursor=pointer]:
+                - img [ref=e2719]
+            - generic "Product Knowledge 12p-2p" [ref=e2723] [cursor=pointer]:
+              - generic [ref=e2724]: PK
+              - generic [ref=e2725]: 12p-2p
+            - img [ref=e2729] [cursor=pointer]
+            - img [ref=e2733] [cursor=pointer]
+            - img [ref=e2737] [cursor=pointer]
+            - generic [ref=e2739] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2741]
+            - generic [ref=e2743] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2745]
+            - img [ref=e2749] [cursor=pointer]
+          - generic [ref=e2750]:
+            - generic [ref=e2752]:
+              - generic [ref=e2753]: TC
+              - generic [ref=e2754]:
+                - paragraph [ref=e2755]: Terry Collins
+                - paragraph [ref=e2756]
+              - button [ref=e2758] [cursor=pointer]:
+                - img [ref=e2759]
+            - generic "Product Knowledge 12p-2p" [ref=e2763] [cursor=pointer]:
+              - generic [ref=e2764]: PK
+              - generic [ref=e2765]: 12p-2p
+            - img [ref=e2769] [cursor=pointer]
+            - img [ref=e2773] [cursor=pointer]
+            - img [ref=e2777] [cursor=pointer]
+            - img [ref=e2781] [cursor=pointer]
+            - img [ref=e2785] [cursor=pointer]
+            - img [ref=e2789] [cursor=pointer]
+          - generic [ref=e2791]:
+            - generic [ref=e2793]:
+              - generic [ref=e2794]: AT
+              - generic [ref=e2795]:
+                - paragraph [ref=e2796]: Anasstasia Trofimov
+                - paragraph [ref=e2797]
+              - button [ref=e2799] [cursor=pointer]:
+                - img [ref=e2800]
+            - generic "Product Knowledge 12p-2p" [ref=e2805] [cursor=pointer]:
+              - generic [ref=e2806]: PK
+              - generic [ref=e2807]: 12p-2p
+            - img [ref=e2812] [cursor=pointer]
+            - img [ref=e2817] [cursor=pointer]
+            - img [ref=e2821] [cursor=pointer]
+            - img [ref=e2825] [cursor=pointer]
+            - img [ref=e2829] [cursor=pointer]
+            - img [ref=e2833] [cursor=pointer]
+          - generic [ref=e2834]:
+            - generic [ref=e2836]:
+              - generic [ref=e2837]: CN
+              - generic [ref=e2838]:
+                - paragraph [ref=e2839]: Christina Namour
+                - paragraph [ref=e2840]
+              - button [ref=e2842] [cursor=pointer]:
+                - img [ref=e2843]
+            - generic [ref=e2846] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2848]
+            - generic [ref=e2850] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2852]
+            - generic [ref=e2854] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2856]
+            - generic [ref=e2858] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2860]
+            - generic [ref=e2862] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2864]
+            - generic [ref=e2866] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2868]
+            - img [ref=e2872] [cursor=pointer]
+          - generic [ref=e2873]:
+            - generic [ref=e2875]:
+              - generic [ref=e2876]: EN
+              - generic [ref=e2877]:
+                - paragraph [ref=e2878]: Eli Nouri
+                - paragraph [ref=e2879]
+              - button [ref=e2881] [cursor=pointer]:
+                - img [ref=e2882]
+            - generic [ref=e2885] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2887]
+            - generic [ref=e2889] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2891]
+            - generic [ref=e2893] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2895]
+            - img [ref=e2900] [cursor=pointer]
+            - img [ref=e2905] [cursor=pointer]
+            - img [ref=e2910] [cursor=pointer]
+            - img [ref=e2914] [cursor=pointer]
+          - generic [ref=e2915]:
+            - generic [ref=e2917]:
+              - generic [ref=e2918]: EW
+              - generic [ref=e2919]:
+                - paragraph [ref=e2920]: Emily Williams
+                - paragraph [ref=e2921]
+              - button [ref=e2923] [cursor=pointer]:
+                - img [ref=e2924]
+            - generic [ref=e2927] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2929]
+            - generic [ref=e2931] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2933]
+            - generic [ref=e2935] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2937]
+            - generic [ref=e2939] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2941]
+            - generic [ref=e2943] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2945]
+            - img [ref=e2949] [cursor=pointer]
+            - img [ref=e2953] [cursor=pointer]
+          - generic [ref=e2954]:
+            - generic [ref=e2956]:
+              - generic [ref=e2957]: LM
+              - generic [ref=e2958]:
+                - paragraph [ref=e2959]: Lauren Mousseau
+                - paragraph [ref=e2960]
+              - button [ref=e2962] [cursor=pointer]:
+                - img [ref=e2963]
+            - generic [ref=e2966] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2968]
+            - generic [ref=e2970] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2972]
+            - generic [ref=e2974] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2976]
+            - generic [ref=e2978] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2980]
+            - generic [ref=e2982] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2984]
+            - generic [ref=e2986] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e2988]
+            - img [ref=e2992] [cursor=pointer]
+          - generic [ref=e2993]:
+            - generic [ref=e2995]:
+              - generic [ref=e2996]: MH
+              - generic [ref=e2997]:
+                - paragraph [ref=e2998]: Matt Heard
+                - paragraph [ref=e2999]
+              - button [ref=e3001] [cursor=pointer]:
+                - img [ref=e3002]
+            - generic [ref=e3005] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e3007]
+            - generic [ref=e3009] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e3011]
+            - generic [ref=e3013] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e3015]
+            - generic [ref=e3017] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e3019]
+            - generic [ref=e3021] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e3023]
+            - img [ref=e3028] [cursor=pointer]
+            - img [ref=e3032] [cursor=pointer]
+          - generic [ref=e3033]:
+            - generic [ref=e3035]:
+              - generic [ref=e3036]: NT
+              - generic [ref=e3037]:
+                - paragraph [ref=e3038]: Nancy Tanguy
+                - paragraph [ref=e3039]
+              - button [ref=e3041] [cursor=pointer]:
+                - img [ref=e3042]
+            - generic [ref=e3045] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e3047]
+            - generic [ref=e3049] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e3051]
+            - generic [ref=e3053] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e3055]
+            - generic [ref=e3057] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e3059]
+            - generic [ref=e3061] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e3063]
+            - img [ref=e3067] [cursor=pointer]
+            - img [ref=e3071] [cursor=pointer]
+          - generic [ref=e3072]:
+            - generic [ref=e3074]:
+              - generic [ref=e3075]: OB
+              - generic [ref=e3076]:
+                - paragraph [ref=e3077]: Owen Bradbury
+                - paragraph [ref=e3078]
+              - button [ref=e3080] [cursor=pointer]:
+                - img [ref=e3081]
+            - generic "Product Knowledge 12p-2p" [ref=e3086] [cursor=pointer]:
+              - generic [ref=e3087]: PK
+              - generic [ref=e3088]: 12p-2p
+            - img [ref=e3093] [cursor=pointer]
+            - generic [ref=e3095] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e3097]
+            - img [ref=e3101] [cursor=pointer]
+            - img [ref=e3105] [cursor=pointer]
+            - img [ref=e3109] [cursor=pointer]
+            - generic [ref=e3111] [cursor=pointer]:
+              - generic:
+                - generic: Unavailable
+              - img [ref=e3113]
+          - generic [ref=e3114]:
+            - generic [ref=e3116]:
+              - generic [ref=e3117]: TG
+              - generic [ref=e3118]:
+                - paragraph [ref=e3119]: Test Guy
+                - paragraph [ref=e3120]
+              - button [ref=e3122] [cursor=pointer]:
+                - img [ref=e3123]
+            - generic "Product Knowledge 12p-2p" [ref=e3127] [cursor=pointer]:
+              - generic [ref=e3128]: PK
+              - generic [ref=e3129]: 12p-2p
+            - img [ref=e3133] [cursor=pointer]
+            - img [ref=e3137] [cursor=pointer]
+            - img [ref=e3141] [cursor=pointer]
+            - img [ref=e3145] [cursor=pointer]
+            - img [ref=e3149] [cursor=pointer]
+            - img [ref=e3153] [cursor=pointer]
+      - generic [ref=e3154]:
+        - generic [ref=e3157]: Cashier
+        - generic [ref=e3160]: Backup Cashier
+        - generic [ref=e3163]: Men's Section
+        - generic [ref=e3166]: Women's Section
+        - generic [ref=e3169]: Floor Monitor
+        - generic [ref=e3170]:
+          - img [ref=e3171]
+          - generic [ref=e3173]: Task
+        - generic [ref=e3176]: Unavailable
+        - generic [ref=e3179]: Time Off
+        - generic [ref=e3181]: "Contact:"
+        - generic [ref=e3182]:
+          - img [ref=e3183]
+          - generic [ref=e3185]: sarvi@rainbowjeans.com
+        - generic [ref=e3186]:
+          - img [ref=e3187]
+          - generic [ref=e3189]: dan@rainbowjeans.com
+        - generic [ref=e3190]:
+          - img [ref=e3191]
+          - generic [ref=e3193]: scott@rainbowjeans.com
+      - button "Hidden from Schedule 2" [ref=e3196] [cursor=pointer]:
+        - generic [ref=e3197]:
+          - img [ref=e3198]
+          - generic [ref=e3203]: Hidden from Schedule
+          - generic [ref=e3204]: "2"
+        - img [ref=e3205]
+      - button "My Time Off Requests" [ref=e3209] [cursor=pointer]:
+        - generic [ref=e3210]:
+          - img [ref=e3211]
+          - generic [ref=e3213]: My Time Off Requests
+        - img [ref=e3214]
+  - dialog "Schedule Product Knowledge" [ref=e3216]:
+    - generic [ref=e3217]:
+      - generic [ref=e3218]:
+        - heading "Schedule Product Knowledge" [level=2] [ref=e3219]
+        - button "Close dialog" [ref=e3220] [cursor=pointer]:
+          - img [ref=e3221]
+      - generic [ref=e3224]:
+        - generic [ref=e3225]:
+          - generic [ref=e3226]:
+            - generic [ref=e3227]: Date
+            - textbox [ref=e3228]: 2026-04-20
+          - generic [ref=e3229]:
+            - generic [ref=e3230]: Start
+            - generic [ref=e3231]:
+              - combobox [ref=e3232]:
+                - option "06 AM"
+                - option "07 AM"
+                - option "08 AM"
+                - option "09 AM"
+                - option "10 AM"
+                - option "11 AM"
+                - option "12 PM"
+                - option "1 PM"
+                - option "2 PM"
+                - option "3 PM" [selected]
+                - option "4 PM"
+                - option "5 PM"
+                - option "6 PM"
+                - option "7 PM"
+                - option "8 PM"
+                - option "9 PM"
+                - option "10 PM"
+                - option "11 PM"
+              - combobox [ref=e3233]:
+                - option ":00" [selected]
+                - option ":15"
+                - option ":30"
+                - option ":45"
+          - generic [ref=e3234]:
+            - generic [ref=e3235]: End
+            - generic [ref=e3236]:
+              - combobox [ref=e3237]:
+                - option "06 AM"
+                - option "07 AM"
+                - option "08 AM"
+                - option "09 AM"
+                - option "10 AM"
+                - option "11 AM"
+                - option "12 PM"
+                - option "1 PM"
+                - option "2 PM"
+                - option "3 PM"
+                - option "4 PM" [selected]
+                - option "5 PM"
+                - option "6 PM"
+                - option "7 PM"
+                - option "8 PM"
+                - option "9 PM"
+                - option "10 PM"
+                - option "11 PM"
+              - combobox [ref=e3238]:
+                - option ":00" [selected]
+                - option ":15"
+                - option ":30"
+                - option ":45"
+        - generic [ref=e3239]:
+          - generic [ref=e3240]: Note (optional)
+          - textbox "e.g. Spring denim line" [ref=e3241]
+        - generic [ref=e3242]:
+          - generic [ref=e3243]:
+            - img [ref=e3244]
+            - generic [ref=e3249]: 1 of 24 attending
+          - generic [ref=e3250]:
+            - button "Select eligible" [ref=e3251] [cursor=pointer]
+            - button "Clear" [ref=e3252] [cursor=pointer]
+        - generic [ref=e3253]:
+          - generic [ref=e3254]: Part-Time (24)
+          - generic [ref=e3255]:
+            - checkbox "Alex Fowler" [ref=e3379] [cursor=pointer]:
+              - generic [ref=e3258]: Alex Fowler
+            - checkbox "Anasstasia Trofimov" [ref=e3382] [cursor=pointer]:
+              - generic [ref=e3262]: Anasstasia Trofimov
+            - checkbox "Christina Namour unavailable mon" [ref=e3359] [cursor=pointer]:
+              - generic [ref=e3266]: Christina Namour
+              - generic [ref=e3267]: unavailable mon
+            - checkbox "Dan Carman" [ref=e3385] [cursor=pointer]:
+              - generic [ref=e3270]: Dan Carman
+            - checkbox "Eli Nouri unavailable mon" [ref=e3360] [cursor=pointer]:
+              - generic [ref=e3274]: Eli Nouri
+              - generic [ref=e3275]: unavailable mon
+            - checkbox "Emily Williams unavailable mon" [ref=e3361] [cursor=pointer]:
+              - generic [ref=e3278]: Emily Williams
+              - generic [ref=e3279]: unavailable mon
+            - checkbox "Gary Scott" [ref=e3388] [cursor=pointer]:
+              - generic [ref=e3282]: Gary Scott
+            - checkbox "Gellert Boloni" [ref=e3391] [cursor=pointer]:
+              - generic [ref=e3286]: Gellert Boloni
+            - checkbox "Lauren Mousseau unavailable mon" [ref=e3364] [cursor=pointer]:
+              - generic [ref=e3290]: Lauren Mousseau
+              - generic [ref=e3291]: unavailable mon
+            - checkbox "Matt Heard unavailable mon" [ref=e3365] [cursor=pointer]:
+              - generic [ref=e3294]: Matt Heard
+              - generic [ref=e3295]: unavailable mon
+            - checkbox "Nancy Tanguy unavailable mon" [ref=e3366] [cursor=pointer]:
+              - generic [ref=e3298]: Nancy Tanguy
+              - generic [ref=e3299]: unavailable mon
+            - checkbox "Natalie Sirkin" [ref=e3394] [cursor=pointer]:
+              - generic [ref=e3302]: Natalie Sirkin
+            - checkbox "Nicole Seeley" [ref=e3397] [cursor=pointer]:
+              - generic [ref=e3306]: Nicole Seeley
+            - checkbox "Nona Kashi" [ref=e3400] [cursor=pointer]:
+              - generic [ref=e3310]: Nona Kashi
+            - checkbox "Owen Bradbury" [ref=e3403] [cursor=pointer]:
+              - generic [ref=e3314]: Owen Bradbury
+            - checkbox "Rafeena Santsarran" [ref=e3406] [cursor=pointer]:
+              - generic [ref=e3318]: Rafeena Santsarran
+            - checkbox "Rebecca Oteba" [ref=e3409] [cursor=pointer]:
+              - generic [ref=e3322]: Rebecca Oteba
+            - checkbox "Sabrina" [ref=e3412] [cursor=pointer]:
+              - generic [ref=e3326]: Sabrina
+            - checkbox "Sadie Kromm" [checked] [active] [ref=e3415] [cursor=pointer]:
+              - img [ref=e3435]
+              - generic [ref=e3330]: Sadie Kromm
+            - checkbox "Sarvi" [ref=e3418] [cursor=pointer]:
+              - generic [ref=e3334]: Sarvi
+            - checkbox "Savannah Chen" [ref=e3421] [cursor=pointer]:
+              - generic [ref=e3338]: Savannah Chen
+            - checkbox "Scott" [ref=e3424] [cursor=pointer]:
+              - generic [ref=e3342]: Scott
+            - checkbox "Terry Collins" [ref=e3427] [cursor=pointer]:
+              - generic [ref=e3346]: Terry Collins
+            - checkbox "Test Guy" [ref=e3430] [cursor=pointer]:
+              - generic [ref=e3350]: Test Guy
+        - generic [ref=e3352]:
+          - button "Cancel" [ref=e3353] [cursor=pointer]
+          - button "Schedule for 1" [ref=e3437] [cursor=pointer]:
+            - img [ref=e3355]
+            - text: Schedule for 1
