@@ -18,6 +18,12 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-18 -- App.jsx component carve-out phase shipped (cuts 8-14)
+Decision: Continued sub-area 4 with 7 more ship-merge-verify cuts on main. Extracted real components (LoginScreen, ColumnHeaderEditor, TooltipButton, ScheduleCell+getAvailabilityShading, EmployeeRow) plus relocated the parked `getStoreHoursForDate` + override refs to `src/utils/storeHoursOverrides.js` (re-exported from App.jsx so 6 legacy importers keep working). Dead `REQUEST_STATUS` + `OFFER_STATUS` enums dropped. App.jsx 3702 -> 3228 lines.
+Rationale: Standalone top-of-file extraction surface fully exhausted with this batch. The override-ref relocation is mechanical (no behavior change) but unblocks EmployeeRow extraction and isolates the parked smell to one file -- the sub-area-6 Context refactor now has a single owner module to replace.
+Confidence: H -- verified 2026-04-18: HEAD `6c2f562` on origin/main, build PASS, bundle stable at 464.79-464.80 kB (re-export in cut 13 added 1 byte).
+Carryover: Cracking open the main App() body is the next surface, but qualitatively different work -- each subsection needs prop/state-threading decisions.
+
 ## 2026-04-18 -- App.jsx pure-extract phase shipped via ship-merge-verify cadence
 Decision: Phase E sub-area 4 split into 7 small cuts, each commit-merge-push to main individually rather than stacked on a feature branch. Modules created: `src/utils/{storeHours,payPeriod,requests,api}.js`, `src/components/{primitives,uiKit,CollapsibleSection}.jsx`, `src/hooks/useFocusTrap.js`. Status maps appended to existing `src/constants.js`. App.jsx 4147 -> 3702 lines.
 Rationale: Stacked cuts widen the gap between repo and prod -- if a regression appears in cut N, blame is ambiguous across cuts 1..N. JR raised this mid-session after we had already shipped cut 1 + cut 2 to a branch. Adopted ship-merge-verify per cut going forward; cuts 3-7 followed the new rhythm directly on main. Saved as global rule `~/.claude/rules/plan-time-knowledge.md`: "Plan-time knowledge does not survive to execution time."

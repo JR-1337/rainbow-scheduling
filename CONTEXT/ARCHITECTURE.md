@@ -30,18 +30,24 @@ Rules:
 
 ## Key Files
 
-- `src/App.jsx` (~3680) -- main app, state, shared exports, `guardedMutation` helper
+- `src/App.jsx` (~3228) -- main App component, state, shared exports
 - `src/views/EmployeeView.jsx` -- extracted employee desktop/mobile view
 - `src/MobileEmployeeView.jsx` -- mobile components: MobileAlertsSheet, MobileBottomNav, MobileBottomSheet
 - `src/MobileAdminView.jsx` -- admin mobile view
 - `src/theme.js` -- THEME / TYPE / OTR accent palette
-- `src/constants.js` -- ROLES / ROLES_BY_ID / REQUEST_STATUS_COLORS / EVENT_TYPES / PRIMARY_CONTACT_EMAIL
+- `src/constants.js` -- ROLES / ROLES_BY_ID / REQUEST_STATUS_COLORS / OFFER/SWAP_STATUS_COLORS+LABELS / EVENT_TYPES / PRIMARY_CONTACT_EMAIL
+- `src/components/` -- LoginScreen, ColumnHeaderEditor, ScheduleCell, EmployeeRow, CollapsibleSection, primitives (Modal/GradientButton/Input/Checkbox/TimePicker/TooltipButton), uiKit (haptic/AnimatedNumber/StaffingBar/ScheduleSkeleton/TaskStarTooltip/GradientBackground/Logo), Button, AdaptiveModal
+- `src/hooks/useFocusTrap.js`
 - `src/panels/` -- admin + employee list panels
 - `src/modals/` -- request/offer/swap/settings/password/shift-editor modals
 - `src/auth.js` -- stateless HMAC session token + cached user + auth-failure callback
 - `src/pdf/generate.js` -- PDF via HTML + window.open + browser print
 - `src/email/build.js` -- plaintext email body builder
 - `src/utils/format.js` -- parseLocalDate, formatDate, escapeHtml, stripEmoji
+- `src/utils/date.js` -- pure date/time helpers (toDateKey, parseTime, formatTimeShort, ...)
+- `src/utils/storeHours.js` -- STAT_HOLIDAYS_2026 / STORE_HOURS / isStatHoliday (pure)
+- `src/utils/storeHoursOverrides.js` -- module-level override refs + getStoreHoursForDate (re-exported from App.jsx for legacy importers; parked sub-area-6 Context refactor will replace)
+- `src/utils/payPeriod.js` / `src/utils/requests.js` / `src/utils/api.js` / `src/utils/eventDefaults.js`
 - `src/utils/timemath.js` -- interval-union hours, availabilityCoversWindow
 - `backend/Code.gs` -- paste into Apps Script editor after edits
 
