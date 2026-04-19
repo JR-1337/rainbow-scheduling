@@ -951,13 +951,14 @@ export default function App() {
     return addedCount;
   };
   
-  // Clear all shifts for specific employees in a week
+  // Clear all shifts AND events (PK/meetings) for specific employees in a week
   const clearWeekShifts = (weekDates, targetEmployees = null) => {
     const emps = targetEmployees || fullTimeEmployees;
     const empIds = new Set(emps.map(e => e.id));
     const newShifts = { ...shifts };
+    const newEvents = { ...events };
     let removedCount = 0;
-    
+
     weekDates.forEach(date => {
       const dateStr = toDateKey(date);
       empIds.forEach(empId => {
@@ -966,14 +967,19 @@ export default function App() {
           delete newShifts[key];
           removedCount++;
         }
+        if (newEvents[key]) {
+          removedCount += Array.isArray(newEvents[key]) ? newEvents[key].length : 1;
+          delete newEvents[key];
+        }
       });
     });
-    
+
     if (removedCount > 0) {
       setShifts(newShifts);
+      setEvents(newEvents);
       setUnsaved(true);
     }
-    
+
     return removedCount;
   };
   
