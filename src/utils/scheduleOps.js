@@ -1,6 +1,51 @@
 import { getDayName, toDateKey, calculateHours } from './date';
 import { STORE_HOURS } from './storeHours';
 
+export function collectPeriodShiftsForSave(dates, employees, shiftsObj, eventsObj) {
+  const periodShifts = [];
+  const periodDates = [];
+  dates.forEach(date => {
+    const dateStr = toDateKey(date);
+    periodDates.push(dateStr);
+    employees.forEach(emp => {
+      const key = `${emp.id}-${dateStr}`;
+      const workShift = shiftsObj[key];
+      if (workShift) {
+        periodShifts.push({
+          id: workShift.id || `shift-${emp.id}-${dateStr}`,
+          employeeId: emp.id,
+          employeeName: emp.name,
+          employeeEmail: emp.email,
+          date: dateStr,
+          startTime: workShift.startTime,
+          endTime: workShift.endTime,
+          role: workShift.role || 'none',
+          task: workShift.task || '',
+          type: 'work',
+          note: ''
+        });
+      }
+      (eventsObj[key] || []).forEach(ev => {
+        periodShifts.push({
+          id: ev.id || `${(ev.type || 'evt').toUpperCase()}-${emp.id}-${dateStr}`,
+          employeeId: emp.id,
+          employeeName: emp.name,
+          employeeEmail: emp.email,
+          date: dateStr,
+          startTime: ev.startTime,
+          endTime: ev.endTime,
+          role: ev.role || 'none',
+          task: '',
+          type: ev.type || 'meeting',
+          note: ev.note || '',
+          hours: typeof ev.hours === 'number' ? ev.hours : calculateHours(ev.startTime, ev.endTime)
+        });
+      });
+    });
+  });
+  return { periodShifts, periodDates };
+}
+
 export function applyShiftMutation(shiftsObj, eventsObj, s) {
   const k = `${s.employeeId}-${s.date}`;
   const type = s.type || 'work';

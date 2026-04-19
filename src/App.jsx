@@ -24,7 +24,7 @@ import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides
 import { apiCall } from './utils/api';
 import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents, filterToLivePeriods } from './utils/apiTransforms';
 import { getFutureShiftDates, formatFutureShiftsBlockMessage, serializeEmployeeForApi } from './utils/employees';
-import { createShiftFromAvailability, applyShiftMutation } from './utils/scheduleOps';
+import { createShiftFromAvailability, applyShiftMutation, collectPeriodShiftsForSave } from './utils/scheduleOps';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -399,51 +399,7 @@ export default function App() {
       if (!window.confirm('Publish this schedule? Employees will see the published shifts.')) return;
       setScheduleSaving(true);
       // Going from Edit Mode → LIVE: batch save shifts and mark as LIVE
-      
-      // Collect all shifts for this period (work + meeting + pk)
-      const periodShifts = [];
-      const periodDates = [];
-      dates.forEach(date => {
-        const dateStr = toDateKey(date);
-        periodDates.push(dateStr);
-        employees.forEach(emp => {
-          const key = `${emp.id}-${dateStr}`;
-          if (shifts[key]) {
-            // Build full shift object for API
-            periodShifts.push({
-              id: shifts[key].id || `shift-${emp.id}-${dateStr}`,
-              employeeId: emp.id,
-              employeeName: emp.name,
-              employeeEmail: emp.email,
-              date: dateStr,
-              startTime: shifts[key].startTime,
-              endTime: shifts[key].endTime,
-              role: shifts[key].role || 'none',
-              task: shifts[key].task || '',
-              type: 'work',
-              note: ''
-            });
-          }
-          // S61 — meeting/pk overlay entries live alongside the work shift and
-          // also need to reach the Sheet when the period is saved.
-          (events[key] || []).forEach(ev => {
-            periodShifts.push({
-              id: ev.id || `${(ev.type || 'evt').toUpperCase()}-${emp.id}-${dateStr}`,
-              employeeId: emp.id,
-              employeeName: emp.name,
-              employeeEmail: emp.email,
-              date: dateStr,
-              startTime: ev.startTime,
-              endTime: ev.endTime,
-              role: ev.role || 'none',
-              task: '',
-              type: ev.type || 'meeting',
-              note: ev.note || '',
-              hours: typeof ev.hours === 'number' ? ev.hours : calculateHours(ev.startTime, ev.endTime)
-            });
-          });
-        });
-      });
+      const { periodShifts, periodDates } = collectPeriodShiftsForSave(dates, employees, shifts, events);
 
       // Batch save shifts to backend
       setToast({ type: 'saving', message: `Saving ${periodShifts.length} shifts...` });
@@ -529,49 +485,8 @@ export default function App() {
     if (scheduleSaving) return;
     haptic();
     setScheduleSaving(true);
-    // Collect all shifts for this period (work + meeting + pk)
-    const periodShifts = [];
-    const periodDates = [];
-    dates.forEach(date => {
-      const dateStr = toDateKey(date);
-      periodDates.push(dateStr);
-      employees.forEach(emp => {
-        const key = `${emp.id}-${dateStr}`;
-        if (shifts[key]) {
-          periodShifts.push({
-            id: shifts[key].id || `shift-${emp.id}-${dateStr}`,
-            employeeId: emp.id,
-            employeeName: emp.name,
-            employeeEmail: emp.email,
-            date: dateStr,
-            startTime: shifts[key].startTime,
-            endTime: shifts[key].endTime,
-            role: shifts[key].role || 'none',
-            task: shifts[key].task || '',
-            type: 'work',
-            note: ''
-          });
-        }
-        // S61 — event entries (meeting/pk) ride along on the same batch save.
-        (events[key] || []).forEach(ev => {
-          periodShifts.push({
-            id: ev.id || `${(ev.type || 'evt').toUpperCase()}-${emp.id}-${dateStr}`,
-            employeeId: emp.id,
-            employeeName: emp.name,
-            employeeEmail: emp.email,
-            date: dateStr,
-            startTime: ev.startTime,
-            endTime: ev.endTime,
-            role: ev.role || 'none',
-            task: '',
-            type: ev.type || 'meeting',
-            note: ev.note || '',
-            hours: typeof ev.hours === 'number' ? ev.hours : calculateHours(ev.startTime, ev.endTime)
-          });
-        });
-      });
-    });
-    
+    const { periodShifts, periodDates } = collectPeriodShiftsForSave(dates, employees, shifts, events);
+
     setToast({ type: 'saving', message: `Saving ${periodShifts.length} shifts...` });
     const saveResult = await apiCall('batchSaveShifts', {
       shifts: periodShifts,
