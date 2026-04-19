@@ -28,8 +28,8 @@ const G = {
 };
 
 const ROLE_GLYPHS = {
-  cashier: 'C',
-  backupCashier: '2',
+  cashier: 'C1',
+  backupCashier: 'C2',
   backupCash: 'B',
   mens: 'M',
   womens: 'W',
@@ -131,8 +131,13 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         const roleName = role?.name || 'Shift';
         const family = ROLE_FAMILY[shift.role] || 'none';
         const glyph = ROLE_GLYPHS[shift.role] || '';
-        return `<td style="padding:5px;border:1px solid ${G.border};background:${G.fill};text-align:center;position:relative;">
-          ${glyph ? `<span style="position:absolute;top:2px;left:4px;font-size:14px;font-weight:800;color:${G.ink};line-height:1;">${glyph}</span>` : ''}
+        // Floor Monitor "owns" its perimeter: 2px ink border wins over the
+        // surrounding 1px grey grid via border-collapse thickness rules.
+        const cellBorder = shift.role === 'floorMonitor'
+          ? `border:2px solid ${G.ink};`
+          : `border:1px solid ${G.border};`;
+        return `<td style="padding:5px;${cellBorder}background:${G.fill};text-align:center;position:relative;">
+          ${glyph ? `<span style="position:absolute;top:2px;left:4px;font-size:11px;font-weight:800;color:${G.ink};line-height:1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
           <div style="font-size:10px;color:${G.ink};margin-bottom:2px;${roleNameStyle(family)}">${roleName}</div>
           <div style="font-size:9px;color:${G.text};">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
           <div style="font-size:8px;color:${G.textMuted};">${shift.hours}h</div>
@@ -178,7 +183,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     const g = ROLE_GLYPHS[r.id] || '';
     const family = ROLE_FAMILY[r.id] || 'none';
     return `<span style="margin-right:15px;font-size:10px;display:inline-flex;align-items:center;gap:5px;">
-      <span style="display:inline-block;width:16px;font-weight:800;font-size:13px;color:${G.ink};text-align:center;">${g}</span>
+      <span style="display:inline-block;min-width:18px;font-weight:800;font-size:11px;color:${G.ink};text-align:center;letter-spacing:-0.5px;">${g}</span>
       <span style="color:${G.text};${roleNameStyle(family)}">${escapeHtml(r.fullName)}</span>
     </span>`;
   }).join('');
