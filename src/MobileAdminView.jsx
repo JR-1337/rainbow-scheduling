@@ -388,19 +388,31 @@ export const MobileAdminScheduleGrid = ({
                                 )}
                               </div>
                               {hasEvents && (
-                                <div className="absolute bottom-0 right-0 flex gap-0.5 p-0.5">
-                                  {cellEvents.map((ev, j) => {
-                                    const et = EVENT_TYPES[ev.type];
-                                    if (!et) return null;
-                                    return (
-                                      <span key={j}
-                                        title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
-                                        className="rounded font-semibold leading-tight"
-                                        style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>
-                                        {et.shortLabel}
-                                      </span>
-                                    );
-                                  })}
+                                <div className="absolute bottom-0 right-0 flex flex-col items-end gap-px p-0.5" style={{ maxWidth: '100%' }}>
+                                  {cellEvents.length >= 3 ? (
+                                    <span
+                                      title={cellEvents.map(ev => {
+                                        const et = EVENT_TYPES[ev.type];
+                                        return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
+                                      }).join('\n')}
+                                      className="rounded font-semibold leading-tight"
+                                      style={{ backgroundColor: firstEventType.bg, color: firstEventType.text, border: `1px solid ${firstEventType.border}`, fontSize: '8px', padding: '0 2px' }}>
+                                      {cellEvents.length} events
+                                    </span>
+                                  ) : (
+                                    cellEvents.map((ev, j) => {
+                                      const et = EVENT_TYPES[ev.type];
+                                      if (!et) return null;
+                                      return (
+                                        <span key={j}
+                                          title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
+                                          className="rounded font-semibold leading-tight"
+                                          style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>
+                                          {et.shortLabel} {formatTimeShort(ev.startTime)}
+                                        </span>
+                                      );
+                                    })
+                                  )}
                                 </div>
                               )}
                             </div>
