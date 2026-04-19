@@ -22,7 +22,7 @@ import { EmployeeRow } from './components/EmployeeRow';
 import { MobileScheduleActionSheet } from './components/MobileScheduleActionSheet';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
-import { normalizeAnnouncements, partitionRequests } from './utils/apiTransforms';
+import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi } from './utils/apiTransforms';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -314,40 +314,7 @@ export default function App() {
     if (result.success) {
       const { employees: empData, shifts: shiftData, requests } = result.data;
       
-      // Set employees - parse availability JSON string to object. Any fallback path
-      // MUST return a fully-populated week so `employee.availability[dayName].available`
-      // never reads off undefined (crashes ScheduleCell + blanks the app).
-      const DEFAULT_AVAILABILITY = {
-        sunday: { available: true, start: '11:00', end: '18:00' },
-        monday: { available: true, start: '11:00', end: '18:00' },
-        tuesday: { available: true, start: '11:00', end: '18:00' },
-        wednesday: { available: true, start: '11:00', end: '18:00' },
-        thursday: { available: true, start: '11:00', end: '19:00' },
-        friday: { available: true, start: '11:00', end: '19:00' },
-        saturday: { available: true, start: '11:00', end: '19:00' }
-      };
-      const ensureFullWeek = (av) => {
-        if (!av || typeof av !== 'object') return { ...DEFAULT_AVAILABILITY };
-        const out = { ...DEFAULT_AVAILABILITY };
-        for (const day of Object.keys(DEFAULT_AVAILABILITY)) {
-          if (av[day] && typeof av[day] === 'object') out[day] = av[day];
-        }
-        return out;
-      };
-      const parsedEmployees = (empData || []).map(emp => ({
-        ...emp,
-        availability: ensureFullWeek(
-          typeof emp.availability === 'string'
-            ? (() => { try { return JSON.parse(emp.availability); } catch { return null; } })()
-            : emp.availability
-        ),
-        // v2.24.0: per-day {start,end} for Auto-Fill. Absence = fall back to
-        // availability. Missing column / bad JSON = null (feature-flag-safe).
-        defaultShift: typeof emp.defaultShift === 'string' && emp.defaultShift
-          ? (() => { try { return JSON.parse(emp.defaultShift); } catch { return null; } })()
-          : (emp.defaultShift && typeof emp.defaultShift === 'object' ? emp.defaultShift : null)
-      }));
-      setEmployees(parsedEmployees);
+      setEmployees(parseEmployeesFromApi(empData));
       
       // Convert shifts array to keyed object { "empId-date": shiftData }
       // Also fix date/time formats from Google Sheets
