@@ -24,7 +24,7 @@ export const getWeekNumber = (date) => {
   return Math.ceil((diff / 604800000) + 1);
 };
 
-const parseTime = (t) => { if (!t) return 0; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+export const parseTime = (t) => { if (!t) return 0; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
 export const formatTimeDisplay = (t) => { if (!t) return '--:--'; const [h, m] = t.split(':').map(Number); return `${h > 12 ? h - 12 : h || 12}:${m.toString().padStart(2, '0')}${h >= 12 ? 'PM' : 'AM'}`; };
 export const formatTimeShort = (t) => { if (!t) return '--'; const h = parseInt(t.split(':')[0]); return `${h > 12 ? h - 12 : h || 12}${h >= 12 ? 'p' : 'a'}`; };
