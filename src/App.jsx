@@ -863,27 +863,36 @@ export default function App() {
     return staffingTargets[dayName] || DEFAULT_STAFFING_TARGETS[dayName] || 8;
   };
   
-  // Auto-populate shift for an employee on a date based on their availability
+  // Auto-populate shift for an employee on a date.
+  // v2.24.0: prefer per-day defaultShift; fall back to availability window.
+  // availability.available stays the gate — never books a day the employee is off.
   const createShiftFromAvailability = (employee, date) => {
     const dayName = getDayName(date).toLowerCase();
     const avail = employee.availability?.[dayName];
-    
+
     // If not available on this day, skip
     if (!avail || !avail.available) return null;
-    
+
+    const ds = employee.defaultShift?.[dayName];
+    const dsStart = ds && ds.start ? ds.start : null;
+    const dsEnd = ds && ds.end ? ds.end : null;
+
+    const startTime = dsStart || avail.start || STORE_HOURS[dayName].open;
+    const endTime = dsEnd || avail.end || STORE_HOURS[dayName].close;
+
     const dateStr = toDateKey(date);
     return {
       employeeId: employee.id,
       employeeName: employee.name,
       date: dateStr,
-      startTime: avail.start || STORE_HOURS[dayName].open,
-      endTime: avail.end || STORE_HOURS[dayName].close,
+      startTime,
+      endTime,
       role: employee.defaultSection || 'none',
       task: '',
       // S61 — explicit so `allShiftKeys` and the backend key both agree on 'work'
       type: 'work',
       note: '',
-      hours: calculateHours(avail.start || STORE_HOURS[dayName].open, avail.end || STORE_HOURS[dayName].close)
+      hours: calculateHours(startTime, endTime)
     };
   };
   
