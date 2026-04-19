@@ -1,4 +1,7 @@
-// PDF GENERATION - Printer-friendly light theme
+// PDF GENERATION - Pure-grayscale output. Rainbow's break-room printer is B&W,
+// so every channel carries info without hue: role = letter glyph + border style,
+// OT = bold + asterisk, holiday = "HOL" + heavy black border, announcement =
+// double border + italic. No hex hues anywhere — only black/white/grey shades.
 import {
   ROLES,
   ROLES_BY_ID,
@@ -12,11 +15,19 @@ import { escapeHtml, stripEmoji } from '../utils/format';
 
 const cleanText = (s) => escapeHtml(stripEmoji(s));
 
-// Greyscale-redundant encoding: break-room printer is B&W. Role, OT, holiday,
-// and announcement each gain a non-hue channel (letter glyph, border style,
-// font weight, typographic marker) so information survives the grayscale
-// reduction. Colors remain for color printers — this is pure redundancy, not
-// replacement. See plan 2026-04-18 Item 6 for rationale.
+// Grayscale palette. One scale, no hues.
+const G = {
+  ink: '#000000',          // primary text, key markers
+  text: '#111111',          // body text
+  textMuted: '#3f3f3f',     // secondary text
+  textFaint: '#6b6b6b',     // tertiary text, footnote
+  rule: '#000000',          // strong rules / borders that must survive print
+  border: '#9a9a9a',        // standard cell border
+  borderSoft: '#c8c8c8',    // subtle divider
+  fillZebra: '#f2f2f2',     // header / banded background
+  fill: '#ffffff',          // cell fill
+};
+
 const ROLE_GLYPHS = {
   cashier: 'C',
   backupCashier: 'B',
@@ -25,13 +36,15 @@ const ROLE_GLYPHS = {
   floorMonitor: 'F',
   none: '',
 };
+// Border style remains the role's redundant channel (solid/dashed/dotted +
+// width); color is fixed to ink so it prints crisply without ink-heavy fills.
 const ROLE_BORDERS = {
   cashier: { style: 'solid', width: '3px' },
   backupCashier: { style: 'dashed', width: '3px' },
   mens: { style: 'solid', width: '2px' },
   womens: { style: 'dashed', width: '2px' },
   floorMonitor: { style: 'dotted', width: '2.5px' },
-  none: { style: 'solid', width: '2px' },
+  none: { style: 'solid', width: '1px' },
 };
 
 // S64 Stage 7 — events carry meeting/PK entries per `${empId}-${date}` key.
@@ -70,12 +83,11 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     return { workHours, totalHours };
   };
 
-  // Announcement: italic body + "[!]" prefix + double top border. Reads as
-  // distinct from shift rows even after color drops to grey.
+  // Announcement: italic body + "[!]" prefix + heavy left bar + double top border.
   const announcementHtml = (announcement && announcement.message) ? `
-    <div style="margin:15px 0;padding:15px;background:#faf7fb;border-radius:8px;border-left:4px solid #932378;border-top:3px double #932378;">
-      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;letter-spacing:0.5px;">[!] ${cleanText(announcement.subject)}</h3>` : '<h3 style="margin:0 0 10px;color:#932378;font-size:13px;font-weight:700;">[!] Announcement</h3>'}
-      <div style="color:#0D0E22;font-size:11px;line-height:1.6;white-space:pre-wrap;font-style:italic;">${cleanText(announcement.message)}</div>
+    <div style="margin:15px 0;padding:15px;background:${G.fillZebra};border-radius:4px;border-left:6px solid ${G.ink};border-top:3px double ${G.ink};">
+      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:${G.ink};font-size:13px;font-weight:800;letter-spacing:0.5px;">[!] ${cleanText(announcement.subject)}</h3>` : `<h3 style="margin:0 0 10px;color:${G.ink};font-size:13px;font-weight:800;">[!] Announcement</h3>`}
+      <div style="color:${G.text};font-size:11px;line-height:1.6;white-space:pre-wrap;font-style:italic;">${cleanText(announcement.message)}</div>
     </div>
   ` : '';
 
@@ -84,17 +96,17 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       const hol = isStatHoliday(d);
       // Holiday: heavy black top border + "HOL" caption in addition to yellow bg,
       // so the marker survives greyscale printing.
-      return `<th style="padding:8px 4px;border:1px solid #cbd5e1;${hol ? 'border-top:3px solid #000;' : ''}background:${hol ? '#fef3c7' : '#f1f5f9'};font-size:11px;text-align:center;width:11%;">
-        ${hol ? `<div style="font-size:7px;font-weight:700;color:#000;letter-spacing:1px;">HOL</div>` : ''}
-        <div style="font-weight:600;color:${hol ? '#92400e' : '#334155'};text-transform:uppercase;font-size:9px;">${getDayNameShort(d)}</div>
-        <div style="font-size:16px;font-weight:700;color:#0f172a;">${d.getDate()}</div>
+      return `<th style="padding:8px 4px;border:1px solid ${G.border};${hol ? `border-top:3px solid ${G.ink};` : ''}background:${hol ? G.fillZebra : G.fillZebra};font-size:11px;text-align:center;width:11%;">
+        ${hol ? `<div style="font-size:7px;font-weight:800;color:${G.ink};letter-spacing:1px;">HOL</div>` : ''}
+        <div style="font-weight:700;color:${G.text};text-transform:uppercase;font-size:9px;">${getDayNameShort(d)}</div>
+        <div style="font-size:16px;font-weight:700;color:${G.ink};">${d.getDate()}</div>
       </th>`;
     }).join('');
 
     const eventBadgeHtml = (evs) => evs.map(ev => {
       const et = EVENT_TYPES[ev.type];
       if (!et) return '';
-      return `<div style="font-size:7px;color:#475569;margin-top:2px;line-height:1.3;"><strong style="color:#1F2937;">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` · ${cleanText(ev.note)}` : ''}</div>`;
+      return `<div style="font-size:7px;color:${G.textMuted};margin-top:2px;line-height:1.3;"><strong style="color:${G.ink};">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` · ${cleanText(ev.note)}` : ''}</div>`;
     }).join('');
 
     const rows = schedulable.map(emp => {
@@ -105,54 +117,49 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         // Approved time-off wins over events — an employee on time-off shouldn't
         // show a meeting/PK card even if one was scheduled before the request was approved.
         if (!shift && hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests)) {
-          return `<td style="padding:6px;border:1px dashed #94a3b8;background:#ffffff;text-align:center;">
-            <div style="font-size:9px;font-weight:700;color:#475569;letter-spacing:1px;">OFF</div>
-            <div style="font-size:7px;color:#64748b;">approved</div>
+          return `<td style="padding:6px;border:1px dashed ${G.border};background:${G.fill};text-align:center;">
+            <div style="font-size:9px;font-weight:800;color:${G.ink};letter-spacing:1px;">OFF</div>
+            <div style="font-size:7px;color:${G.textFaint};">approved</div>
           </td>`;
         }
         if (!shift && dayEvents.length === 0) {
-          return '<td style="padding:6px;border:1px solid #cbd5e1;background:#ffffff;"></td>';
+          return `<td style="padding:6px;border:1px solid ${G.border};background:${G.fill};"></td>`;
         }
         if (!shift) {
-          // Event-only day — neutral grey card.
-          return `<td style="padding:5px;border:2px solid #9CA3AF;background:#F3F4F6;text-align:center;">
+          // Event-only day — banded fill + ink border.
+          return `<td style="padding:5px;border:2px solid ${G.ink};background:${G.fillZebra};text-align:center;">
             ${eventBadgeHtml(dayEvents)}
           </td>`;
         }
         const role = ROLES_BY_ID[shift.role];
         const roleName = role?.name || 'Shift';
-        // Whitelist color to hex-only so CSS injection is impossible even if a role color is ever sourced from user input.
-        const rawColor = role?.color || '#64748b';
-        const roleColor = /^#[0-9a-fA-F]{3,8}$/.test(rawColor) ? rawColor : '#64748b';
         const roleBorder = ROLE_BORDERS[shift.role] || ROLE_BORDERS.none;
         const glyph = ROLE_GLYPHS[shift.role] || '';
         const glyphPrefix = glyph ? `${glyph}: ` : '';
-        return `<td style="padding:5px;border:${roleBorder.width} ${roleBorder.style} ${roleColor};background:#ffffff;text-align:center;">
-          <div style="font-size:10px;font-weight:700;color:${roleColor};margin-bottom:2px;">${glyphPrefix}${roleName}</div>
-          <div style="font-size:9px;color:#0D0E22;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
-          <div style="font-size:8px;color:#475569;">${shift.hours}h</div>
-          ${shift.task ? `<div style="font-size:7px;color:#d97706;margin-top:2px;line-height:1.3;word-break:break-word;">★ ${cleanText(shift.task)}</div>` : ''}
+        return `<td style="padding:5px;border:${roleBorder.width} ${roleBorder.style} ${G.ink};background:${G.fill};text-align:center;">
+          <div style="font-size:10px;font-weight:800;color:${G.ink};margin-bottom:2px;">${glyphPrefix}${roleName}</div>
+          <div style="font-size:9px;color:${G.text};">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
+          <div style="font-size:8px;color:${G.textMuted};">${shift.hours}h</div>
+          ${shift.task ? `<div style="font-size:7px;color:${G.ink};font-weight:700;margin-top:2px;line-height:1.3;word-break:break-word;">★ ${cleanText(shift.task)}</div>` : ''}
           ${eventBadgeHtml(dayEvents)}
         </td>`;
       }).join('');
 
       const { workHours, totalHours } = calcWeekHours(emp.id, weekDates);
-      // Ontario ESA: OT kicks in at 44h. All paid time counts, so use totalHours for coloring.
-      const hoursColor = totalHours >= 44 ? '#ef4444' : totalHours >= 40 ? '#d97706' : '#475569';
-      // Greyscale redundancy: OT (>=44) is bold + trailing asterisk; near-OT (40-43) is bold.
+      // Ontario ESA: OT kicks in at 44h. Hue removed — emphasis carried by weight + asterisk.
       const isOT = totalHours >= 44;
       const isNearOT = totalHours >= 40 && totalHours < 44;
       const hoursWeight = (isOT || isNearOT) ? '800' : '600';
-      const otMarker = isOT ? '*' : '';
+      const otMarker = isOT ? '**' : isNearOT ? '*' : '';
       const hasExtras = totalHours > workHours + 0.01;
       const hoursDisplay = totalHours > 0
-        ? (hasExtras ? `${totalHours.toFixed(1)}h${otMarker} <span style="font-size:8px;color:#64748b;font-weight:500;">(${workHours.toFixed(1)} work)</span>` : `${totalHours.toFixed(1)}h${otMarker}`)
+        ? (hasExtras ? `${totalHours.toFixed(1)}h${otMarker} <span style="font-size:8px;color:${G.textFaint};font-weight:500;">(${workHours.toFixed(1)} work)</span>` : `${totalHours.toFixed(1)}h${otMarker}`)
         : '—';
 
       return `<tr style="page-break-inside:avoid;">
-        <td style="padding:8px;border:1px solid #cbd5e1;background:#ffffff;">
-          <div style="font-weight:600;font-size:11px;color:#0D0E22;">${cleanText(emp.name)}</div>
-          <div style="font-size:10px;color:${hoursColor};font-weight:${hoursWeight};">${hoursDisplay}</div>
+        <td style="padding:8px;border:1px solid ${G.border};background:${G.fill};">
+          <div style="font-weight:700;font-size:11px;color:${G.ink};">${cleanText(emp.name)}</div>
+          <div style="font-size:10px;color:${G.ink};font-weight:${hoursWeight};">${hoursDisplay}</div>
         </td>
         ${cells}
       </tr>`;
@@ -161,42 +168,43 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     const headcountCells = weekDates.map(date => {
       const dateStr = toDateKey(date);
       const count = schedulable.reduce((n, emp) => n + (shifts[`${emp.id}-${dateStr}`] ? 1 : 0), 0);
-      return `<td style="padding:6px;border:1px solid #cbd5e1;background:#f8fafc;text-align:center;font-size:13px;font-weight:700;color:#0D0E22;">${count}</td>`;
+      return `<td style="padding:6px;border:1px solid ${G.border};background:${G.fillZebra};text-align:center;font-size:13px;font-weight:700;color:${G.ink};">${count}</td>`;
     }).join('');
     const headcountRow = `<tr style="page-break-inside:avoid;">
-      <td style="padding:8px;border:1px solid #cbd5e1;background:#f1f5f9;font-size:9px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:1px;">Scheduled</td>
+      <td style="padding:8px;border:1px solid ${G.border};background:${G.fillZebra};font-size:9px;font-weight:700;color:${G.text};text-transform:uppercase;letter-spacing:1px;">Scheduled</td>
       ${headcountCells}
     </tr>`;
 
     return `
       <div class="wk-block" style="margin-bottom:25px;">
-        <div style="background:#0D0E22;padding:10px 15px;border-radius:8px 8px 0 0;">
-          <h3 style="margin:0;color:#ffffff;font-size:14px;font-weight:600;">Week ${weekNum}</h3>
-          <p style="margin:2px 0 0;color:rgba(255,255,255,0.8);font-size:11px;">${formatDate(weekDates[0])} — ${formatDate(weekDates[6])}</p>
+        <div style="background:${G.ink};padding:10px 15px;border-radius:4px 4px 0 0;">
+          <h3 style="margin:0;color:#ffffff;font-size:14px;font-weight:700;">Week ${weekNum}</h3>
+          <p style="margin:2px 0 0;color:#dddddd;font-size:11px;">${formatDate(weekDates[0])} — ${formatDate(weekDates[6])}</p>
         </div>
         <table style="width:100%;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
-          <thead style="display:table-header-group;"><tr><th style="padding:8px;border:1px solid #cbd5e1;background:#f1f5f9;width:15%;font-size:10px;text-align:left;color:#475569;text-transform:uppercase;">Employee</th>${headers}</tr></thead>
+          <thead style="display:table-header-group;"><tr><th style="padding:8px;border:1px solid ${G.border};background:${G.fillZebra};width:15%;font-size:10px;text-align:left;color:${G.text};text-transform:uppercase;">Employee</th>${headers}</tr></thead>
           <tbody>${rows}${headcountRow}</tbody>
         </table>
       </div>
     `;
   };
 
-  // Legend shows the letter glyph alongside the color swatch so B&W readers can
-  // map M:/W:/C:/B:/F: prefixes back to role names.
+  // Legend: glyph in an ink-bordered box (no fill colors). Border style mirrors
+  // the cell border the role uses, so the legend doubles as a key for the
+  // dashed/solid/dotted pattern.
   const legendItems = ROLES.filter(r => r.id !== 'none').map(r => {
-    const c = /^#[0-9a-fA-F]{3,8}$/.test(r.color) ? r.color : '#64748b';
     const g = ROLE_GLYPHS[r.id] || '';
+    const b = ROLE_BORDERS[r.id] || ROLE_BORDERS.none;
     return `<span style="margin-right:15px;font-size:10px;display:inline-flex;align-items:center;gap:5px;">
-      <span style="display:inline-block;width:14px;height:14px;background:${c};border-radius:3px;color:#fff;font-weight:700;font-size:9px;text-align:center;line-height:14px;">${g}</span>
-      <span style="color:#334155;">${escapeHtml(r.fullName)}</span>
+      <span style="display:inline-block;width:16px;height:16px;border:${b.width} ${b.style} ${G.ink};color:${G.ink};font-weight:800;font-size:9px;text-align:center;line-height:14px;background:${G.fill};">${g}</span>
+      <span style="color:${G.text};">${escapeHtml(r.fullName)}</span>
     </span>`;
   }).join('');
 
   const adminContactsHtml = adminContacts.length > 0 ? `
-    <div style="margin-top:12px;padding:10px 15px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-      <div style="font-weight:600;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Contact Admin</div>
-      ${adminContacts.map(a => `<span style="margin-right:20px;font-size:11px;color:#334155;">${cleanText(a.name)}: <span style="color:#0369a1;">${cleanText(a.email)}</span></span>`).join('')}
+    <div style="margin-top:12px;padding:10px 15px;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
+      <div style="font-weight:700;font-size:9px;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Contact Admin</div>
+      ${adminContacts.map(a => `<span style="margin-right:20px;font-size:11px;color:${G.text};">${cleanText(a.name)}: <span style="color:${G.ink};font-weight:600;">${cleanText(a.email)}</span></span>`).join('')}
     </div>
   ` : '';
 
@@ -215,35 +223,35 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       tr { page-break-inside: avoid; }
       thead { display: table-header-group; }
     }
-    body { font-family: 'Inter', Arial, sans-serif; padding: 20px; margin: 0 auto; max-width: 1100px; background: #ffffff; }
-    .print-btn { background: #0D0E22; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
-    .print-btn:hover { background: #1a1c3d; }
+    body { font-family: 'Inter', Arial, sans-serif; padding: 20px; margin: 0 auto; max-width: 1100px; background: #ffffff; color: ${G.text}; }
+    .print-btn { background: ${G.ink}; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .print-btn:hover { background: ${G.text}; }
   </style>
 </head>
 <body style="background:#ffffff;">
-  <div class="no-print" style="position:sticky;top:0;background:#ffffff;padding:10px 0;margin-bottom:10px;border-bottom:1px solid #e2e8f0;text-align:right;z-index:10;">
+  <div class="no-print" style="position:sticky;top:0;background:#ffffff;padding:10px 0;margin-bottom:10px;border-bottom:1px solid ${G.border};text-align:right;z-index:10;">
     <button class="print-btn" onclick="window.print()">Print Schedule</button>
-    <span style="margin-left:15px;color:#64748b;font-size:11px;">Review the preview below, then click Print.</span>
+    <span style="margin-left:15px;color:${G.textFaint};font-size:11px;">Review the preview below, then click Print.</span>
   </div>
-  <div style="text-align:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid #0D0E22;">
+  <div style="text-align:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid ${G.ink};">
     <div style="font-family:'Josefin Sans',sans-serif;margin-bottom:5px;">
-      <span style="color:#475569;font-size:10px;letter-spacing:3px;">OVER THE</span><br>
-      <span style="color:#932378;font-size:24px;letter-spacing:4px;font-weight:600;">RAINBOW</span>
+      <span style="color:${G.textMuted};font-size:10px;letter-spacing:3px;">OVER THE</span><br>
+      <span style="color:${G.ink};font-size:24px;letter-spacing:4px;font-weight:700;">RAINBOW</span>
     </div>
-    <p style="margin:8px 0 0;font-size:12px;"><span style="color:#0D0E22;font-weight:600;">Staff Schedule</span></p>
-    <p style="margin:5px 0 0;color:#475569;font-size:11px;">Week ${weekNum1} & ${weekNum2} • ${formatMonthWord(periodInfo.startDate)} ${periodInfo.startDate.getDate()} — ${formatMonthWord(periodInfo.endDate)} ${periodInfo.endDate.getDate()}, ${periodInfo.startDate.getFullYear()}</p>
+    <p style="margin:8px 0 0;font-size:12px;"><span style="color:${G.ink};font-weight:700;">Staff Schedule</span></p>
+    <p style="margin:5px 0 0;color:${G.textMuted};font-size:11px;">Week ${weekNum1} & ${weekNum2} • ${formatMonthWord(periodInfo.startDate)} ${periodInfo.startDate.getDate()} — ${formatMonthWord(periodInfo.endDate)} ${periodInfo.endDate.getDate()}, ${periodInfo.startDate.getFullYear()}</p>
   </div>
 
   ${announcementHtml}
   ${makeWeekTable(week1, weekNum1)}
   ${makeWeekTable(week2, weekNum2)}
 
-  <div style="margin-top:20px;padding:12px 15px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-    <div style="margin-bottom:6px;font-weight:600;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Legend</div>
-    <div>${legendItems}<span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="color:#d97706;">★</span><span style="color:#334155;">Has Task</span></span><span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;"><span style="display:inline-block;padding:1px 6px;border:1px dashed #94a3b8;font-weight:700;color:#475569;font-size:8px;letter-spacing:1px;">OFF</span><span style="color:#334155;">Approved Time Off</span></span></div>
+  <div style="margin-top:20px;padding:12px 15px;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
+    <div style="margin-bottom:6px;font-weight:700;font-size:9px;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;">Legend</div>
+    <div>${legendItems}<span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="color:${G.ink};font-weight:700;">★</span><span style="color:${G.text};">Has Task</span></span><span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="display:inline-block;padding:1px 6px;border:1px dashed ${G.border};font-weight:800;color:${G.ink};font-size:8px;letter-spacing:1px;">OFF</span><span style="color:${G.text};">Approved Time Off</span></span><span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;"><span style="color:${G.ink};font-weight:800;">* / **</span><span style="color:${G.text};">40h+ / 44h+ (OT)</span></span></div>
   </div>
   ${adminContactsHtml}
-  <div style="margin-top:20px;padding-top:12px;border-top:1px solid #e2e8f0;text-align:center;font-size:9px;color:#94a3b8;">
+  <div style="margin-top:20px;padding-top:12px;border-top:1px solid ${G.border};text-align:center;font-size:9px;color:${G.textFaint};">
     Printed ${printedAt} • This is a snapshot — live schedule at rainbow-scheduling.vercel.app
   </div>
 </body>
