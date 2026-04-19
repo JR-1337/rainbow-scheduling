@@ -39,6 +39,27 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
   const toggleDay = (d) => setFormData({ ...formData, availability: { ...formData.availability, [d]: { ...formData.availability[d], available: !formData.availability[d].available } } });
   const updateTime = (d, f, v) => setFormData({ ...formData, availability: { ...formData.availability, [d]: { ...formData.availability[d], [f]: v } } });
 
+  // v2.24.0: per-day Default Shift (what Auto-Fill books). Decoupled from
+  // availability window. Absence → Auto-Fill falls back to availability.
+  const getDs = (d) => formData.defaultShift?.[d] || null;
+  const updateDefaultTime = (d, f, v) => {
+    const cur = formData.defaultShift || {};
+    const existing = cur[d] || {};
+    // Seed the missing side from availability so saving a single dropdown
+    // produces a complete {start,end} pair.
+    const av = formData.availability?.[d] || {};
+    const next = {
+      start: f === 'start' ? v : (existing.start || av.start || '10:00'),
+      end: f === 'end' ? v : (existing.end || av.end || '18:00')
+    };
+    setFormData({ ...formData, defaultShift: { ...cur, [d]: next } });
+  };
+  const clearDefault = (d) => {
+    const cur = { ...(formData.defaultShift || {}) };
+    delete cur[d];
+    setFormData({ ...formData, defaultShift: Object.keys(cur).length ? cur : null });
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={employee ? 'Edit Employee' : 'Add Employee'} size="xl">
       {showDeleteConfirm ? (
@@ -210,6 +231,45 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                     ) : (
                       <div className="text-xs py-2" style={{ color: THEME.text.muted }}>Off</div>
                     )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Default shift hours</label>
+            <p className="text-xs mb-2" style={{ color: THEME.text.muted }}>Auto-Fill books these hours. Leave blank to use availability.</p>
+            <div className="grid grid-cols-7 gap-1">
+              {days.map(d => {
+                const av = formData.availability[d];
+                const ds = getDs(d);
+                if (!av?.available) {
+                  return (
+                    <div key={d} className="text-center">
+                      <div className="w-full px-1 py-1 rounded text-xs font-medium mb-1" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}>{d.slice(0, 3)}</div>
+                      <div className="text-xs py-2" style={{ color: THEME.text.muted }}>—</div>
+                    </div>
+                  );
+                }
+                const startVal = ds?.start || '';
+                const endVal = ds?.end || '';
+                return (
+                  <div key={d} className="text-center">
+                    <div className="w-full px-1 py-1 rounded text-xs font-medium mb-1" style={{ backgroundColor: THEME.accent.blue, color: 'white' }}>{d.slice(0, 3)}</div>
+                    <div className="space-y-1">
+                      <select value={startVal} onChange={e => updateDefaultTime(d, 'start', e.target.value)} className="w-full px-0.5 py-0.5 rounded text-center" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: startVal ? THEME.text.primary : THEME.text.muted, fontSize: '9px' }}>
+                        <option value="">—</option>
+                        {Array.from({ length: 14 }, (_, i) => i + 6).map(h => <option key={h} value={`${h.toString().padStart(2, '0')}:00`}>{h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}</option>)}
+                      </select>
+                      <select value={endVal} onChange={e => updateDefaultTime(d, 'end', e.target.value)} className="w-full px-0.5 py-0.5 rounded text-center" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: endVal ? THEME.text.primary : THEME.text.muted, fontSize: '9px' }}>
+                        <option value="">—</option>
+                        {Array.from({ length: 14 }, (_, i) => i + 6).map(h => <option key={h} value={`${h.toString().padStart(2, '0')}:00`}>{h > 12 ? h - 12 : h}{h >= 12 ? 'p' : 'a'}</option>)}
+                      </select>
+                      {ds && (
+                        <button onClick={() => clearDefault(d)} className="w-full rounded text-center" style={{ fontSize: '9px', color: THEME.text.muted, backgroundColor: 'transparent' }}>clear</button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
