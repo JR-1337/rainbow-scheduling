@@ -46,6 +46,29 @@ export function collectPeriodShiftsForSave(dates, employees, shiftsObj, eventsOb
   return { periodShifts, periodDates };
 }
 
+export function transferShiftBetweenEmployees(shiftsObj, fromEmp, toEmp, dateStr) {
+  const fromKey = `${fromEmp.id}-${dateStr}`;
+  const sourceShift = shiftsObj[fromKey];
+  if (!sourceShift) return shiftsObj;
+  const next = { ...shiftsObj };
+  delete next[fromKey];
+  next[`${toEmp.id}-${dateStr}`] = { ...sourceShift, employeeId: toEmp.id, employeeName: toEmp.name };
+  return next;
+}
+
+export function swapShiftsBetweenEmployees(shiftsObj, empA, empB, dateA, dateB) {
+  const keyA = `${empA.id}-${dateA}`;
+  const keyB = `${empB.id}-${dateB}`;
+  const shiftA = shiftsObj[keyA];
+  const shiftB = shiftsObj[keyB];
+  const next = { ...shiftsObj };
+  delete next[keyA];
+  delete next[keyB];
+  if (shiftA) next[`${empB.id}-${dateA}`] = { ...shiftA, employeeId: empB.id, employeeName: empB.name };
+  if (shiftB) next[`${empA.id}-${dateB}`] = { ...shiftB, employeeId: empA.id, employeeName: empA.name };
+  return next;
+}
+
 export function applyShiftMutation(shiftsObj, eventsObj, s) {
   const k = `${s.employeeId}-${s.date}`;
   const type = s.type || 'work';

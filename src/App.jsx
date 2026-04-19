@@ -24,7 +24,7 @@ import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides
 import { apiCall } from './utils/api';
 import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents, filterToLivePeriods } from './utils/apiTransforms';
 import { getFutureShiftDates, formatFutureShiftsBlockMessage, serializeEmployeeForApi } from './utils/employees';
-import { createShiftFromAvailability, applyShiftMutation, collectPeriodShiftsForSave } from './utils/scheduleOps';
+import { createShiftFromAvailability, applyShiftMutation, collectPeriodShiftsForSave, transferShiftBetweenEmployees, swapShiftsBetweenEmployees } from './utils/scheduleOps';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { generateSchedulePDF } from './pdf/generate';
@@ -992,16 +992,7 @@ export default function App() {
       const offerer = employees.find(e => e.email === (offer.offererEmail || offer.employeeEmail));
       const recipient = employees.find(e => e.email === offer.recipientEmail);
       if (offerer && recipient) {
-        const shiftKey = `${offerer.id}-${offer.shiftDate}`;
-        const oldShift = shifts[shiftKey];
-        if (oldShift) {
-          setShifts(prevShifts => {
-            const newShifts = { ...prevShifts };
-            delete newShifts[shiftKey];
-            newShifts[`${recipient.id}-${offer.shiftDate}`] = { ...oldShift, employeeId: recipient.id, employeeName: recipient.name };
-            return newShifts;
-          });
-        }
+        setShifts(prev => transferShiftBetweenEmployees(prev, offerer, recipient, offer.shiftDate));
       }
       setShiftOffers(prev => prev.map(o => {
         if (o.offerId === offerId || o.requestId === offerId) {
@@ -1060,16 +1051,7 @@ export default function App() {
       const offerer = employees.find(e => e.email === (offer.offererEmail || offer.employeeEmail));
       const recipient = employees.find(e => e.email === offer.recipientEmail);
       if (offerer && recipient) {
-        const recipientShiftKey = `${recipient.id}-${offer.shiftDate}`;
-        const currentShift = shifts[recipientShiftKey];
-        if (currentShift) {
-          setShifts(prevShifts => {
-            const newShifts = { ...prevShifts };
-            delete newShifts[recipientShiftKey];
-            newShifts[`${offerer.id}-${offer.shiftDate}`] = { ...currentShift, employeeId: offerer.id, employeeName: offerer.name };
-            return newShifts;
-          });
-        }
+        setShifts(prev => transferShiftBetweenEmployees(prev, recipient, offerer, offer.shiftDate));
       }
       setShiftOffers(prev => prev.map(o => {
         if (o.offerId === offerId || o.requestId === offerId) {
@@ -1201,25 +1183,8 @@ export default function App() {
     if (result.success) {
       const initiator = employees.find(e => e.email === (swap.initiatorEmail || swap.employeeEmail));
       const partner = employees.find(e => e.email === swap.partnerEmail);
-      
       if (initiator && partner) {
-        const initiatorShiftKey = `${initiator.id}-${swap.initiatorShiftDate}`;
-        const partnerShiftKey = `${partner.id}-${swap.partnerShiftDate}`;
-        const initiatorShift = shifts[initiatorShiftKey];
-        const partnerShift = shifts[partnerShiftKey];
-        
-        setShifts(prevShifts => {
-          const newShifts = { ...prevShifts };
-          delete newShifts[initiatorShiftKey];
-          delete newShifts[partnerShiftKey];
-          if (initiatorShift) {
-            newShifts[`${partner.id}-${swap.initiatorShiftDate}`] = { ...initiatorShift, employeeId: partner.id, employeeName: partner.name };
-          }
-          if (partnerShift) {
-            newShifts[`${initiator.id}-${swap.partnerShiftDate}`] = { ...partnerShift, employeeId: initiator.id, employeeName: initiator.name };
-          }
-          return newShifts;
-        });
+        setShifts(prev => swapShiftsBetweenEmployees(prev, initiator, partner, swap.initiatorShiftDate, swap.partnerShiftDate));
       }
       
       setShiftSwaps(prev => prev.map(s => {
