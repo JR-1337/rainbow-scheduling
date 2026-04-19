@@ -43,7 +43,7 @@
  *   once admin UI displays the password from the resetPassword response only.
  *
  * Changes in v2.22.0:
- * - Employees tab gains column U: `defaultSection` (values mens|womens|cashier|backupCashier|floorMonitor|none, default 'none').
+ * - Employees tab gains column U: `defaultSection` (values mens|womens|cashier|backupCashier|backupCash|floorMonitor|none, default 'none').
  *   Frontend autofill's `createShiftFromAvailability` uses `employee.defaultSection || 'none'`
  *   instead of hardcoding 'none'. Backend changes: `createEmployeesTab` headers array updated;
  *   `saveEmployee` is header-driven so no row-mapper change needed. Back-compat: missing

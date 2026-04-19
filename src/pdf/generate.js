@@ -30,7 +30,8 @@ const G = {
 
 const ROLE_GLYPHS = {
   cashier: 'C',
-  backupCashier: 'B',
+  backupCashier: '2',
+  backupCash: 'B',
   mens: 'M',
   womens: 'W',
   floorMonitor: 'F',
@@ -41,6 +42,7 @@ const ROLE_GLYPHS = {
 const ROLE_BORDERS = {
   cashier: { style: 'solid', width: '3px' },
   backupCashier: { style: 'dashed', width: '3px' },
+  backupCash: { style: 'dotted', width: '3px' },
   mens: { style: 'solid', width: '2px' },
   womens: { style: 'dashed', width: '2px' },
   floorMonitor: { style: 'dotted', width: '2.5px' },

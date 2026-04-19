@@ -43,7 +43,7 @@ export const THEME = {
   tooltip: { bg: '#FFFFFF', border: OTR_ACCENT.primary + '60' },
   accent: { blue: OTR_ACCENT.primary, purple: OTR_ACCENT.dark, cyan: '#09728C', pink: OTR_ACCENT.primary, text: _accentText },
   text: { primary: OTR.navy, secondary: '#5C5C5C', muted: '#8B8580' },
-  roles: { cashier: '#932378', backupCashier: '#B44D9A', mens: '#0453A3', womens: '#EC3228', floorMonitor: '#F57F20', none: '#64748B' },
+  roles: { cashier: '#932378', backupCashier: '#B44D9A', backupCash: '#D08BC3', mens: '#0453A3', womens: '#EC3228', floorMonitor: '#F57F20', none: '#64748B' },
   border: { subtle: `rgba(${_ar}, ${_ag}, ${_ab}, 0.15)`, default: OTR_ACCENT.primary + '80', bright: OTR_ACCENT.primary },
   status: { success: '#34D399', warning: '#FBBF24', error: '#F87171' },
   action: {
