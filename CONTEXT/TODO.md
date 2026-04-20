@@ -40,7 +40,8 @@ Rules:
 
 ## Verification
 
-- Last validated: `npm run build` PASS at HEAD `9f8ada2` pushed to origin/main; modern bundle 477 kB, legacy bundle + polyfills emitted for old Safari
+- Last validated: `npm run build` PASS at HEAD `10c3980` pushed to origin/main; modern bundle 472 kB, legacy bundle + polyfills emitted for old Safari
+- Last validated: 4-bucket sort + dividers PASS localhost Playwright at 1280px (admin grid, 2 dividers), 768px (same), 390px (mobile admin, 2 divider &lt;tr&gt; rows); PDF fixture shows 3 transitions x 2 weeks = 6 dividers visible
 - Last validated: Apps Script v2.25.0 LIVE; schedule-change notifications fire for non-Sarvi/non-JR admin edits
 - Last validated: 3 decouple smokes PASS on prod 2026-04-19 (Auto-Fill defaultShift precedence, PK Select-eligible 19/24, mobile 502x800 form render)
 - Last validated: Phase E cuts 1-12 each smoke-green on localhost Playwright (login + schedule render + zero console errors) before commit-and-push; 12 commits pushed to origin/main 2026-04-19
@@ -57,6 +58,7 @@ Rules:
 
 ## Completed
 
+- [2026-04-20] Schedule sort: 4-bucket order (Sarvi, other admins alpha, FT alpha, PT alpha) + bucket-transition dividers (`10c3980`). New `src/utils/employeeSort.js` (employeeBucket, sortBySarviAdminsFTPT, computeDividerIndices) centralizes logic across 5 render sites: desktop admin (App.jsx), desktop employee (views/EmployeeView.jsx), mobile admin, mobile employee, PDF (now sorts; was Sheet-order). Dividers skip empty buckets. Localhost Playwright PASS at 1280/768/390px + PDF fixture shows 6 dividers = 3 transitions x 2 weeks. Supersedes 3-bucket LESSONS entry; LESSONS + ARCHITECTURE updated.
 - [2026-04-19] Phase E cuts 13-15 shipped (App.jsx 2606 -> 2526, -80). Cut 13 `d9c5377` added `matchesOfferId`, `matchesSwapId`, `errorMsg` to `src/utils/requests.js` and DRY'd 26 sites across request/offer/swap handlers (no line change; DRY-correctness win). Cut 14 `d6e8811` extracted desktop Save/GoLive/Edit three-state button into `src/components/ScheduleStateButton.jsx`. Cut 15 `3d271a3` unified mobile + desktop onto one ScheduleStateButton with middle-ground sizing (px-2.5 py-1, text-xs, icon 11, title-case labels); mobile Publish stays inline as sibling with flex-wrap. Playwright smoke PASS at 1280px + 390px, zero console errors.
 - [2026-04-19] Default store hours Mon/Tue/Wed open 10:00 -> 11:00 (`9f8ada2`). Close stays 18:00, Thu-Sat and Sun unchanged. Safe to change now that Auto-Fill reads per-employee `defaultShift` (fallback availability) rather than store hours; Mon/Tue/Wed store-open no longer affects booked hours.
 - [2026-04-19] PDF role-encoding redesign shipped (`b189db5` -> `3e735d9` -> `2480a61` -> `d2414eb`). Iterated three systems with JR. Settled on: uniform 1px grey grid; monogram glyph (C1 / C2 / B / M / W / F) anchored top-left of each cell via absolute-position span; role name styled by family (cash = BOLD UPPERCASE letter-spaced, section = medium title case, monitor = italic); Floor Monitor is the ONLY role with a 2px ink perimeter — thicker border wins under `border-collapse` so monitor visibly owns its cell edges. Legend chip mirrors the cell treatment.

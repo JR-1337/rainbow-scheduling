@@ -30,7 +30,7 @@ Rules:
 
 ## Key Files
 
-- `src/App.jsx` (~3120) -- main App component, state, shared exports
+- `src/App.jsx` (~2512) -- main App component, state, shared exports
 - `src/views/EmployeeView.jsx` -- extracted employee desktop/mobile view
 - `src/MobileEmployeeView.jsx` -- mobile components: MobileAlertsSheet, MobileBottomNav, MobileBottomSheet
 - `src/MobileAdminView.jsx` -- admin mobile view
@@ -48,6 +48,7 @@ Rules:
 - `src/utils/storeHours.js` -- STAT_HOLIDAYS_2026 / STORE_HOURS / isStatHoliday (pure)
 - `src/utils/storeHoursOverrides.js` -- module-level override refs + getStoreHoursForDate (re-exported from App.jsx for legacy importers; parked sub-area-6 Context refactor will replace)
 - `src/utils/payPeriod.js` / `src/utils/requests.js` / `src/utils/api.js` / `src/utils/eventDefaults.js`
+- `src/utils/employeeSort.js` -- four-bucket display order (Sarvi, admins, FT, PT) + bucket-transition dividers; single source of truth for admin/employee/mobile/PDF rendering
 - `src/utils/timemath.js` -- interval-union hours, availabilityCoversWindow
 - `backend/Code.gs` -- paste into Apps Script editor after edits
 

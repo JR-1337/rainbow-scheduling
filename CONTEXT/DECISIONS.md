@@ -18,6 +18,15 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-20 -- Schedule display: 4-bucket sort (Sarvi, admins, FT, PT) with bucket-transition dividers
+Decision: New `src/utils/employeeSort.js` exports `employeeBucket` (0=Sarvi, 1=other admins, 2=FT non-admin, 3=PT non-admin), `sortBySarviAdminsFTPT` (alpha within bucket), `computeDividerIndices` (transitions only, skips empty buckets). Five render sites migrated: desktop admin grid (App.jsx), desktop employee view (views/EmployeeView.jsx), mobile admin (MobileAdminView.jsx), mobile employee (MobileEmployeeView.jsx), and PDF (pdf/generate.js now sorts; it previously rendered in Sheet order with no divider). PDF emits a divider `<tr>` with `colspan=weekDates.length+1` on transitions; both weeks share the same map.
+Rationale: Prior 3-bucket sort (Sarvi → FT → PT) lumped other admins into FT/PT by their employmentType. JR wants admins grouped between Sarvi and FT with a discreet divider, matching the existing FT→PT divider style. Centralizing kills the four duplicate inline sort bodies + divider predicates that had already drifted (each file had its own `isFirstPT`/`ptStartIndex` variant).
+Confidence: H -- `npm run build` PASS, localhost Playwright PASS at 1280/768/390px (2 dividers each at Sarvi→FT and FT→PT because Dan+Scott are admins with showOnSchedule=false → bucket-1 empty, no spurious line), PDF fixture with 4 employees across all 4 buckets emits 3 transition dividers × 2 weeks = 6 total.
+Rejected alternatives:
+- Per-file inline bucket predicate -- rejected, kept drifting (pre-change the four files had subtly different Sarvi/FT/PT logic).
+- Separate "hide divider if only Sarvi in bucket 0" -- rejected, JR explicit: divider still renders below Sarvi even when she's the only admin on schedule.
+Supersedes: 2026-02-10 "Sarvi first, then full-time alpha, then part-time alpha" lesson in LESSONS.md (rewritten with 4-bucket rule on 2026-04-20).
+
 ## 2026-04-19 -- Phase E cuts 13-15 + ScheduleStateButton unified sizing
 Decision: Three further cuts shipped same day. Cut 13 added `matchesOfferId`, `matchesSwapId`, `errorMsg` helpers to `src/utils/requests.js` (no App.jsx line change; DRY'd 26 request/offer/swap sites so future handlers cannot miss the dual-key branch). Cut 14 extracted desktop three-state Save/GoLive/Edit button into `src/components/ScheduleStateButton.jsx` (App.jsx -41). Cut 15 unified mobile + desktop onto the same component with middle-ground sizing: `px-2.5 py-1`, `text-xs`, icon 11, title-case labels. Mobile Publish stays inline as sibling (composition); row wraps via `flex-wrap`.
 Rationale: Two-copy drift hazard on mobile vs desktop button was real -- mobile block was 22px tall (under 44px touch floor). JR rejected size-prop split; asked for unified design. Middle sizing reads cleanly both viewports without requiring per-viewport knobs. Same pattern Button.jsx sets: one component, variants for meaning not for size where possible.
