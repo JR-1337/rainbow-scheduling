@@ -21,6 +21,7 @@ import {
 import { GradientBackground, haptic } from './components/uiKit';
 import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } from './utils/date';
 import { isStatHoliday } from './utils/storeHours';
+import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
 
 import { MobileScheduleGrid } from './MobileEmployeeView';
 import { EVENT_TYPES } from './constants';
@@ -178,33 +179,11 @@ export const MobileAdminScheduleGrid = ({
   const CELL_HEIGHT = 66;
   const HEADER_HEIGHT = 68; // Taller to fit staffing counter
   
-  const sortedEmployees = useMemo(() => {
-    return [...employees].sort((a, b) => {
-      // Sarvi always first
-      const aIsSarvi = a.name.toLowerCase() === 'sarvi';
-      const bIsSarvi = b.name.toLowerCase() === 'sarvi';
-      if (aIsSarvi && !bIsSarvi) return -1;
-      if (bIsSarvi && !aIsSarvi) return 1;
-      
-      // Full-time before part-time
-      const aFT = a.employmentType === 'full-time';
-      const bFT = b.employmentType === 'full-time';
-      if (aFT && !bFT) return -1;
-      if (bFT && !aFT) return 1;
-      
-      // Alphabetical within same type
-      return a.name.localeCompare(b.name);
-    });
-  }, [employees]);
-  
-  // Find index where part-time starts (for divider)
-  const ptStartIndex = useMemo(() => {
-    const idx = sortedEmployees.findIndex(e => e.employmentType !== 'full-time' && e.name.toLowerCase() !== 'sarvi');
-    // Only show divider if there are both FT and PT employees
-    const hasFT = sortedEmployees.some(e => e.employmentType === 'full-time' || e.name.toLowerCase() === 'sarvi');
-    const hasPT = sortedEmployees.some(e => e.employmentType !== 'full-time' && e.name.toLowerCase() !== 'sarvi');
-    return hasFT && hasPT ? idx : -1;
-  }, [sortedEmployees]);
+  // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
+  const sortedEmployees = useMemo(() => sortBySarviAdminsFTPT(employees), [employees]);
+
+  // Indices where a divider should render (bucket transition, skips empty buckets).
+  const dividerIndices = useMemo(() => computeDividerIndices(sortedEmployees), [sortedEmployees]);
 
   const totalWidth = NAME_COL_WIDTH + (dates.length * CELL_WIDTH);
   const todayStr = toDateKey(new Date());
@@ -292,7 +271,7 @@ export const MobileAdminScheduleGrid = ({
             {sortedEmployees.map((emp, empIndex) => {
               const isLoggedIn = emp.id === loggedInUser.id;
               const weekHours = getEmployeeHours(emp.id);
-              const showDivider = empIndex === ptStartIndex;
+              const showDivider = dividerIndices.has(empIndex);
               
               return (
                 <React.Fragment key={emp.id}>

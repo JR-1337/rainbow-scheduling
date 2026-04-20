@@ -21,6 +21,7 @@ import { isStatHoliday } from './utils/storeHours';
 import { useFocusTrap } from './hooks/useFocusTrap';
 import { EVENT_TYPES } from './constants';
 import { computeDayUnionHours } from './utils/timemath';
+import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE DETECTION HOOK
@@ -169,33 +170,11 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
   const CELL_HEIGHT = 66;
   const HEADER_HEIGHT = 52;
   
-  // Sort: Sarvi first, then logged-in user, then alphabetical
-  const sortedEmployees = useMemo(() => {
-    return [...employees].sort((a, b) => {
-      // Sarvi always first
-      const aIsSarvi = a.name.toLowerCase() === 'sarvi';
-      const bIsSarvi = b.name.toLowerCase() === 'sarvi';
-      if (aIsSarvi && !bIsSarvi) return -1;
-      if (bIsSarvi && !aIsSarvi) return 1;
-      
-      // Full-time before part-time
-      const aFT = a.employmentType === 'full-time';
-      const bFT = b.employmentType === 'full-time';
-      if (aFT && !bFT) return -1;
-      if (bFT && !aFT) return 1;
-      
-      // Alphabetical within same type
-      return a.name.localeCompare(b.name);
-    });
-  }, [employees]);
-  
-  // Find index where part-time starts (for divider)
-  const ptStartIndex = useMemo(() => {
-    const idx = sortedEmployees.findIndex(e => e.employmentType !== 'full-time' && e.name.toLowerCase() !== 'sarvi');
-    const hasFT = sortedEmployees.some(e => e.employmentType === 'full-time' || e.name.toLowerCase() === 'sarvi');
-    const hasPT = sortedEmployees.some(e => e.employmentType !== 'full-time' && e.name.toLowerCase() !== 'sarvi');
-    return hasFT && hasPT ? idx : -1;
-  }, [sortedEmployees]);
+  // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
+  const sortedEmployees = useMemo(() => sortBySarviAdminsFTPT(employees), [employees]);
+
+  // Indices where a divider should render (bucket transition, skips empty buckets).
+  const dividerIndices = useMemo(() => computeDividerIndices(sortedEmployees), [sortedEmployees]);
   
   const hasApprovedTimeOff = (emp, dateStr) => {
     return timeOffRequests.some(req => 
@@ -265,7 +244,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
             {sortedEmployees.map((emp, empIndex) => {
               const hours = getEmployeeHours(emp.id);
               const isMe = emp.id === loggedInUser.id;
-              const showDivider = empIndex === ptStartIndex;
+              const showDivider = dividerIndices.has(empIndex);
               return (
                 <React.Fragment key={emp.id}>
                   {showDivider && (

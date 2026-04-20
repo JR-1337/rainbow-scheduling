@@ -402,9 +402,9 @@ Lesson: "moved to Settled history" > "approved." Users see where the row went.
 Context: Any guarded mutation success message.
 Affirmations: 0
 
-## [PROJECT] -- Display sort: Sarvi first, then full-time alpha, then part-time alpha
-Lesson: This order is intentional. Sarvi pinned top for her own convenience.
-Context: Admin grid + employee list + PDF.
+## [PROJECT] -- Display sort: Sarvi, other admins alpha, FT alpha, PT alpha
+Lesson: Four buckets in order. Sarvi pinned top; other non-owner admins (with showOnSchedule where the list filters them) next alpha; then full-time non-admins alpha; then part-time non-admins alpha. Two discreet dividers render on bucket transitions. Single source of truth: `src/utils/employeeSort.js` (`sortBySarviAdminsFTPT`, `employeeBucket`, `computeDividerIndices`).
+Context: Admin grid (App.jsx), employee view (views/EmployeeView.jsx), mobile admin + mobile employee (MobileAdminView, MobileEmployeeView), PDF (src/pdf/generate.js). Shipped 2026-04-20; supersedes prior 3-bucket rule.
 Affirmations: 0
 
 ## [PROJECT] -- Past dates: headcount only, no target comparison

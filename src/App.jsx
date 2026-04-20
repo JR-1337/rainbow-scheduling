@@ -29,6 +29,7 @@ import { getFutureShiftDates, formatFutureShiftsBlockMessage, serializeEmployeeF
 import { createShiftFromAvailability, applyShiftMutation, collectPeriodShiftsForSave, transferShiftBetweenEmployees, swapShiftsBetweenEmployees } from './utils/scheduleOps';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
+import { sortBySarviAdminsFTPT, employeeBucket } from './utils/employeeSort';
 import { generateSchedulePDF } from './pdf/generate';
 import { getAuthToken, setAuthToken, clearAuth, setCachedUser, handleAuthError } from './auth';
 import { OTR, THEME, TYPE } from './theme';
@@ -553,26 +554,12 @@ export default function App() {
   };
   
   // Active employees for scheduling (exclude owner, exclude admins unless showOnSchedule)
-  // Sort: Sarvi first (if schedulable), then full-time (alpha), then part-time (alpha)
-  const schedulableEmployees = useMemo(() => [...employees]
-    .filter(e => e.active && !e.deleted && !e.isOwner)
-    .filter(e => !e.isAdmin || e.showOnSchedule)
-    .sort((a, b) => {
-      // Sarvi always first (check by name, case-insensitive)
-      const aIsSarvi = a.name.toLowerCase() === 'sarvi';
-      const bIsSarvi = b.name.toLowerCase() === 'sarvi';
-      if (aIsSarvi && !bIsSarvi) return -1;
-      if (bIsSarvi && !aIsSarvi) return 1;
-      
-      // Full-time before part-time
-      const aFT = a.employmentType === 'full-time';
-      const bFT = b.employmentType === 'full-time';
-      if (aFT && !bFT) return -1;
-      if (bFT && !aFT) return 1;
-      
-      // Alphabetical within same type
-      return a.name.localeCompare(b.name);
-    }), [employees]);
+  // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
+  const schedulableEmployees = useMemo(() => sortBySarviAdminsFTPT(
+    employees
+      .filter(e => e.active && !e.deleted && !e.isOwner)
+      .filter(e => !e.isAdmin || e.showOnSchedule)
+  ), [employees]);
   
   // Full-time employees only (for auto-populate feature)
   const fullTimeEmployees = useMemo(() => schedulableEmployees.filter(e => e.employmentType === 'full-time'), [schedulableEmployees]);
@@ -2201,11 +2188,10 @@ export default function App() {
                   })}
                 </div>
                 <div>{schedulableEmployees.map((e, i) => {
-                  const isFirstPT = i > 0 && e.employmentType !== 'full-time' && e.name.toLowerCase() !== 'sarvi' && 
-                    (schedulableEmployees[i-1].employmentType === 'full-time' || schedulableEmployees[i-1].name.toLowerCase() === 'sarvi');
+                  const showDivider = i > 0 && employeeBucket(e) !== employeeBucket(schedulableEmployees[i-1]);
                   return (
                     <React.Fragment key={e.id}>
-                      {isFirstPT && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
+                      {showDivider && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
                       <EmployeeRow employee={e} dates={currentDates} shifts={shifts} events={events} onCellClick={handleCellClick} getEmployeeHours={getEmpHours} onEdit={handleEditEmployee} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={!isCurrentPeriodEditMode} />
                     </React.Fragment>
                   );

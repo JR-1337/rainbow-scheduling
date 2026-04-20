@@ -11,6 +11,7 @@ import { isStatHoliday } from '../utils/storeHours';
 import { hasApprovedTimeOffForDate } from '../utils/requests';
 import { EVENT_TYPES, PRIMARY_CONTACT_EMAIL } from '../constants';
 import { escapeHtml, stripEmoji } from '../utils/format';
+import { sortBySarviAdminsFTPT, employeeBucket } from '../utils/employeeSort';
 
 const cleanText = (s) => escapeHtml(stripEmoji(s));
 
@@ -66,10 +67,13 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   const weekNum1 = getWeekNumber(week1[0]);
   const weekNum2 = getWeekNumber(week2[0]);
 
-  // Filter schedulable employees (exclude owner, exclude admins unless showOnSchedule)
-  const schedulable = employees
-    .filter(e => e.active && !e.deleted && !e.isOwner)
-    .filter(e => !e.isAdmin || e.showOnSchedule);
+  // Filter schedulable employees (exclude owner, exclude admins unless showOnSchedule).
+  // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
+  const schedulable = sortBySarviAdminsFTPT(
+    employees
+      .filter(e => e.active && !e.deleted && !e.isOwner)
+      .filter(e => !e.isAdmin || e.showOnSchedule)
+  );
 
   // PDF contact row shows the primary store contact only (Sarvi). If her record
   // isn't found, fall back to any active non-owner admin so the PDF still lists
@@ -105,7 +109,10 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       return `<div style="font-size:7px;color:${G.textMuted};margin-top:2px;line-height:1.3;"><strong style="color:${G.ink};">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` · ${cleanText(ev.note)}` : ''}</div>`;
     }).join('');
 
-    const rows = schedulable.map(emp => {
+    const dividerColspan = weekDates.length + 1;
+    const dividerRow = `<tr><td colspan="${dividerColspan}" style="padding:0;border:0;background:${G.fill};"><div style="height:1px;background:${G.border};margin:3px 8px;"></div></td></tr>`;
+    const rows = schedulable.map((emp, i) => {
+      const showDivider = i > 0 && employeeBucket(emp) !== employeeBucket(schedulable[i - 1]);
       const cells = weekDates.map(date => {
         const dateStr = toDateKey(date);
         const shift = shifts[`${emp.id}-${dateStr}`];
@@ -146,7 +153,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         </td>`;
       }).join('');
 
-      return `<tr style="page-break-inside:avoid;">
+      return `${showDivider ? dividerRow : ''}<tr style="page-break-inside:avoid;">
         <td style="padding:8px;border:1px solid ${G.border};background:${G.fill};">
           <div style="font-weight:700;font-size:11px;color:${G.ink};">${cleanText(emp.name)}</div>
         </td>

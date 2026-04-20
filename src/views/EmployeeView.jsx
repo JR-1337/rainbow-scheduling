@@ -9,6 +9,7 @@ import { CollapsibleSection } from '../components/CollapsibleSection';
 import { CURRENT_PERIOD_INDEX } from '../utils/payPeriod';
 import { toDateKey, getWeekNumber, formatDate, formatTimeDisplay, formatTimeShort, getDayName } from '../utils/date';
 import { isStatHoliday } from '../utils/storeHours';
+import { sortBySarviAdminsFTPT, employeeBucket } from '../utils/employeeSort';
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet, MobileAlertsSheet, computeAlertItems } from '../MobileEmployeeView';
 import { EVENT_TYPES } from '../constants';
 import { MyShiftOffersPanel } from '../panels/MyShiftOffersPanel';
@@ -266,26 +267,13 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
   const weekNum1 = getWeekNumber(week1[0]), weekNum2 = getWeekNumber(week2[0]);
   const currentDates = activeWeek === 1 ? week1 : week2;
   
-  // Schedulable employees (exclude owner, exclude admins unless showOnSchedule)
-  const schedulableEmployees = [...employees]
-    .filter(e => e.active && !e.deleted && !e.isOwner)
-    .filter(e => !e.isAdmin || e.showOnSchedule)
-    .sort((a, b) => {
-      // Sarvi always first
-      const aIsSarvi = a.name.toLowerCase() === 'sarvi';
-      const bIsSarvi = b.name.toLowerCase() === 'sarvi';
-      if (aIsSarvi && !bIsSarvi) return -1;
-      if (bIsSarvi && !aIsSarvi) return 1;
-      
-      // Full-time before part-time
-      const aFT = a.employmentType === 'full-time';
-      const bFT = b.employmentType === 'full-time';
-      if (aFT && !bFT) return -1;
-      if (bFT && !aFT) return 1;
-      
-      // Alphabetical within same type
-      return a.name.localeCompare(b.name);
-    });
+  // Schedulable employees (exclude owner, exclude admins unless showOnSchedule).
+  // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
+  const schedulableEmployees = sortBySarviAdminsFTPT(
+    employees
+      .filter(e => e.active && !e.deleted && !e.isOwner)
+      .filter(e => !e.isAdmin || e.showOnSchedule)
+  );
   
   // Admin contacts for employee-facing display: Sarvi only (other admins hidden per JR)
   const adminContacts = employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted && e.name?.toLowerCase() === 'sarvi');
@@ -787,11 +775,10 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
               })}
             </div>
             <div>{schedulableEmployees.map((e, i) => {
-              const isFirstPT = i > 0 && e.employmentType !== 'full-time' && e.name.toLowerCase() !== 'sarvi' && 
-                (schedulableEmployees[i-1].employmentType === 'full-time' || schedulableEmployees[i-1].name.toLowerCase() === 'sarvi');
+              const showDivider = i > 0 && employeeBucket(e) !== employeeBucket(schedulableEmployees[i-1]);
               return (
                 <React.Fragment key={e.id}>
-                  {isFirstPT && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
+                  {showDivider && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
                   <EmployeeViewRow employee={e} dates={currentDates} shifts={shifts} events={events} loggedInEmpId={currentUser.id} getEmployeeHours={getEmpHours} timeOffRequests={timeOffRequests} />
                 </React.Fragment>
               );
