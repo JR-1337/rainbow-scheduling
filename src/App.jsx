@@ -1599,6 +1599,14 @@ export default function App() {
                               {!emp.active ? 'Inactive' : 'Hidden Admin'}
                             </span>
                           </div>
+                          <button
+                            onClick={() => { setEditingEmp(emp); setEmpFormOpen(true); }}
+                            className="p-1 rounded hover:opacity-80"
+                            style={{ backgroundColor: THEME.bg.elevated }}
+                            title="Edit Employee"
+                          >
+                            <Edit3 size={10} style={{ color: THEME.text.muted }} />
+                          </button>
                         </div>
                       ))}
                     </div>
