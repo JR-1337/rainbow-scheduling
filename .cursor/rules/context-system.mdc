@@ -3,90 +3,93 @@ description: RAINBOW Scheduling App -- Cursor adapter; routes to CONTEXT/* canon
 alwaysApply: true
 ---
 
+<!-- LOOP_ACCESS_RULES_V1 -->
+<!-- ADAPTER_SCHEMA_V1 -->
+
 # SYSTEM_DIRECTIVE: CONTEXT_SYSTEM
 
 RAINBOW Scheduling App. Retail scheduling platform for Over The Rainbow / Rainbow Jeans. Live at <https://rainbow-scheduling.vercel.app>. Stakeholders: JR (dev), Sarvi (scheduling admin).
 
-Canonical mutable memory lives in `CONTEXT/`. This file is a thin routing adapter. Normal work reads and writes `CONTEXT/*`, not this file.
+Thin routing layer. Canonical mutable memory is `CONTEXT/*`. This rule is stable; edit only when routing or ownership changes.
 
 ## Memory Ownership
 
-Non-overlapping file roles:
+- `CONTEXT/TODO.md` -- current worklist, blockers, verification, recent completions
+- `CONTEXT/DECISIONS.md` -- durable decisions with confidence and rationale
+- `CONTEXT/ARCHITECTURE.md` -- current structure snapshot
+- `CONTEXT/LESSONS.md` -- durable preferences, pitfalls, corrections
+- `CONTEXT/handoffs/*.md` -- one current handoff
+- `CONTEXT/archive/` -- historical docs with learning value (e.g., S42 audit)
 
-- `CONTEXT/TODO.md` -- Active worklist, Blocked, Verification, Completed
-- `CONTEXT/DECISIONS.md` -- durable decisions, reverse chronological, H/M/L confidence
-- `CONTEXT/ARCHITECTURE.md` -- current structure, components, flows, integrations
-- `CONTEXT/LESSONS.md` -- preferences, repeated pitfalls, workflow corrections
-- `CONTEXT/handoffs/` -- one current session handoff
-- `CONTEXT/archive/` -- historical docs with learning value
+Cross-project: `~/.context-system/CONTEXT/LESSONS.md` read when `[GLOBAL]` scope is relevant.
 
-Never duplicate content across files. Task state belongs in TODO.md only. Rationale belongs in DECISIONS.md only.
+Optional `DATA/`: `DATA/catalog.md` inventories loop fixtures. Read `DATA/*` only for LOOP work, `DATA_CAPTURE_BOOTSTRAP.md`, or explicit `CONTEXT/TODO`.
 
 ## Memory Style
 
-Telegraphic ASCII in `CONTEXT/*`:
-
-- bullets under 12 words, sentences under 20 words, no paragraphs
-- state first, explanation second
-- ASCII operators only: `!=` `==` `->` `=>` `in` `not` `and` `or` `blocked by` `TODO:` `RISK:`
-- no LaTeX math, Unicode math, box-drawing, fancy quotes, or em-dashes
-- dates belong in handoffs, decisions, completed work, and git history; not in adapters
-
-Adapters use normal plain English.
+Telegraphic ASCII. Bullets aim under 12 words. Sentences under 20. ASCII operators only (`!=`, `==`, `->`, `=>`, `in`, `not`, `and`, `or`, `blocked by`, `TODO:`, `RISK:`). No LaTeX, no Unicode math, no em-dashes, no en-dashes.
 
 ## Boot Read
 
-At session start, read in this order:
-
-1. current handoff in `CONTEXT/handoffs/` if resuming continuity
-2. `CONTEXT/TODO.md`
-3. `CONTEXT/DECISIONS.md`
-4. `CONTEXT/ARCHITECTURE.md`
-5. `CONTEXT/LESSONS.md` when approach could be shaped by user preferences or past corrections
+Start each session by reading `TODO.md`, `DECISIONS.md`, `ARCHITECTURE.md`. Add `LESSONS.md` when preferences may apply. Add the current handoff only if resuming.
 
 ## Module Adapters
 
-None currently. Create a module adapter (scoped `globs`, `alwaysApply: false`) when a subtree has its own runtime, owns an external integration, or recurs in active work.
+None currently. Module adapters live at `.cursor/rules/module-{module-name}.mdc` with `alwaysApply: false` and scoped `globs`. Create only when the subtree has distinct runtime, conventions, or an external integration. Keep under 100 lines.
 
-Candidate module boundaries if growth warrants: `backend/` (Apps Script), `src/pdf/` + `src/email/`, future payroll-aggregator.
+Candidate boundaries if growth warrants: `backend/` (Apps Script), `src/pdf/` + `src/email/`, future payroll-aggregator.
 
 ## Mid-Chat Re-Read
 
-Re-read a memory file when:
-
-- it was just written by you or the user
-- scope shifts to a different component
-- a contradiction between stated intent and memory appears
-- you are about to make a decision that depends on current plan, settled direction, or structure
+Re-read a memory file when it changed, scope shifted, a contradiction surfaced, or before edits that depend on current plan/decisions/architecture.
 
 ## Write Triggers
 
-- `TODO.md` -- task status, order, blockers, next steps, verification state change
-- `DECISIONS.md` -- durable direction chosen or proven by implementation
-- `ARCHITECTURE.md` -- structure, boundaries, flows, integrations change
-- `LESSONS.md` -- durable preference, correction, or repeated pitfall emerges
-- handoff -- only on explicit end-of-session or handoff request, after syncing main files
+- `TODO.md`: on status/order/blocker/next-step/verification change.
+- `DECISIONS.md`: on durable direction change or proof by implementation.
+- `ARCHITECTURE.md`: on structural change.
+- `LESSONS.md`: on durable preference or repeated pitfall. Before appending, grep for similar titles and increment `Affirmations:` instead of duplicating.
+- Handoffs: end-of-session only, atomic write (`.tmp` then `mv`).
+
+If you catch yourself writing rationale in TODO, move it to DECISIONS. If you catch yourself writing task state in ARCHITECTURE, move it to TODO. If you catch yourself writing preferences in DECISIONS, move them to LESSONS.
 
 ## End-Of-Task Sync
 
-Before claiming a task done: verify TODO.md reflects new status, DECISIONS.md captures any durable choice, ARCHITECTURE.md reflects structural changes, LESSONS.md captures corrections worth keeping.
-
-## Do Not Write
-
-- do not update this adapter for routine task progress
-- do not write to the Claude adapter (`CLAUDE.md`) from Cursor; that file is ignored during normal work except adapter repair
-- do not add module adapters speculatively
-- do not store task lists, decision history, or handoff text inside this adapter
-
-## Cross-Harness
-
-Claude uses its own adapter at `CLAUDE.md`. Both adapters point to the same `CONTEXT/*`. During normal work this adapter ignores the Claude one. Only read the Claude adapter during adapter repair or suspected drift; if one adapter is repaired for drift, repair the other in the same task.
+`CONTEXT/*` is the default write target during normal work. Do not edit this adapter or `CLAUDE.md` during routine progress. If routing behavior changed, repair all sibling adapters in the same task.
 
 ## Immutable Constraints
 
-These are project-wide invariants:
-
+Project-wide invariants, do not change without JR approval:
 - Google Sheets column headers -- see `docs/schemas/sheets-schema.md`
 - `publishedShifts` / `publishedEvents` gate employee visibility to LIVE periods only
 - Ontario ESA 44-hour overtime surfaces as amber/red visual flag, not publish-blocker
 - OTR 5 brand accents immutable: Red #EC3228, Blue #0453A3, Orange #F57F20, Green #00A84D, Purple #932378
+
+## Reference Material (non-canonical)
+
+Static or slow-changing docs outside `CONTEXT/*`:
+- `docs/schemas/sheets-schema.md` -- canonical Sheets column headers
+- `docs/schemas/TEMPLATE-schema.md` -- schema doc template
+- `docs/DEPLOY-S36-AUTH.md` -- one-time auth deploy notes
+- `docs/research/*.md` -- UX research references
+
+## Sibling Project
+
+`~/APPS/RAINBOW-PITCH/` -- separate repo, separate Vercel deploy at <https://rainbow-pitch.vercel.app>. Pitch slides and print routes. Reuses a copy of `src/theme.js`. Not governed by this adapter.
+
+## Do Not Write
+
+- Live task state, handoff text, or decision history in this file.
+- Dates (dates belong in handoffs, DECISIONS, completed items, git history).
+- Cross-references that restate `CONTEXT/*` content.
+
+## Cross-Harness
+
+Claude uses `CLAUDE.md`. Kimi uses `KIMI.md`. All adapters point to the same `CONTEXT/*`. During normal work this adapter ignores the siblings. Only read a sibling adapter during adapter repair or suspected drift; if one adapter is repaired, repair all three in the same task.
+
+## Loop Access Rules
+
+If this project contains `LOOP/<mode>/` directories, they are machine-owned territory for auto-loop ratchet experiments. Routine human work does not read or write `LOOP/*` except:
+- `LOOP/<mode>/observations.md` during graduation review (tick `- [x]` to approve, delete entry to reject)
+
+The meta-agent owns `LOOP/<mode>/*` during loop runs. Graduation happens only via the handoff flow on human ratification. Do not hand-edit `program.md` during active sessions, `results.tsv`, `jobs/*`, or task files during experiments.

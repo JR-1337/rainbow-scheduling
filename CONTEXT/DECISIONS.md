@@ -1,4 +1,5 @@
 <!-- SCHEMA: DECISIONS.md
+Version: 1
 Purpose: durable product, architecture, and workflow decisions with rationale.
 Write mode: append new entries at the top. Reverse chronological.
 
@@ -6,14 +7,24 @@ Rules:
 - Newest entries at the top.
 - Every entry has: date heading, decision title, rationale, Confidence level.
 - Confidence scale: H (high), M (medium), L (low).
-- Confidence: H requires inline verification note with source and date.
-  Example: `Confidence: H - tests pass 2026-04-16`
+- Confidence grammar (regex-enforceable):
+    Confidence: H(-holdout)? -- <source>, verified YYYY-MM-DD
+    Confidence: M( -- <verification hint>)?
+    Confidence: L -- <what would verify>
+- Confidence: H-holdout is used on entries graduated from auto-loop with
+  held-out task scoring passing. Use plain H if the mode predates holdout
+  retrofit or the Candidate was promoted without holdout scoring.
 - Confidence: M is the default when verification is absent or stale.
-- Confidence: L when plausible but unverified; name what would confirm.
+- Optional Source field: human (default, omit) or meta-agent-ratified.
+  Used when the decision came from auto-loop observation rather than direct human choice.
+  Unratified proposals live in LOOP/<mode>/observations.md Candidates, not here.
+- Optional Evidence field: <mode>/<tag> (<metric>: <value>). Reference only.
+  Links a decision to the run that produced the signal.
 - Invalidated entries get marked `Superseded` but stay in the file. Do not erase.
 - Rejected alternatives may be noted under the decision when they are likely to
-  resurface or when the rejection rationale saves future re-litigation later.
-- Do not store temporary plans, open questions, or task checklists (use TODO.md).
+  resurface or when the rejection rationale saves future re-litigation.
+- If you catch yourself writing temporary plans, open questions, or task
+  checklists, move them to TODO.md.
 - Bullets under 12 words, sentences under 20 words, no paragraphs.
 - ASCII operators only.
 -->
@@ -408,15 +419,22 @@ Confidence: H - deck finalized per JR S65
 ## YYYY-MM-DD -- [Decision title]
 Decision: [one sentence statement of what was decided]
 Rationale: [one to three sentences on why]
-Confidence: H - [verification source and date]
+Confidence: H -- [source], verified YYYY-MM-DD
 (or Confidence: M)
-(or Confidence: L - [what would verify])
+(or Confidence: L -- [what would verify])
 
 Rejected alternatives (optional):
 - [alternative] -- rejected because [reason]
 
 ## YYYY-MM-DD -- [Older decision, still valid]
 ...
+
+## YYYY-MM-DD -- [Decision ratified from auto-loop observation]
+Decision: [one sentence statement]
+Rationale: [one to three sentences]
+Confidence: H-holdout -- ratified from <mode>/<tag>, verified YYYY-MM-DD
+Source: meta-agent-ratified
+Evidence: <mode>/<tag> (<metric>: <value>)
 
 ## YYYY-MM-DD -- [Old decision] (Superseded by YYYY-MM-DD)
 ...

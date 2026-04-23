@@ -15,3 +15,6 @@ pitchdeck/assets/_video_raw/
 # CONTEXT migration staging and rollback artifacts
 .context-migration/
 .migration-recovery/
+# Snapshot used by Upgrade-Mode byte-preservation verification (BOOTSTRAP Step 13).
+# Deleted on successful upgrade; persists if Step 13 detected user-content drift.
+CONTEXT/.upgrade-snapshot/

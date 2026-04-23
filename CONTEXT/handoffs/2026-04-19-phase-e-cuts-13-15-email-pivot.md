@@ -1,7 +1,15 @@
 <!-- SCHEMA: handoff
+Version: 1
 Purpose: session continuity for the next chat. Ephemeral.
-Write mode: one file at a time. Prior handoff deleted when new one is written.
-Rules: filename YYYY-MM-DD-{short-slug}.md; required sections per HANDOFF_PROMPT.md; do not restate adapter content; ASCII operators only.
+Write mode: one file at a time via atomic rename (write .tmp then mv).
+             Retention governed by HANDOFF.md / HANDOFF-LOOP.md Step 6.
+
+Rules:
+- Filename: sNNN-YYYY-MM-DD-{short-slug}.md where NNN is the next three-digit session index (see HANDOFF.md / HANDOFF-LOOP.md Terminology).
+- Required sections defined in HANDOFF.md (lite) or HANDOFF-LOOP.md (full).
+- Do not duplicate full TODO.md or DECISIONS.md content; reference them.
+- Do not restate adapter content. Do not become another adapter layer.
+- ASCII operators only.
 -->
 
 # Handoff -- 2026-04-19 -- Phase E cuts 13-15 then pivot to email features

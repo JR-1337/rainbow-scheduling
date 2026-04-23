@@ -1,11 +1,11 @@
 <!-- SCHEMA: archive/
+Version: 1
 Purpose: historical routing, integration, or decision docs with learning value.
 Write mode: write once, do not update.
 
 Rules:
 - Filename: YYYY-MM-{short-slug}.md (month prefix, not full date)
 - Delete pure redundancy instead of archiving.
-- Do not archive handoffs (the handoff retention rule handles them).
 - Archived docs are not active memory. The agent reads them only when
   history is directly relevant to a current question.
 -->
