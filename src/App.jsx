@@ -1986,6 +1986,10 @@ export default function App() {
                     <Settings size={14} style={{ color: THEME.text.secondary }} />
                     Admin Settings
                   </button>
+                  <button role="menuitem" onClick={() => { setAdminMenuOpen(false); setMobileAdminChangePasswordOpen(true); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.text.primary }}>
+                    <Key size={14} style={{ color: THEME.text.secondary }} />
+                    Change Password
+                  </button>
                   <div className="h-px mx-2" style={{ backgroundColor: THEME.border.subtle }} />
                   <button role="menuitem" onClick={() => { setAdminMenuOpen(false); clearAuth(); setCurrentUser(null); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.status.error }}>
                     <LogOut size={14} />
@@ -2400,6 +2404,7 @@ export default function App() {
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <InactiveEmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
       <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />
+      <ChangePasswordModal isOpen={mobileAdminChangePasswordOpen} onClose={() => setMobileAdminChangePasswordOpen(false)} currentUser={currentUser} />
       <PKEventModal
         isOpen={pkModalOpen}
         onClose={() => setPkModalOpen(false)}
