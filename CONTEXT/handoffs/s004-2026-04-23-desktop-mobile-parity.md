@@ -1,4 +1,4 @@
-# s004 -- 2026-04-23 -- Desktop/Mobile Parity Ports + Adversarial Audit
+# s004 -- 2026-04-23 -- Desktop/Mobile Parity Ports + Logo Nav
 
 ## Session Greeting
 
@@ -9,8 +9,8 @@ Your first reply must be 1-2 short sentences + a `Pass-forward:` line + exactly 
 ## State
 
 - Project: `/home/johnrichmond007/APPS/RAINBOW Scheduling APP`
-- Git: clean, HEAD `54dfa8d`, main == origin/main (latest commit: CONTEXT sync for parity ports)
-- Active focus: parity ports complete; no open code work. Next gate is Sarvi prod smoke OR email overhaul pre-work.
+- Git: clean, HEAD `2812631`, main == origin/main (latest commit: logo nav + handoff s004 + CONTEXT sync)
+- Active focus: parity ports + logo nav complete; no open code work. Next gate is Sarvi prod smoke OR email overhaul pre-work.
 - Apps Script: v2.25.0 LIVE (no backend change this session)
 
 ## This Session
@@ -20,6 +20,7 @@ Your first reply must be 1-2 short sentences + a `Pass-forward:` line + exactly 
 - Shipped `bf2a8e3`: per-row Edit3 button on mobile Hidden from Schedule collapsible; exact copy of desktop pattern (`p-1`, size-10, `setEditingEmp + setEmpFormOpen`). `reopenStaffAfterFormRef` NOT set, matching desktop.
 - Shipped `54dfa8d`: CONTEXT sync (TODO.md + DECISIONS.md).
 - Adversarial audit (text-only): no functional defects in either port. Wire, state, handlers, build, Playwright all clean.
+- Shipped `2812631`: RAINBOW logo (desktop header App.jsx:1917 + mobile admin header App.jsx:1424) wrapped in `<a href="/">`. Clicking reloads SPA from root. Build PASS, pushed.
 - LESSONS.md: added parity-audit-needs-behavior-verification lesson.
 - TODO.md: trimmed Completed from 6 -> 5 items (removed oldest PDF role-encoding entry).
 - Decanting: clean. No working assumptions unrecorded. No near-misses. Naive next move would be "continue parity audit" -- nothing left to port.
@@ -27,7 +28,7 @@ Your first reply must be 1-2 short sentences + a `Pass-forward:` line + exactly 
 
 ## Hot Files
 
-- [src/App.jsx](src/App.jsx) -- parity changes: mobile Hidden rows ~line 1577, desktop dropdown ~line 1975, desktop modal render ~line 2403
+- [src/App.jsx](src/App.jsx) -- logo nav ~line 1424 (mobile) + ~line 1917 (desktop); parity: Hidden rows ~line 1577, dropdown ~line 1975, modal render ~line 2403
 - [CONTEXT/TODO.md](CONTEXT/TODO.md)
 - [CONTEXT/DECISIONS.md](CONTEXT/DECISIONS.md)
 
@@ -55,7 +56,7 @@ Your first reply must be 1-2 short sentences + a `Pass-forward:` line + exactly 
 
 ## Verify On Start
 
-- `git status` -- expect clean, HEAD `54dfa8d`
+- `git status` -- expect clean, HEAD `2812631`
 - Read TODO.md Active + Blocked for current gates
 
 ## Next Step Prompt
@@ -68,4 +69,4 @@ Two productive paths, both unblocked on this side:
 
 Confirm with JR which to start.
 
-Pass-forward: Parity work is complete and clean; next productive step is email send-site audit (pre-work while Gmail sender gate is open) or Bug 4 repro from JR.
+Pass-forward: Parity ports + logo nav complete and clean; next productive step is email send-site audit (pre-work while Gmail sender gate is open) or Bug 4 repro from JR.

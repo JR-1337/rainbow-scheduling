@@ -61,12 +61,11 @@ Rules:
 
 ## Completed
 
+- [2026-04-23] Logo nav: RAINBOW logo (desktop header + mobile admin header) wrapped in `<a href="/">` (`2812631`). Clicking reloads app from root. Build PASS, pushed.
 - [2026-04-23] Desktop/mobile admin parity ports: Change Password on desktop (`f19b5e4`) + per-row Edit on mobile Hidden section (`bf2a8e3`). Change Password menuitem added between Admin Settings and Sign Out in desktop avatar dropdown; `ChangePasswordModal` rendered in desktop return. Mobile Hidden from Schedule collapsible gains inline Edit3 button per row (identical styling to desktop pattern). Two other audit-flagged "gaps" rejected after investigation: desktop already exceeds `MobileEmployeeQuickView` via hover tooltip showing email + phone + full availability (App.jsx:2482-2513); Hidden section itself already existed on both branches. Playwright smoke PASS desktop 1280px + mobile 390px, zero console errors.
 - [2026-04-23] FT default shift fallback + rainbowjeans.com favicon (`1bdde4e`). New `FT_DEFAULT_SHIFT` constant in `src/utils/storeHours.js` (Mon-Wed 10-18, Thu-Sat 10:30-19, Sun 10:30-18). `createShiftFromAvailability` fallback: per-employee `defaultShift` -> FT pattern (FT only) -> availability (PT); always clamped to availability; degenerate clamp -> null. Same branch in `ShiftEditorModal.getDefaultBookingTimes` for empty-cell prefill. Favicon + apple-touch from rainbowjeans.com OTR50.png, favicon.svg kept as tertiary fallback. 12/12 unit cases PASS via Playwright browser import; build PASS; zero console errors.
 - [2026-04-20] Schedule sort: 4-bucket order (Sarvi, other admins alpha, FT alpha, PT alpha) + bucket-transition dividers (`10c3980`). New `src/utils/employeeSort.js` centralizes logic across 5 render sites: desktop admin, desktop employee, mobile admin, mobile employee, PDF. Dividers skip empty buckets. Localhost Playwright PASS at 1280/768/390px + PDF fixture shows 6 dividers.
 - [2026-04-19] Phase E cuts 13-15 shipped (App.jsx 2606 -> 2526, -80). Cut 13 `d9c5377` added matchesOfferId/matchesSwapId/errorMsg helpers + DRY'd 26 sites. Cut 14 `d6e8811` extracted ScheduleStateButton desktop. Cut 15 `3d271a3` unified mobile + desktop onto one ScheduleStateButton with middle-ground sizing. Playwright smoke PASS at 1280px + 390px.
-- [2026-04-19] Default store hours Mon/Tue/Wed open 10:00 -> 11:00 (`9f8ada2`). Close stays 18:00, Thu-Sat and Sun unchanged. Safe because Auto-Fill reads defaultShift, not STORE_HOURS directly.
-
 <!-- TEMPLATE
 ## Active
 - [task] -- next step: [concrete action]
