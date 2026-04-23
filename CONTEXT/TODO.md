@@ -66,7 +66,6 @@ Rules:
 - [2026-04-20] Schedule sort: 4-bucket order (Sarvi, other admins alpha, FT alpha, PT alpha) + bucket-transition dividers (`10c3980`). New `src/utils/employeeSort.js` centralizes logic across 5 render sites: desktop admin, desktop employee, mobile admin, mobile employee, PDF. Dividers skip empty buckets. Localhost Playwright PASS at 1280/768/390px + PDF fixture shows 6 dividers.
 - [2026-04-19] Phase E cuts 13-15 shipped (App.jsx 2606 -> 2526, -80). Cut 13 `d9c5377` added matchesOfferId/matchesSwapId/errorMsg helpers + DRY'd 26 sites. Cut 14 `d6e8811` extracted ScheduleStateButton desktop. Cut 15 `3d271a3` unified mobile + desktop onto one ScheduleStateButton with middle-ground sizing. Playwright smoke PASS at 1280px + 390px.
 - [2026-04-19] Default store hours Mon/Tue/Wed open 10:00 -> 11:00 (`9f8ada2`). Close stays 18:00, Thu-Sat and Sun unchanged. Safe because Auto-Fill reads defaultShift, not STORE_HOURS directly.
-- [2026-04-19] PDF role-encoding redesign shipped (`b189db5` -> `d2414eb`). Uniform 1px grey grid; monogram glyph (C1/C2/B/M/W/F) anchored top-left; role name styled by family (cash = BOLD UPPERCASE, section = medium title case, monitor = italic); Floor Monitor is the ONLY role with 2px ink perimeter. Legend chip mirrors cell treatment.
 
 <!-- TEMPLATE
 ## Active

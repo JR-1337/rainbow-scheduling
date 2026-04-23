@@ -414,6 +414,11 @@ Lesson: "moved to Settled history" > "approved." Users see where the row went.
 Context: Any guarded mutation success message.
 Affirmations: 0
 
+## [PROJECT] -- Parity audit must verify rendered behavior, not component grep
+Lesson: A component-presence grep incorrectly reports gaps. Hover tooltips, conditional renders, and richer-desktop equivalents are invisible to grep. Always code-read the actual render path before declaring a gap.
+Context: 2026-04-23 parity audit -- Explore subagent misreported 2 of 3 gaps (Employee Quick View "missing" on desktop; Hidden section "missing" on mobile). Both existed; the actual gap was narrower (one missing Edit button). Subagent used keyword search only.
+Affirmations: 0
+
 ## [PROJECT] -- Display sort: Sarvi, other admins alpha, FT alpha, PT alpha
 Lesson: Four buckets in order. Sarvi pinned top; other non-owner admins (with showOnSchedule where the list filters them) next alpha; then full-time non-admins alpha; then part-time non-admins alpha. Two discreet dividers render on bucket transitions. Single source of truth: `src/utils/employeeSort.js` (`sortBySarviAdminsFTPT`, `employeeBucket`, `computeDividerIndices`).
 Context: Admin grid (App.jsx), employee view (views/EmployeeView.jsx), mobile admin + mobile employee (MobileAdminView, MobileEmployeeView), PDF (src/pdf/generate.js). Shipped 2026-04-20; supersedes prior 3-bucket rule.
