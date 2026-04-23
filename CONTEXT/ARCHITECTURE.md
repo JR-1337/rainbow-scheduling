@@ -46,7 +46,7 @@ Rules:
 - `src/email/build.js` -- plaintext email body builder
 - `src/utils/format.js` -- parseLocalDate, formatDate, escapeHtml, stripEmoji
 - `src/utils/date.js` -- pure date/time helpers (toDateKey, parseTime, formatTimeShort, ...)
-- `src/utils/storeHours.js` -- STAT_HOLIDAYS_2026 / STORE_HOURS / isStatHoliday (pure)
+- `src/utils/storeHours.js` -- STAT_HOLIDAYS_2026 / STORE_HOURS / FT_DEFAULT_SHIFT / isStatHoliday (pure)
 - `src/utils/storeHoursOverrides.js` -- module-level override refs + getStoreHoursForDate (re-exported from App.jsx for legacy importers; parked sub-area-6 Context refactor will replace)
 - `src/utils/payPeriod.js` / `src/utils/requests.js` / `src/utils/api.js` / `src/utils/eventDefaults.js`
 - `src/utils/employeeSort.js` -- four-bucket display order (Sarvi, admins, FT, PT) + bucket-transition dividers; single source of truth for admin/employee/mobile/PDF rendering
@@ -71,10 +71,11 @@ Rules:
 
 ## Employee Shape
 
-- `availability.{day} = {available, start, end}` -- PK eligibility gate + fallback for Auto-Fill hours
-- `defaultShift.{day} = {start, end}` (v2.24.0, col N) -- per-day hours Auto-Fill books; absent day = fall back to availability
+- `availability.{day} = {available, start, end}` -- PK eligibility gate + always clamps Auto-Fill output
+- `defaultShift.{day} = {start, end}` (v2.24.0, col N) -- per-day Auto-Fill override when set
+- `employmentType` == 'full-time' -- enables `FT_DEFAULT_SHIFT` fallback (Mon-Wed 10-18, Thu-Sat 10:30-19, Sun 10:30-18); PT falls back to availability.start/end
 - `defaultSection` (col V) -- role seed for Auto-Fill
-- Decouple: widening availability for PK eligibility no longer changes Auto-Fill output
+- Decouple: widening availability for PK eligibility does not widen booked hours (FT clamps to store pattern, PT clamps to availability window)
 
 ## Shift State
 

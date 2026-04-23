@@ -29,6 +29,15 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-23 -- FT default shift fallback (Mon-Wed 10-18, Thu-Sat 10:30-19, Sun 10:30-18) + favicon swap
+Decision: New `FT_DEFAULT_SHIFT` constant in `src/utils/storeHours.js` holds per-day FT shift defaults. `createShiftFromAvailability` fallback order: per-employee `defaultShift[day]` -> `FT_DEFAULT_SHIFT[day]` for FT only -> availability.start/end for PT. Result clamped to availability window (max(fbStart, avail.start), min(fbEnd, avail.end)); degenerate clamp returns null. `getDefaultBookingTimes` in `ShiftEditorModal` branches the same way for empty-cell pre-fill. Favicon swapped to rainbowjeans.com's OTR50.png (48x48 favicon + 180x180 apple-touch-icon); existing `favicon.svg` kept as tertiary fallback link.
+Rationale: Sarvi's Auto-Fill was booking 06:00-22:00 shifts because most FT rows have no per-day `defaultShift` set and `availability` was widened by `widenAvailabilityForPK_` or legacy test data. Store-pattern FT default as fallback plus availability-clamp decouples "how wide is availability" from "what hours do we book by default" without a per-row migration. Favicon swap per JR: brand alignment with rainbowjeans.com main site.
+Confidence: H -- verified 2026-04-23: 12/12 `createShiftFromAvailability` unit cases PASS in browser via Playwright `await import('/src/utils/scheduleOps.js')` (FT wide/narrow/unavailable/clamp-degenerate, PT keeps availability-width, per-employee `defaultShift` still wins); build PASS; favicon assets 200 in dev; zero console errors on login. HEAD `1bdde4e` on origin/main.
+Rejected alternatives:
+- Per-row `defaultShift` migration script -- rejected; would need re-running on any store-hour change. Fallback constant does not.
+- Apply FT pattern to PT -- rejected; JR explicit: PT stays availability-width so student schedules respect their windows directly.
+- Replace `favicon.svg` entirely -- rejected; kept as tertiary fallback for zero-risk rollout.
+
 ## 2026-04-20 -- Schedule display: 4-bucket sort (Sarvi, admins, FT, PT) with bucket-transition dividers
 Decision: New `src/utils/employeeSort.js` exports `employeeBucket` (0=Sarvi, 1=other admins, 2=FT non-admin, 3=PT non-admin), `sortBySarviAdminsFTPT` (alpha within bucket), `computeDividerIndices` (transitions only, skips empty buckets). Five render sites migrated: desktop admin grid (App.jsx), desktop employee view (views/EmployeeView.jsx), mobile admin (MobileAdminView.jsx), mobile employee (MobileEmployeeView.jsx), and PDF (pdf/generate.js now sorts; it previously rendered in Sheet order with no divider). PDF emits a divider `<tr>` with `colspan=weekDates.length+1` on transitions; both weeks share the same map.
 Rationale: Prior 3-bucket sort (Sarvi → FT → PT) lumped other admins into FT/PT by their employmentType. JR wants admins grouped between Sarvi and FT with a discreet divider, matching the existing FT→PT divider style. Centralizing kills the four duplicate inline sort bodies + divider predicates that had already drifted (each file had its own `isFirstPT`/`ptStartIndex` variant).
