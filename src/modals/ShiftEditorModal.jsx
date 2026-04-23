@@ -7,9 +7,15 @@ import { getStoreHoursForDate } from '../App';
 import { Modal, TimePicker, GradientButton } from '../components/primitives';
 import { AnimatedNumber } from '../components/uiKit';
 import { toDateKey, formatDateLong, calculateHours } from '../utils/date';
-import { isStatHoliday } from '../utils/storeHours';
+import { isStatHoliday, FT_DEFAULT_SHIFT } from '../utils/storeHours';
+import { getDayName } from '../utils/date';
 
-const getDefaultBookingTimes = (date) => {
+const getDefaultBookingTimes = (date, employee) => {
+  if (employee?.employmentType === 'full-time') {
+    const dayName = getDayName(date).toLowerCase();
+    const ft = FT_DEFAULT_SHIFT[dayName];
+    if (ft) return { start: ft.start, end: ft.end };
+  }
   const storeHours = getStoreHoursForDate(date);
   return { start: storeHours.open, end: storeHours.close };
 };
@@ -46,7 +52,7 @@ export const ShiftEditorModal = ({
 }) => {
   const storeHours = getStoreHoursForDate(date);
   const isHoliday = isStatHoliday(date);
-  const defaultTimes = getDefaultBookingTimes(date);
+  const defaultTimes = getDefaultBookingTimes(date, employee);
 
   // Derive which tabs to show and which is active.
   const presentTypes = useMemo(() => {
@@ -70,7 +76,7 @@ export const ShiftEditorModal = ({
   // cross-contaminate.
   const seedFor = (type) => {
     if (type === 'work') {
-      const t = getDefaultBookingTimes(date);
+      const t = getDefaultBookingTimes(date, employee);
       return {
         startTime: existingShift?.startTime || t.start,
         endTime: existingShift?.endTime || t.end,

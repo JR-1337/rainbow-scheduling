@@ -1,5 +1,5 @@
 import { getDayName, toDateKey, calculateHours } from './date';
-import { STORE_HOURS } from './storeHours';
+import { STORE_HOURS, FT_DEFAULT_SHIFT } from './storeHours';
 
 export function collectPeriodShiftsForSave(dates, employees, shiftsObj, eventsObj) {
   const periodShifts = [];
@@ -100,11 +100,24 @@ export function createShiftFromAvailability(employee, date) {
   if (!avail || !avail.available) return null;
 
   const ds = employee.defaultShift?.[dayName];
-  const dsStart = ds && ds.start ? ds.start : null;
-  const dsEnd = ds && ds.end ? ds.end : null;
+  const isFT = employee.employmentType === 'full-time';
 
-  const startTime = dsStart || avail.start || STORE_HOURS[dayName].open;
-  const endTime = dsEnd || avail.end || STORE_HOURS[dayName].close;
+  let fbStart, fbEnd;
+  if (ds && ds.start && ds.end) {
+    fbStart = ds.start;
+    fbEnd = ds.end;
+  } else if (isFT) {
+    fbStart = FT_DEFAULT_SHIFT[dayName].start;
+    fbEnd = FT_DEFAULT_SHIFT[dayName].end;
+  } else {
+    fbStart = avail.start || STORE_HOURS[dayName].open;
+    fbEnd = avail.end || STORE_HOURS[dayName].close;
+  }
+
+  const startTime = avail.start && avail.start > fbStart ? avail.start : fbStart;
+  const endTime = avail.end && avail.end < fbEnd ? avail.end : fbEnd;
+
+  if (startTime >= endTime) return null;
 
   return {
     employeeId: employee.id,

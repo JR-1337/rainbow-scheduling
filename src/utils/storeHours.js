@@ -17,6 +17,16 @@ export const STORE_HOURS = {
   saturday: { open: '11:00', close: '19:00' },
 };
 
+export const FT_DEFAULT_SHIFT = {
+  sunday:    { start: '10:30', end: '18:00' },
+  monday:    { start: '10:00', end: '18:00' },
+  tuesday:   { start: '10:00', end: '18:00' },
+  wednesday: { start: '10:00', end: '18:00' },
+  thursday:  { start: '10:30', end: '19:00' },
+  friday:    { start: '10:30', end: '19:00' },
+  saturday:  { start: '10:30', end: '19:00' },
+};
+
 export const STAT_HOLIDAY_HOURS = { open: '12:00', close: '17:00' };
 
 export const STAT_HOLIDAYS_2026 = [
