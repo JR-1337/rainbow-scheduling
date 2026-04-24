@@ -29,6 +29,22 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-24 -- Employee hover tooltip trimmed to name + mailto email
+Decision: Desktop employee-name hover tooltip (App.jsx ~line 2491) shows only name (+ admin shield, Former badge) and a single email row wrapped in `<a href="mailto:...">` with `target="_blank" rel="noopener noreferrer"`. Dropped: hours badge, phone row, admin-access text row, 7-day availability grid. `useTooltip` hook (src/hooks/useTooltip.js) gains 180ms delayed hide plus `handleTooltipEnter` / `handleTooltipLeave` exports so the card's own onMouseEnter/onMouseLeave can cancel the pending hide while cursor traverses from row into the card. Email uses length-based font-size step-down (12px default, 1px smaller per ~3 chars beyond 32, floor 9px) and `whiteSpace: nowrap` so long addresses shrink to fit the 240px card on one line.
+Rationale: JR 2026-04-24: "doesnt need to show their availability... just the name and the email which you should be able to scroll to and click if you keep your mouse over the tooltip card." Availability visible on the grid + edit view; phone + admin-access row redundant. Wrap-on-overflow (tried first, `f9fedef`) looked messy; shrink-to-fit font keeps single-line read. target=_blank so the mail client opens without navigating the app tab.
+Confidence: H -- verified 2026-04-24: build PASS at `06ef00c` on origin/main; prod render by JR to be spot-confirmed.
+Rejected alternatives:
+- word-break wrap for long emails -- tried in `f9fedef`, reverted in `96467fc`; JR "does that look good?" called it out as ugly.
+- Keep hours badge on tooltip -- redundant with EmployeeRow row-left hours display.
+
+## 2026-04-24 -- PK/MTG badge relocation from absolute overlay to inline flex row
+Decision: Event badges (PK, MTG, "N events" rollup) moved out of `absolute bottom-0 right-0` positioning in the shift-cell branch of three files: `src/components/ScheduleCell.jsx`, `src/MobileAdminView.jsx`, `src/MobileEmployeeView.jsx`. Each `shift ? (...)` branch now wraps the role-name span and badge-list div in a new `<div className="flex items-start justify-between gap-1">` at the top of the cell; the badge list keeps its existing span JSX, `EVENT_TYPES` styling, `title` hover tooltips, and the `>=3` rollup pill. `pr-3` dropped from desktop role-name span; `relative` dropped on wrappers with no remaining absolute child (kept on ScheduleCell which still has an absolute star).
+Rationale: JR flagged that PK indicators visibly covered the hours + task-star row on prod. Absolute overlays on 56-66px cells cannot avoid collision. In-flow layout is zero-overlap by construction; role name truncates if badges crowd it. Reuses existing badge markup and `EVENT_TYPES` colors; no new component.
+Confidence: H -- verified 2026-04-24: build PASS at `a6200cc` on origin/main; desktop admin 1280px + mobile admin 390px Playwright smoke PASS on Alex Fowler Sun 2026-04-19 cell; prod smoke PASS after Vercel redeploy. Employee viewport unsmoked because `testguy@testing.com` is inactive on prod; code path is structurally identical.
+Rejected alternatives:
+- Badge row above role name as dedicated top line -- rejected; would force cell height bump or smaller role-name font. Inline with role name reuses existing flex row.
+- Left-edge colored stripe -- rejected; loses `shortLabel` text, less explicit for admins skimming the grid.
+
 ## 2026-04-23 -- Desktop/mobile admin parity ports (Change Password + Hidden row Edit)
 Decision: Two small parity ports after 2026-04-23 audit. (1) Desktop admin avatar dropdown gains a "Change Password" menuitem (between Admin Settings and Sign Out divider) and renders `ChangePasswordModal` in the desktop return; reuses existing top-level `mobileAdminChangePasswordOpen` state. (2) Mobile Hidden from Schedule collapsible gains a per-row Edit3 button matching desktop's inline edit affordance; opens `EmployeeFormModal`. No other ports pursued.
 Rationale: Parity audit identified three candidate gaps; deeper investigation showed only two were real. Employee Quick View was called "missing on desktop" but desktop already has an equivalent (hover tooltip at App.jsx:2482-2513) that shows MORE info -- email + phone + full 7-day availability -- than `MobileEmployeeQuickView`. Hidden from Schedule was called "missing on mobile" but the collapsible section already existed on both; the only gap was desktop's per-row Edit button. Change Password WAS genuinely desktop-missing (mobile-only drawer button). Scope kept minimal: 5 lines for Change Password, 8 lines for the Hidden-row Edit.

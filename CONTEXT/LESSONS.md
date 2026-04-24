@@ -44,6 +44,16 @@ Lesson: Apps Script functions ending with `_` are filtered out of the editor's f
 Context: 2026-04-19 -- `widenAvailabilityForPK_` invisible in dropdown; added `runWidenAvailabilityForPK` wrapper. Both deleted after the one-shot ran.
 Affirmations: 0
 
+## [PROJECT] -- Check for visual obstruction before re-chasing a "doesn't render" bug
+Lesson: When a bug report says "X saves but doesn't show in UI," verify X is actually missing from the DOM before digging into load/key/state code. Sheet had 4 PK rows that DID render; the real issue was an `absolute bottom-0 right-0` badge layering over the work-shift's hours row, making the PK "disappear" visually while the shift appeared unchanged.
+Context: 2026-04-24 Bug 5 investigation. Handoff inherited "top-nav PK doesn't render" framing from a prior session; Sheet inspection via Drive MCP showed the events existed; prod smoke showed PK badge WAS rendered but was obscuring shift content. Shifted scope from "re-render bug" to "visual overlap fix" mid-session.
+Affirmations: 0
+
+## [PROJECT] -- Absolute-positioned cell overlays collide on small schedule cells
+Lesson: Desktop 56px and mobile 66px grid cells cannot host absolute-positioned overlays AND a multi-row shift payload without collision. Put secondary indicators (PK/MTG badges, icons, flags) in an in-flow flex row with the role name so the browser arbitrates space.
+Context: 2026-04-24 PK/MTG badge relocation across ScheduleCell.jsx, MobileAdminView.jsx, MobileEmployeeView.jsx. Same anti-pattern in all three.
+Affirmations: 0
+
 ## [PROJECT] -- Render shared overlays at App root, not inside branch returns
 Lesson: Modals, toasts, action sheets and any other overlay shared between the mobile-admin early-return branch and the desktop return must be defined once (e.g. `const confirmModal = ...` before the branch) and rendered from both branches. If only one branch mounts it, state updates from the other branch silently no-op and the feature reads as broken.
 Context: Shipped 2026-04-19: the auto-populate confirm `<Modal>` lived only in the desktop return. Mobile Clear Wk / Fill Wk-with-existing / PK-autofill-confirm all dispatched `setAutoPopulateConfirm({...})` but nothing mounted. Fix 1 extracted the JSX into a shared const referenced from both returns.
