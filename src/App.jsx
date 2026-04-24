@@ -2505,6 +2505,8 @@ export default function App() {
           </div>
           <a
             href={`mailto:${tooltipData.employee.email}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-1 hover:underline"
             style={{
               color: THEME.text.secondary,
