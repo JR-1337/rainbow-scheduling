@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Star, Trash2, Check, AlertTriangle, Plus, Thermometer } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Star, Trash2, Check, AlertTriangle, Thermometer } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES, EVENT_TYPES } from '../constants';
 import { getPKDefaultTimes, MEETING_DEFAULT_TIMES } from '../utils/eventDefaults';
@@ -16,26 +16,29 @@ const getDefaultBookingTimes = (date) => {
   return { start: d.start, end: d.end };
 };
 
-// PK defaults branch on day-of-week via getPKDefaultTimes (Saturday pre-open).
-// Meeting is locked 14:00-16:00 via MEETING_DEFAULT_TIMES.
+// PK defaults branch on day-of-week; meeting is locked 14:00-16:00.
 const getDefaultEventTimes = (type = 'meeting', date = null) => {
   if (type === 'pk') return getPKDefaultTimes(date || new Date());
   return MEETING_DEFAULT_TIMES;
 };
 
-// Tabbed editor for scheduled activity (Work / Meeting / PK). Sick is NOT a tab —
-// it's an absence override that answers "is this employee here?" not "what are
-// they doing?". It lives in its own Absence section above the tabs and toggles
-// independently. See research synthesis: sick must be structurally separate
-// from the activity tabs to avoid a gestalt category error.
+// The three scheduled-activity types form one gestalt group — they answer
+// "what is this employee doing?". Sick is categorically different (an absence
+// override) and lives in its own Absence section, not in this group.
+const ACTIVITY_TYPES = ['work', 'meeting', 'pk'];
+
+// Modal for editing a single day: one Absence toggle (sick) + three activity
+// toggles (work / meeting / pk). Tap an unlit tab to book with defaults (saves
+// immediately). Tap the lit active tab again to unbook. Tap a lit non-active
+// tab to focus it for editing. Footer trash clears the whole day in one shot.
 export const ShiftEditorModal = ({
   isOpen,
   onClose,
   onSave,
   employee,
   date,
-  existingShift,            // work shift (or undefined)
-  existingEvents = [],      // array of meeting/pk/sick entries (may be empty)
+  existingShift,
+  existingEvents = [],
   totalPeriodHours,
   availability,
   hasApprovedTimeOff = false,
@@ -44,30 +47,19 @@ export const ShiftEditorModal = ({
 }) => {
   const storeHours = getStoreHoursForDate(date);
   const isHoliday = isStatHoliday(date);
-  const defaultTimes = getDefaultBookingTimes(date);
 
-  // Activity tabs exclude sick (sick has its own section).
-  const presentTypes = useMemo(() => {
-    const set = new Set();
-    if (existingShift) set.add('work');
-    existingEvents.forEach(e => { if (e.type && e.type !== 'sick') set.add(e.type); });
-    if (set.size === 0) set.add('work'); // empty cell defaults to new work shift
-    return set;
-  }, [existingShift, existingEvents]);
+  const hasType = (type) => type === 'work'
+    ? !!existingShift
+    : !!existingEvents.find(e => e.type === type);
 
-  const firstTab = presentTypes.has('work') ? 'work'
-    : presentTypes.has('meeting') ? 'meeting'
-    : 'pk';
-  const [activeType, setActiveType] = useState(firstTab);
-  const [openTabs, setOpenTabs] = useState(presentTypes);
+  // Default active tab: the first booked activity (reading order), else work.
+  // Initialized once per modal open — do NOT reset when data changes, because
+  // tap-to-toggle mutates data and the effect would clobber the user's intent
+  // (tapping Meeting books it → effect sees work first → activeType resets to
+  // 'work' → second tap focuses instead of unbooks). The modal is re-mounted
+  // when editingShift changes in App.jsx, so initial useState covers reopens.
+  const [activeType, setActiveType] = useState(() => ACTIVITY_TYPES.find(hasType) || 'work');
 
-  useEffect(() => {
-    setActiveType(firstTab);
-    setOpenTabs(new Set(presentTypes));
-  }, [existingShift, existingEvents, firstTab, presentTypes]);
-
-  // Per-tab local draft state. Separate drafts so switching tabs doesn't
-  // cross-contaminate.
   const seedFor = (type) => {
     if (type === 'work') {
       const t = getDefaultBookingTimes(date);
@@ -91,7 +83,7 @@ export const ShiftEditorModal = ({
   const [meetingDraft, setMeetingDraft] = useState(seedFor('meeting'));
   const [pkDraft, setPkDraft] = useState(seedFor('pk'));
 
-  // Sick (absence) state — persisted on toggle, not via the Save button.
+  // Sick (absence) state — separate category, immediate-save toggle.
   const existingSick = existingEvents.find(e => e.type === 'sick');
   const [sickActive, setSickActive] = useState(!!existingSick);
   const [sickNote, setSickNote] = useState(existingSick?.note || '');
@@ -113,20 +105,19 @@ export const ShiftEditorModal = ({
     : setPkDraft;
 
   const shiftHours = calculateHours(draft.startTime, draft.endTime);
-  const existingThisType = activeType === 'work' ? existingShift : existingEvents.find(e => e.type === activeType);
-  // Period projection. When sick is active the day contributes 0 regardless of
-  // the work draft. Otherwise work-tab edits apply their delta; meeting/pk show
-  // the current total (no clean per-entry delta for overlapping events).
+  // Period projection. Sick: day is 0 regardless of draft. Work tab: add delta.
+  // Meeting/pk: no clean per-entry delta (union-counted), show current total.
   const projectedTotal = sickActive ? totalPeriodHours
     : activeType === 'work' ? totalPeriodHours - (existingShift?.hours || 0) + shiftHours
     : totalPeriodHours;
 
-  // Warnings are irrelevant when the employee isn't coming in.
   const showAvailabilityWarning = !sickActive && activeType === 'work' && (hasApprovedTimeOff || (availability && availability.available === false));
   const resultingStreak = !sickActive && activeType === 'work' ? priorWorkStreak + 1 : 0;
   const showStreakWarning = !sickActive && activeType === 'work' && resultingStreak >= 5;
 
   const handleSave = () => {
+    // Save only mutates the currently-focused activity tab. First-book happens
+    // via toggleTab (immediate save with defaults); Save persists edits.
     if (activeType === 'work') {
       onSave({
         employeeId: employee.id,
@@ -157,18 +148,50 @@ export const ShiftEditorModal = ({
     onClose();
   };
 
-  const handleDelete = () => {
-    onSave({ employeeId: employee.id, date: toDateKey(date), type: activeType, deleted: true });
+  // Tap-to-toggle on an activity tab. Tri-state:
+  //   unlit (not booked) → book with defaults + focus
+  //   lit, not active    → focus for editing (no mutation)
+  //   lit, active        → unbook (destructive)
+  const toggleTab = (type) => {
+    const booked = hasType(type);
+    if (!booked) {
+      const t = type === 'work' ? getDefaultBookingTimes(date) : getDefaultEventTimes(type, date);
+      onSave({
+        employeeId: employee.id,
+        employeeName: employee.name,
+        date: toDateKey(date),
+        startTime: t.start,
+        endTime: t.end,
+        role: type === 'work' ? 'none' : 'none',
+        task: '',
+        type,
+        note: '',
+        hours: calculateHours(t.start, t.end),
+      });
+      setActiveType(type);
+    } else if (type !== activeType) {
+      setActiveType(type);
+    } else {
+      onSave({ employeeId: employee.id, date: toDateKey(date), type, deleted: true });
+      const remaining = ACTIVITY_TYPES.filter(t => t !== type && hasType(t));
+      setActiveType(remaining[0] || 'work');
+    }
+  };
+
+  // Clear the whole day — every activity + any sick mark. Single destructive
+  // action for "remove everything here."
+  const clearDay = () => {
+    const k = toDateKey(date);
+    if (existingShift) onSave({ employeeId: employee.id, date: k, type: 'work', deleted: true });
+    existingEvents.forEach(ev => {
+      onSave({ employeeId: employee.id, date: k, type: ev.type, deleted: true });
+    });
     onClose();
   };
 
-  const addTab = (type) => {
-    setOpenTabs(prev => { const n = new Set(prev); n.add(type); return n; });
-    setActiveType(type);
-  };
+  const hasAnyData = !!existingShift || existingEvents.length > 0;
 
-  // Sick toggle persists immediately — it's a decisive "is this person here"
-  // state change, not a draft. Flipping it writes or deletes the sick event.
+  // Sick toggle persists immediately — decisive state change, not a draft.
   const saveSick = (nextActive, noteValue) => {
     if (nextActive) {
       const t = existingShift?.startTime && existingShift?.endTime
@@ -204,7 +227,6 @@ export const ShiftEditorModal = ({
     }
   };
 
-  const addableTypes = ['work', 'meeting', 'pk'].filter(t => !openTabs.has(t));
   const isAdmin = !!currentUser?.isAdmin;
 
   return (
@@ -240,10 +262,10 @@ export const ShiftEditorModal = ({
         </div>
       </div>
 
-      {/* Absence section. Sick answers "is the employee here?" — categorically
-          distinct from the scheduled-activity tabs below. Admin-only. Toggle
-          persists immediately; reason commits on blur. Common region + amber
-          accent make it structurally separate from the activity tabs. */}
+      {/* ABSENCE — sick answers "is the employee here?". Visually distinct
+          from the scheduled-activity toggles below: amber palette, its own
+          container, its own label. Pattern-interrupt by design (research:
+          L0-05 common region + L0-06 reading order). */}
       {isAdmin && (
         <div className="p-2 rounded-lg mb-2"
           style={{
@@ -279,34 +301,41 @@ export const ShiftEditorModal = ({
         </div>
       )}
 
-      {/* Scheduled activity tabs. Muted when sick is active — the activity is
-          moot when the employee isn't coming in. */}
-      <div className="flex items-center gap-1 mb-2 flex-wrap" style={{ opacity: sickActive ? 0.5 : 1 }}>
-        {[...openTabs].map(type => {
-          const active = type === activeType;
-          const tabStyle = type === 'work'
-            ? { bg: active ? THEME.accent.blue : THEME.bg.elevated, text: active ? 'white' : THEME.text.primary, border: active ? THEME.accent.blue : THEME.border.default, label: 'Work' }
-            : { bg: active ? (EVENT_TYPES[type].text) : EVENT_TYPES[type].bg, text: active ? 'white' : EVENT_TYPES[type].text, border: EVENT_TYPES[type].border, label: EVENT_TYPES[type].label };
-          return (
-            <button key={type} onClick={() => setActiveType(type)}
-              className="px-2 py-1 rounded text-xs font-medium transition-colors"
-              style={{ backgroundColor: tabStyle.bg, color: tabStyle.text, border: `1px solid ${tabStyle.border}` }}>
-              {tabStyle.label}
-            </button>
-          );
-        })}
-        {addableTypes.length > 0 && (
-          <div className="flex items-center gap-1 ml-1">
-            <span className="text-xs" style={{ color: THEME.text.muted }}>+</span>
-            {addableTypes.map(type => (
-              <button key={type} onClick={() => addTab(type)}
-                className="px-1.5 py-1 rounded text-xs flex items-center gap-0.5"
-                style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary, border: `1px dashed ${THEME.border.default}` }}>
-                <Plus size={10} />{type === 'work' ? 'Work' : EVENT_TYPES[type].label}
+      {/* SCHEDULED — three peer toggles with unified visual language (gestalt
+          similarity). Lit = booked (saved data). Unlit = not booked. Tap to
+          book/focus/unbook. Muted when sick is active (activity is moot). */}
+      <div className="mb-2" style={{ opacity: sickActive ? 0.5 : 1, pointerEvents: sickActive ? 'none' : 'auto' }}>
+        <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: THEME.text.muted }}>Scheduled</p>
+        <div className="flex items-center gap-1 flex-wrap">
+          {ACTIVITY_TYPES.map(type => {
+            const booked = hasType(type);
+            const active = type === activeType;
+            const label = type === 'work' ? 'Work' : EVENT_TYPES[type].label;
+            // Unified palette: one accent for "booked." Active booked gets
+            // full fill; inactive booked gets a muted fill; unbooked is a
+            // dashed outlined placeholder.
+            const litColor = THEME.accent.blue;
+            const style = booked && active
+              ? { bg: litColor, color: 'white', border: litColor, dashed: false }
+              : booked
+                ? { bg: litColor + '1A', color: litColor, border: litColor + '60', dashed: false }
+                : { bg: 'transparent', color: THEME.text.muted, border: THEME.border.default, dashed: true };
+            return (
+              <button key={type} type="button"
+                onClick={() => toggleTab(type)}
+                aria-pressed={booked}
+                title={booked ? (active ? `Tap again to remove ${label}` : `Tap to edit ${label}`) : `Tap to book ${label}`}
+                className="px-2.5 py-1 rounded text-xs font-medium transition-colors"
+                style={{
+                  backgroundColor: style.bg,
+                  color: style.color,
+                  border: `1px ${style.dashed ? 'dashed' : 'solid'} ${style.border}`,
+                }}>
+                {label}
               </button>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
       </div>
 
       <div style={{ opacity: sickActive ? 0.5 : 1, pointerEvents: sickActive ? 'none' : 'auto' }}>
@@ -353,7 +382,7 @@ export const ShiftEditorModal = ({
       </div>
 
       <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
-        {existingThisType && !sickActive && <GradientButton danger small onClick={handleDelete} ariaLabel={`Remove ${activeType}`}><Trash2 size={10} /></GradientButton>}
+        {hasAnyData && <GradientButton danger small onClick={clearDay} ariaLabel="Clear all bookings for this day"><Trash2 size={10} /></GradientButton>}
         <div className="flex gap-2 ml-auto">
           <GradientButton variant="secondary" small onClick={onClose}>Cancel</GradientButton>
           <GradientButton small onClick={handleSave} disabled={sickActive}><Check size={12} />Save</GradientButton>
