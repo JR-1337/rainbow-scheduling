@@ -102,12 +102,13 @@ export const ShiftEditorModal = ({
       ? totalPeriodHours - (existingShift?.hours || 0) + workHours
       : totalPeriodHours;
 
-  const showAvailabilityWarning = !sickActive && hasType('work') && (hasApprovedTimeOff || (availability && availability.available === false));
+  // Availability warning fires for ANY scheduled activity (work / meeting / pk)
+  // on a day the employee is off or has approved time off. The streak warning
+  // is work-specific (consecutive-work-day rule).
+  const hasAnyActivity = ACTIVITY_TYPES.some(hasType);
+  const showAvailabilityWarning = !sickActive && hasAnyActivity && (hasApprovedTimeOff || (availability && availability.available === false));
   const resultingStreak = !sickActive && hasType('work') ? priorWorkStreak + 1 : 0;
-  // Streak is academic if the employee isn't supposed to be there at all.
-  // Suppress it when availability/time-off already flagged the day — stacking
-  // two amber warnings on the same cell reads as duplication.
-  const showStreakWarning = !sickActive && !showAvailabilityWarning && hasType('work') && resultingStreak >= 5;
+  const showStreakWarning = !sickActive && hasType('work') && resultingStreak >= 5;
 
   // Save persists the CURRENT drafts for every booked type. Booking happens on
   // tap (immediate save of defaults); Save captures edits the user made after
@@ -267,26 +268,36 @@ export const ShiftEditorModal = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Shift" size="sm">
-      {showStreakWarning && (
-        <div className="p-2 rounded-lg mb-2 flex items-start gap-2" style={{ backgroundColor: THEME.status.warning + '15', border: `1px solid ${THEME.status.warning}60` }}>
-          <AlertTriangle size={14} style={{ color: THEME.status.warning, marginTop: 1, flexShrink: 0 }} />
-          <p className="text-xs" style={{ color: THEME.text.primary }}>
-            <strong>{employee.name}</strong> would be on their {resultingStreak === 5 ? '5th' : `${resultingStreak}th`} consecutive work day.
-            <span style={{ color: THEME.text.secondary }}> OK to save; just a heads-up.</span>
-          </p>
-        </div>
-      )}
-      {showAvailabilityWarning && (
-        <div className="p-2 rounded-lg mb-2 flex items-start gap-2" style={{ backgroundColor: THEME.status.warning + '20', border: `1px solid ${THEME.status.warning}` }}>
-          <AlertTriangle size={14} style={{ color: THEME.status.warning, marginTop: 1, flexShrink: 0 }} />
-          <p className="text-xs" style={{ color: THEME.text.primary }}>
-            {hasApprovedTimeOff
-              ? <><strong>{employee.name}</strong> has approved time off for this date.</>
-              : <><strong>{employee.name}</strong> is marked unavailable on {formatDateLong(date).split(',')[0]}s.</>}
-            <span style={{ color: THEME.text.secondary }}> You can still schedule them, but double-check first.</span>
-          </p>
-        </div>
-      )}
+      {(showAvailabilityWarning || showStreakWarning) && (() => {
+        const reasons = [];
+        if (showAvailabilityWarning) {
+          reasons.push(hasApprovedTimeOff
+            ? <>has <strong>approved time off</strong> for this date</>
+            : <>is marked <strong>unavailable</strong> on <strong>{formatDateLong(date).split(',')[0]}s</strong></>);
+        }
+        if (showStreakWarning) {
+          const ord = resultingStreak === 5 ? '5th' : `${resultingStreak}th`;
+          reasons.push(<>would be on their <strong>{ord} consecutive</strong> work day</>);
+        }
+        return (
+          <div className="p-2 rounded-lg mb-2 flex items-start gap-2" style={{ backgroundColor: THEME.status.warning + '20', border: `1px solid ${THEME.status.warning}` }}>
+            <AlertTriangle size={14} style={{ color: THEME.status.warning, marginTop: 1, flexShrink: 0 }} />
+            <div className="text-xs" style={{ color: THEME.text.primary }}>
+              {reasons.length === 1 ? (
+                <p><strong>{employee.name}</strong> {reasons[0]}.<span style={{ color: THEME.text.secondary }}> OK to save; just a heads-up.</span></p>
+              ) : (
+                <>
+                  <p className="mb-0.5"><strong>{employee.name}</strong> — heads-up:</p>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    {reasons.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                  <p className="mt-0.5" style={{ color: THEME.text.secondary }}>OK to save; just flagging.</p>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="p-2 rounded-lg mb-2" style={{ backgroundColor: THEME.bg.tertiary }}>
         <div className="flex items-center gap-2">
