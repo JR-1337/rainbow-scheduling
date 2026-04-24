@@ -21,6 +21,14 @@ Rules:
 
 ## Active
 
+- Sub-plan C (availability default 06-22) -- IN PROGRESS, accepted 2026-04-24 -- next: Sonnet 4.6 executes `/home/johnrichmond007/.claude/plans/sub-plan-C-availability-06-22.md`
+- Sub-plan A (rename FT_DEFAULT_SHIFT -> DEFAULT_SHIFT + unify PT workday default) -- queued -- drill after C merges
+- Sub-plan B (meeting default lock 14:00-16:00) -- queued -- drill after A merges
+- Sub-plan D (Apps Script backfill of untouched old-default availability rows) -- queued -- drill after C merges
+- Item 1 (Sick-mark flow) -- queued -- parent plan stashed, drill in plan mode one at a time
+- Item 2 (Floor Supervisor role) -- queued -- parent plan stashed
+- Item 3 (Admin tier 2 + job title) -- queued -- parent plan stashed
+- Parent plan file: `/home/johnrichmond007/.claude/plans/ill-tell-you-them-fancy-leaf.md` -- holds full backlog, JR-locked canonical defaults table, sub-plan split
 - Test Sarvi-batch end-to-end -- next: JR + Sarvi smoke 10 items per plan verification section (frontend LIVE, Apps Script v2.22 LIVE)
 - Phase A+B+C save-failure smoke -- next: JR Wi-Fi-off test save/delete failure paths on phone; edit-modal must stay on "Edit" (not "Add"), state must revert on failure (post-commit 7a13cab LIVE)
 - Adversarial audit Phase E -- next: pause or pick a concrete motivation. Cuts 1-15 shipped across two sessions; App.jsx 3044 -> 2526 (-518, -17%). Latest session added `utils/requests.js` helpers (matchesOfferId/matchesSwapId/errorMsg DRY across 26 sites) and `components/ScheduleStateButton.jsx` (unified mobile + desktop three-state Save/GoLive/Edit). JR said "good on code and bug fixes" -- further cuts should wait on a feature motivation. Sub-area 6 (Context provider) still parked.
@@ -56,7 +64,7 @@ Rules:
 - Missing validation: PDF UTF-8 charset + em-dash sweep + iOS `.blob` download fix not retested on Sarvi's iPad
 - Last validated: Sarvi-batch items 1/2/5/6/7/8/9/10 PASS prod Playwright 2026-04-24 (autofill toast, PK Sat 10:00/10:45, defaultSection round-trip, PDF B&W role glyphs, hidden-staff badge, Hidden collapsible, Dan/Scott hidden, Reactivate button tonal green). Items 3/4/11 SKIP per plan.
 - Last validated: PK/MTG badge relocation PASS prod Playwright 2026-04-24 at HEAD `a6200cc` (Alex Fowler Sun 2026-04-19 cell: role top-left, PK badge top-right, time+hours row clear below, zero console errors). Employee viewport not smoked (testguy inactive); structurally identical code path.
-- Last validated: Employee tooltip trim PASS build at HEAD `06ef00c` (name + mailto email only; delayed-hide on card; shrink-to-fit font; target=_blank). Prod render not yet hand-verified by JR.
+- Last validated: Employee tooltip trim PASS prod 2026-04-24 at HEAD `06ef00c` (name + mailto email only; delayed-hide on card; shrink-to-fit font; target=_blank) -- JR hand-confirmed.
 - Missing validation: no automated test suite; manual Playwright smoke only
 
 ## Completed

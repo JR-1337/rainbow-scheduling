@@ -2244,13 +2244,13 @@ function createEmployeesTab(ss) {
 
   const headers = ['id', 'name', 'email', 'password', 'phone', 'address', 'dob', 'active', 'isAdmin', 'isOwner', 'showOnSchedule', 'deleted', 'availability', 'defaultShift', 'counterPointId', 'adpNumber', 'rateOfPay', 'employmentType', 'passwordHash', 'passwordSalt', 'passwordChanged', 'defaultSection'];
   const avail = JSON.stringify({
-    sunday: { available: true, start: '11:00', end: '18:00' },
-    monday: { available: true, start: '11:00', end: '18:00' },
-    tuesday: { available: true, start: '11:00', end: '18:00' },
-    wednesday: { available: true, start: '11:00', end: '18:00' },
-    thursday: { available: true, start: '11:00', end: '19:00' },
-    friday: { available: true, start: '11:00', end: '19:00' },
-    saturday: { available: true, start: '11:00', end: '19:00' }
+    sunday:    { available: true, start: '06:00', end: '22:00' },
+    monday:    { available: true, start: '06:00', end: '22:00' },
+    tuesday:   { available: true, start: '06:00', end: '22:00' },
+    wednesday: { available: true, start: '06:00', end: '22:00' },
+    thursday:  { available: true, start: '06:00', end: '22:00' },
+    friday:    { available: true, start: '06:00', end: '22:00' },
+    saturday:  { available: true, start: '06:00', end: '22:00' }
   });
 
   const data = [

@@ -1,13 +1,13 @@
 import { toDateKey, calculateHours } from './date';
 
 const DEFAULT_AVAILABILITY = {
-  sunday: { available: true, start: '11:00', end: '18:00' },
-  monday: { available: true, start: '11:00', end: '18:00' },
-  tuesday: { available: true, start: '11:00', end: '18:00' },
-  wednesday: { available: true, start: '11:00', end: '18:00' },
-  thursday: { available: true, start: '11:00', end: '19:00' },
-  friday: { available: true, start: '11:00', end: '19:00' },
-  saturday: { available: true, start: '11:00', end: '19:00' }
+  sunday:    { available: true, start: '06:00', end: '22:00' },
+  monday:    { available: true, start: '06:00', end: '22:00' },
+  tuesday:   { available: true, start: '06:00', end: '22:00' },
+  wednesday: { available: true, start: '06:00', end: '22:00' },
+  thursday:  { available: true, start: '06:00', end: '22:00' },
+  friday:    { available: true, start: '06:00', end: '22:00' },
+  saturday:  { available: true, start: '06:00', end: '22:00' }
 };
 
 function ensureFullWeek(av) {
