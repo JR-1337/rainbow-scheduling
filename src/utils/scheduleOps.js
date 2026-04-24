@@ -72,7 +72,10 @@ export function swapShiftsBetweenEmployees(shiftsObj, empA, empB, dateA, dateB) 
 export function applyShiftMutation(shiftsObj, eventsObj, s) {
   const k = `${s.employeeId}-${s.date}`;
   const type = s.type || 'work';
-  const label = type === 'meeting' ? 'Meeting' : type === 'pk' ? 'PK event' : 'Shift';
+  const label = type === 'meeting' ? 'Meeting'
+    : type === 'pk' ? 'PK event'
+    : type === 'sick' ? 'Sick day'
+    : 'Shift';
   const touched = type === 'work' ? 'shifts' : 'events';
   let nextShifts = shiftsObj;
   let nextEvents = eventsObj;

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Star, Trash2, Check, AlertTriangle, Plus } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES, EVENT_TYPES } from '../constants';
-import { getPKDefaultTimes, MEETING_DEFAULT_TIMES } from '../utils/eventDefaults';
+import { getPKDefaultTimes, MEETING_DEFAULT_TIMES, getSickDefaultTimes } from '../utils/eventDefaults';
 import { getStoreHoursForDate } from '../App';
 import { Modal, TimePicker, GradientButton } from '../components/primitives';
 import { AnimatedNumber } from '../components/uiKit';
@@ -18,8 +18,11 @@ const getDefaultBookingTimes = (date) => {
 
 // PK defaults branch on day-of-week via getPKDefaultTimes (Saturday pre-open).
 // Meeting is locked 14:00-16:00 across all days via MEETING_DEFAULT_TIMES.
-const getDefaultEventTimes = (type = 'meeting', date = null) => {
+// Sick mirrors the existing work shift if one exists; else returns null so the
+// caller can fall through to getDefaultBookingTimes.
+const getDefaultEventTimes = (type = 'meeting', date = null, existingShift = null) => {
   if (type === 'pk') return getPKDefaultTimes(date || new Date());
+  if (type === 'sick') return getSickDefaultTimes(date, existingShift);
   return MEETING_DEFAULT_TIMES;
 };
 
@@ -34,11 +37,12 @@ export const ShiftEditorModal = ({
   employee,
   date,
   existingShift,            // work shift (or undefined)
-  existingEvents = [],      // array of meeting/pk entries (may be empty)
+  existingEvents = [],      // array of meeting/pk/sick entries (may be empty)
   totalPeriodHours,
   availability,
   hasApprovedTimeOff = false,
   priorWorkStreak = 0,
+  currentUser = null,
 }) => {
   const storeHours = getStoreHoursForDate(date);
   const isHoliday = isStatHoliday(date);
@@ -53,7 +57,10 @@ export const ShiftEditorModal = ({
     return set;
   }, [existingShift, existingEvents]);
 
-  const firstTab = presentTypes.has('work') ? 'work' : presentTypes.has('meeting') ? 'meeting' : 'pk';
+  const firstTab = presentTypes.has('work') ? 'work'
+    : presentTypes.has('meeting') ? 'meeting'
+    : presentTypes.has('pk') ? 'pk'
+    : 'sick';
   const [activeType, setActiveType] = useState(firstTab);
   const [openTabs, setOpenTabs] = useState(presentTypes);
 
@@ -75,7 +82,7 @@ export const ShiftEditorModal = ({
       };
     }
     const ev = existingEvents.find(e => e.type === type);
-    const t = getDefaultEventTimes(type, date);
+    const t = getDefaultEventTimes(type, date, existingShift) || getDefaultBookingTimes(date);
     return {
       startTime: ev?.startTime || t.start,
       endTime: ev?.endTime || t.end,
@@ -86,24 +93,35 @@ export const ShiftEditorModal = ({
   const [workDraft, setWorkDraft] = useState(seedFor('work'));
   const [meetingDraft, setMeetingDraft] = useState(seedFor('meeting'));
   const [pkDraft, setPkDraft] = useState(seedFor('pk'));
+  const [sickDraft, setSickDraft] = useState(seedFor('sick'));
 
   useEffect(() => {
     setWorkDraft(seedFor('work'));
     setMeetingDraft(seedFor('meeting'));
     setPkDraft(seedFor('pk'));
+    setSickDraft(seedFor('sick'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingShift, existingEvents, date]);
 
-  const draft = activeType === 'work' ? workDraft : activeType === 'meeting' ? meetingDraft : pkDraft;
-  const setDraft = activeType === 'work' ? setWorkDraft : activeType === 'meeting' ? setMeetingDraft : setPkDraft;
+  const draft = activeType === 'work' ? workDraft
+    : activeType === 'meeting' ? meetingDraft
+    : activeType === 'pk' ? pkDraft
+    : sickDraft;
+  const setDraft = activeType === 'work' ? setWorkDraft
+    : activeType === 'meeting' ? setMeetingDraft
+    : activeType === 'pk' ? setPkDraft
+    : setSickDraft;
 
   const shiftHours = calculateHours(draft.startTime, draft.endTime);
   const existingThisType = activeType === 'work' ? existingShift : existingEvents.find(e => e.type === activeType);
-  // Period-hours projection is only meaningful for the work tab — meeting/pk
-  // union with work so we don't have a clean per-entry delta.
+  // Period-hours projection. Work tab: add the edited shift, subtract the prior.
+  // Sick tab: zero the day (sick overrides the underlying work shift in rollups).
+  // Meeting/pk: no clean per-entry delta, show current total.
   const projectedTotal = activeType === 'work'
     ? totalPeriodHours - (existingShift?.hours || 0) + shiftHours
-    : totalPeriodHours;
+    : activeType === 'sick'
+      ? totalPeriodHours - (existingShift?.hours || 0)
+      : totalPeriodHours;
 
   const showAvailabilityWarning = activeType === 'work' && (hasApprovedTimeOff || (availability && availability.available === false));
   // S64 Stage 8.2 — advisory banner on 5th+ consecutive work day. Informational only,
@@ -152,7 +170,11 @@ export const ShiftEditorModal = ({
     setActiveType(type);
   };
 
-  const addableTypes = ['work', 'meeting', 'pk'].filter(t => !openTabs.has(t));
+  const isAdmin = !!currentUser?.isAdmin;
+  const allAddableTypes = isAdmin
+    ? ['work', 'meeting', 'pk', 'sick']
+    : ['work', 'meeting', 'pk'];
+  const addableTypes = allAddableTypes.filter(t => !openTabs.has(t));
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Shift" size="sm">
@@ -243,17 +265,21 @@ export const ShiftEditorModal = ({
       ) : (
         <div className="mb-2">
           <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>
-            {activeType === 'meeting' ? 'What is this meeting about?' : 'What product knowledge is being covered?'}
+            {activeType === 'meeting' ? 'What is this meeting about?'
+              : activeType === 'pk' ? 'What product knowledge is being covered?'
+              : 'Reason (optional)'}
           </label>
           <input value={draft.note} onChange={e => setDraft({ ...draft, note: e.target.value })}
-            placeholder={activeType === 'meeting' ? 'e.g. 1:1 review' : 'e.g. Spring denim line'}
+            placeholder={activeType === 'meeting' ? 'e.g. 1:1 review'
+              : activeType === 'pk' ? 'e.g. Spring denim line'
+              : 'e.g. flu, called in at 9am'}
             className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
             style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
         </div>
       )}
 
       <div className="p-2 rounded-lg mb-3 grid grid-cols-2 gap-2 text-center" style={{ backgroundColor: THEME.bg.tertiary }}>
-        <div><span className="text-xs" style={{ color: THEME.text.muted }}>{activeType === 'work' ? 'SHIFT' : activeType === 'meeting' ? 'MEETING' : 'PK'}</span><p className="text-lg font-bold" style={{ color: THEME.accent.cyan }}><AnimatedNumber value={shiftHours} decimals={1} suffix="h" /></p></div>
+        <div><span className="text-xs" style={{ color: THEME.text.muted }}>{activeType === 'work' ? 'SHIFT' : activeType === 'meeting' ? 'MEETING' : activeType === 'pk' ? 'PK' : 'SICK'}</span><p className="text-lg font-bold" style={{ color: THEME.accent.cyan }}><AnimatedNumber value={activeType === 'sick' ? 0 : shiftHours} decimals={1} suffix="h" /></p></div>
         <div><span className="text-xs" style={{ color: THEME.text.muted }}>PERIOD</span><p className="text-lg font-bold" style={{ color: projectedTotal >= 44 ? THEME.status.error : projectedTotal >= 40 ? THEME.status.warning : THEME.accent.cyan }}><AnimatedNumber value={projectedTotal} decimals={1} suffix="h" /></p></div>
       </div>
 
