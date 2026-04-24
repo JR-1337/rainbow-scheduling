@@ -68,27 +68,29 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, ava
                 <Star size={10} fill={THEME.task} color={THEME.task} />
               </div>
             )}
-            <span className="text-xs font-semibold truncate pr-3" style={{ color: role?.color }}>{role?.name}</span>
+            <div className="flex items-start justify-between gap-1">
+              <span className="text-xs font-semibold truncate" style={{ color: role?.color }}>{role?.name}</span>
+              {hasEvents && (
+                <div className="flex gap-0.5 shrink-0">
+                  {visibleEvents.map((ev, i) => {
+                    const et = EVENT_TYPES[ev.type];
+                    if (!et) return null;
+                    return (
+                      <span key={i}
+                        title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
+                        className="rounded px-1 text-[9px] font-semibold leading-tight"
+                        style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}` }}>
+                        {et.shortLabel}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <div className="flex items-center justify-between">
               <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
               <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>{shift.hours}h</span>
             </div>
-            {hasEvents && (
-              <div className="absolute bottom-0 right-0 flex gap-0.5 p-0.5">
-                {visibleEvents.map((ev, i) => {
-                  const et = EVENT_TYPES[ev.type];
-                  if (!et) return null;
-                  return (
-                    <span key={i}
-                      title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
-                      className="rounded px-1 text-[9px] font-semibold leading-tight"
-                      style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}` }}>
-                      {et.shortLabel}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
           </div>
         ) : eventOnly ? (
           <div className="p-1.5 h-full flex flex-col justify-between relative"
