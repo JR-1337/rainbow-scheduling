@@ -2581,3 +2581,74 @@ function _backfillShiftStartsCore_(dryRun) {
 function backfillShiftStartsDryRun() { _backfillShiftStartsCore_(true); }
 function backfillShiftStartsLive()   { _backfillShiftStartsCore_(false); }
 
+// ============================================================================
+// ONE-SHOT: widen every employee's availability to 06:00-22:00 on all days
+// marked available. Days marked `available: false` are preserved. Malformed
+// / null availability is replaced with the full 7-day 06-22 shape. Run from
+// the Apps Script editor:
+//   widenAvailabilityToMaxHoursDryRun()  -- logs, no writes
+//   widenAvailabilityToMaxHoursLive()    -- backup Employees tab, then writes
+// ============================================================================
+function _widenAvailabilityCore_(dryRun) {
+  const mode = dryRun ? 'DRY-RUN' : 'LIVE';
+  Logger.log('=== widenAvailabilityToMaxHours ' + mode + ' ===');
+  const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
+  Logger.log('Total rows: ' + employees.length);
+
+  if (!dryRun) {
+    const ss = SpreadsheetApp.getActive();
+    const src = ss.getSheetByName(CONFIG.TABS.EMPLOYEES);
+    const stamp = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), 'yyyyMMdd_HHmm');
+    const backupName = 'Employees_backup_' + stamp;
+    src.copyTo(ss).setName(backupName);
+    Logger.log('Backup tab created: ' + backupName);
+  }
+
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  let changedCount = 0, skipCount = 0;
+
+  employees.forEach(emp => {
+    let avail = null;
+    try {
+      avail = typeof emp.availability === 'string' ? JSON.parse(emp.availability) : emp.availability;
+    } catch (e) {
+      avail = null;
+    }
+
+    const out = {};
+    const changedDays = [];
+    const daysOff = [];
+
+    days.forEach(d => {
+      const cur = (avail && avail[d]) ? avail[d] : null;
+      if (cur && cur.available === false) {
+        out[d] = { available: false, start: cur.start || '06:00', end: cur.end || '22:00' };
+        daysOff.push(d);
+      } else {
+        out[d] = { available: true, start: '06:00', end: '22:00' };
+        if (!cur || cur.available !== true || cur.start !== '06:00' || cur.end !== '22:00') {
+          changedDays.push(d);
+        }
+      }
+    });
+
+    if (changedDays.length === 0) {
+      Logger.log('  row ' + emp._rowIndex + ' ' + (emp.name || '?') + ' -> ALREADY_MAX');
+      skipCount++;
+      return;
+    }
+
+    Logger.log('  row ' + emp._rowIndex + ' ' + (emp.name || '?') + ' -> WIDEN ' + changedDays.length + '/7 days' + (daysOff.length ? ' [off: ' + daysOff.join(',') + ']' : ''));
+    changedCount++;
+
+    if (!dryRun) {
+      updateCell(CONFIG.TABS.EMPLOYEES, emp._rowIndex, 'availability', JSON.stringify(out));
+    }
+  });
+
+  Logger.log('=== DONE. widen=' + changedCount + ' skip=' + skipCount + (dryRun ? ' (no writes)' : '') + ' ===');
+}
+
+function widenAvailabilityToMaxHoursDryRun() { _widenAvailabilityCore_(true); }
+function widenAvailabilityToMaxHoursLive()   { _widenAvailabilityCore_(false); }
+
