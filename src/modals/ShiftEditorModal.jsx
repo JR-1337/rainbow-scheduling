@@ -22,15 +22,20 @@ const getDefaultEventTimes = (type = 'meeting', date = null) => {
   return MEETING_DEFAULT_TIMES;
 };
 
-// The three scheduled-activity types form one gestalt group — they answer
-// "what is this employee doing?". Sick is categorically different (an absence
-// override) and lives in its own Absence section, not in this group.
+// Three peer scheduled-activity types. They answer "what is the employee doing?".
+// Sick is a separate category (absence override) and lives in its own section.
 const ACTIVITY_TYPES = ['work', 'meeting', 'pk'];
 
-// Modal for editing a single day: one Absence toggle (sick) + three activity
-// toggles (work / meeting / pk). Tap an unlit tab to book with defaults (saves
-// immediately). Tap the lit active tab again to unbook. Tap a lit non-active
-// tab to focus it for editing. Footer trash clears the whole day in one shot.
+// Modal for editing a single day:
+//   - Absence section (sick toggle) — categorically separate, amber palette.
+//   - Scheduled toggles (Work / Meeting / PK) — unified blue palette; tap is
+//     ALWAYS a decisive toggle: unlit tap books with defaults, lit tap unbooks.
+//     No intermediate "focus" step — JR's feedback: "the first press acts as
+//     a selector and only once selected it acts as a toggle."
+//   - Each booked type renders its own inline edit form (stacked). This
+//     removes the single-focus concept so users can edit any booked type
+//     without fear of unbooking the one they want to edit.
+//   - Footer trash = clear-whole-day (wipes every activity + any sick mark).
 export const ShiftEditorModal = ({
   isOpen,
   onClose,
@@ -51,14 +56,6 @@ export const ShiftEditorModal = ({
   const hasType = (type) => type === 'work'
     ? !!existingShift
     : !!existingEvents.find(e => e.type === type);
-
-  // Default active tab: the first booked activity (reading order), else work.
-  // Initialized once per modal open — do NOT reset when data changes, because
-  // tap-to-toggle mutates data and the effect would clobber the user's intent
-  // (tapping Meeting books it → effect sees work first → activeType resets to
-  // 'work' → second tap focuses instead of unbooks). The modal is re-mounted
-  // when editingShift changes in App.jsx, so initial useState covers reopens.
-  const [activeType, setActiveType] = useState(() => ACTIVITY_TYPES.find(hasType) || 'work');
 
   const seedFor = (type) => {
     if (type === 'work') {
@@ -83,7 +80,7 @@ export const ShiftEditorModal = ({
   const [meetingDraft, setMeetingDraft] = useState(seedFor('meeting'));
   const [pkDraft, setPkDraft] = useState(seedFor('pk'));
 
-  // Sick (absence) state — separate category, immediate-save toggle.
+  // Sick (absence) state — immediate-save toggle, separate category.
   const existingSick = existingEvents.find(e => e.type === 'sick');
   const [sickActive, setSickActive] = useState(!!existingSick);
   const [sickNote, setSickNote] = useState(existingSick?.note || '');
@@ -97,28 +94,23 @@ export const ShiftEditorModal = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingShift, existingEvents, date]);
 
-  const draft = activeType === 'work' ? workDraft
-    : activeType === 'meeting' ? meetingDraft
-    : pkDraft;
-  const setDraft = activeType === 'work' ? setWorkDraft
-    : activeType === 'meeting' ? setMeetingDraft
-    : setPkDraft;
-
-  const shiftHours = calculateHours(draft.startTime, draft.endTime);
-  // Period projection. Sick: day is 0 regardless of draft. Work tab: add delta.
-  // Meeting/pk: no clean per-entry delta (union-counted), show current total.
+  const workHours = calculateHours(workDraft.startTime, workDraft.endTime);
+  // Period projection: when sick, day contributes 0; otherwise reflect the
+  // current work draft's delta.
   const projectedTotal = sickActive ? totalPeriodHours
-    : activeType === 'work' ? totalPeriodHours - (existingShift?.hours || 0) + shiftHours
-    : totalPeriodHours;
+    : hasType('work')
+      ? totalPeriodHours - (existingShift?.hours || 0) + workHours
+      : totalPeriodHours;
 
-  const showAvailabilityWarning = !sickActive && activeType === 'work' && (hasApprovedTimeOff || (availability && availability.available === false));
-  const resultingStreak = !sickActive && activeType === 'work' ? priorWorkStreak + 1 : 0;
-  const showStreakWarning = !sickActive && activeType === 'work' && resultingStreak >= 5;
+  const showAvailabilityWarning = !sickActive && hasType('work') && (hasApprovedTimeOff || (availability && availability.available === false));
+  const resultingStreak = !sickActive && hasType('work') ? priorWorkStreak + 1 : 0;
+  const showStreakWarning = !sickActive && hasType('work') && resultingStreak >= 5;
 
+  // Save persists the CURRENT drafts for every booked type. Booking happens on
+  // tap (immediate save of defaults); Save captures edits the user made after
+  // the initial book.
   const handleSave = () => {
-    // Save only mutates the currently-focused activity tab. First-book happens
-    // via toggleTab (immediate save with defaults); Save persists edits.
-    if (activeType === 'work') {
+    if (hasType('work')) {
       onSave({
         employeeId: employee.id,
         employeeName: employee.name,
@@ -129,57 +121,51 @@ export const ShiftEditorModal = ({
         task: workDraft.task,
         type: 'work',
         note: '',
-        hours: shiftHours,
-      });
-    } else {
-      onSave({
-        employeeId: employee.id,
-        employeeName: employee.name,
-        date: toDateKey(date),
-        startTime: draft.startTime,
-        endTime: draft.endTime,
-        role: 'none',
-        task: '',
-        type: activeType,
-        note: draft.note,
-        hours: shiftHours,
+        hours: calculateHours(workDraft.startTime, workDraft.endTime),
       });
     }
+    ['meeting', 'pk'].forEach(type => {
+      if (hasType(type)) {
+        const draft = type === 'meeting' ? meetingDraft : pkDraft;
+        onSave({
+          employeeId: employee.id,
+          employeeName: employee.name,
+          date: toDateKey(date),
+          startTime: draft.startTime,
+          endTime: draft.endTime,
+          role: 'none',
+          task: '',
+          type,
+          note: draft.note,
+          hours: calculateHours(draft.startTime, draft.endTime),
+        });
+      }
+    });
     onClose();
   };
 
-  // Tap-to-toggle on an activity tab. Tri-state:
-  //   unlit (not booked) → book with defaults + focus
-  //   lit, not active    → focus for editing (no mutation)
-  //   lit, active        → unbook (destructive)
+  // Tap-to-toggle. No focus step, no "first press selects" surprise.
+  // Unlit → book with defaults (immediate save). Lit → unbook (immediate save).
   const toggleTab = (type) => {
-    const booked = hasType(type);
-    if (!booked) {
-      const t = type === 'work' ? getDefaultBookingTimes(date) : getDefaultEventTimes(type, date);
-      onSave({
-        employeeId: employee.id,
-        employeeName: employee.name,
-        date: toDateKey(date),
-        startTime: t.start,
-        endTime: t.end,
-        role: type === 'work' ? 'none' : 'none',
-        task: '',
-        type,
-        note: '',
-        hours: calculateHours(t.start, t.end),
-      });
-      setActiveType(type);
-    } else if (type !== activeType) {
-      setActiveType(type);
-    } else {
+    if (hasType(type)) {
       onSave({ employeeId: employee.id, date: toDateKey(date), type, deleted: true });
-      const remaining = ACTIVITY_TYPES.filter(t => t !== type && hasType(t));
-      setActiveType(remaining[0] || 'work');
+      return;
     }
+    const t = type === 'work' ? getDefaultBookingTimes(date) : getDefaultEventTimes(type, date);
+    onSave({
+      employeeId: employee.id,
+      employeeName: employee.name,
+      date: toDateKey(date),
+      startTime: t.start,
+      endTime: t.end,
+      role: 'none',
+      task: '',
+      type,
+      note: '',
+      hours: calculateHours(t.start, t.end),
+    });
   };
 
-  // Clear the whole day — every activity + any sick mark. Single destructive
-  // action for "remove everything here."
   const clearDay = () => {
     const k = toDateKey(date);
     if (existingShift) onSave({ employeeId: employee.id, date: k, type: 'work', deleted: true });
@@ -191,7 +177,6 @@ export const ShiftEditorModal = ({
 
   const hasAnyData = !!existingShift || existingEvents.length > 0;
 
-  // Sick toggle persists immediately — decisive state change, not a draft.
   const saveSick = (nextActive, noteValue) => {
     if (nextActive) {
       const t = existingShift?.startTime && existingShift?.endTime
@@ -229,6 +214,54 @@ export const ShiftEditorModal = ({
 
   const isAdmin = !!currentUser?.isAdmin;
 
+  // Render helper: the edit form for one booked activity type.
+  const renderActivityForm = (type) => {
+    if (type === 'work') {
+      return (
+        <div key="work" className="mb-2 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
+          <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: THEME.accent.blue }}>Work</p>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <TimePicker label="Start" value={workDraft.startTime} onChange={t => setWorkDraft({ ...workDraft, startTime: t })} />
+            <TimePicker label="End" value={workDraft.endTime} onChange={t => setWorkDraft({ ...workDraft, endTime: t })} />
+          </div>
+          <div className="mb-2">
+            <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Role</label>
+            <div className="grid grid-cols-3 gap-1">
+              {ROLES.map(r => (
+                <button key={r.id} onClick={() => setWorkDraft({ ...workDraft, role: r.id })}
+                  className="px-1.5 py-1 rounded text-xs font-medium"
+                  style={{ backgroundColor: workDraft.role === r.id ? r.color : THEME.bg.elevated, color: workDraft.role === r.id ? 'white' : THEME.text.primary, border: `1px solid ${workDraft.role === r.id ? r.color : THEME.border.default}` }}>
+                  {r.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Task <Star size={8} fill={THEME.task} color={THEME.task} className="inline" /></label>
+          <input value={workDraft.task} onChange={e => setWorkDraft({ ...workDraft, task: e.target.value })} placeholder="Optional..." className="w-full px-2 py-1.5 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
+        </div>
+      );
+    }
+    const draft = type === 'meeting' ? meetingDraft : pkDraft;
+    const setDraft = type === 'meeting' ? setMeetingDraft : setPkDraft;
+    const label = EVENT_TYPES[type].label;
+    const noteLabel = type === 'meeting' ? 'What is this meeting about?' : 'What product knowledge is being covered?';
+    const notePlaceholder = type === 'meeting' ? 'e.g. 1:1 review' : 'e.g. Spring denim line';
+    return (
+      <div key={type} className="mb-2 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
+        <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: THEME.accent.blue }}>{label}</p>
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <TimePicker label="Start" value={draft.startTime} onChange={t => setDraft({ ...draft, startTime: t })} />
+          <TimePicker label="End" value={draft.endTime} onChange={t => setDraft({ ...draft, endTime: t })} />
+        </div>
+        <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>{noteLabel}</label>
+        <input value={draft.note} onChange={e => setDraft({ ...draft, note: e.target.value })}
+          placeholder={notePlaceholder}
+          className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
+          style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
+      </div>
+    );
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Shift" size="sm">
       {showStreakWarning && (
@@ -262,10 +295,7 @@ export const ShiftEditorModal = ({
         </div>
       </div>
 
-      {/* ABSENCE — sick answers "is the employee here?". Visually distinct
-          from the scheduled-activity toggles below: amber palette, its own
-          container, its own label. Pattern-interrupt by design (research:
-          L0-05 common region + L0-06 reading order). */}
+      {/* ABSENCE — own container, amber palette, pattern-interrupt vs activities. */}
       {isAdmin && (
         <div className="p-2 rounded-lg mb-2"
           style={{
@@ -301,30 +331,23 @@ export const ShiftEditorModal = ({
         </div>
       )}
 
-      {/* SCHEDULED — three peer toggles with unified visual language (gestalt
-          similarity). Lit = booked (saved data). Unlit = not booked. Tap to
-          book/focus/unbook. Muted when sick is active (activity is moot). */}
+      {/* SCHEDULED — three peer toggles, unified palette. Tap = toggle (book or
+          unbook immediately). No focus state. Muted when sick is active. */}
       <div className="mb-2" style={{ opacity: sickActive ? 0.5 : 1, pointerEvents: sickActive ? 'none' : 'auto' }}>
         <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: THEME.text.muted }}>Scheduled</p>
         <div className="flex items-center gap-1 flex-wrap">
           {ACTIVITY_TYPES.map(type => {
             const booked = hasType(type);
-            const active = type === activeType;
             const label = type === 'work' ? 'Work' : EVENT_TYPES[type].label;
-            // Unified palette: one accent for "booked." Active booked gets
-            // full fill; inactive booked gets a muted fill; unbooked is a
-            // dashed outlined placeholder.
             const litColor = THEME.accent.blue;
-            const style = booked && active
+            const style = booked
               ? { bg: litColor, color: 'white', border: litColor, dashed: false }
-              : booked
-                ? { bg: litColor + '1A', color: litColor, border: litColor + '60', dashed: false }
-                : { bg: 'transparent', color: THEME.text.muted, border: THEME.border.default, dashed: true };
+              : { bg: 'transparent', color: THEME.text.muted, border: THEME.border.default, dashed: true };
             return (
               <button key={type} type="button"
                 onClick={() => toggleTab(type)}
                 aria-pressed={booked}
-                title={booked ? (active ? `Tap again to remove ${label}` : `Tap to edit ${label}`) : `Tap to book ${label}`}
+                title={booked ? `Tap to remove ${label}` : `Tap to book ${label}`}
                 className="px-2.5 py-1 rounded text-xs font-medium transition-colors"
                 style={{
                   backgroundColor: style.bg,
@@ -338,47 +361,24 @@ export const ShiftEditorModal = ({
         </div>
       </div>
 
+      {/* Per-type edit forms — stacked, shown only for booked types. */}
       <div style={{ opacity: sickActive ? 0.5 : 1, pointerEvents: sickActive ? 'none' : 'auto' }}>
-        <div className="grid grid-cols-2 gap-2">
-          <TimePicker label="Start" value={draft.startTime} onChange={t => setDraft({ ...draft, startTime: t })} />
-          <TimePicker label="End" value={draft.endTime} onChange={t => setDraft({ ...draft, endTime: t })} />
-        </div>
-
-        {activeType === 'work' ? (
-          <>
-            <div className="mb-2">
-              <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Role</label>
-              <div className="grid grid-cols-3 gap-1">
-                {ROLES.map(r => (
-                  <button key={r.id} onClick={() => setWorkDraft({ ...workDraft, role: r.id })}
-                    className="px-1.5 py-1 rounded text-xs font-medium"
-                    style={{ backgroundColor: workDraft.role === r.id ? r.color : THEME.bg.elevated, color: workDraft.role === r.id ? 'white' : THEME.text.primary, border: `1px solid ${workDraft.role === r.id ? r.color : THEME.border.default}` }}>
-                    {r.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="mb-2">
-              <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Task <Star size={8} fill={THEME.task} color={THEME.task} className="inline" /></label>
-              <input value={workDraft.task} onChange={e => setWorkDraft({ ...workDraft, task: e.target.value })} placeholder="Optional..." className="w-full px-2 py-1.5 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
-            </div>
-          </>
-        ) : (
-          <div className="mb-2">
-            <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>
-              {activeType === 'meeting' ? 'What is this meeting about?' : 'What product knowledge is being covered?'}
-            </label>
-            <input value={draft.note} onChange={e => setDraft({ ...draft, note: e.target.value })}
-              placeholder={activeType === 'meeting' ? 'e.g. 1:1 review' : 'e.g. Spring denim line'}
-              className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
-              style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
-          </div>
-        )}
+        {ACTIVITY_TYPES.filter(hasType).map(renderActivityForm)}
       </div>
 
       <div className="p-2 rounded-lg mb-3 grid grid-cols-2 gap-2 text-center" style={{ backgroundColor: THEME.bg.tertiary }}>
-        <div><span className="text-xs" style={{ color: THEME.text.muted }}>{activeType === 'work' ? 'SHIFT' : activeType === 'meeting' ? 'MEETING' : 'PK'}</span><p className="text-lg font-bold" style={{ color: THEME.accent.cyan }}><AnimatedNumber value={sickActive ? 0 : shiftHours} decimals={1} suffix="h" /></p></div>
-        <div><span className="text-xs" style={{ color: THEME.text.muted }}>PERIOD</span><p className="text-lg font-bold" style={{ color: projectedTotal >= 44 ? THEME.status.error : projectedTotal >= 40 ? THEME.status.warning : THEME.accent.cyan }}><AnimatedNumber value={projectedTotal} decimals={1} suffix="h" /></p></div>
+        <div>
+          <span className="text-xs" style={{ color: THEME.text.muted }}>TODAY</span>
+          <p className="text-lg font-bold" style={{ color: THEME.accent.cyan }}>
+            <AnimatedNumber value={sickActive ? 0 : (hasType('work') ? workHours : 0)} decimals={1} suffix="h" />
+          </p>
+        </div>
+        <div>
+          <span className="text-xs" style={{ color: THEME.text.muted }}>PERIOD</span>
+          <p className="text-lg font-bold" style={{ color: projectedTotal >= 44 ? THEME.status.error : projectedTotal >= 40 ? THEME.status.warning : THEME.accent.cyan }}>
+            <AnimatedNumber value={projectedTotal} decimals={1} suffix="h" />
+          </p>
+        </div>
       </div>
 
       <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>

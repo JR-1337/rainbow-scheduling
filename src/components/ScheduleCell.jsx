@@ -46,6 +46,18 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, ava
 
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
 
+        {/* Sick: thin red diagonal stripe across the cell (bottom-left to top-
+            right). Additive to the amber bg + struck work text — makes the
+            "not here" state unmistakable even in a glance at a dense grid.
+            Not OTR brand red (#EC3228); uses red-600 (#DC2626). */}
+        {hasSick && (
+          <div aria-hidden="true"
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'linear-gradient(to top right, transparent calc(50% - 1px), #DC2626 calc(50% - 1px), #DC2626 calc(50% + 1px), transparent calc(50% + 1px))',
+            }} />
+        )}
+
         {isFullyUnavailable && !shift && !isDeleted && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span className="text-xs" style={{ color: THEME.text.muted, fontSize: '9px' }}>Unavailable</span>

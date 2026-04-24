@@ -349,6 +349,13 @@ export const MobileAdminScheduleGrid = ({
                           opacity: approvedTimeOff ? 0.7 : isUnavailable && !shift && !hasEvents ? 0.5 : 1,
                           height: CELL_HEIGHT - 4
                         }}>
+                          {hasSick && (
+                            <div aria-hidden="true"
+                              className="absolute inset-0 pointer-events-none"
+                              style={{
+                                background: 'linear-gradient(to top right, transparent calc(50% - 1px), #DC2626 calc(50% - 1px), #DC2626 calc(50% + 1px), transparent calc(50% + 1px))',
+                              }} />
+                          )}
                           {approvedTimeOff && !shift && !hasEvents ? (
                             <div className="flex items-center justify-center h-full">
                               <span style={{ color: THEME.text.muted, fontSize: '9px' }}>Time Off</span>
