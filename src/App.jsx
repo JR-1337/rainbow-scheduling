@@ -607,11 +607,18 @@ export default function App() {
     return t;
   }, [currentDateStrs, shifts, events]);
 
-  // Count scheduled employees for a given date
+  // Count scheduled employees for a given date. Sick days drop out of the
+  // headcount — the employee isn't actually there, even though the work row
+  // stays in the sheet for audit.
   const getScheduledCount = useCallback((date) => {
     const dateStr = toDateKey(date);
-    return schedulableEmployees.filter(emp => shifts[`${emp.id}-${dateStr}`]).length;
-  }, [schedulableEmployees, shifts]);
+    return schedulableEmployees.filter(emp => {
+      if (!shifts[`${emp.id}-${dateStr}`]) return false;
+      const evs = events[`${emp.id}-${dateStr}`];
+      if (evs && evs.some(e => e.type === 'sick')) return false;
+      return true;
+    }).length;
+  }, [schedulableEmployees, shifts, events]);
   
   // Get staffing target for a given date (per-date override → weekly default → fallback)
   const getStaffingTarget = (date) => {

@@ -163,7 +163,12 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 
     const headcountCells = weekDates.map(date => {
       const dateStr = toDateKey(date);
-      const count = schedulable.reduce((n, emp) => n + (shifts[`${emp.id}-${dateStr}`] ? 1 : 0), 0);
+      const count = schedulable.reduce((n, emp) => {
+        if (!shifts[`${emp.id}-${dateStr}`]) return n;
+        const evs = events[`${emp.id}-${dateStr}`];
+        if (evs && evs.some(e => e.type === 'sick')) return n;
+        return n + 1;
+      }, 0);
       return `<td style="padding:6px;border:1px solid ${G.border};background:${G.fillZebra};text-align:center;font-size:13px;font-weight:700;color:${G.ink};">${count}</td>`;
     }).join('');
     const headcountRow = `<tr style="page-break-inside:avoid;">
