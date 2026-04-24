@@ -206,11 +206,10 @@ Rationale: Autofill was stamping `role:'none'` on every shift, forcing Sarvi to 
 Confidence: H - shipped 2026-04-18; backward-compatible (missing column falls back to 'none')
 Revisit if: Sarvi wants per-day section override (e.g. backupCashier Mon/Tue, mens Wed-Sat).
 
-## 2026-04-18 -- Bulk "Autofill PK Week" added as secondary toolbar button
-Decision: New outline button "Autofill Wk N" next to "Schedule PK" in admin toolbar. Loops active week's 7 dates, computes eligible full-timers per day via `availabilityCoversWindow`, calls `bulkCreatePKEvent` sequentially. Day-of-week default times. Skips days with no eligible. Frontend-only loop; no backend change.
-Rationale: Plan Item 3. Per-day PK entry was one button at a time; scheduler-friction fix. Secondary (outline) variant keeps it one notch below primary "Schedule PK" per button-hierarchy rule (`applied-component-patterns.md` SS 2).
-Confidence: H - shipped 2026-04-18
-Revisit if: Apps Script 7-8s/call floor makes the 7-sequence loop too slow (~50s) -- then add backend `bulkCreatePKEventWeek` for single round-trip.
+## 2026-04-18 -- Bulk "Autofill PK Week" -- REJECTED (never shipped; PK is day-specific, not weekly)
+Decision: Reverted / never shipped. Source contains only single-day "Schedule PK" modal (App.jsx:2139); no "Autofill Wk N" button exists. 2026-04-24 prod Playwright smoke confirmed absence.
+Rationale: PK sessions are scheduled for specific days (Saturday pre-open briefing, other-day post-close training), not on a 7-day sweep basis. A week-wide autofill would create PK events on days they don't belong. JR (2026-04-24): "PK's are for specific days."
+Confidence: H -- verified 2026-04-24 via source grep + prod smoke.
 
 ## 2026-04-18 -- Former Staff with shifts removed from schedule grid entirely
 Decision: `src/App.jsx` deletes the inline "Former Staff (History)" block inside the schedule grid. Deleted employees no longer appear on the schedule view even if they hold shifts in the displayed period. Backend records + shift rows preserved for audit/payroll. Restore via Manage Staff > Restore.

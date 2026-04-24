@@ -29,7 +29,7 @@ Rules:
 - CF Worker SWR cache -- next: design KV cache key from `getAllData` payload; flip `API_URL` in src/App.jsx
 - Email + distribution overhaul -- next: JR creates dedicated Gmail (e.g. rainbow-scheduling@gmail.com) to replace his personal account as sender; then revisit sender identity across MailApp calls, schedule PDF distribution, announcement emails, welcome email on new-employee create (emp-XXX default pw), Sarvi admin notifications, and any other external comms. Scope: audit every send site, standardize from-address, subject conventions, and deliverability (SPF/DKIM if custom domain later)
 - Payroll aggregator path 1 -- blocked by demo go-ahead; see Blocked
-- [PARKED, do not surface] Staff-cell action menu -- move Fill Wk / Clear Wk / PK-week controls into each employee's "Staff" cell on the schedule; add a dropdown of all staff so admin can bulk-book or clear an entire week for one picked employee from that menu. Also investigate current Fill Wk / Clear Wk behavior -- JR wants full-fill to cover everyone. Raised 2026-04-18, explore later, do not ask
+- [PARKED, do not surface] Staff-cell action menu -- move Fill Wk / Clear Wk controls into each employee's "Staff" cell on the schedule; add a dropdown of all staff so admin can bulk-book or clear an entire week for one picked employee from that menu. Also investigate current Fill Wk / Clear Wk behavior -- JR wants full-fill to cover everyone. Raised 2026-04-18, explore later, do not ask
 
 ## Blocked
 
@@ -53,10 +53,9 @@ Rules:
 - Missing validation: cut 8 (applyShiftMutation) + cut 10 (shift transfer/swap helpers) live admin-action paths not exercised -- offer/swap approve/revoke need live-test
 - Missing validation: cut 13 (errorMsg/matchesOfferId/matchesSwapId across offer+swap handlers) live admin-action paths not exercised
 - Missing validation: Sarvi iPad white-screen fixes not retested (theme.js localStorage guard + plugin-legacy)
-- Missing validation: new Backup Cash role not smoked on prod (ShiftEditorModal picker, EmployeeFormModal defaultSection, PDF legend glyph 'B')
+- Missing validation: Backup Cash live shift + ShiftEditorModal picker + PDF glyph B on live shift not yet exercised end-to-end (defaultSection picker confirmed, PDF legend B confirmed)
 - Missing validation: PDF UTF-8 charset + em-dash sweep + iOS `.blob` download fix not retested on Sarvi's iPad
-- Missing validation: PDF role-encoding system not smoked on prod
-- Missing validation: Sarvi-batch 10 items not yet hands-on tested by JR + Sarvi
+- Last validated: Sarvi-batch items 1/2/5/6/7/8/9/10 PASS prod Playwright 2026-04-24 (autofill toast, PK Sat 10:00/10:45, defaultSection round-trip, PDF B&W role glyphs, hidden-staff badge, Hidden collapsible, Dan/Scott hidden, Reactivate button tonal green). Items 3/4/11 SKIP per plan.
 - Missing validation: no automated test suite; manual Playwright smoke only
 
 ## Completed
