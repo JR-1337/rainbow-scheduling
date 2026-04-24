@@ -2380,3 +2380,110 @@ function clearAllData() {
   Logger.log('Data cleared. Employees and Settings preserved.');
 }
 
+// ============================================================================
+// ONE-SHOT: availability backfill to 06:00-22:00 on all days.
+// Only rewrites rows whose availability exactly matches a known old default.
+// Run from the Apps Script editor dropdown:
+//   backfillAvailabilityDryRun()  -- logs classifications, no writes
+//   backfillAvailabilityLive()    -- snapshots tab, then rewrites
+// ============================================================================
+const _NEW_AVAIL_SHAPE = {
+  sunday:    { available: true, start: '06:00', end: '22:00' },
+  monday:    { available: true, start: '06:00', end: '22:00' },
+  tuesday:   { available: true, start: '06:00', end: '22:00' },
+  wednesday: { available: true, start: '06:00', end: '22:00' },
+  thursday:  { available: true, start: '06:00', end: '22:00' },
+  friday:    { available: true, start: '06:00', end: '22:00' },
+  saturday:  { available: true, start: '06:00', end: '22:00' }
+};
+
+const _OLD_DEFAULT_SHAPES = [
+  {
+    label: 'v2.24-modal',
+    shape: {
+      sunday:    { available: true, start: '11:00', end: '18:00' },
+      monday:    { available: true, start: '10:00', end: '20:00' },
+      tuesday:   { available: true, start: '10:00', end: '20:00' },
+      wednesday: { available: true, start: '10:00', end: '20:00' },
+      thursday:  { available: true, start: '10:00', end: '20:00' },
+      friday:    { available: true, start: '10:00', end: '20:00' },
+      saturday:  { available: true, start: '10:00', end: '19:00' }
+    }
+  },
+  {
+    label: 'apiTransforms-seed',
+    shape: {
+      sunday:    { available: true, start: '11:00', end: '18:00' },
+      monday:    { available: true, start: '11:00', end: '18:00' },
+      tuesday:   { available: true, start: '11:00', end: '18:00' },
+      wednesday: { available: true, start: '11:00', end: '18:00' },
+      thursday:  { available: true, start: '11:00', end: '19:00' },
+      friday:    { available: true, start: '11:00', end: '19:00' },
+      saturday:  { available: true, start: '11:00', end: '19:00' }
+    }
+  }
+];
+
+function _availEquals_(a, b) {
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  return days.every(d =>
+    a && b && a[d] && b[d] &&
+    a[d].available === b[d].available &&
+    a[d].start === b[d].start &&
+    a[d].end === b[d].end
+  );
+}
+
+function _classifyAvail_(avail) {
+  if (!avail || typeof avail !== 'object') return { label: 'MALFORMED', rewrite: false };
+  if (_availEquals_(avail, _NEW_AVAIL_SHAPE)) return { label: 'ALREADY_NEW', rewrite: false };
+  for (var i = 0; i < _OLD_DEFAULT_SHAPES.length; i++) {
+    if (_availEquals_(avail, _OLD_DEFAULT_SHAPES[i].shape)) {
+      return { label: 'OLD_DEFAULT_' + _OLD_DEFAULT_SHAPES[i].label, rewrite: true };
+    }
+  }
+  return { label: 'CUSTOM', rewrite: false };
+}
+
+function _backfillAvailabilityCore_(dryRun) {
+  const mode = dryRun ? 'DRY-RUN' : 'LIVE';
+  Logger.log('=== backfillAvailability ' + mode + ' ===');
+  const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
+  Logger.log('Total rows: ' + employees.length);
+
+  if (!dryRun) {
+    const ss = SpreadsheetApp.getActive();
+    const src = ss.getSheetByName(CONFIG.TABS.EMPLOYEES);
+    const stamp = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), 'yyyyMMdd_HHmm');
+    const backupName = 'Employees_backup_' + stamp;
+    src.copyTo(ss).setName(backupName);
+    Logger.log('Backup tab created: ' + backupName);
+  }
+
+  let rewriteCount = 0;
+  let skipCount = 0;
+  employees.forEach(emp => {
+    let avail = null;
+    try {
+      avail = typeof emp.availability === 'string' ? JSON.parse(emp.availability) : emp.availability;
+    } catch (e) {
+      avail = null;
+    }
+    const c = _classifyAvail_(avail);
+    Logger.log('  row ' + emp._rowIndex + ' ' + (emp.name || '(no name)') + ' -> ' + c.label);
+    if (c.rewrite) {
+      rewriteCount++;
+      if (!dryRun) {
+        updateCell(CONFIG.TABS.EMPLOYEES, emp._rowIndex, 'availability', JSON.stringify(_NEW_AVAIL_SHAPE));
+      }
+    } else {
+      skipCount++;
+    }
+  });
+
+  Logger.log('=== DONE. rewrite=' + rewriteCount + ' skip=' + skipCount + (dryRun ? ' (no writes)' : '') + ' ===');
+}
+
+function backfillAvailabilityDryRun() { _backfillAvailabilityCore_(true); }
+function backfillAvailabilityLive()   { _backfillAvailabilityCore_(false); }
+
