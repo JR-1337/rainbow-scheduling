@@ -58,7 +58,7 @@ export { parseLocalDate, escapeHtml, THEME, TYPE, ROLES, ROLES_BY_ID };
 export { getStoreHoursForDate } from './utils/storeHoursOverrides';
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
-  User, Users, Phone, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, EyeOff, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu, BookOpen
+  User, Users, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, EyeOff, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu, BookOpen
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -232,7 +232,7 @@ export default function App() {
   
   const [inactivePanelOpen, setInactivePanelOpen] = useState(false);
   // tooltipData + handleShowTooltip + handleHideTooltip moved to hooks/useTooltip.js
-  const { tooltipData, handleShowTooltip, handleHideTooltip } = useTooltip();
+  const { tooltipData, handleShowTooltip, handleHideTooltip, handleTooltipEnter, handleTooltipLeave } = useTooltip();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [timeOffRequests, setTimeOffRequests] = useState([]);
   const [shiftOffers, setShiftOffers] = useState([]);
@@ -2489,34 +2489,27 @@ export default function App() {
       
       {/* Employee Tooltip - rendered at top level to escape stacking contexts */}
       {tooltipData && (
-        <div className="fixed p-2.5 rounded-lg shadow-2xl" style={{ top: tooltipData.pos.top, left: tooltipData.pos.left, width: 240, backgroundColor: THEME.tooltip.bg, border: `1px solid ${THEME.tooltip.border}`, boxShadow: '0 20px 50px rgba(0, 0, 0, 0.25)', zIndex: 99999 }}>
+        <div
+          className="fixed p-2.5 rounded-lg shadow-2xl"
+          style={{ top: tooltipData.pos.top, left: tooltipData.pos.left, width: 240, backgroundColor: THEME.tooltip.bg, border: `1px solid ${THEME.tooltip.border}`, boxShadow: '0 20px 50px rgba(0, 0, 0, 0.25)', zIndex: 99999 }}
+          onMouseEnter={handleTooltipEnter}
+          onMouseLeave={handleTooltipLeave}
+        >
           <div className="flex items-center gap-2 mb-2 pb-2" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
             <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: tooltipData.isDeleted ? THEME.bg.elevated : `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: tooltipData.isDeleted ? THEME.text.muted : 'white' }}>{tooltipData.employee.name.charAt(0)}</div>
-            <div className="flex-1">
-              <p className="font-semibold text-xs flex items-center gap-1" style={{ color: THEME.text.primary }}>
-                {tooltipData.employee.name} 
-                {tooltipData.employee.isAdmin && <Shield size={10} style={{ color: THEME.accent.purple }} />}
-                {tooltipData.isDeleted && <span style={{ color: THEME.text.muted }}>(Former)</span>}
-              </p>
-              <p className="text-xs font-bold" style={{ color: tooltipData.hours >= 40 ? THEME.status.error : tooltipData.hours >= 35 ? THEME.status.warning : THEME.accent.cyan }}>{tooltipData.hours.toFixed(1)}h</p>
-            </div>
+            <p className="font-semibold text-xs flex items-center gap-1 flex-1" style={{ color: THEME.text.primary }}>
+              {tooltipData.employee.name}
+              {tooltipData.employee.isAdmin && <Shield size={10} style={{ color: THEME.accent.purple }} />}
+              {tooltipData.isDeleted && <span style={{ color: THEME.text.muted }}>(Former)</span>}
+            </p>
           </div>
-          <div className="space-y-0.5 text-xs mb-2">
-            <div className="flex items-center gap-1" style={{ color: THEME.text.secondary }}><Mail size={10} />{tooltipData.employee.email}</div>
-            {tooltipData.employee.phone && <div className="flex items-center gap-1" style={{ color: THEME.text.secondary }}><Phone size={10} />{tooltipData.employee.phone}</div>}
-            {tooltipData.employee.isAdmin && <div className="flex items-center gap-1" style={{ color: THEME.accent.purple }}><Shield size={10} />Admin Access</div>}
-          </div>
-          {!tooltipData.isDeleted && (
-            <div className="pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: THEME.text.muted }}>AVAILABILITY</p>
-              <div className="grid grid-cols-2 gap-x-2 gap-y-0">
-                {days.map(d => {
-                  const av = tooltipData.employee.availability[d];
-                  return <div key={d} className="flex justify-between text-xs"><span style={{ color: av.available ? THEME.text.primary : THEME.text.muted }}>{d.slice(0,3)}</span>{av.available ? <span style={{ color: THEME.accent.cyan }}>{formatTimeShort(av.start)}-{formatTimeShort(av.end)}</span> : <span style={{ color: THEME.text.muted }}>—</span>}</div>;
-                })}
-              </div>
-            </div>
-          )}
+          <a
+            href={`mailto:${tooltipData.employee.email}`}
+            className="flex items-center gap-1 text-xs hover:underline"
+            style={{ color: THEME.text.secondary }}
+          >
+            <Mail size={10} />{tooltipData.employee.email}
+          </a>
         </div>
       )}
     </div>
