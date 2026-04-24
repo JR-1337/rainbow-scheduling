@@ -2487,3 +2487,97 @@ function _backfillAvailabilityCore_(dryRun) {
 function backfillAvailabilityDryRun() { _backfillAvailabilityCore_(true); }
 function backfillAvailabilityLive()   { _backfillAvailabilityCore_(false); }
 
+// ============================================================================
+// ONE-SHOT: rewrite existing work shifts with startTime = '11:00' to the
+// canonical per-day workday start (DEFAULT_SHIFT equivalent). Ends unchanged.
+// Future-dated only (date >= today). Run from the Apps Script editor:
+//   backfillShiftStartsDryRun()  -- logs, no writes
+//   backfillShiftStartsLive()    -- backup Shifts tab, then writes
+// ============================================================================
+const _WORKDAY_DEFAULTS = {
+  sunday:    '10:30',
+  monday:    '10:00',
+  tuesday:   '10:00',
+  wednesday: '10:00',
+  thursday:  '10:30',
+  friday:    '10:30',
+  saturday:  '10:30'
+};
+
+function _dayNameFromDateStr_(s) {
+  if (!s || typeof s !== 'string' || s.length < 10) return null;
+  const y = parseInt(s.slice(0, 4), 10);
+  const m = parseInt(s.slice(5, 7), 10);
+  const d = parseInt(s.slice(8, 10), 10);
+  if (!y || !m || !d) return null;
+  const names = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+  return names[new Date(y, m - 1, d).getDay()];
+}
+
+function _todayKey_() {
+  const tz = SpreadsheetApp.getActive().getSpreadsheetTimeZone();
+  return Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+}
+
+function _backfillShiftStartsCore_(dryRun) {
+  const mode = dryRun ? 'DRY-RUN' : 'LIVE';
+  Logger.log('=== backfillShiftStarts ' + mode + ' ===');
+  const shifts = getSheetData(CONFIG.TABS.SHIFTS);
+  const today = _todayKey_();
+  Logger.log('Total shift rows: ' + shifts.length + '. Today: ' + today);
+
+  if (!dryRun) {
+    const ss = SpreadsheetApp.getActive();
+    const src = ss.getSheetByName(CONFIG.TABS.SHIFTS);
+    const stamp = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), 'yyyyMMdd_HHmm');
+    const backupName = 'Shifts_backup_' + stamp;
+    src.copyTo(ss).setName(backupName);
+    Logger.log('Backup tab created: ' + backupName);
+  }
+
+  let rewriteCount = 0, skipCount = 0;
+  shifts.forEach(row => {
+    const type = (row.type || 'work').toString();
+    const dateStr = (row.date || '').toString().slice(0, 10);
+    const startTime = (row.startTime || '').toString();
+
+    if (type !== 'work') {
+      Logger.log('  row ' + row._rowIndex + ' ' + (row.employeeName || '?') + ' ' + dateStr + ' -> SKIP_NOT_WORK');
+      skipCount++;
+      return;
+    }
+    if (dateStr < today) {
+      Logger.log('  row ' + row._rowIndex + ' ' + (row.employeeName || '?') + ' ' + dateStr + ' -> SKIP_PAST');
+      skipCount++;
+      return;
+    }
+    if (startTime !== '11:00') {
+      Logger.log('  row ' + row._rowIndex + ' ' + (row.employeeName || '?') + ' ' + dateStr + ' start=' + startTime + ' -> SKIP_NOT_11');
+      skipCount++;
+      return;
+    }
+    const dayName = _dayNameFromDateStr_(dateStr);
+    if (!dayName) {
+      Logger.log('  row ' + row._rowIndex + ' date=' + dateStr + ' -> SKIP_MALFORMED');
+      skipCount++;
+      return;
+    }
+    const newStart = _WORKDAY_DEFAULTS[dayName];
+    if (newStart === '11:00') {
+      Logger.log('  row ' + row._rowIndex + ' ' + dateStr + ' -> SKIP (target also 11:00)');
+      skipCount++;
+      return;
+    }
+    Logger.log('  row ' + row._rowIndex + ' ' + (row.employeeName || '?') + ' ' + dateStr + ' (' + dayName + ') -> REWRITE_11_TO_' + newStart);
+    rewriteCount++;
+    if (!dryRun) {
+      updateCell(CONFIG.TABS.SHIFTS, row._rowIndex, 'startTime', newStart);
+    }
+  });
+
+  Logger.log('=== DONE. rewrite=' + rewriteCount + ' skip=' + skipCount + (dryRun ? ' (no writes)' : '') + ' ===');
+}
+
+function backfillShiftStartsDryRun() { _backfillShiftStartsCore_(true); }
+function backfillShiftStartsLive()   { _backfillShiftStartsCore_(false); }
+
