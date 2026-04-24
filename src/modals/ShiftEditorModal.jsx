@@ -2,35 +2,25 @@ import { useState, useEffect, useMemo } from 'react';
 import { Star, Trash2, Check, AlertTriangle, Plus } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES, EVENT_TYPES } from '../constants';
-import { getPKDefaultTimes } from '../utils/eventDefaults';
+import { getPKDefaultTimes, MEETING_DEFAULT_TIMES } from '../utils/eventDefaults';
 import { getStoreHoursForDate } from '../App';
 import { Modal, TimePicker, GradientButton } from '../components/primitives';
 import { AnimatedNumber } from '../components/uiKit';
 import { toDateKey, formatDateLong, calculateHours } from '../utils/date';
-import { isStatHoliday, FT_DEFAULT_SHIFT } from '../utils/storeHours';
+import { isStatHoliday, DEFAULT_SHIFT } from '../utils/storeHours';
 import { getDayName } from '../utils/date';
 
-const getDefaultBookingTimes = (date, employee) => {
-  if (employee?.employmentType === 'full-time') {
-    const dayName = getDayName(date).toLowerCase();
-    const ft = FT_DEFAULT_SHIFT[dayName];
-    if (ft) return { start: ft.start, end: ft.end };
-  }
-  const storeHours = getStoreHoursForDate(date);
-  return { start: storeHours.open, end: storeHours.close };
+const getDefaultBookingTimes = (date) => {
+  const dayName = getDayName(date).toLowerCase();
+  const d = DEFAULT_SHIFT[dayName];
+  return { start: d.start, end: d.end };
 };
 
 // PK defaults branch on day-of-week via getPKDefaultTimes (Saturday pre-open).
-// Meeting defaults to the next full hour from now (or 14:00 if that's already past).
+// Meeting is locked 14:00-16:00 across all days via MEETING_DEFAULT_TIMES.
 const getDefaultEventTimes = (type = 'meeting', date = null) => {
   if (type === 'pk') return getPKDefaultTimes(date || new Date());
-  const now = new Date();
-  let hour = now.getHours() + 1;
-  if (hour < 10 || hour > 17) hour = 14;
-  const pad = (n) => String(n).padStart(2, '0');
-  const start = `${pad(hour)}:00`;
-  const end = `${pad(hour + 2)}:00`;
-  return { start, end };
+  return MEETING_DEFAULT_TIMES;
 };
 
 // S61 — Tabbed editor. Admins land on the tab that already has data (work first,
@@ -52,7 +42,7 @@ export const ShiftEditorModal = ({
 }) => {
   const storeHours = getStoreHoursForDate(date);
   const isHoliday = isStatHoliday(date);
-  const defaultTimes = getDefaultBookingTimes(date, employee);
+  const defaultTimes = getDefaultBookingTimes(date);
 
   // Derive which tabs to show and which is active.
   const presentTypes = useMemo(() => {
@@ -76,7 +66,7 @@ export const ShiftEditorModal = ({
   // cross-contaminate.
   const seedFor = (type) => {
     if (type === 'work') {
-      const t = getDefaultBookingTimes(date, employee);
+      const t = getDefaultBookingTimes(date);
       return {
         startTime: existingShift?.startTime || t.start,
         endTime: existingShift?.endTime || t.end,

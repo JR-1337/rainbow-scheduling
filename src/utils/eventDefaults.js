@@ -1,3 +1,6 @@
+// Meeting default locked to 14:00-16:00 across all days.
+export const MEETING_DEFAULT_TIMES = { start: '14:00', end: '16:00' };
+
 // PK defaults: Saturday is a pre-open briefing (10:00-10:45); other days are
 // post-close training blocks (18:00-20:00). Accept either a Date or YYYY-MM-DD
 // string; parse as local wall-clock so ISO dates don't drift across timezones.

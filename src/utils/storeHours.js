@@ -17,7 +17,8 @@ export const STORE_HOURS = {
   saturday: { open: '11:00', close: '19:00' },
 };
 
-export const FT_DEFAULT_SHIFT = {
+// Unified workday default for both FT and PT employees (was FT_DEFAULT_SHIFT).
+export const DEFAULT_SHIFT = {
   sunday:    { start: '10:30', end: '18:00' },
   monday:    { start: '10:00', end: '18:00' },
   tuesday:   { start: '10:00', end: '18:00' },
