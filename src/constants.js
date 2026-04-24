@@ -13,7 +13,7 @@ export const ROLES = [
 export const ROLES_BY_ID = Object.fromEntries(ROLES.map(r => [r.id, r]));
 
 // S61 — Orthogonal shift types. Not a role entry; a shift row carries `type` + `role`
-// independently. Meeting/PK entries set role='none' and render with the neutral palette.
+// independently. Meeting/PK/Sick entries set role='none' and render with the neutral palette.
 export const EVENT_TYPES = {
   meeting: {
     id: 'meeting',
@@ -30,6 +30,14 @@ export const EVENT_TYPES = {
     bg: THEME.event.pkBg,
     text: THEME.event.pkText,
     border: THEME.event.pkBorder,
+  },
+  sick: {
+    id: 'sick',
+    label: 'Sick',
+    shortLabel: 'SICK',
+    bg: THEME.event.sickBg,
+    text: THEME.event.sickText,
+    border: THEME.event.sickBorder,
   },
 };
 
