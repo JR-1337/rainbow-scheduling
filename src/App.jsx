@@ -1417,6 +1417,17 @@ export default function App() {
     />
   );
 
+  // Logo click returns admin to "home": schedule tab, current pay period, week 1,
+  // scrolled to top. Stateful (not a full reload) so unsaved drafts/modals the
+  // admin may have in flight don't get wiped.
+  const goHome = () => {
+    setActiveTab('schedule');
+    setMobileAdminTab('schedule');
+    setActiveWeek(1);
+    setPeriodIndex(CURRENT_PERIOD_INDEX);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // ═══════════════════════════════════════════════════════════════════════════
   // MOBILE ADMIN VIEW
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1432,10 +1443,10 @@ export default function App() {
         <header className="sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: 'none', zIndex: 100 }}>
           {/* Row 1: Centered RAINBOW logo (hamburger removed - bottom nav "More" owns the drawer) */}
           <div className="flex items-center justify-center px-3 pt-3 pb-2" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>
-            <a href="/" style={{ textAlign: 'center', textDecoration: 'none' }}>
+            <button type="button" onClick={goHome} aria-label="Home" style={{ textAlign: 'center', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
               <p style={{ color: THEME.text.muted, fontSize: '8px', letterSpacing: '0.2em' }}>OVER THE</p>
               <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '16px', letterSpacing: '0.12em', lineHeight: 1 }}>RAINBOW</p>
-            </a>
+            </button>
           </div>
 
           {/* Row 2: Period nav centered */}
@@ -1930,7 +1941,7 @@ export default function App() {
       <header className={`px-4 py-2 sticky top-0 ${pendingRequestCount > 0 ? 'ambient-pending' : ''}`} style={{ backgroundColor: THEME.bg.secondary, borderBottom: `1px solid ${THEME.border.default}`, zIndex: 100, boxShadow: THEME.shadow.cardSm }}>
         <div className="max-w-[1400px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <a href="/"><Logo /></a>
+            <button type="button" onClick={goHome} aria-label="Home" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}><Logo /></button>
             <div className="h-8 w-px" style={{ backgroundColor: THEME.border.default }} />
             <div className="flex items-center gap-2">
               <button onClick={() => setPeriodIndex(periodIndex - 1)} aria-label="Previous pay period" className="p-2 rounded-lg hover:scale-105 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary }}><ChevronLeft size={14} /></button>

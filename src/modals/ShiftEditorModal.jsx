@@ -104,7 +104,10 @@ export const ShiftEditorModal = ({
 
   const showAvailabilityWarning = !sickActive && hasType('work') && (hasApprovedTimeOff || (availability && availability.available === false));
   const resultingStreak = !sickActive && hasType('work') ? priorWorkStreak + 1 : 0;
-  const showStreakWarning = !sickActive && hasType('work') && resultingStreak >= 5;
+  // Streak is academic if the employee isn't supposed to be there at all.
+  // Suppress it when availability/time-off already flagged the day — stacking
+  // two amber warnings on the same cell reads as duplication.
+  const showStreakWarning = !sickActive && !showAvailabilityWarning && hasType('work') && resultingStreak >= 5;
 
   // Save persists the CURRENT drafts for every booked type. Booking happens on
   // tap (immediate save of defaults); Save captures edits the user made after

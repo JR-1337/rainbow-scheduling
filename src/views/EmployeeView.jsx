@@ -340,12 +340,15 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
         
         {/* Mobile Header - Sticky */}
         <header className="sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: 'none', zIndex: 100 }}>
-          {/* Row 1: Centered RAINBOW logo (hamburger + bell removed - bottom nav owns those destinations) */}
+          {/* Row 1: Centered RAINBOW logo — tap to return to current period. */}
           <div className="flex items-center justify-center px-3 pt-3 pb-2" style={{ fontFamily: "'Josefin Sans', sans-serif" }}>
-            <div style={{ textAlign: 'center' }}>
+            <button type="button"
+              onClick={() => { onPeriodChange(CURRENT_PERIOD_INDEX); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              aria-label="Home"
+              style={{ textAlign: 'center', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
               <p style={{ color: THEME.text.muted, fontSize: '8px', letterSpacing: '0.2em' }}>OVER THE</p>
               <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '16px', letterSpacing: '0.12em', lineHeight: 1 }}>RAINBOW</p>
-            </div>
+            </button>
           </div>
 
           {/* Row 2: Period nav centered, bigger */}
@@ -654,9 +657,14 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
       <header className="px-4 py-2 sticky top-0" style={{ backgroundColor: THEME.bg.secondary, borderBottom: `1px solid ${THEME.border.default}`, zIndex: 100, boxShadow: THEME.shadow.cardSm }}>
         <div className="max-w-[1400px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Logo />
+            <button type="button"
+              onClick={() => { onPeriodChange(CURRENT_PERIOD_INDEX); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              aria-label="Home"
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+              <Logo />
+            </button>
             <div className="h-8 w-px" style={{ backgroundColor: THEME.border.default }} />
-            
+
             {/* Period Navigation */}
             <div className="flex items-center gap-2">
               <button 
