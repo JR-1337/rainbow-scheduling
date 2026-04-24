@@ -229,6 +229,11 @@ Lesson: Include derived fields (hours, computed keys) in save payload even if fr
 Context: Adding meeting/pk events without `hours` in batchSaveShifts payload.
 Affirmations: 0
 
+## [PROJECT] -- Opus 4.7 plans, Sonnet 4.6 executes
+Lesson: For non-trivial multi-file changes, spawn an Opus 4.7 subagent to produce the detailed plan; spawn a Sonnet 4.6 subagent to execute it. Sonnet does both in the same session only when a model flag prevents spawning Opus (e.g. current session running in Sonnet only mode).
+Context: JR stated 2026-04-23 "I'm gonna have opus 4.7 do the thinking and sonnet executing detailed plans" after EnterPlanMode confusion. Explicitly: "opus 4.7 plans the code and does the system 2 thinking and then a sonnet 4.6 sub agent executes the very specific plan."
+Affirmations: 0
+
 ## Workflow and process
 
 ## [PROJECT] -- Push and confirm deploy before handing JR a phone-smoke checklist
@@ -254,7 +259,8 @@ Affirmations: 0
 ## [PROJECT] -- Follow approved plan verbatim
 Lesson: Do not ask "bundle or split?" or "what's next?" mid-execution. If ambiguous, re-read plan file; do not re-ask JR.
 Context: Plan sign-off removes decisions from the loop. Re-asking wastes context and erodes trust.
-Affirmations: 1
+Affirmations: 2
+-- GRADUATE to root adapter at next audit --
 
 ## [PROJECT] -- One clarifying question per directive
 Lesson: Ask at most one, only on the actual unresolved axis. "Audit the file" means audit the file.
