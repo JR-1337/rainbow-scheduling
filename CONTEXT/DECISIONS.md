@@ -29,15 +29,45 @@ Rules:
 - ASCII operators only.
 -->
 
-## 2026-04-24 -- Sick shift type with compliance-layer absence semantics
-Decision: Added `sick` as a fourth shift type alongside `work`/`meeting`/`pk`. Admin-only: ShiftEditorModal exposes `+ Sick` tab gated on `currentUser.isAdmin`. Sick is stored as an event overlay on (employee, date); the underlying work row stays intact in the Shifts sheet for audit. Every compliance computation routes around sick days so the schedule reflects actual coverage. Intercepts: `computeDayUnionHours` (src/utils/timemath.js) short-circuits to 0 on any sick entry; `getEmpHours` fast-path also skips; `computeConsecutiveWorkDayStreak` takes optional `sickLookup` (sick breaks the streak); `getScheduledCount` (App.jsx:608) filters sick-day employees out of headcount; PDF weekly headcount reducer (src/pdf/generate.js:164) applies the same filter. `getSickDefaultTimes` mirrors the existing work shift's start/end; falls through to DEFAULT_SHIFT weekday defaults when none. Theme tokens: amber `sickBg #FEF3EC / sickText #9A3412 / sickBorder #F59E0B` off OTR accent rotation and off pk/meeting greys. Hours card in ShiftEditorModal displays `SICK 0h` to match the rollup semantic. Backend unchanged (generic type handling confirmed end-to-end). 5 commits ec184df -> f41537e.
-Rationale: JR 2026-04-24: "when he isn't actually there" - sick must propagate through weekly hours, ESA 44hr flag, staffing targets, and consecutive-days streak. Work row preservation keeps the original "who was scheduled" record for payroll/audit. Compliance intercept at the compute layer (not on the row) means one change point covers getEmpHours, email, PDF totals, and the 44hr flag (which reads `totalPeriodHours={getEmpHours(...)}` in the modal). Admin-only gate: employees don't have modal access today, belt-and-suspenders for the future.
-Confidence: H -- verified 2026-04-24 localhost Playwright: Sarvi Mon 04-20 marked sick, weekly total dropped 57.0h -> 47.0h, Mon headcount dropped 12 -> 11, amber SICK badge rendered, work row preserved. Prod smoke pending deploy.
-Rejected alternatives:
-- Delete the work shift when sick marked -- rejected; loses audit trail of original schedule intent.
-- Zero `hours` field on the work row instead of compute-layer override -- rejected; `computeDayUnionHours` uses start/end interval union, not the `hours` field, so zeroing it wouldn't flow; would need a second flag anyway.
-- Employee self-report sick in v1 -- rejected; Phase 1 is admin-only, employee surface is Sick v2 and needs request/approve flow.
-- Sick as a boolean flag on the work row -- rejected; breaks the EVENT_TYPES generic render and requires per-site branching everywhere.
+## 2026-04-24 -- ShiftEditorModal redesign (absence toggle + peer activity toggles)
+Decision: Shipped the sick shift type, then iterated the modal through JR feedback into a toggle-based design that separates absence from activity. SUPERSEDES the earlier sick-as-tab design (commit d6a83b2 DECISIONS entry) which stacked sick as a peer tab next to work/meeting/pk.
+
+Final shape (HEAD c012e1d):
+- **Absence section** (top, admin-only): amber-bordered container with Thermometer icon + "Mark as sick"/"Called in sick" label + switch. Switch persists immediately (tap = save/delete). Reason input commits on blur. Amber palette (sickBg #FEF3EC / sickText #9A3412 / sickBorder #F59E0B) — deliberate pattern-interrupt vs the blue scheduled activities below.
+- **Scheduled toggles** (middle): three peer buttons Work / Meeting / PK in a unified blue palette (gestalt similarity — they're all "scheduled activity"). Tap-always-toggles: unlit tap books with type defaults (immediate save), lit tap unbooks (immediate save). No focus/select intermediate step. Each booked type renders its own inline edit form (stacked) with its time pickers + type-specific fields (role/task for work; note for meeting/pk) — no single-focus `activeType` gate.
+- **Hours cards**: TODAY + PERIOD; sick zeroes TODAY.
+- **Footer**: red trash (clearDay) wipes work + all events + sick in one pass; Cancel closes; Save persists all booked drafts.
+- **Cell treatment**: when sick is present, cell bg flips to amber sickBg, role/time/hours text renders struck-through + muted, AND a thin red diagonal stripe (#DC2626, red-600, NOT OTR brand red) runs bottom-left-to-top-right. Three cues stacked = unmistakable "not here" even at a glance across a dense grid. Applied in ScheduleCell (desktop admin) + MobileAdminView.
+- **Unified warning**: one amber box above the toggles. Fires when the employee is marked unavailable / has approved time off for ANY scheduled activity (work/meeting/pk, not just work), and/or when a work booking would put them on a 5+ consecutive-day streak. One reason → inline line; multiple → bulleted list with specific parts bolded (weekday name, ordinal, "unavailable", "approved time off", "Nth consecutive").
+
+Compliance layer (unchanged from first sick-mark pass): `computeDayUnionHours` short-circuits to 0 on any sick entry; `getEmpHours` fast path skips sick days; `computeConsecutiveWorkDayStreak` takes optional `sickLookup` to break the streak; `getScheduledCount` (App.jsx) + PDF headcount reducer (src/pdf/generate.js) both drop sick-day employees. ESA 44hr flag auto-picks up because it reads `totalPeriodHours={getEmpHours(...)}`.
+
+Backend unchanged (generic on `type` column). Admin gate on Absence section + backend `verifyAuth(true)` on all shift writes = belt-and-suspenders.
+
+Stack: 13 commits ec184df..c012e1d.
+
+Rationale:
+- JR rejected sick-as-tab: "the buttons for work meeting or pk is one thing. sick is another thing. it's listed as if it's the same and the whole type of work looks sloppy UI." Gestalt similarity (Creative-Partner L0-05) says same-function items should look alike; sick is different-function so it needs pattern-interrupt.
+- JR rejected focus-before-toggle: "the first press acts as a selector and only once selected it acts as a toggle. if pk is highlighted, I have to select meeting and then click again to delete the pk." Fix was to remove the focus gate and show each booked type's form inline simultaneously.
+- JR rejected the faint sick badge: "the sick doesn't say sick anymore. maybe a thin line diagonal through the card in a specific red shade?" Red diagonal stripe is additive to the amber bg + struck work text = three redundant cues.
+- Work row preservation keeps "who was originally scheduled" for payroll/audit; hours zero-out via compute-layer override, not by mutating the row.
+
+Bugs found and fixed during iteration (captured for next session's anti-patterns):
+- `projectedTotal` double-subtracted work hours when sick was already saved (totalPeriodHours already excluded the day via getEmpHours sick-guard) → PERIOD showed "-8h" for an 8h-only employee. Fix: check `sickAlreadyPresent` before subtracting.
+- `activeType` useEffect reset clobbered user's tap intent on book (book PK → effect saw work first → activeType reset to 'work' → second tap on PK focused instead of unbooked). Fix: remove setActiveType from the data-change effect; initialize once via useState initializer. Later: removed `activeType` entirely when stacking forms.
+- `existingShift` was passed as `editingShift.shift` (frozen snapshot captured on cell click) — Meeting/PK read live `events[...]` so they toggled; Work read the frozen snapshot so taps had no effect ("can't deselect"). Fix: both modal call sites now read live from `shifts[${empId}-${date}]`.
+
+Confidence: H -- verified 2026-04-24 localhost Playwright at each stage (book meeting, unbook meeting, book work, unbook work, toggle sick on, toggle sick off, red diagonal renders, warnings consolidate). Prod smoke pending JR phone-test on latest HEAD c012e1d.
+
+Rejected alternatives along the way:
+- Sick as a tab peer to work/meeting/pk -- rejected by JR (gestalt category error).
+- × remove button on each activity tab -- rejected by JR ("no x. make the button a toggle").
+- Tap to focus / double-tap to unbook -- rejected by JR (selector-then-toggle surprise).
+- Per-tab lit palette (blue for work, grey for meeting, darker grey for pk) -- rejected; use unified accent.blue for all three (similarity within the group, differentiation via label only).
+- Delete the work shift when sick -- rejected; loses audit trail.
+- Zero the work row's `hours` field -- rejected; computeDayUnionHours uses intervals not `hours`, would require a second flag anyway.
+- Employee self-report sick in v1 -- deferred to Sick v2 (needs request/approve flow).
+- Stale `<a href="/">` logo that full-reloads -- rejected in favor of stateful `goHome` button that resets view/period/week without blowing away in-flight work.
 
 ## 2026-04-24 -- Widen existing employees' availability (preserve day-off)
 Decision: After `backfillAvailabilityDryRun` showed 0 rewrites and 23 CUSTOM out of 26 rows (Sarvi had customized every employee's availability beyond the two encoded old-default shapes), shipped a second one-shot `widenAvailabilityToMaxHoursDryRun`/`Live` in `7d64893`. For each day: `available: false` stays off (preserves day-off intent); `available: true` or malformed gets overwritten to `06:00-22:00`. Ran live 2026-04-24 13:43 -- 26/26 widened, backup tab `Employees_backup_20260424_1343` created, day-off flags preserved (Sarvi Sun, Lauren/Christina Sun-only, Matt/Emily/Nancy weekends-only, etc.). All four backfill code blocks removed from Code.gs in `0d2c2bd` (-273 lines) after successful run.
