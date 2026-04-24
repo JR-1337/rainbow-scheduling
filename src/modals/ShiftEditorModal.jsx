@@ -57,10 +57,13 @@ export const ShiftEditorModal = ({
     return set;
   }, [existingShift, existingEvents]);
 
-  const firstTab = presentTypes.has('work') ? 'work'
+  // Sick takes first-tab priority when present: it's an override (employee isn't
+  // there), so the delete affordance should be one tap away on reopen. Pk/meeting
+  // keep the previous work-first order because they're overlays on the work shift.
+  const firstTab = presentTypes.has('sick') ? 'sick'
+    : presentTypes.has('work') ? 'work'
     : presentTypes.has('meeting') ? 'meeting'
-    : presentTypes.has('pk') ? 'pk'
-    : 'sick';
+    : 'pk';
   const [activeType, setActiveType] = useState(firstTab);
   const [openTabs, setOpenTabs] = useState(presentTypes);
 
@@ -115,12 +118,15 @@ export const ShiftEditorModal = ({
   const shiftHours = calculateHours(draft.startTime, draft.endTime);
   const existingThisType = activeType === 'work' ? existingShift : existingEvents.find(e => e.type === activeType);
   // Period-hours projection. Work tab: add the edited shift, subtract the prior.
-  // Sick tab: zero the day (sick overrides the underlying work shift in rollups).
+  // Sick tab: if sick is already saved for this day, totalPeriodHours already
+  // excludes it (getEmpHours sick-guard) — show as-is. If sick is being ADDED,
+  // subtract the work shift's hours since the day is about to zero out.
   // Meeting/pk: no clean per-entry delta, show current total.
+  const sickAlreadyPresent = existingEvents.some(e => e.type === 'sick');
   const projectedTotal = activeType === 'work'
     ? totalPeriodHours - (existingShift?.hours || 0) + shiftHours
     : activeType === 'sick'
-      ? totalPeriodHours - (existingShift?.hours || 0)
+      ? (sickAlreadyPresent ? totalPeriodHours : totalPeriodHours - (existingShift?.hours || 0))
       : totalPeriodHours;
 
   const showAvailabilityWarning = activeType === 'work' && (hasApprovedTimeOff || (availability && availability.available === false));

@@ -311,6 +311,7 @@ export const MobileAdminScheduleGrid = ({
                     const firstEvent = hasEvents ? cellEvents[0] : null;
                     const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
                     const eventOnly = !shift && hasEvents;
+                    const hasSick = cellEvents.some(ev => ev.type === 'sick');
 
                     const approvedTimeOff = timeOffRequests.some(r =>
                       r.email === emp.email && r.status === 'approved' &&
@@ -333,12 +334,14 @@ export const MobileAdminScheduleGrid = ({
                           cursor: isEditMode ? 'pointer' : 'default'
                         }}>
                         <div className="h-full rounded-md relative overflow-hidden" style={{
-                          backgroundColor: approvedTimeOff ? THEME.text.muted + '15'
+                          backgroundColor: hasSick ? EVENT_TYPES.sick.bg
+                            : approvedTimeOff ? THEME.text.muted + '15'
                             : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
                             : shift ? role?.color + '25'
                             : eventOnly ? firstEventType.bg
                             : THEME.bg.tertiary,
-                          border: `1px solid ${approvedTimeOff ? THEME.text.muted + '30'
+                          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border
+                            : approvedTimeOff ? THEME.text.muted + '30'
                             : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
                             : shift ? role?.color + '50'
                             : eventOnly ? firstEventType.border
@@ -357,7 +360,7 @@ export const MobileAdminScheduleGrid = ({
                           ) : shift ? (
                             <div className="p-1 h-full flex flex-col justify-between">
                               <div className="flex items-start justify-between gap-1">
-                                <span className="font-semibold truncate" style={{ color: role?.color, fontSize: '10px' }}>{role?.name}</span>
+                                <span className="font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : role?.color, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '10px' }}>{role?.name}</span>
                                 {hasEvents && (
                                   <div className="flex gap-0.5 shrink-0">
                                     {cellEvents.length >= 3 ? (
@@ -388,10 +391,10 @@ export const MobileAdminScheduleGrid = ({
                                 )}
                               </div>
                               <div>
-                                <span style={{ color: THEME.text.secondary, fontSize: '9px' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
+                                <span style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '9px' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="font-medium" style={{ color: THEME.text.muted, fontSize: '9px' }}>{shift.hours}h</span>
+                                <span className="font-medium" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '9px' }}>{hasSick ? '0' : shift.hours}h</span>
                                 {shift.task && (
                                   <Star size={8} fill={THEME.task} color={THEME.task} />
                                 )}

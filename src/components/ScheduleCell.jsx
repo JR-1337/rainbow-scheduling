@@ -26,6 +26,9 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, ava
   const eventOnly = !shift && hasEvents;
   const firstEvent = hasEvents ? visibleEvents[0] : null;
   const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
+  // Sick overrides the day: cell reads as "not here", work row is struck through
+  // but still visible for audit.
+  const hasSick = visibleEvents.some(ev => ev.type === 'sick');
   const isHoliday = isStatHoliday(date);
   const shading = getAvailabilityShading(availability, storeHours);
   const isFullyUnavailable = !availability.available;
@@ -37,8 +40,8 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, ava
     <>
       <div onClick={isClickable ? onClick : undefined} className={`h-14 rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
         style={{
-          backgroundColor: shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
-          border: `1px solid ${shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`
+          backgroundColor: hasSick ? EVENT_TYPES.sick.bg : shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
+          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border : shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`
         }}>
 
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
@@ -69,7 +72,7 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, ava
               </div>
             )}
             <div className="flex items-start justify-between gap-1">
-              <span className="text-xs font-semibold truncate" style={{ color: role?.color }}>{role?.name}</span>
+              <span className="text-xs font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : role?.color, textDecoration: hasSick ? 'line-through' : 'none' }}>{role?.name}</span>
               {hasEvents && (
                 <div className="flex gap-0.5 shrink-0">
                   {visibleEvents.map((ev, i) => {
@@ -88,8 +91,8 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, ava
               )}
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
-              <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>{shift.hours}h</span>
+              <span className="text-xs" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
+              <span className="text-xs font-medium" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none' }}>{hasSick ? '0' : shift.hours}h</span>
             </div>
           </div>
         ) : eventOnly ? (
