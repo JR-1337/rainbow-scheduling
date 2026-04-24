@@ -1778,7 +1778,7 @@ export default function App() {
               onSave={saveShift}
               employee={editingShift.employee}
               date={editingShift.date}
-              existingShift={editingShift.shift}
+              existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]}
               existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []}
               totalPeriodHours={getEmpHours(editingShift.employee.id)}
               availability={editingShift.employee.availability?.[getDayName(editingShift.date)]}
@@ -2428,7 +2428,7 @@ export default function App() {
           toDateKey(prior),
           (id, k) => (events[`${id}-${k}`] || []).some(e => e.type === 'sick')
         );
-        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} employee={editingShift.employee} date={editingShift.date} existingShift={editingShift.shift} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
+        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
       })()}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <InactiveEmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
