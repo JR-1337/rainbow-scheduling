@@ -224,9 +224,9 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                 const today = date.toDateString() === new Date().toDateString();
                 const hol = isStatHoliday(date);
                 return (
-                  <th key={i} style={{ 
+                  <th key={i} style={{
                     width: CELL_WIDTH, minWidth: CELL_WIDTH, height: HEADER_HEIGHT,
-                    backgroundColor: today ? THEME.accent.purple + '20' : hol ? THEME.status.warning + '15' : THEME.bg.tertiary,
+                    background: today ? `linear-gradient(${THEME.accent.purple}20, ${THEME.accent.purple}20), ${THEME.bg.tertiary}` : hol ? `linear-gradient(${THEME.status.warning}15, ${THEME.status.warning}15), ${THEME.bg.tertiary}` : THEME.bg.tertiary,
                     borderBottom: today ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : `1px solid ${THEME.border.default}`,
                     padding: '2px 4px', textAlign: 'center', verticalAlign: 'middle'
                   }}>
@@ -258,7 +258,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                   {/* Name cell - frozen left */}
                   <td style={{
                     width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH,
-                    backgroundColor: isMe ? THEME.accent.purple + '20' : THEME.bg.secondary,
+                    background: isMe ? `linear-gradient(${THEME.accent.purple}20, ${THEME.accent.purple}20), ${THEME.bg.secondary}` : THEME.bg.secondary,
                     borderRight: `1px solid ${THEME.border.default}`,
                     borderBottom: `1px solid ${THEME.border.subtle}`,
                     borderLeft: isMe ? `3px solid ${THEME.accent.purple}` : 'none',
