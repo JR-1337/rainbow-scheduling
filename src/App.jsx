@@ -2505,11 +2505,15 @@ export default function App() {
           </div>
           <a
             href={`mailto:${tooltipData.employee.email}`}
-            className="flex items-start gap-1 text-xs hover:underline"
-            style={{ color: THEME.text.secondary, wordBreak: 'break-all' }}
+            className="flex items-center gap-1 hover:underline"
+            style={{
+              color: THEME.text.secondary,
+              fontSize: tooltipData.employee.email.length > 32 ? `${Math.max(9, 12 - Math.ceil((tooltipData.employee.email.length - 32) / 3))}px` : '12px',
+              whiteSpace: 'nowrap'
+            }}
           >
-            <Mail size={10} className="flex-shrink-0 mt-0.5" />
-            <span className="min-w-0">{tooltipData.employee.email}</span>
+            <Mail size={10} className="flex-shrink-0" />
+            {tooltipData.employee.email}
           </a>
         </div>
       )}
