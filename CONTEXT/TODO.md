@@ -21,7 +21,6 @@ Rules:
 
 ## Active
 
-- Item 1 (Sick-mark flow) -- queued in backlog
 - Item 2 (Floor Supervisor role) -- queued in backlog
 - Item 3 (Admin tier 2 + job title) -- queued in backlog
 - JR to delete `Employees_backup_20260424_1343` tab from Sheet once satisfied with widen result -- optional cleanup
@@ -63,6 +62,8 @@ Rules:
 - Last validated: Employee tooltip trim PASS prod 2026-04-24 at HEAD `06ef00c` (name + mailto email only; delayed-hide on card; shrink-to-fit font; target=_blank) -- JR hand-confirmed.
 - Last validated: defaults unification shipped 2026-04-24 at HEAD `06f0027`. `npm run build` PASS at each step. Grep `FT_DEFAULT_SHIFT` in src/ = zero code hits. Commits c7cd101 (rename + PT unify + meeting lock), 4bd9310 (availability 06-22), 06f0027 (formatTimeShort minute fix).
 - Last validated: `widenAvailabilityToMaxHoursLive` ran 2026-04-24 13:43 -- 26/26 rows widened, day-off flags preserved (Sarvi Sun off; Lauren/Christina Sun-only; Matt/Emily/Nancy weekends-only; etc.). Backup tab `Employees_backup_20260424_1343` created.
+- Last validated: sick-mark feature shipped 2026-04-24 across 5 commits (HEAD `f41537e`). localhost Playwright smoke PASS: admin clicked Sarvi Mon 04-20 work cell (None 10a-8p 10h, 57h weekly), added `+ Sick` tab with reason "flu", saved; cell now renders amber `SICK 10a` badge + tooltip "Sick 10a-8p — flu"; Sarvi weekly total dropped 57.0h -> 47.0h; Mon headcount dropped 12 -> 11; work row preserved. No console errors.
+- Missing validation: prod smoke of sick-mark end-to-end (admin save + hours/headcount/streak/PDF/email intact) -- pending push + Vercel redeploy.
 - Deferred: `backfillShiftStartsDryRun`/`Live` never run -- JR determined redundant given clear+autofill flow (autofill skips PT; Sarvi rebooks PT manually with new 10:00/10:30 prefill from `c7cd101`).
 - Missing validation: prod smoke of PT click-to-book prefill (should be 10:00 or 10:30 per day, was 11:00) -- shipped `c7cd101` on Vercel, hand-confirm pending.
 - Missing validation: prod smoke of meeting prefill (should be 14:00-16:00, was "next full hour") -- shipped `c7cd101`.
@@ -71,11 +72,10 @@ Rules:
 
 ## Completed
 
+- [2026-04-24] Sick shift type shipped end-to-end (5 commits: `ec184df` -> `f41537e`). EVENT_TYPES registry + amber theme tokens (sickBg #FEF3EC / sickText #9A3412 / sickBorder #F59E0B). `computeDayUnionHours` short-circuits to 0 on any sick entry; `getEmpHours` fast-path skips sick days; `computeConsecutiveWorkDayStreak` takes optional sickLookup (wired at both App.jsx call sites); `getScheduledCount` + PDF headcount reducer both drop sick-day employees. `getSickDefaultTimes` mirrors existing work shift. ShiftEditorModal gains admin-gated `+ Sick` tab via `currentUser.isAdmin`; sick seeds from work-shift times; hours card displays `SICK 0h`; projectedTotal sick branch subtracts the work shift's hours; note placeholder "e.g. flu, called in at 9am". `applyShiftMutation` toast label gains "Sick day". Backend unchanged (generic type handling confirmed). Build PASS at each phase commit. localhost Playwright smoke validated hours + headcount + badge.
 - [2026-04-24] Widen existing employees' availability to 06-22 (day-off preserved). Added `widenAvailabilityToMaxHoursDryRun`/`Live` to `backend/Code.gs` (`7d64893`), ran live at 13:43 (26/26 rows widened, backup tab `Employees_backup_20260424_1343` created). Then removed all four backfill code blocks from Code.gs to keep the file clean (`0d2c2bd`, -273 lines). File back to 2381 lines; JR re-pasted. Replaces the initially-shipped `backfillAvailabilityDryRun`/`Live` which matched zero rows because Sarvi had customized every row.
 - [2026-04-24] formatTimeShort minute rendering fix (`06f0027`). `src/utils/date.js:30` previously dropped minutes, rendering 10:30-19:00 as "10-7" on the schedule grid. Now returns "10:30a-7p" for half-hour times and keeps compact "10a-7p" for on-the-hour. All 35 call sites (ScheduleCell, MobileAdminView, MobileEmployeeView, etc.) pick up the fix via shared util. Build PASS.
 - [2026-04-24] Defaults unification: workday prefill + meeting lock (`c7cd101`). Renamed `FT_DEFAULT_SHIFT` -> `DEFAULT_SHIFT` in `src/utils/storeHours.js`. `ShiftEditorModal.getDefaultBookingTimes` now always returns `DEFAULT_SHIFT[day]` for FT + PT (dropped storeHours fallback + `employee` param). `createShiftFromAvailability` fallback also uses `DEFAULT_SHIFT` for PT (dropped `STORE_HOURS` import in scheduleOps). New `MEETING_DEFAULT_TIMES = { start: '14:00', end: '16:00' }` in `src/utils/eventDefaults.js`; `getDefaultEventTimes` meeting branch returns the constant (dropped "next full hour" dynamic logic). `npm run build` PASS, grep `FT_DEFAULT_SHIFT` in src/ = zero hits. Prod smoke pending.
-- [2026-04-24] One-shot Shifts-tab backfill for booked 11:00 starts (`6782f6b`). Two editor-only Apps Script functions appended to `backend/Code.gs` after `backfillAvailabilityLive`: `backfillShiftStartsDryRun` + `backfillShiftStartsLive`. Rewrites future-dated (date >= today) work-type shifts where `startTime === '11:00'` to `_WORKDAY_DEFAULTS[dayName].start` (10:00 Mon-Wed, 10:30 Sun/Thu-Sat). Ends unchanged. Backs up Shifts tab as `Shifts_backup_YYYYMMDD_HHmm`. Not yet run by JR.
-- [2026-04-24] One-shot Employees-tab availability backfill (`06507ab`). Two editor-only Apps Script functions appended to `backend/Code.gs` after `clearAllData`: `backfillAvailabilityDryRun` + `backfillAvailabilityLive`. Rewrites rows whose availability exactly matches one of two known old defaults (v2.24-modal shape: Mon-Fri 10-20, Sat 10-19, Sun 11-18; apiTransforms-seed shape: Sun-Wed 11-18, Thu-Sat 11-19) to 06:00-22:00 all days. Customized rows skipped. Backs up Employees tab as `Employees_backup_YYYYMMDD_HHmm`. Not yet run by JR.
 <!-- TEMPLATE
 ## Active
 - [task] -- next step: [concrete action]

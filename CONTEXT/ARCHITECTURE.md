@@ -36,7 +36,7 @@ Rules:
 - `src/MobileEmployeeView.jsx` -- mobile components: MobileAlertsSheet, MobileBottomNav, MobileBottomSheet
 - `src/MobileAdminView.jsx` -- admin mobile view
 - `src/theme.js` -- THEME / TYPE / OTR accent palette
-- `src/constants.js` -- ROLES / ROLES_BY_ID / REQUEST_STATUS_COLORS / OFFER/SWAP_STATUS_COLORS+LABELS / EVENT_TYPES / PRIMARY_CONTACT_EMAIL
+- `src/constants.js` -- ROLES / ROLES_BY_ID / REQUEST_STATUS_COLORS / OFFER/SWAP_STATUS_COLORS+LABELS / EVENT_TYPES (work/meeting/pk/sick) / PRIMARY_CONTACT_EMAIL
 - `src/components/` -- LoginScreen, ColumnHeaderEditor, ScheduleCell, EmployeeRow, CollapsibleSection, primitives (Modal/GradientButton/Input/Checkbox/TimePicker/TooltipButton), uiKit (haptic/AnimatedNumber/StaffingBar/ScheduleSkeleton/TaskStarTooltip/GradientBackground/Logo), Button, AdaptiveModal, MobileScheduleActionSheet
 - `src/hooks/` -- useFocusTrap, useUnsavedWarning, useDismissOnOutside, useAuth, useToast, useAnnouncements, useGuardedMutation, useTooltip
 - `src/panels/` -- admin + employee list panels
@@ -47,7 +47,7 @@ Rules:
 - `src/utils/format.js` -- parseLocalDate, formatDate, escapeHtml, stripEmoji
 - `src/utils/date.js` -- pure date/time helpers (toDateKey, parseTime, formatTimeShort, ...)
 - `src/utils/storeHours.js` -- STAT_HOLIDAYS_2026 / STORE_HOURS / DEFAULT_SHIFT (FT+PT unified) / isStatHoliday (pure)
-- `src/utils/eventDefaults.js` -- getPKDefaultTimes (Sat 10:00-10:45 else 18:00-20:00) / MEETING_DEFAULT_TIMES (14:00-16:00 locked)
+- `src/utils/eventDefaults.js` -- getPKDefaultTimes (Sat 10:00-10:45 else 18:00-20:00) / MEETING_DEFAULT_TIMES (14:00-16:00 locked) / getSickDefaultTimes (mirrors existing work shift)
 - `src/utils/storeHoursOverrides.js` -- module-level override refs + getStoreHoursForDate (re-exported from App.jsx for legacy importers; parked sub-area-6 Context refactor will replace)
 - `src/utils/payPeriod.js` / `src/utils/requests.js` / `src/utils/api.js` / `src/utils/eventDefaults.js`
 - `src/utils/employeeSort.js` -- four-bucket display order (Sarvi, admins, FT, PT) + bucket-transition dividers; single source of truth for admin/employee/mobile/PDF rendering
@@ -81,10 +81,11 @@ Rules:
 ## Shift State
 
 - `shifts[${empId}-${date}]` = work shift object (scalar)
-- `events[${empId}-${date}]` = array of meeting/pk entries
+- `events[${empId}-${date}]` = array of meeting/pk/sick entries
 - `publishedShifts` / `publishedEvents` = LIVE-gated copies for employee view
-- Union hours via `computeDayUnionHours` (overlap counts once)
-- Backend key `${empId}-${date}-${type}` keeps work/meeting/pk distinct rows
+- Union hours via `computeDayUnionHours` (overlap counts once; sick entry short-circuits day to 0)
+- Sick day intercepts (2026-04-24): `getEmpHours` fast-path skips, `getScheduledCount` drops the employee, `computeConsecutiveWorkDayStreak` sickLookup breaks the run, PDF headcount reducer filters sick
+- Backend key `${empId}-${date}-${type}` keeps work/meeting/pk/sick distinct rows
 
 ## Data Model
 
