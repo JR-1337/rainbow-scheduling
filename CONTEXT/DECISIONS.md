@@ -29,6 +29,38 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-24 -- Widen existing employees' availability (preserve day-off)
+Decision: After `backfillAvailabilityDryRun` showed 0 rewrites and 23 CUSTOM out of 26 rows (Sarvi had customized every employee's availability beyond the two encoded old-default shapes), shipped a second one-shot `widenAvailabilityToMaxHoursDryRun`/`Live` in `7d64893`. For each day: `available: false` stays off (preserves day-off intent); `available: true` or malformed gets overwritten to `06:00-22:00`. Ran live 2026-04-24 13:43 -- 26/26 widened, backup tab `Employees_backup_20260424_1343` created, day-off flags preserved (Sarvi Sun, Lauren/Christina Sun-only, Matt/Emily/Nancy weekends-only, etc.). All four backfill code blocks removed from Code.gs in `0d2c2bd` (-273 lines) after successful run.
+Rationale: Narrow exact-match backfill is the safe default (never wipe customized values) but matches nothing when Sarvi has edited every row. Widen-with-day-off-preserved walks the right line: widens the start/end to the canonical 06-22 window while respecting intentional unavailability. One-shots deleted post-run because editor-only script pollution grows Code.gs unbounded.
+Confidence: H -- verified 2026-04-24 13:43 via live Execution log (26 widen, 0 skip).
+Rejected alternatives:
+- Full overwrite to 7-days-available 06-22 -- rejected (option B); would wipe legitimate day-off marks (Lauren Sun-only, weekend-only PTs).
+- Keep the one-shots in Code.gs for re-use -- rejected; file hygiene wins over hypothetical future need. Git history preserves the code if needed.
+- Narrow backfill via a third old-default shape grep -- rejected; no consistent third shape exists across 23 customized rows.
+
+## 2026-04-24 -- formatTimeShort renders minutes when non-zero
+Decision: `src/utils/date.js:30` `formatTimeShort(t)` now returns `10:30a` for half-hour starts/ends and keeps the compact `10a` form for on-the-hour. Prior implementation read only the hour, rendering 10:30-19:00 as `10-7` on the schedule grid. All 35 call sites (ScheduleCell, MobileAdminView, MobileEmployeeView, etc.) pick up the fix via the shared util.
+Rationale: JR 2026-04-24: "it renders the hour but not the minute ... so it looks wrong." Bug surfaced after PT default shifts unified to `DEFAULT_SHIFT` which uses 10:30 on Sun + Thu-Sat. Fix is minimal: one-line change to the util, no caller changes.
+Confidence: H -- verified 2026-04-24: build PASS at `06f0027` on origin/main. Prod render by JR to be spot-confirmed.
+
+## 2026-04-24 -- Unified workday default DEFAULT_SHIFT (FT + PT) + meeting lock 14:00-16:00
+Decision: `FT_DEFAULT_SHIFT` renamed to `DEFAULT_SHIFT` in `src/utils/storeHours.js`. Both FT and PT now use the same per-day defaults (Sun 10:30-18, Mon-Wed 10-18, Thu-Sat 10:30-19) when a per-employee `defaultShift` is absent. `ShiftEditorModal.getDefaultBookingTimes` drops the FT/PT branch and the `STORE_HOURS` fallback; `employee` parameter removed. `createShiftFromAvailability` in scheduleOps.js drops the `isFT` branch; both employment types fall through to `DEFAULT_SHIFT[day]`; `STORE_HOURS` import dropped from that file. New constant `MEETING_DEFAULT_TIMES = { start: '14:00', end: '16:00' }` in `src/utils/eventDefaults.js`; `getDefaultEventTimes` meeting branch returns it (dropped "next full hour from now" dynamic logic); PK branch unchanged.
+Rationale: JR locked the canonical defaults 2026-04-24: workday = current FT_DEFAULT_SHIFT values for both FT and PT, PK unchanged, meeting fixed to a specific pair. The rename stops lying about scope. Unifying PT removes the store-hours prefill that was making Sarvi book PT at 11:00. Static meeting default matches JR's "very specific" preference and aligns with the 14:00-16:00 start.
+Confidence: H -- verified 2026-04-24: build PASS at `c7cd101`; grep `FT_DEFAULT_SHIFT` in src/ zero hits. Prod smoke pending (PT click-to-book + meeting prefill + autofill).
+Rejected alternatives:
+- Per-employee migration to set `defaultShift` individually -- rejected; a shared constant is one source of truth.
+- Keep PT on availability width -- rejected; causes Sarvi to manually correct every PT click-to-book.
+- Keep meeting as dynamic "next full hour" -- rejected; JR wants deterministic prefill.
+
+## 2026-04-24 -- Availability default 06:00-22:00 + one-shot backfills (editor-only Apps Script)
+Decision: Default availability for a newly-created employee is now `{ available: true, start: '06:00', end: '22:00' }` for all 7 days. Set in 3 places: `src/modals/EmployeeFormModal.jsx` primary (dropped `PK_FRIENDLY_DEFAULTS` + `STORE_HOURS` import), `src/utils/apiTransforms.js` `DEFAULT_AVAILABILITY` fallback, `backend/Code.gs:2246-2254` seed template (inert for live sheets but aligned). Two new editor-only Apps Script functions in `backend/Code.gs`: `backfillAvailabilityDryRun` / `backfillAvailabilityLive` (rewrite availability for rows matching one of two known old default shapes -- v2.24-modal Mon-Fri 10-20/Sat 10-19/Sun 11-18, apiTransforms-seed Sun-Wed 11-18/Thu-Sat 11-19 -- to the new 06-22 shape; customized rows skipped). `backfillShiftStartsDryRun` / `backfillShiftStartsLive` (future-dated work-type shifts where `startTime === '11:00'` -> `_WORKDAY_DEFAULTS[day].start` 10:00/10:30; ends unchanged; past shifts and meeting/PK rows skipped). Both pairs back up the source tab as `<Tab>_backup_YYYYMMDD_HHmm` via `SpreadsheetApp.copyTo` before writing.
+Rationale: Availability is the outer eligibility window, not the booking window. Widest reasonable default means Sarvi only narrows when a real constraint exists; booking hours stay controlled by `DEFAULT_SHIFT` / per-employee `defaultShift`. Backfills needed because existing employees still carry old default shapes and their booked shifts start at 11:00 from the pre-unify PT prefill. Exact-match classification leaves customized rows alone.
+Confidence: H -- verified 2026-04-24: build PASS at `4bd9310` (code-side) + `06507ab` + `6782f6b` (Apps Script appends, brace-balanced). Backfills not yet run by JR -- dry-run log will confirm shape detection before live run.
+Rejected alternatives:
+- Helper text under the availability grid explaining "widest by default" -- rejected; modal stays clean (JR).
+- Bulk-overwrite all rows regardless of current value -- rejected; customized rows would lose intentional narrowing.
+- End-time backfill on existing shifts -- rejected for this pass; starts-only keeps hours-math predictable.
+
 ## 2026-04-24 -- Employee hover tooltip trimmed to name + mailto email
 Decision: Desktop employee-name hover tooltip (App.jsx ~line 2491) shows only name (+ admin shield, Former badge) and a single email row wrapped in `<a href="mailto:...">` with `target="_blank" rel="noopener noreferrer"`. Dropped: hours badge, phone row, admin-access text row, 7-day availability grid. `useTooltip` hook (src/hooks/useTooltip.js) gains 180ms delayed hide plus `handleTooltipEnter` / `handleTooltipLeave` exports so the card's own onMouseEnter/onMouseLeave can cancel the pending hide while cursor traverses from row into the card. Email uses length-based font-size step-down (12px default, 1px smaller per ~3 chars beyond 32, floor 9px) and `whiteSpace: nowrap` so long addresses shrink to fit the 240px card on one line.
 Rationale: JR 2026-04-24: "doesnt need to show their availability... just the name and the email which you should be able to scroll to and click if you keep your mouse over the tooltip card." Availability visible on the grid + edit view; phone + admin-access row redundant. Wrap-on-overflow (tried first, `f9fedef`) looked messy; shrink-to-fit font keeps single-line read. target=_blank so the mail client opens without navigating the app tab.

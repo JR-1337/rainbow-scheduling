@@ -24,7 +24,7 @@ Rules:
 ## Components
 
 - Frontend -- React 18 + Vite + Tailwind + Lucide -- `src/`
-- Backend -- Google Apps Script -- `backend/Code.gs` (~2350 lines, v2.24.0 live)
+- Backend -- Google Apps Script -- `backend/Code.gs` (~2583 lines, v2.25.0 live + four editor-only backfills appended 2026-04-24)
 - Data -- Google Sheets (5 tabs) -- schema in `docs/schemas/sheets-schema.md`
 - Deploy -- Vercel auto on push (frontend) + Apps Script manual (backend)
 - Email -- MailApp as "OTR Scheduling"
@@ -46,7 +46,8 @@ Rules:
 - `src/email/build.js` -- plaintext email body builder
 - `src/utils/format.js` -- parseLocalDate, formatDate, escapeHtml, stripEmoji
 - `src/utils/date.js` -- pure date/time helpers (toDateKey, parseTime, formatTimeShort, ...)
-- `src/utils/storeHours.js` -- STAT_HOLIDAYS_2026 / STORE_HOURS / FT_DEFAULT_SHIFT / isStatHoliday (pure)
+- `src/utils/storeHours.js` -- STAT_HOLIDAYS_2026 / STORE_HOURS / DEFAULT_SHIFT (FT+PT unified) / isStatHoliday (pure)
+- `src/utils/eventDefaults.js` -- getPKDefaultTimes (Sat 10:00-10:45 else 18:00-20:00) / MEETING_DEFAULT_TIMES (14:00-16:00 locked)
 - `src/utils/storeHoursOverrides.js` -- module-level override refs + getStoreHoursForDate (re-exported from App.jsx for legacy importers; parked sub-area-6 Context refactor will replace)
 - `src/utils/payPeriod.js` / `src/utils/requests.js` / `src/utils/api.js` / `src/utils/eventDefaults.js`
 - `src/utils/employeeSort.js` -- four-bucket display order (Sarvi, admins, FT, PT) + bucket-transition dividers; single source of truth for admin/employee/mobile/PDF rendering
