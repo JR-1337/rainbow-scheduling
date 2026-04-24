@@ -587,13 +587,16 @@ export default function App() {
 
   // S61 — hours count work + meeting + pk, but overlaps are union-counted.
   // Fast path: day has only a work shift (no events). Slow path: events present,
-  // merge all intervals for the day and sum the union.
+  // merge all intervals for the day and sum the union. Sick days short-circuit
+  // to 0 regardless of the underlying work shift — the employee wasn't there.
   const getEmpHours = useCallback((id) => {
     let t = 0;
     for (let i = 0; i < currentDateStrs.length; i++) {
       const key = `${id}-${currentDateStrs[i]}`;
       const work = shifts[key];
       const evs = events[key];
+      const hasSick = evs && evs.some(e => e.type === 'sick');
+      if (hasSick) continue;
       if (!evs || evs.length === 0) {
         if (work) t += work.hours || 0;
       } else {
@@ -1755,7 +1758,12 @@ export default function App() {
         {/* Shift Editor Modal (reused from desktop) */}
         {editingShift && (() => {
           const prior = new Date(editingShift.date); prior.setDate(prior.getDate() - 1);
-          const priorStreak = computeConsecutiveWorkDayStreak((id, k) => !!shifts[`${id}-${k}`], editingShift.employee.id, toDateKey(prior));
+          const priorStreak = computeConsecutiveWorkDayStreak(
+            (id, k) => !!shifts[`${id}-${k}`],
+            editingShift.employee.id,
+            toDateKey(prior),
+            (id, k) => (events[`${id}-${k}`] || []).some(e => e.type === 'sick')
+          );
           return (
             <ShiftEditorModal
               isOpen
@@ -2406,7 +2414,12 @@ export default function App() {
       <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} suggestedPassword={editingEmp ? undefined : `emp-${String(employees.length + 1).padStart(3, '0')}`} />
       {editingShift && (() => {
         const prior = new Date(editingShift.date); prior.setDate(prior.getDate() - 1);
-        const priorStreak = computeConsecutiveWorkDayStreak((id, k) => !!shifts[`${id}-${k}`], editingShift.employee.id, toDateKey(prior));
+        const priorStreak = computeConsecutiveWorkDayStreak(
+          (id, k) => !!shifts[`${id}-${k}`],
+          editingShift.employee.id,
+          toDateKey(prior),
+          (id, k) => (events[`${id}-${k}`] || []).some(e => e.type === 'sick')
+        );
         return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} employee={editingShift.employee} date={editingShift.date} existingShift={editingShift.shift} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} priorWorkStreak={priorStreak} />;
       })()}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />

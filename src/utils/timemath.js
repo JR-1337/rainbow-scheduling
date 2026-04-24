@@ -32,6 +32,10 @@ export function mergeIntervals(intervals) {
 // any stale row that only has pre-computed hours.
 export function computeDayUnionHours(entries) {
   if (!entries || entries.length === 0) return 0;
+  // Sick overrides the day: any sick entry zeros the total so rollups reflect
+  // time actually worked, not time originally scheduled. Work row stays in the
+  // sheet for audit; compliance reads through this helper.
+  if (entries.some(e => e && e.type === 'sick')) return 0;
   const good = [];
   let fallbackHours = 0;
   entries.forEach(e => {
@@ -74,7 +78,9 @@ export function availabilityCoversWindow(availability, dateStr, startHHMM, endHH
 // (inclusive of uptoDate) on which the employee has a work-type shift. Used by
 // the ShiftEditor consecutive-days advisory. ESA isn't enforced — informational only.
 // `workShiftLookup(empId, dateStr)` should return truthy when a work shift exists.
-export function computeConsecutiveWorkDayStreak(workShiftLookup, empId, uptoDateStr) {
+// Optional `sickLookup(empId, dateStr)` breaks the streak on a sick day — the
+// employee wasn't actually at work, so the run resets.
+export function computeConsecutiveWorkDayStreak(workShiftLookup, empId, uptoDateStr, sickLookup = null) {
   if (!uptoDateStr) return 0;
   let streak = 0;
   const cur = new Date(uptoDateStr + 'T12:00:00');
@@ -83,6 +89,7 @@ export function computeConsecutiveWorkDayStreak(workShiftLookup, empId, uptoDate
     const m = String(cur.getMonth() + 1).padStart(2, '0');
     const d = String(cur.getDate()).padStart(2, '0');
     const key = `${y}-${m}-${d}`;
+    if (sickLookup && sickLookup(empId, key)) break;
     if (workShiftLookup(empId, key)) {
       streak += 1;
       cur.setDate(cur.getDate() - 1);
