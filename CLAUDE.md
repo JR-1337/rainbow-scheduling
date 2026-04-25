@@ -16,7 +16,7 @@ All durable project state lives under `CONTEXT/`:
 - `CONTEXT/DECISIONS.md` -- durable decisions with confidence and rationale
 - `CONTEXT/ARCHITECTURE.md` -- current structure snapshot
 - `CONTEXT/LESSONS.md` -- durable preferences, pitfalls, corrections
-- `CONTEXT/handoffs/*.md` -- one current handoff, deleted on next session's end
+- `CONTEXT/handoffs/*.md` -- last 3 handoffs retained; older move to `CONTEXT/archive/handoff-archive/` (see `~/context-system/HANDOFF.md` Step 6)
 - `CONTEXT/archive/` -- historical material with learning value (e.g., S42 audit)
 
 Cross-project lessons live in `~/.context-system/CONTEXT/LESSONS.md` and are read only when `[GLOBAL]`-scoped context is relevant.
