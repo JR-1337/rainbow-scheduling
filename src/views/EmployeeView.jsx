@@ -774,7 +774,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
                 const today = date.toDateString() === new Date().toDateString();
                 const hol = isStatHoliday(date);
                 return (
-                  <div key={toDateKey(date)} className="p-1 text-center" style={{ backgroundColor: today ? THEME.accent.purple + '20' : hol ? THEME.status.warning + '15' : THEME.bg.tertiary, borderBottom: today ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : 'none' }}>
+                  <div key={toDateKey(date)} className="p-1 text-center" style={{ background: today ? `linear-gradient(${THEME.accent.purple}20, ${THEME.accent.purple}20), ${THEME.bg.tertiary}` : hol ? `linear-gradient(${THEME.status.warning}15, ${THEME.status.warning}15), ${THEME.bg.tertiary}` : THEME.bg.tertiary, borderBottom: today ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : 'none' }}>
                     <p className="font-semibold text-xs" style={{ color: today ? THEME.accent.purple : hol ? THEME.status.warning : THEME.text.primary }}>{getDayName(date).slice(0, 3)}</p>
                     <p className="text-sm font-bold" style={{ color: THEME.text.primary }}>{date.getDate()}</p>
                     <p className="text-xs" style={{ color: THEME.text.muted }}>{formatTimeShort(sh.open)}-{formatTimeShort(sh.close)}</p>

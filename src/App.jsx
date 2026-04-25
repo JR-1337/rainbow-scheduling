@@ -2205,10 +2205,10 @@ export default function App() {
                     const isPast = dateStr < toDateKey(new Date());
                     const canEdit = isCurrentPeriodEditMode && !isPast;
                     return (
-                      <div 
+                      <div
                         key={dateStr}
                         className={`p-1 text-center ${canEdit ? 'cursor-pointer hover:opacity-80' : ''}`}
-                        style={{ backgroundColor: today ? THEME.accent.purple + '20' : hol ? THEME.status.warning + '15' : THEME.bg.tertiary, borderBottom: today ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : 'none' }}
+                        style={{ background: today ? `linear-gradient(${THEME.accent.purple}20, ${THEME.accent.purple}20), ${THEME.bg.tertiary}` : hol ? `linear-gradient(${THEME.status.warning}15, ${THEME.status.warning}15), ${THEME.bg.tertiary}` : THEME.bg.tertiary, borderBottom: today ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : 'none' }}
                         onClick={() => canEdit && setEditingColumnDate(date)}
                         title={canEdit ? 'Click to edit hours & target' : isPast ? 'Past dates cannot be edited' : 'Switch to Edit Mode to change'}
                       >

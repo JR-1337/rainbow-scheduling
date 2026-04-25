@@ -229,7 +229,11 @@ export const MobileAdminScheduleGrid = ({
                     style={{
                       position: 'sticky', top: 0, zIndex: 20,
                       width: CELL_WIDTH, minWidth: CELL_WIDTH, height: HEADER_HEIGHT,
-                      backgroundColor: isToday ? THEME.accent.purple + '20' : hol ? THEME.status.warning + '15' : THEME.bg.tertiary,
+                      background: isToday
+                        ? `linear-gradient(${THEME.accent.purple}20, ${THEME.accent.purple}20), ${THEME.bg.tertiary}`
+                        : hol
+                          ? `linear-gradient(${THEME.status.warning}15, ${THEME.status.warning}15), ${THEME.bg.tertiary}`
+                          : THEME.bg.tertiary,
                       borderBottom: isToday ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : `1px solid ${THEME.border.default}`,
                       padding: '2px', textAlign: 'center',
                       cursor: canEditHeader ? 'pointer' : 'default',
