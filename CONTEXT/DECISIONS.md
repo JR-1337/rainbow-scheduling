@@ -29,6 +29,24 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-25 -- Admin Tier 1 inherits the title field (DRY render via hasTitle helper)
+Decision: Admin (Tier 1) employees now use the same `title` rendering pattern as admin2 -- title input + validation in EmployeeFormModal, neutral cell render (text.primary on bg.tertiary, default border), no PDF glyph or 2px border, static Title chip in ShiftEditorModal, self-view shows title in EmployeeView and MobileEmployeeView, tooltip shows Title line. Shipped via shared predicate `hasTitle(emp) = !!emp && (emp.isAdmin || emp.adminTier === 'admin2')` at `src/utils/employeeRender.js`. Replaces every `adminTier === 'admin2'` render branch with the helper across 8 files (ScheduleCell, MobileAdminView, pdf/generate, ShiftEditorModal, EmployeeView, MobileEmployeeView, App.jsx tooltip, EmployeeFormModal). Tooltip Shield color stays per-tier (admin1 purple, admin2 blue) -- the only visual divergence between tiers.
+Rationale: JR ask 2026-04-25 -- "i need admin1 to have the same title functionality as the admin2. admin1 gets titles instead of roles." Concrete reason: at OTR, "Admin" (Tier 1) is also a leader (asst manager, lead buyer) who doesn't man a role section -- they need an identity label, same as admin2. Tiers differ only on (a) write permissions and (b) accent color, NOT on schedule cell render. Single helper avoids the next 8-file shotgun edit when admin3 lands.
+Confidence: H -- verified 2026-04-25 build PASS at HEAD `303e4c5`. Bundle delta -0.03 kB gzip. Playwright smoke partially complete (steps 1-9 advanced; killed at step 10 cleanup hang); JR phone-smoke pending.
+Rejected alternatives:
+- Inline `(adminTier === 'admin1' || adminTier === 'admin2')` at every callsite -- rejected, defeats the DRY motivation. Future tier add would re-shotgun.
+- Force-clear `defaultSection` to `'none'` on Admin picker click -- rejected per JR's orthogonality rule (1 click = 1 field). Render layer ignores defaultSection for hasTitle employees, so leaving it is harmless metadata.
+- Force-clear `title: ''` on Staff picker click -- rejected, persists silently across tier transitions; render layer never reads it for non-titled employees.
+- Exempt Owner from hasTitle -- rejected, owner has `isAdmin: true` and is treated as admin everywhere else; uniform treatment.
+
+## 2026-04-25 -- Picker buttons obey orthogonality (1 click = 1 field)
+Decision: Tier picker buttons (Staff / Admin / Admin 2) in EmployeeFormModal now write only `isAdmin` and `adminTier`. Prior implementation (admin2 Phase 2) bundled `showOnSchedule`, `defaultSection: 'none'`, and `title: ''` writes per click. Stripped to minimum. Saved as auto-memory directive (one-time inline correction, not a separate memory file per JR ask).
+Rationale: JR caught two regressions caused by bundled writes -- (a) toggling to Admin force-hid the employee from the schedule grid (`showOnSchedule: false` write), patched in `5fece50`; (b) JR's general principle re-stated: "any employee of any level's visibility persists independently of them moving levels or roles. or anything. i changed 1 setting not two. thats simple logic." Rule: a UI control mutates only the field(s) it nominally owns. Adjacent fields stay untouched.
+Confidence: H -- direct user instruction, durable rule. Verified at HEAD `5fece50` (showOnSchedule fix) and HEAD `303e4c5` (admin1-title commit, which carries the broader picker cleanup).
+Rejected alternatives:
+- Keep `defaultSection: 'none'` write on Admin/Admin 2 buttons "for data-model cleanliness" -- rejected, render layer ignores defaultSection for titled employees so the cleanup was cosmetic and violated orthogonality.
+- Keep `title: ''` clear on Staff button "to avoid stale data" -- rejected, title persists silently and is harmless for staff (no UI surface reads it).
+
 ## 2026-04-25 -- Clear dropdown covers part-timers; Auto-Fill stays FT-only
 Decision: Clear gained "All Part-Timers" + per-PT individual rows on both desktop admin (App.jsx Clear `<select>`) and mobile admin (MobileScheduleActionSheet level=`clear`). Backend wiring added a `clear-all-pt` handler branch that calls `clearWeekShifts(weekDates, partTimeEmployees)`. Auto-Fill remains full-time-only because PT default-shift logic is per-employee and Sarvi already books PT manually (decision preserved from S60-era design). One `partTimeEmployees` memo derived from `schedulableEmployees` mirrors `fullTimeEmployees`.
 Rationale: JR flagged that there was no way to clear a part-timer's week — every other clear operation existed for FT but not PT. Mirroring the FT structure (All + individuals) gives Sarvi the same precision for both groups while preserving the intentional Auto-Fill asymmetry.

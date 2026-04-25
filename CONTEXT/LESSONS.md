@@ -450,6 +450,12 @@ Lesson: Visual marker for dates with per-date overrides vs defaults.
 Context: Admin grid rendering.
 Affirmations: 0
 
+## [GLOBAL] -- One UI control = one field write (orthogonality)
+Lesson: A picker/toggle/button writes only the field(s) it nominally owns. Do not bundle adjacent-field updates ("atomic" writes of 4-5 fields per click) even when "data-model cleanliness" tempts it. Independent settings stay independent across all transitions.
+Context: 2026-04-25 -- the EmployeeFormModal tier picker (Staff/Admin/Admin 2) was writing `{isAdmin, adminTier, title, showOnSchedule, defaultSection}` per click. Two distinct regressions surfaced: (1) Admin click force-wrote `showOnSchedule: false`, hiding admin1s from grid on every tier change; (2) JR re-stated the principle as a rule: "any employee of any level's visibility persists independently of them moving levels or roles. or anything. i changed 1 setting not two. thats simple logic." Fix shipped at `5fece50` then consolidated at `303e4c5`. Helpers like `defaultSection: 'none'` for admin2 were also stripped because the render layer ignores defaultSection for hasTitle employees, making the bundle cosmetic.
+Confidence: H -- direct user instruction.
+Affirmations: 1
+
 <!-- TEMPLATE
 ## [GLOBAL] -- [Lesson title]
 Lesson: [what to do or avoid, in one sentence]

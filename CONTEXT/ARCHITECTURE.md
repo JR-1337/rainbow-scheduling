@@ -50,7 +50,8 @@ Rules:
 - `src/utils/eventDefaults.js` -- getPKDefaultTimes (Sat 10:00-10:45 else 18:00-20:00) / MEETING_DEFAULT_TIMES (14:00-16:00 locked) / getSickDefaultTimes (mirrors existing work shift)
 - `src/utils/storeHoursOverrides.js` -- module-level override refs + getStoreHoursForDate (re-exported from App.jsx for legacy importers; parked sub-area-6 Context refactor will replace)
 - `src/utils/payPeriod.js` / `src/utils/requests.js` / `src/utils/api.js` / `src/utils/eventDefaults.js`
-- `src/utils/employeeSort.js` -- four-bucket display order (Sarvi, admins, FT, PT) + bucket-transition dividers; single source of truth for admin/employee/mobile/PDF rendering
+- `src/utils/employeeSort.js` -- five-bucket display order (Sarvi, admin1, admin2, FT, PT) + bucket-transition dividers; single source of truth for admin/employee/mobile/PDF rendering
+- `src/utils/employeeRender.js` -- `hasTitle(emp)` predicate (`emp.isAdmin || emp.adminTier === 'admin2'`); single source of truth for "render by title not role" branches across 8 files (ScheduleCell, MobileAdminView, pdf/generate, ShiftEditorModal, EmployeeView, MobileEmployeeView, App.jsx tooltip, EmployeeFormModal)
 - `src/utils/timemath.js` -- interval-union hours, availabilityCoversWindow
 - `backend/Code.gs` -- paste into Apps Script editor after edits
 
