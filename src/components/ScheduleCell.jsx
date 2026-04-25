@@ -18,7 +18,7 @@ const getAvailabilityShading = (avail, storeHours) => {
   };
 };
 
-export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, availability, storeHours, isDeleted = false, hasApprovedTimeOff = false, isLocked = false, employee = null }) => {
+export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick, availability, storeHours, isDeleted = false, hasApprovedTimeOff = false, isLocked = false, employee = null }) => {
   const [showTask, setShowTask] = useState(false);
   const starRef = useRef(null);
   const role = shift ? ROLES_BY_ID[shift.role] : null;
@@ -45,7 +45,7 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, ava
 
   return (
     <>
-      <div onClick={isClickable ? onClick : undefined} className={`h-14 rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
+      <div onClick={isClickable ? () => onCellClick(employee, date, shift) : undefined} className={`h-14 rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
         style={{
           backgroundColor: hasSick ? EVENT_TYPES.sick.bg : shift && isTitled ? THEME.bg.tertiary : shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
           border: `1px solid ${hasSick ? EVENT_TYPES.sick.border : shift && isTitled ? THEME.border.default : shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`

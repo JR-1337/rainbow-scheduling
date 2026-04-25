@@ -7,6 +7,8 @@ import { hasApprovedTimeOffForDate } from '../utils/requests';
 import { AnimatedNumber } from './uiKit';
 import { ScheduleCell } from './ScheduleCell';
 
+const EMPTY_EVENTS = Object.freeze([]);
+
 export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, onCellClick, getEmployeeHours, onEdit, isDeleted = false, onShowTooltip, onHideTooltip, timeOffRequests = [], isLocked = false }) => {
   const rowRef = useRef(null);
   const hours = getEmployeeHours(employee.id);
@@ -40,11 +42,11 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
         const storeHrs = getStoreHoursForDate(date);
         const shift = shifts[`${employee.id}-${toDateKey(date)}`];
         const dateStr = toDateKey(date);
-        const cellEvents = events[`${employee.id}-${dateStr}`] || [];
+        const cellEvents = events[`${employee.id}-${dateStr}`] || EMPTY_EVENTS;
         const approvedTimeOff = hasApprovedTimeOffForDate(employee.email, dateStr, timeOffRequests);
         return (
           <div key={dateStr} className="p-0.5" style={{ backgroundColor: THEME.bg.secondary }}>
-            <ScheduleCell shift={shift} events={cellEvents} date={date} availability={av} storeHours={storeHrs} onClick={() => !isDeleted && !isLocked && onCellClick(employee, date, shift)} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} employee={employee} />
+            <ScheduleCell shift={shift} events={cellEvents} date={date} availability={av} storeHours={storeHrs} onCellClick={onCellClick} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} employee={employee} />
           </div>
         );
       })}
