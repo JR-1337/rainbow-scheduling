@@ -2,7 +2,18 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.25.0 (schedule-change notifications to Sarvi on saveShift + batchSaveShifts)
+ * Version: 2.26.0 (admin tier 2 + title columns on Employees tab)
+ *
+ * Changes in v2.26.0:
+ * - Employees tab gains two columns: `adminTier` (col W, '' | 'admin1' | 'admin2') and
+ *   `title` (col X, freeform one-word label like 'Manager'). `createEmployeesTab` headers
+ *   list extended. `saveEmployee` is header-driven, no row-mapper change needed.
+ * - createToken_: JWT payload now carries `t: employee.adminTier || ''`. verifyToken_
+ *   returns `adminTier`. No permission change: admin2 rows have `isAdmin=FALSE`, so
+ *   the existing `requiredAdmin` gate in `verifyAuth` rejects their writes automatically
+ *   and the frontend routes them to EmployeeView via the `!currentUser.isAdmin` check.
+ * - Manual step (one-time, live Sheet): add headers `adminTier` (col W) and `title`
+ *   (col X) to the Employees tab. Existing rows left blank are fine.
  *
  * Changes in v2.25.0:
  * - `sendScheduleChangeNotification_(caller, summary)`: emails CONFIG.ADMIN_EMAIL when
@@ -502,7 +513,8 @@ function createToken_(employee) {
     e: employee.email,
     exp: Date.now() + TOKEN_TTL_MS,
     a: employee.isAdmin === true,
-    o: employee.isOwner === true
+    o: employee.isOwner === true,
+    t: typeof employee.adminTier === 'string' ? employee.adminTier : ''
   };
   const payloadB64 = base64UrlEncodeString_(JSON.stringify(payload));
   const sig = hmacSign_(payloadB64);
@@ -531,7 +543,7 @@ function verifyToken_(token) {
   if (!payload.exp || payload.exp < Date.now()) {
     return { valid: false, error: { code: 'AUTH_EXPIRED', message: 'Session expired, please log in again' } };
   }
-  return { valid: true, email: payload.e, isAdmin: payload.a === true, isOwner: payload.o === true };
+  return { valid: true, email: payload.e, isAdmin: payload.a === true, isOwner: payload.o === true, adminTier: typeof payload.t === 'string' ? payload.t : '' };
 }
 
 function generateSalt_() {
@@ -2242,7 +2254,7 @@ function createEmployeesTab(ss) {
   if (!sheet) sheet = ss.insertSheet(TAB_NAME);
   sheet.clear();
 
-  const headers = ['id', 'name', 'email', 'password', 'phone', 'address', 'dob', 'active', 'isAdmin', 'isOwner', 'showOnSchedule', 'deleted', 'availability', 'defaultShift', 'counterPointId', 'adpNumber', 'rateOfPay', 'employmentType', 'passwordHash', 'passwordSalt', 'passwordChanged', 'defaultSection'];
+  const headers = ['id', 'name', 'email', 'password', 'phone', 'address', 'dob', 'active', 'isAdmin', 'isOwner', 'showOnSchedule', 'deleted', 'availability', 'defaultShift', 'counterPointId', 'adpNumber', 'rateOfPay', 'employmentType', 'passwordHash', 'passwordSalt', 'passwordChanged', 'defaultSection', 'adminTier', 'title'];
   const avail = JSON.stringify({
     sunday:    { available: true, start: '06:00', end: '22:00' },
     monday:    { available: true, start: '06:00', end: '22:00' },
@@ -2255,8 +2267,8 @@ function createEmployeesTab(ss) {
 
   const data = [
     headers,
-    ['emp-owner', 'JR', 'johnrichmond007@gmail.com', 'emp-owner', '', '', '', true, true, true, false, false, avail, '', '', '', '', '', '', ''],
-    ['emp-admin-1', 'Sarvi', 'sarvi@rainbowjeans.com', 'emp-admin-1', '', '', '', true, true, false, false, false, avail, '', '', '', 'full-time', '', '', '']
+    ['emp-owner', 'JR', 'johnrichmond007@gmail.com', 'emp-owner', '', '', '', true, true, true, false, false, avail, '', '', '', '', '', '', '', '', '', '', ''],
+    ['emp-admin-1', 'Sarvi', 'sarvi@rainbowjeans.com', 'emp-admin-1', '', '', '', true, true, false, false, false, avail, '', '', '', 'full-time', '', '', '', '', '', 'admin1', '']
   ];
 
   sheet.getRange(1, 1, data.length, headers.length).setValues(data);

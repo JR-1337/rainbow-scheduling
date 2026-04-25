@@ -32,7 +32,11 @@ export function parseEmployeesFromApi(empData) {
     ),
     defaultShift: typeof emp.defaultShift === 'string' && emp.defaultShift
       ? safeJsonParse(emp.defaultShift)
-      : (emp.defaultShift && typeof emp.defaultShift === 'object' ? emp.defaultShift : null)
+      : (emp.defaultShift && typeof emp.defaultShift === 'object' ? emp.defaultShift : null),
+    // v2.26.0 — admin tier + title. Normalize blanks so downstream conditionals
+    // ("if emp.adminTier === 'admin2'") and React-controlled inputs never see undefined.
+    adminTier: typeof emp.adminTier === 'string' ? emp.adminTier : '',
+    title: typeof emp.title === 'string' ? emp.title : ''
   }));
 }
 

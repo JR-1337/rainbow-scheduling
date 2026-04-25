@@ -2,10 +2,10 @@
 
 CRITICAL: These column headers are exact. Do not rename, reorder, or omit fields.
 
-## Employees Tab (22 columns, A-V)
+## Employees Tab (24 columns, A-X)
 
 ```
-id | name | email | password | phone | address | dob | active | isAdmin | isOwner | showOnSchedule | deleted | availability | defaultShift | counterPointId | adpNumber | rateOfPay | employmentType | passwordHash | passwordSalt | passwordChanged | defaultSection
+id | name | email | password | phone | address | dob | active | isAdmin | isOwner | showOnSchedule | deleted | availability | defaultShift | counterPointId | adpNumber | rateOfPay | employmentType | passwordHash | passwordSalt | passwordChanged | defaultSection | adminTier | title
 ```
 
 - `availability`: JSON string - `{ "sunday": { "available": true, "start": "11:00", "end": "18:00" }, ... }`
@@ -15,6 +15,8 @@ id | name | email | password | phone | address | dob | active | isAdmin | isOwne
 - `password`: Legacy plaintext column. Sheets may store as number - always use `String()` for comparisons. After S36, populated only for accounts that haven't logged in since the migration OR for admin-reset accounts (so admin UI can display the default). Cleared on any user-initiated password change.
 - `passwordHash`: base64url-encoded SHA-256 of `salt + password`. Empty until first post-S36 login or password change.
 - `passwordSalt`: per-user UUID salt used with `passwordHash`. Empty until first post-S36 login or password change.
+- **`adminTier`** (col W, v2.26.0): `'' | 'admin1' | 'admin2'`. Orthogonal to `isAdmin`: admin1 rows have `isAdmin=TRUE` + `adminTier='admin1'` (pure admins); admin2 rows have `isAdmin=FALSE` + `adminTier='admin2'` + a non-empty `title` (view-only users shown on the schedule grid between admins and FT staff, bookable by Sarvi). Legacy rows read as `''`.
+- **`title`** (col X, v2.26.0): Freeform one-word label (e.g. `Manager`, `Buyer`, `VM`). Populated for admin2 rows, blank otherwise. Renders in place of role name on the schedule grid, PDF, mobile, and EmployeeView for admin2 employees. Max recommended length 20 chars (UI-enforced, not schema-enforced).
 
 ## Shifts Tab (11 columns, A-K)
 
