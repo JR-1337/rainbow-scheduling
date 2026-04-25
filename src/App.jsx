@@ -31,7 +31,6 @@ import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCove
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { sortBySarviAdminsFTPT, employeeBucket } from './utils/employeeSort';
 import { hasTitle } from './utils/employeeRender';
-import { generateSchedulePDF } from './pdf/generate';
 import { getAuthToken, setAuthToken, clearAuth, setCachedUser, handleAuthError } from './auth';
 import { OTR, THEME, TYPE } from './theme';
 import { ROLES, ROLES_BY_ID, EVENT_TYPES } from './constants';
@@ -1382,7 +1381,12 @@ export default function App() {
     setEditingEmp(emp);
     setEmpFormOpen(true);
   }, []);
-  
+
+  const handleExportPDF = useCallback(async () => {
+    const { generateSchedulePDF } = await import('./pdf/generate');
+    generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement, timeOffRequests, events);
+  }, [employees, shifts, dates, startDate, endDate, currentAnnouncement, timeOffRequests, events]);
+
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
   // Show login screen if not logged in
@@ -1751,7 +1755,7 @@ export default function App() {
           onOpenSettings={() => { setMobileAdminDrawerOpen(false); setSettingsOpen(true); }}
           onOpenOwnRequests={() => { setMobileAdminDrawerOpen(false); setAdminRequestModalOpen(true); }}
           onOpenPK={() => { setMobileAdminDrawerOpen(false); setPkModalOpen(true); }}
-          onExportPDF={() => { setMobileAdminDrawerOpen(false); generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement, timeOffRequests, events); }}
+          onExportPDF={() => { setMobileAdminDrawerOpen(false); handleExportPDF(); }}
           onOpenStaff={() => { setMobileAdminDrawerOpen(false); setMobileStaffPanelOpen(true); }}
           pendingRequestCount={pendingRequestCount}
         />
@@ -1973,7 +1977,7 @@ export default function App() {
 
             {/* Primary operations: Export + Publish */}
             <div className="relative">
-              <TooltipButton tooltip={currentAnnouncement?.message ? "Export PDF (includes announcement)" : "Export PDF"} onClick={() => generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement, timeOffRequests, events)}><FileText size={12} /></TooltipButton>
+              <TooltipButton tooltip={currentAnnouncement?.message ? "Export PDF (includes announcement)" : "Export PDF"} onClick={handleExportPDF}><FileText size={12} /></TooltipButton>
               {currentAnnouncement?.message && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full" style={{ backgroundColor: THEME.accent.blue }} />}
             </div>
             <div className="relative">
