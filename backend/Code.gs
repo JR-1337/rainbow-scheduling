@@ -1795,10 +1795,20 @@ function batchSaveShifts(payload) {
     const existingValues = sheet.getDataRange().getValues();
     const existing = parseSheetValues_(existingValues);
 
-    // v2.21.0: keys include `type` so work + meeting + pk entries on the same day are
-    // distinct rows. Back-compat: a row (or payload shift) with empty/missing type
-    // falls back to 'work'. Frontend now always sends explicit type.
-    const keyOf = (s) => `${s.employeeId}-${normalizeDate(s.date)}-${s.type || 'work'}`;
+    // v2.26.0: meetings allow N per (empId, date) — keyed by row id so multiple
+    // meetings on the same day each get their own row. Singular types (work, sick,
+    // pk) keep the 3-tuple key so the singular invariant holds (PK bulk-create at
+    // bulkCreatePKEvent already enforces dupe-skip on its write path). Back-compat:
+    // missing type falls back to 'work'. Missing id on a meeting (e.g. legacy row
+    // pre-N-meetings) is given a synthetic id derived from 3-tuple — preserves the
+    // legacy row's identity so it isn't accidentally appended-as-new.
+    const SINGULAR_TYPES_ = { work: 1, sick: 1, pk: 1 };
+    const keyOf = (s) => {
+      const t = s.type || 'work';
+      const d = normalizeDate(s.date);
+      if (SINGULAR_TYPES_[t]) return `${s.employeeId}-${d}-${t}`;
+      return s.id ? String(s.id) : `${t.toUpperCase()}-${s.employeeId}-${d}`;
+    };
 
     const keepKeys = new Set();
     if (allShiftKeys && allShiftKeys.length > 0) {

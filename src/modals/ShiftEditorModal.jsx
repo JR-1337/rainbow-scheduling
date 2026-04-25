@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Star, Trash2, Check, AlertTriangle, Thermometer } from 'lucide-react';
+import { Star, Trash2, Check, AlertTriangle, Thermometer, X, Plus } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES, EVENT_TYPES } from '../constants';
 import { getPKDefaultTimes, MEETING_DEFAULT_TIMES } from '../utils/eventDefaults';
@@ -56,7 +56,9 @@ export const ShiftEditorModal = ({
 
   const hasType = (type) => type === 'work'
     ? !!existingShift
-    : !!existingEvents.find(e => e.type === type);
+    : type === 'meeting'
+      ? meetingDrafts.length > 0
+      : !!existingEvents.find(e => e.type === type);
 
   const seedFor = (type) => {
     if (type === 'work') {
@@ -77,8 +79,31 @@ export const ShiftEditorModal = ({
     };
   };
 
+  // Stable id for a new meeting row. Backend keyOf uses this to allow N meetings
+  // per (empId, date). 8 chars of base36 randomness + emp/date prefix gives a
+  // sub-trillion collision probability per emp-date, which is overkill for a
+  // schedule grid but cheap.
+  const newMeetingId = (empId, d) =>
+    `MTG-${empId}-${toDateKey(d)}-${Math.random().toString(36).slice(2, 10)}`;
+
+  // Seed the meetingDrafts array from existingEvents. Each existing meeting
+  // preserves its row id (so saves overwrite the right backend row). Ordered by
+  // startTime so the cell renders in chronological order.
+  const seedMeetings = () => {
+    const existing = existingEvents
+      .filter(e => e.type === 'meeting')
+      .slice()
+      .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+    return existing.map(ev => ({
+      id: ev.id || `MEETING-${employee.id}-${toDateKey(date)}`,
+      startTime: ev.startTime,
+      endTime: ev.endTime,
+      note: ev.note || '',
+    }));
+  };
+
   const [workDraft, setWorkDraft] = useState(seedFor('work'));
-  const [meetingDraft, setMeetingDraft] = useState(seedFor('meeting'));
+  const [meetingDrafts, setMeetingDrafts] = useState(() => seedMeetings());
   const [pkDraft, setPkDraft] = useState(seedFor('pk'));
 
   // Sick (absence) state — immediate-save toggle, separate category.
@@ -88,7 +113,7 @@ export const ShiftEditorModal = ({
 
   useEffect(() => {
     setWorkDraft(seedFor('work'));
-    setMeetingDraft(seedFor('meeting'));
+    setMeetingDrafts(seedMeetings());
     setPkDraft(seedFor('pk'));
     setSickActive(!!existingSick);
     setSickNote(existingSick?.note || '');
@@ -134,29 +159,72 @@ export const ShiftEditorModal = ({
         hours: calculateHours(workDraft.startTime, workDraft.endTime),
       });
     }
-    ['meeting', 'pk'].forEach(type => {
-      if (hasType(type)) {
-        const draft = type === 'meeting' ? meetingDraft : pkDraft;
-        onSave({
-          employeeId: employee.id,
-          employeeName: employee.name,
-          date: toDateKey(date),
-          startTime: draft.startTime,
-          endTime: draft.endTime,
-          role: 'none',
-          task: '',
-          type,
-          note: draft.note,
-          hours: calculateHours(draft.startTime, draft.endTime),
-        });
-      }
+    // Meetings: iterate drafts; each one carries its own id so the backend write
+    // path replaces the matching row or appends a new one.
+    meetingDrafts.forEach(draft => {
+      onSave({
+        id: draft.id,
+        employeeId: employee.id,
+        employeeName: employee.name,
+        date: toDateKey(date),
+        startTime: draft.startTime,
+        endTime: draft.endTime,
+        role: 'none',
+        task: '',
+        type: 'meeting',
+        note: draft.note,
+        hours: calculateHours(draft.startTime, draft.endTime),
+      });
     });
+    // PK still singular.
+    if (hasType('pk')) {
+      onSave({
+        employeeId: employee.id,
+        employeeName: employee.name,
+        date: toDateKey(date),
+        startTime: pkDraft.startTime,
+        endTime: pkDraft.endTime,
+        role: 'none',
+        task: '',
+        type: 'pk',
+        note: pkDraft.note,
+        hours: calculateHours(pkDraft.startTime, pkDraft.endTime),
+      });
+    }
     onClose();
   };
 
   // Tap-to-toggle. No focus step, no "first press selects" surprise.
   // Unlit → book with defaults (immediate save). Lit → unbook (immediate save).
   const toggleTab = (type) => {
+    if (type === 'meeting') {
+      if (meetingDrafts.length === 0) {
+        // Unlit + tap → add first meeting with defaults; immediate save.
+        const t = getDefaultEventTimes('meeting', date);
+        const id = newMeetingId(employee.id, date);
+        const draft = { id, startTime: t.start, endTime: t.end, note: '' };
+        setMeetingDrafts([draft]);
+        onSave({
+          id, employeeId: employee.id, employeeName: employee.name,
+          date: toDateKey(date),
+          startTime: t.start, endTime: t.end,
+          role: 'none', task: '', type: 'meeting', note: '',
+          hours: calculateHours(t.start, t.end),
+        });
+      } else {
+        // Lit + tap → remove LAST meeting. Per JR: symmetry-preserving for N=1
+        // (existing behavior — removes the only one); for N>=2 removes the
+        // most-recently-added.
+        const last = meetingDrafts[meetingDrafts.length - 1];
+        setMeetingDrafts(meetingDrafts.slice(0, -1));
+        onSave({
+          id: last.id, employeeId: employee.id,
+          date: toDateKey(date), type: 'meeting', deleted: true,
+        });
+      }
+      return;
+    }
+    // work / pk — existing behavior.
     if (hasType(type)) {
       onSave({ employeeId: employee.id, date: toDateKey(date), type, deleted: true });
       return;
@@ -180,7 +248,7 @@ export const ShiftEditorModal = ({
     const k = toDateKey(date);
     if (existingShift) onSave({ employeeId: employee.id, date: k, type: 'work', deleted: true });
     existingEvents.forEach(ev => {
-      onSave({ employeeId: employee.id, date: k, type: ev.type, deleted: true });
+      onSave({ id: ev.id, employeeId: employee.id, date: k, type: ev.type, deleted: true });
     });
     onClose();
   };
@@ -225,7 +293,8 @@ export const ShiftEditorModal = ({
   const isAdmin = !!currentUser?.isAdmin;
   const isTitledTarget = hasTitle(employee);
 
-  // Render helper: the edit form for one booked activity type.
+  // Render helper: the edit form for one booked activity type (work and pk only).
+  // Meeting is handled via renderMeetingsSection below.
   const renderActivityForm = (type) => {
     if (type === 'work') {
       return (
@@ -261,26 +330,93 @@ export const ShiftEditorModal = ({
         </div>
       );
     }
-    const draft = type === 'meeting' ? meetingDraft : pkDraft;
-    const setDraft = type === 'meeting' ? setMeetingDraft : setPkDraft;
-    const label = EVENT_TYPES[type].label;
-    const noteLabel = type === 'meeting' ? 'What is this meeting about?' : 'What product knowledge is being covered?';
-    const notePlaceholder = type === 'meeting' ? 'e.g. 1:1 review' : 'e.g. Spring denim line';
+    // pk only — meeting handled via renderMeetingsSection
     return (
-      <div key={type} className="mb-2 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
-        <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: THEME.accent.blue }}>{label}</p>
+      <div key="pk" className="mb-2 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
+        <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: THEME.accent.blue }}>{EVENT_TYPES.pk.label}</p>
         <div className="grid grid-cols-2 gap-2 mb-2">
-          <TimePicker label="Start" value={draft.startTime} onChange={t => setDraft({ ...draft, startTime: t })} />
-          <TimePicker label="End" value={draft.endTime} onChange={t => setDraft({ ...draft, endTime: t })} />
+          <TimePicker label="Start" value={pkDraft.startTime} onChange={t => setPkDraft({ ...pkDraft, startTime: t })} />
+          <TimePicker label="End" value={pkDraft.endTime} onChange={t => setPkDraft({ ...pkDraft, endTime: t })} />
         </div>
-        <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>{noteLabel}</label>
-        <input value={draft.note} onChange={e => setDraft({ ...draft, note: e.target.value })}
-          placeholder={notePlaceholder}
+        <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>What product knowledge is being covered?</label>
+        <input value={pkDraft.note} onChange={e => setPkDraft({ ...pkDraft, note: e.target.value })}
+          placeholder="e.g. Spring denim line"
           className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
           style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
       </div>
     );
   };
+
+  // Per-meeting card. First meeting (idx=0) has no X — tab-toggle is its removal
+  // control. Meetings 2+ show a small X for surgical per-row delete.
+  const renderMeetingRow = (draft, idx) => {
+    const showDelete = idx > 0;
+    const setDraft = (next) => {
+      const arr = meetingDrafts.slice();
+      arr[idx] = next;
+      setMeetingDrafts(arr);
+    };
+    const deleteThis = () => {
+      const removed = meetingDrafts[idx];
+      setMeetingDrafts(meetingDrafts.filter((_, i) => i !== idx));
+      onSave({
+        id: removed.id, employeeId: employee.id,
+        date: toDateKey(date), type: 'meeting', deleted: true,
+      });
+    };
+    return (
+      <div key={draft.id} className="mb-2 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-[10px] uppercase tracking-wider" style={{ color: THEME.accent.blue }}>
+            {EVENT_TYPES.meeting.label}{meetingDrafts.length > 1 ? ` ${idx + 1}` : ''}
+          </p>
+          {showDelete && (
+            <button type="button" onClick={deleteThis}
+              aria-label={`Remove meeting ${idx + 1}`}
+              className="p-0.5 rounded hover:opacity-70"
+              style={{ color: THEME.text.muted }}>
+              <X size={12} />
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <TimePicker label="Start" value={draft.startTime} onChange={t => setDraft({ ...draft, startTime: t })} />
+          <TimePicker label="End" value={draft.endTime} onChange={t => setDraft({ ...draft, endTime: t })} />
+        </div>
+        <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>What is this meeting about?</label>
+        <input value={draft.note} onChange={e => setDraft({ ...draft, note: e.target.value })}
+          placeholder="e.g. 1:1 review"
+          className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
+          style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
+      </div>
+    );
+  };
+
+  const addMeeting = () => {
+    const t = getDefaultEventTimes('meeting', date);
+    const id = newMeetingId(employee.id, date);
+    const draft = { id, startTime: t.start, endTime: t.end, note: '' };
+    setMeetingDrafts([...meetingDrafts, draft]);
+    onSave({
+      id, employeeId: employee.id, employeeName: employee.name,
+      date: toDateKey(date),
+      startTime: t.start, endTime: t.end,
+      role: 'none', task: '', type: 'meeting', note: '',
+      hours: calculateHours(t.start, t.end),
+    });
+  };
+
+  const renderMeetingsSection = () => (
+    <>
+      {meetingDrafts.map(renderMeetingRow)}
+      <button type="button" onClick={addMeeting}
+        className="w-full mb-2 px-2 py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1"
+        style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary, border: `1px dashed ${THEME.border.default}` }}>
+        <Plus size={12} />
+        Add another meeting
+      </button>
+    </>
+  );
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Shift" size="sm">
@@ -393,7 +529,9 @@ export const ShiftEditorModal = ({
 
       {/* Per-type edit forms — stacked, shown only for booked types. */}
       <div style={{ opacity: sickActive ? 0.5 : 1, pointerEvents: sickActive ? 'none' : 'auto' }}>
-        {ACTIVITY_TYPES.filter(hasType).map(renderActivityForm)}
+        {hasType('work') && renderActivityForm('work')}
+        {hasType('meeting') && renderMeetingsSection()}
+        {hasType('pk') && renderActivityForm('pk')}
       </div>
 
       <div className="p-2 rounded-lg mb-3 grid grid-cols-2 gap-2 text-center" style={{ backgroundColor: THEME.bg.tertiary }}>

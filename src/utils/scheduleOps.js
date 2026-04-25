@@ -69,6 +69,14 @@ export function swapShiftsBetweenEmployees(shiftsObj, empA, empB, dateA, dateB) 
   return next;
 }
 
+// Meeting allows N per (empId, date) — keyed by row id (matches backend keyOf
+// at Code.gs:1801). PK and sick remain singular: the type-replace branch
+// preserves the prior invariant that one PK / one sick mark exists per day.
+// Work stays in shiftsObj (scalar). Mutation contract: caller passes `s.id`
+// for meeting; an id-less meeting (legacy or modal bug) appends a fresh row
+// rather than colliding with an existing one.
+const MULTI_TYPES = new Set(['meeting']);
+
 export function applyShiftMutation(shiftsObj, eventsObj, s) {
   const k = `${s.employeeId}-${s.date}`;
   const type = s.type || 'work';
@@ -84,7 +92,24 @@ export function applyShiftMutation(shiftsObj, eventsObj, s) {
     nextShifts = { ...shiftsObj };
     if (s.deleted) delete nextShifts[k];
     else nextShifts[k] = s;
+  } else if (MULTI_TYPES.has(type)) {
+    nextEvents = { ...eventsObj };
+    const arr = (nextEvents[k] || []).slice();
+    const matchIdx = s.id != null
+      ? arr.findIndex(e => String(e.id) === String(s.id))
+      : -1;
+    if (s.deleted) {
+      if (matchIdx >= 0) arr.splice(matchIdx, 1);
+      if (arr.length > 0) nextEvents[k] = arr; else delete nextEvents[k];
+    } else if (matchIdx >= 0) {
+      arr[matchIdx] = s;
+      nextEvents[k] = arr;
+    } else {
+      arr.push(s);
+      nextEvents[k] = arr;
+    }
   } else {
+    // pk, sick — singular per (empId, date, type). Type-replace branch.
     nextEvents = { ...eventsObj };
     const arr = (nextEvents[k] || []).filter(e => (e.type || 'work') !== type);
     if (s.deleted) {
