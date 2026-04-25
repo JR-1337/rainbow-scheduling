@@ -17,10 +17,16 @@ const getAvailabilityShading = (avail, storeHours) => {
   };
 };
 
-export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, availability, storeHours, isDeleted = false, hasApprovedTimeOff = false, isLocked = false }) => {
+export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, availability, storeHours, isDeleted = false, hasApprovedTimeOff = false, isLocked = false, employee = null }) => {
   const [showTask, setShowTask] = useState(false);
   const starRef = useRef(null);
   const role = shift ? ROLES_BY_ID[shift.role] : null;
+  // Admin2: render employee.title in place of role name. Cell uses a neutral
+  // palette (muted border, tertiary bg) so it reads as "shift exists, no role".
+  const isAdmin2 = !!(shift && employee && employee.adminTier === 'admin2');
+  const admin2Label = isAdmin2 ? (employee.title || '') : '';
+  const labelText = isAdmin2 ? admin2Label : (role?.name || '');
+  const labelColor = isAdmin2 ? THEME.text.primary : role?.color;
   const visibleEvents = (events || []).filter(ev => EVENT_TYPES[ev.type]);
   const hasEvents = visibleEvents.length > 0;
   const eventOnly = !shift && hasEvents;
@@ -40,8 +46,8 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, ava
     <>
       <div onClick={isClickable ? onClick : undefined} className={`h-14 rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
         style={{
-          backgroundColor: hasSick ? EVENT_TYPES.sick.bg : shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
-          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border : shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`
+          backgroundColor: hasSick ? EVENT_TYPES.sick.bg : shift && isAdmin2 ? THEME.bg.tertiary : shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
+          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border : shift && isAdmin2 ? THEME.border.default : shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`
         }}>
 
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
@@ -84,7 +90,7 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, ava
               </div>
             )}
             <div className="flex items-start justify-between gap-1">
-              <span className="text-xs font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : role?.color, textDecoration: hasSick ? 'line-through' : 'none' }}>{role?.name}</span>
+              <span className="text-xs font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : labelColor, textDecoration: hasSick ? 'line-through' : 'none' }}>{labelText}</span>
               {hasEvents && (
                 <div className="flex gap-0.5 shrink-0">
                   {visibleEvents.map((ev, i) => {

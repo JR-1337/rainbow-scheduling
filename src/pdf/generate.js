@@ -136,13 +136,15 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
             ${eventBadgeHtml(dayEvents)}
           </td>`;
         }
+        const isAdmin2 = emp.adminTier === 'admin2';
         const role = ROLES_BY_ID[shift.role];
-        const roleName = role?.name || 'Shift';
-        const family = ROLE_FAMILY[shift.role] || 'none';
-        const glyph = ROLE_GLYPHS[shift.role] || '';
+        const roleName = isAdmin2 ? (cleanText(emp.title || '') || 'Shift') : (role?.name || 'Shift');
+        const family = isAdmin2 ? 'none' : (ROLE_FAMILY[shift.role] || 'none');
+        const glyph = isAdmin2 ? '' : (ROLE_GLYPHS[shift.role] || '');
         // Supervisory roles "own" their perimeter: 2px ink border wins over the
         // surrounding 1px grey grid via border-collapse thickness rules.
-        const cellBorder = (shift.role === 'floorMonitor' || shift.role === 'floorSupervisor')
+        // Admin2 always uses the standard 1px grey border (no role-based override).
+        const cellBorder = (!isAdmin2 && (shift.role === 'floorMonitor' || shift.role === 'floorSupervisor'))
           ? `border:2px solid ${G.ink};`
           : `border:1px solid ${G.border};`;
         return `<td style="padding:5px;${cellBorder}background:${G.fill};text-align:center;position:relative;">

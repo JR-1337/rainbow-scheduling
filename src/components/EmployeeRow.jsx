@@ -44,7 +44,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
         const approvedTimeOff = hasApprovedTimeOffForDate(employee.email, dateStr, timeOffRequests);
         return (
           <div key={dateStr} className="p-0.5" style={{ backgroundColor: THEME.bg.secondary }}>
-            <ScheduleCell shift={shift} events={cellEvents} date={date} availability={av} storeHours={storeHrs} onClick={() => !isDeleted && !isLocked && onCellClick(employee, date, shift)} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} />
+            <ScheduleCell shift={shift} events={cellEvents} date={date} availability={av} storeHours={storeHrs} onClick={() => !isDeleted && !isLocked && onCellClick(employee, date, shift)} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} employee={employee} />
           </div>
         );
       })}

@@ -222,6 +222,7 @@ export const ShiftEditorModal = ({
   };
 
   const isAdmin = !!currentUser?.isAdmin;
+  const isAdmin2Target = employee?.adminTier === 'admin2';
 
   // Render helper: the edit form for one booked activity type.
   const renderActivityForm = (type) => {
@@ -233,18 +234,27 @@ export const ShiftEditorModal = ({
             <TimePicker label="Start" value={workDraft.startTime} onChange={t => setWorkDraft({ ...workDraft, startTime: t })} />
             <TimePicker label="End" value={workDraft.endTime} onChange={t => setWorkDraft({ ...workDraft, endTime: t })} />
           </div>
-          <div className="mb-2">
-            <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Role</label>
-            <div className="grid grid-cols-3 gap-1">
-              {ROLES.map(r => (
-                <button key={r.id} onClick={() => setWorkDraft({ ...workDraft, role: r.id })}
-                  className="px-1.5 py-1 rounded text-xs font-medium"
-                  style={{ backgroundColor: workDraft.role === r.id ? r.color : THEME.bg.elevated, color: workDraft.role === r.id ? 'white' : THEME.text.primary, border: `1px solid ${workDraft.role === r.id ? r.color : THEME.border.default}` }}>
-                  {r.name}
-                </button>
-              ))}
+          {isAdmin2Target ? (
+            <div className="mb-2">
+              <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Title</label>
+              <div className="px-2 py-1 rounded text-xs font-medium inline-block" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${THEME.border.default}` }}>
+                {employee.title || '(no title)'}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mb-2">
+              <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Role</label>
+              <div className="grid grid-cols-3 gap-1">
+                {ROLES.map(r => (
+                  <button key={r.id} onClick={() => setWorkDraft({ ...workDraft, role: r.id })}
+                    className="px-1.5 py-1 rounded text-xs font-medium"
+                    style={{ backgroundColor: workDraft.role === r.id ? r.color : THEME.bg.elevated, color: workDraft.role === r.id ? 'white' : THEME.text.primary, border: `1px solid ${workDraft.role === r.id ? r.color : THEME.border.default}` }}>
+                    {r.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Task <Star size={8} fill={THEME.task} color={THEME.task} className="inline" /></label>
           <input value={workDraft.task} onChange={e => setWorkDraft({ ...workDraft, task: e.target.value })} placeholder="Optional..." className="w-full px-2 py-1.5 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
         </div>

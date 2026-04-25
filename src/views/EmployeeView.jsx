@@ -603,9 +603,9 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
           {mobileShiftDetail && (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: mobileShiftDetail.role?.color }} />
-                <span className="font-semibold" style={{ color: mobileShiftDetail.role?.color, fontSize: '15px' }}>
-                  {mobileShiftDetail.role?.name}
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: currentUser.adminTier === 'admin2' ? THEME.text.primary : mobileShiftDetail.role?.color }} />
+                <span className="font-semibold" style={{ color: currentUser.adminTier === 'admin2' ? THEME.text.primary : mobileShiftDetail.role?.color, fontSize: '15px' }}>
+                  {currentUser.adminTier === 'admin2' ? (currentUser.title || '') : mobileShiftDetail.role?.name}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -838,14 +838,17 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
                 const shift = shifts[`${currentUser.id}-${toDateKey(date)}`];
                 if (!shift) return null;
                 const role = ROLES_BY_ID[shift.role];
+                const isSelfAdmin2 = currentUser.adminTier === 'admin2';
+                const labelText = isSelfAdmin2 ? (currentUser.title || '') : (role?.name || '');
+                const labelColor = isSelfAdmin2 ? THEME.text.primary : role?.color;
                 const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
                 return (
-                  <div key={toDateKey(date)} className="flex items-center gap-3 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, borderLeft: `3px solid ${role?.color}` }}>
+                  <div key={toDateKey(date)} className="flex items-center gap-3 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, borderLeft: `3px solid ${labelColor}` }}>
                     <div className="w-16">
                       <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>{dayName} {date.getDate()}</p>
                     </div>
                     <div className="flex-1 flex items-center gap-2">
-                      <span className="text-xs font-semibold" style={{ color: role?.color }}>{role?.name}</span>
+                      <span className="text-xs font-semibold" style={{ color: labelColor }}>{labelText}</span>
                       <span className="text-xs" style={{ color: THEME.text.muted }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
                       <span className="text-xs" style={{ color: THEME.accent.cyan }}>{shift.hours}h</span>
                     </div>

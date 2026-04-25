@@ -444,6 +444,9 @@ export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, time
           const shift = shifts[`${currentUser.id}-${dateStr}`];
           const dayEvents = (events[`${currentUser.id}-${dateStr}`] || []).filter(ev => EVENT_TYPES[ev.type]);
           const role = shift ? ROLES_BY_ID[shift.role] : null;
+          const isSelfAdmin2 = currentUser.adminTier === 'admin2';
+          const labelText = shift ? (isSelfAdmin2 ? (currentUser.title || '') : (role?.name || '')) : '';
+          const labelColor = shift ? (isSelfAdmin2 ? THEME.text.primary : (role?.color || THEME.text.primary)) : THEME.text.muted;
           const isTimeOff = myTimeOffDates.has(dateStr);
           const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
           const today = date.toDateString() === new Date().toDateString();
@@ -451,7 +454,7 @@ export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, time
           return (
             <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg" style={{
               backgroundColor: today ? THEME.accent.purple + '15' : THEME.bg.tertiary,
-              borderLeft: `3px solid ${shift ? role?.color : dayEvents.length > 0 ? EVENT_TYPES[dayEvents[0].type].border : isTimeOff ? THEME.text.muted : 'transparent'}`,
+              borderLeft: `3px solid ${shift ? labelColor : dayEvents.length > 0 ? EVENT_TYPES[dayEvents[0].type].border : isTimeOff ? THEME.text.muted : 'transparent'}`,
               border: today ? `1px solid ${THEME.accent.purple}40` : undefined
             }}>
               <div className="w-12 flex-shrink-0">
@@ -462,7 +465,7 @@ export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, time
               <div className="flex-1 flex flex-col gap-1">
                 {shift ? (
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: role?.color + '25', color: role?.color }}>{role?.name}</span>
+                    <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: (isSelfAdmin2 ? THEME.bg.tertiary : (role?.color + '25')), color: labelColor }}>{labelText}</span>
                     <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)} – {formatTimeShort(shift.endTime)}</span>
                     {shift.task && (
                       <span className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: THEME.task + '20', color: THEME.task }}>

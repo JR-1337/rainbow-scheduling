@@ -2547,6 +2547,7 @@ export default function App() {
             <p className="font-semibold text-xs flex items-center gap-1 flex-1" style={{ color: THEME.text.primary }}>
               {tooltipData.employee.name}
               {tooltipData.employee.isAdmin && <Shield size={10} style={{ color: THEME.accent.purple }} />}
+              {tooltipData.employee.adminTier === 'admin2' && <Shield size={10} style={{ color: THEME.accent.blue }} />}
               {tooltipData.isDeleted && <span style={{ color: THEME.text.muted }}>(Former)</span>}
             </p>
           </div>
@@ -2564,6 +2565,12 @@ export default function App() {
             <Mail size={10} className="flex-shrink-0" />
             {tooltipData.employee.email}
           </a>
+          {tooltipData.employee.adminTier === 'admin2' && tooltipData.employee.title && (
+            <div className="flex items-center gap-1 mt-1" style={{ color: THEME.text.secondary, fontSize: '11px' }}>
+              <span style={{ color: THEME.text.muted }}>Title:</span>
+              <span style={{ color: THEME.text.primary, fontWeight: 600 }}>{tooltipData.employee.title}</span>
+            </div>
+          )}
         </div>
       )}
     </div>

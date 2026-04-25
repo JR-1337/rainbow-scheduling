@@ -326,6 +326,10 @@ export const MobileAdminScheduleGrid = ({
                     const avail = emp.availability?.[dayName];
                     const isUnavailable = avail && !avail.available;
                     const role = shift ? ROLES_BY_ID[shift.role] : null;
+                    const isAdmin2 = emp.adminTier === 'admin2';
+                    const admin2Label = isAdmin2 ? (emp.title || '') : '';
+                    const labelText = shift ? (isAdmin2 ? admin2Label : role?.name) : '';
+                    const labelColor = shift ? (isAdmin2 ? THEME.text.primary : role?.color) : THEME.text.muted;
 
                     return (
                       <td key={i}
@@ -341,12 +345,14 @@ export const MobileAdminScheduleGrid = ({
                           backgroundColor: hasSick ? EVENT_TYPES.sick.bg
                             : approvedTimeOff ? THEME.text.muted + '15'
                             : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
+                            : shift && isAdmin2 ? THEME.bg.tertiary
                             : shift ? role?.color + '25'
                             : eventOnly ? firstEventType.bg
                             : THEME.bg.tertiary,
                           border: `1px solid ${hasSick ? EVENT_TYPES.sick.border
                             : approvedTimeOff ? THEME.text.muted + '30'
                             : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
+                            : shift && isAdmin2 ? THEME.border.default
                             : shift ? role?.color + '50'
                             : eventOnly ? firstEventType.border
                             : THEME.border.default}`,
@@ -371,7 +377,7 @@ export const MobileAdminScheduleGrid = ({
                           ) : shift ? (
                             <div className="p-1 h-full flex flex-col justify-between">
                               <div className="flex items-start justify-between gap-1">
-                                <span className="font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : role?.color, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '10px' }}>{role?.name}</span>
+                                <span className="font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : labelColor, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '10px' }}>{labelText}</span>
                                 {hasEvents && (
                                   <div className="flex gap-0.5 shrink-0">
                                     {cellEvents.length >= 3 ? (
