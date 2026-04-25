@@ -112,8 +112,13 @@ export const ShiftEditorModal = ({
 
   // Save persists the CURRENT drafts for every booked type. Booking happens on
   // tap (immediate save of defaults); Save captures edits the user made after
-  // the initial book.
+  // the initial book. When sick is active the reason input commits on blur,
+  // so we also flush any pending reason here in case the user tapped Save
+  // without first blurring the field.
   const handleSave = () => {
+    if (sickActive && sickNote !== (existingSick?.note || '')) {
+      saveSick(true, sickNote);
+    }
     if (hasType('work')) {
       onSave({
         employeeId: employee.id,
@@ -399,7 +404,7 @@ export const ShiftEditorModal = ({
         {hasAnyData && <GradientButton danger small onClick={clearDay} ariaLabel="Clear all bookings for this day"><Trash2 size={10} /></GradientButton>}
         <div className="flex gap-2 ml-auto">
           <GradientButton variant="secondary" small onClick={onClose}>Cancel</GradientButton>
-          <GradientButton small onClick={handleSave} disabled={sickActive}><Check size={12} />Save</GradientButton>
+          <GradientButton small onClick={handleSave}><Check size={12} />Save</GradientButton>
         </div>
       </div>
     </Modal>

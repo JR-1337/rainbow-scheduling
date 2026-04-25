@@ -397,15 +397,23 @@ export const MobileAdminScheduleGrid = ({
                                   </div>
                                 )}
                               </div>
-                              <div>
-                                <span style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '9px' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '9px' }}>{hasSick ? '0' : shift.hours}h</span>
-                                {shift.task && (
-                                  <Star size={8} fill={THEME.task} color={THEME.task} />
-                                )}
-                              </div>
+                              {hasSick && cellEvents.find(ev => ev.type === 'sick')?.note ? (
+                                <span className="italic truncate block" style={{ color: THEME.text.muted, fontSize: '9px' }} title={cellEvents.find(ev => ev.type === 'sick').note}>
+                                  {cellEvents.find(ev => ev.type === 'sick').note}
+                                </span>
+                              ) : (
+                                <>
+                                  <div>
+                                    <span style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '9px' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '9px' }}>{hasSick ? '0' : shift.hours}h</span>
+                                    {shift.task && (
+                                      <Star size={8} fill={THEME.task} color={THEME.task} />
+                                    )}
+                                  </div>
+                                </>
+                              )}
                             </div>
                           ) : eventOnly ? (
                             <div className="p-1 h-full flex flex-col justify-between"

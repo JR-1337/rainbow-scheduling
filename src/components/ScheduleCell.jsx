@@ -102,10 +102,16 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, ava
                 </div>
               )}
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
-              <span className="text-xs font-medium" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none' }}>{hasSick ? '0' : shift.hours}h</span>
-            </div>
+            {hasSick && visibleEvents.find(ev => ev.type === 'sick')?.note ? (
+              <span className="text-xs italic truncate block" style={{ color: THEME.text.muted }} title={visibleEvents.find(ev => ev.type === 'sick').note}>
+                {visibleEvents.find(ev => ev.type === 'sick').note}
+              </span>
+            ) : (
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
+                <span className="text-xs font-medium" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none' }}>{hasSick ? '0' : shift.hours}h</span>
+              </div>
+            )}
           </div>
         ) : eventOnly ? (
           <div className="p-1.5 h-full flex flex-col justify-between relative"
