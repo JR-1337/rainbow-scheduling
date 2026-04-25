@@ -21,6 +21,7 @@ import { useAnnouncements } from './hooks/useAnnouncements';
 import { useGuardedMutation } from './hooks/useGuardedMutation';
 import { useTooltip } from './hooks/useTooltip';
 import { EmployeeRow } from './components/EmployeeRow';
+import ColumnHeaderCell from './components/ColumnHeaderCell';
 import { MobileScheduleActionSheet } from './components/MobileScheduleActionSheet';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
@@ -610,18 +611,31 @@ export default function App() {
     return t;
   }, [currentDateStrs, shifts, events]);
 
+  // Pre-compute per-date scheduled headcounts once per relevant state change.
+  // O(n_emp * n_dates) cost paid once here instead of per-render per-date.
+  const scheduledByDate = useMemo(() => {
+    const counts = {};
+    for (const dateStr of currentDateStrs) {
+      let n = 0;
+      for (const emp of schedulableEmployees) {
+        const key = `${emp.id}-${dateStr}`;
+        if (!shifts[key]) continue;
+        const evs = events[key];
+        if (evs && evs.some(e => e.type === 'sick')) continue;
+        n++;
+      }
+      counts[dateStr] = n;
+    }
+    return counts;
+  }, [currentDateStrs, schedulableEmployees, shifts, events]);
+
   // Count scheduled employees for a given date. Sick days drop out of the
   // headcount — the employee isn't actually there, even though the work row
   // stays in the sheet for audit.
-  const getScheduledCount = useCallback((date) => {
-    const dateStr = toDateKey(date);
-    return schedulableEmployees.filter(emp => {
-      if (!shifts[`${emp.id}-${dateStr}`]) return false;
-      const evs = events[`${emp.id}-${dateStr}`];
-      if (evs && evs.some(e => e.type === 'sick')) return false;
-      return true;
-    }).length;
-  }, [schedulableEmployees, shifts, events]);
+  const getScheduledCount = useCallback(
+    (date) => scheduledByDate[toDateKey(date)] || 0,
+    [scheduledByDate]
+  );
   
   // Get staffing target for a given date (per-date override → weekly default → fallback)
   const getStaffingTarget = (date) => {
@@ -1375,6 +1389,9 @@ export default function App() {
   const handleCellClick = useCallback((emp, d, s) => {
     setEditingShift({ employee: emp, date: d, shift: s });
   }, []);
+
+  // Column header click handler — stable ref keeps ColumnHeaderCell memo effective
+  const handleColumnHeaderClick = useCallback((date) => setEditingColumnDate(date), []);
 
   // Edit employee handler — stable ref keeps EmployeeRow memo effective
   const handleEditEmployee = useCallback((emp) => {
@@ -2212,37 +2229,25 @@ export default function App() {
               <div className="rounded-b-xl rounded-tr-xl overflow-visible relative" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderTop: 'none', zIndex: 1, boxShadow: THEME.shadow.card }}>
                 <div className="grid gap-px" style={{ gridTemplateColumns: '140px repeat(7, 1fr)', backgroundColor: THEME.border.subtle }}>
                   <div className="p-1.5" style={{ backgroundColor: THEME.bg.tertiary }}><span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>Employee</span></div>
-                  {currentDates.map((date, i) => {
+                  {currentDates.map((date) => {
                     const sh = getStoreHoursForDate(date);
-                    const today = date.toDateString() === new Date().toDateString();
-                    const hol = isStatHoliday(date);
-                    const scheduled = getScheduledCount(date);
-                    const target = getStaffingTarget(date);
-                    const atTarget = scheduled >= target;
-                    const overTarget = scheduled > target;
                     const dateStr = toDateKey(date);
-                    const hasOverride = !!storeHoursOverrides[dateStr] || staffingTargetOverrides[dateStr] !== undefined;
-                    const isPast = dateStr < toDateKey(new Date());
-                    const canEdit = isCurrentPeriodEditMode && !isPast;
+                    const isPast = dateStr < todayStr;
                     return (
-                      <div
+                      <ColumnHeaderCell
                         key={dateStr}
-                        className={`p-1 text-center ${canEdit ? 'cursor-pointer hover:opacity-80' : ''}`}
-                        style={{ background: today ? `linear-gradient(${THEME.accent.purple}20, ${THEME.accent.purple}20), ${THEME.bg.tertiary}` : hol ? `linear-gradient(${THEME.status.warning}15, ${THEME.status.warning}15), ${THEME.bg.tertiary}` : THEME.bg.tertiary, borderBottom: today ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : 'none' }}
-                        onClick={() => canEdit && setEditingColumnDate(date)}
-                        title={canEdit ? 'Click to edit hours & target' : isPast ? 'Past dates cannot be edited' : 'Switch to Edit Mode to change'}
-                      >
-                        <p className="font-semibold text-xs" style={{ color: today ? THEME.accent.purple : hol ? THEME.status.warning : THEME.text.primary }}>{getDayName(date).slice(0, 3)}</p>
-                        <p className="text-sm font-bold" style={{ color: THEME.text.primary }}>{date.getDate()}</p>
-                        <p className="text-xs" style={{ color: hasOverride ? THEME.accent.cyan + 'CC' : THEME.text.muted }}>{formatTimeShort(sh.open)}-{formatTimeShort(sh.close)}</p>
-                        <p className="text-xs mt-0.5">
-                          <AnimatedNumber value={scheduled} overtimeThreshold={Infinity} style={{ color: overTarget ? THEME.status.error + 'AA' : atTarget ? THEME.status.success + '99' : THEME.text.muted }} />
-                          <span style={{ color: hasOverride ? THEME.accent.cyan + '99' : THEME.text.muted }}>/{target}</span>
-                        </p>
-                        {target > 0 && (
-                          <div className="px-1"><StaffingBar scheduled={scheduled} target={target} /></div>
-                        )}
-                      </div>
+                        date={date}
+                        isToday={dateStr === todayStr}
+                        isHoliday={isStatHoliday(date)}
+                        storeOpen={sh.open}
+                        storeClose={sh.close}
+                        scheduled={scheduledByDate[dateStr] || 0}
+                        target={getStaffingTarget(date)}
+                        hasOverride={!!storeHoursOverrides[dateStr] || staffingTargetOverrides[dateStr] !== undefined}
+                        canEdit={isCurrentPeriodEditMode && !isPast}
+                        isPast={isPast}
+                        onClick={handleColumnHeaderClick}
+                      />
                     );
                   })}
                 </div>
