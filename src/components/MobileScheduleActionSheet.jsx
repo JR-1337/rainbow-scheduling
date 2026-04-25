@@ -12,6 +12,7 @@ export const MobileScheduleActionSheet = ({
   week1,
   week2,
   fullTimeEmployees,
+  partTimeEmployees = [],
   employeeHasShiftsInWeek,
   autoPopulateWeek,
   setAutoPopulateConfirm,
@@ -139,7 +140,27 @@ export const MobileScheduleActionSheet = ({
             destructive
             onClick={() => fire(() => setAutoPopulateConfirm({ type: 'clear-all', week: activeWeek }))}
           />
+          <Row
+            icon={<Trash2 size={18} style={{ color: THEME.status.error }} />}
+            label="All Part-Timers"
+            destructive
+            onClick={() => fire(() => setAutoPopulateConfirm({ type: 'clear-all-pt', week: activeWeek }))}
+          />
+          {fullTimeEmployees.filter(emp => employeeHasShiftsInWeek(emp, weekDates)).length > 0 && (
+            <div className="px-4 pt-3 pb-1 text-[10px] uppercase tracking-wider" style={{ color: THEME.text.muted }}>Full-Time</div>
+          )}
           {fullTimeEmployees.filter(emp => employeeHasShiftsInWeek(emp, weekDates)).map(emp => (
+            <Row
+              key={emp.id}
+              icon={<span className="w-[18px]" />}
+              label={emp.name}
+              onClick={() => fire(() => setAutoPopulateConfirm({ type: 'clear-week', employee: emp, week: activeWeek }))}
+            />
+          ))}
+          {partTimeEmployees.filter(emp => employeeHasShiftsInWeek(emp, weekDates)).length > 0 && (
+            <div className="px-4 pt-3 pb-1 text-[10px] uppercase tracking-wider" style={{ color: THEME.text.muted }}>Part-Time</div>
+          )}
+          {partTimeEmployees.filter(emp => employeeHasShiftsInWeek(emp, weekDates)).map(emp => (
             <Row
               key={emp.id}
               icon={<span className="w-[18px]" />}

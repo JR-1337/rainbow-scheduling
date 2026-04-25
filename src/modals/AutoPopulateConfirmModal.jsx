@@ -23,6 +23,7 @@ export function AutoPopulateConfirmModal({ state, onClose, onConfirm }) {
           {state.type === 'populate-week' && `Auto-Fill Week ${state.week} for ${state.employee?.name}?`}
           {state.type === 'clear-week' && `Clear Week ${state.week} for ${state.employee?.name}?`}
           {state.type === 'clear-all' && `Clear All Full-Time Shifts for Week ${state.week}?`}
+          {state.type === 'clear-all-pt' && `Clear All Part-Time Shifts for Week ${state.week}?`}
         </p>
 
         <p className="text-xs mb-4" style={{ color: THEME.text.secondary }}>

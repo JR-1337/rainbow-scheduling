@@ -563,6 +563,9 @@ export default function App() {
   
   // Full-time employees only (for auto-populate feature)
   const fullTimeEmployees = useMemo(() => schedulableEmployees.filter(e => e.employmentType === 'full-time'), [schedulableEmployees]);
+
+  // Part-time employees (Clear dropdown can target them; Auto-Fill stays FT-only by design)
+  const partTimeEmployees = useMemo(() => schedulableEmployees.filter(e => e.employmentType === 'part-time'), [schedulableEmployees]);
   
   // Admin contacts (admins who are not owner, for display purposes)
   const adminContacts = useMemo(() => employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted), [employees]);
@@ -727,6 +730,9 @@ export default function App() {
     } else if (type === 'clear-all') {
       const count = clearWeekShifts(weekDates);
       showToast('success', `Removed ${count} shifts for full-time employees`);
+    } else if (type === 'clear-all-pt') {
+      const count = clearWeekShifts(weekDates, partTimeEmployees);
+      showToast('success', `Removed ${count} shifts for part-time employees`);
     }
 
     setAutoPopulateConfirm(null);
@@ -1894,6 +1900,7 @@ export default function App() {
           week1={week1}
           week2={week2}
           fullTimeEmployees={fullTimeEmployees}
+          partTimeEmployees={partTimeEmployees}
           employeeHasShiftsInWeek={employeeHasShiftsInWeek}
           autoPopulateWeek={autoPopulateWeek}
           setAutoPopulateConfirm={setAutoPopulateConfirm}
@@ -2126,17 +2133,19 @@ export default function App() {
 
                   <div className="w-px h-4" style={{ backgroundColor: THEME.border.default }} />
 
-                  {/* S62 — Clear dropdown (collapsed the same way) */}
+                  {/* S62 — Clear dropdown. Both FT and PT clearable; Auto-Fill remains FT-only. */}
                   <select
                     value=""
                     onChange={(e) => {
                       const val = e.target.value;
                       e.target.value = '';
                       if (!val) return;
-                      if (val === '__all__') {
+                      if (val === '__all_ft__') {
                         setAutoPopulateConfirm({ type: 'clear-all', week: activeWeek });
+                      } else if (val === '__all_pt__') {
+                        setAutoPopulateConfirm({ type: 'clear-all-pt', week: activeWeek });
                       } else {
-                        const emp = fullTimeEmployees.find(x => x.id === val);
+                        const emp = schedulableEmployees.find(x => x.id === val);
                         if (emp) setAutoPopulateConfirm({ type: 'clear-week', employee: emp, week: activeWeek });
                       }
                     }}
@@ -2145,9 +2154,15 @@ export default function App() {
                     aria-label={`Clear week ${activeWeek}`}
                   >
                     <option value="">🗑 Clear Week {activeWeek}...</option>
-                    <option value="__all__" style={{ fontWeight: 700, color: THEME.status.error }}>All Full-Timers</option>
-                    <optgroup label="— or pick one —">
+                    <option value="__all_ft__" style={{ fontWeight: 700, color: THEME.status.error }}>All Full-Timers</option>
+                    <option value="__all_pt__" style={{ fontWeight: 700, color: THEME.status.error }}>All Part-Timers</option>
+                    <optgroup label="— Full-Time —">
                       {fullTimeEmployees.filter(emp => employeeHasShiftsInWeek(emp, activeWeek === 1 ? week1 : week2)).map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="— Part-Time —">
+                      {partTimeEmployees.filter(emp => employeeHasShiftsInWeek(emp, activeWeek === 1 ? week1 : week2)).map(emp => (
                         <option key={emp.id} value={emp.id}>{emp.name}</option>
                       ))}
                     </optgroup>
