@@ -367,12 +367,28 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                                 const et = EVENT_TYPES[ev.type];
                                 return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
                               }).join('\n')}>
-                              <span className="font-semibold truncate" style={{ color: firstEventType.text, fontSize: '10px' }}>
-                                {cellEvents.length === 1 ? firstEventType.shortLabel : `${cellEvents.length} events`}
-                              </span>
-                              <span style={{ color: firstEventType.text, opacity: 0.8, fontSize: '9px' }}>
-                                {formatTimeShort(firstEvent.startTime)}-{formatTimeShort(firstEvent.endTime)}
-                              </span>
+                              {cellEvents.length === 2 ? (
+                                <div className="flex flex-col gap-0.5">
+                                  {cellEvents.map((ev, i) => {
+                                    const et = EVENT_TYPES[ev.type] || firstEventType;
+                                    return (
+                                      <div key={i} className="flex items-center gap-0.5">
+                                        <span className="rounded font-semibold leading-tight" style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>{et.shortLabel}</span>
+                                        <span style={{ color: et.text, opacity: 0.8, fontSize: '7px' }}>{formatTimeShort(ev.startTime)}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="font-semibold truncate" style={{ color: firstEventType.text, fontSize: '10px' }}>
+                                    {cellEvents.length === 1 ? firstEventType.shortLabel : `${cellEvents.length} events`}
+                                  </span>
+                                  <span style={{ color: firstEventType.text, opacity: 0.8, fontSize: '9px' }}>
+                                    {formatTimeShort(firstEvent.startTime)}-{formatTimeShort(firstEvent.endTime)}
+                                  </span>
+                                </>
+                              )}
                             </div>
                           ) : null}
                         </div>

@@ -126,12 +126,28 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
               const et = EVENT_TYPES[ev.type];
               return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
             }).join('\n')}>
-            <span className="text-xs font-semibold truncate" style={{ color: firstEventType.text }}>
-              {visibleEvents.length === 1 ? firstEventType.shortLabel : `${visibleEvents.length} events`}
-            </span>
-            <span className="text-xs" style={{ color: firstEventType.text, opacity: 0.8 }}>
-              {formatTimeShort(firstEvent.startTime)}-{formatTimeShort(firstEvent.endTime)}
-            </span>
+            {visibleEvents.length === 2 ? (
+              <div className="flex flex-col gap-0.5">
+                {visibleEvents.map((ev, i) => {
+                  const et = EVENT_TYPES[ev.type] || firstEventType;
+                  return (
+                    <div key={i} className="flex items-center gap-0.5">
+                      <span className="rounded font-semibold leading-tight" style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '10px', padding: '0 2px' }}>{et.shortLabel}</span>
+                      <span style={{ color: et.text, opacity: 0.8, fontSize: '9px' }}>{formatTimeShort(ev.startTime)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <>
+                <span className="text-xs font-semibold truncate" style={{ color: firstEventType.text }}>
+                  {visibleEvents.length === 1 ? firstEventType.shortLabel : `${visibleEvents.length} events`}
+                </span>
+                <span className="text-xs" style={{ color: firstEventType.text, opacity: 0.8 }}>
+                  {formatTimeShort(firstEvent.startTime)}-{formatTimeShort(firstEvent.endTime)}
+                </span>
+              </>
+            )}
           </div>
         ) : (
           !isDeleted && !isLocked && (
