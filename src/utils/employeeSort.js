@@ -1,16 +1,18 @@
-// Four-bucket display order for schedule renders (desktop admin grid,
+// Five-bucket display order for schedule renders (desktop admin grid,
 // desktop employee view, mobile admin, mobile employee, PDF):
 //   0 = Sarvi (pinned top)
-//   1 = other admins (isAdmin && !isOwner && not Sarvi)
-//   2 = full-time non-admins
-//   3 = part-time non-admins (rest)
+//   1 = other admin1s (isAdmin && !isOwner && not Sarvi)
+//   2 = admin2s (view-only, rendered with title instead of role)
+//   3 = full-time non-admins
+//   4 = part-time non-admins (rest)
 // Alphabetical within each bucket. Dividers render on bucket transitions.
 
 export const employeeBucket = (e) => {
   if ((e.name || '').toLowerCase() === 'sarvi') return 0;
   if (e.isAdmin) return 1;
-  if (e.employmentType === 'full-time') return 2;
-  return 3;
+  if (e.adminTier === 'admin2') return 2;
+  if (e.employmentType === 'full-time') return 3;
+  return 4;
 };
 
 export const sortBySarviAdminsFTPT = (employees) =>

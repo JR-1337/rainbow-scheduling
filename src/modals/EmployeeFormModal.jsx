@@ -14,13 +14,13 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
     (a, d) => ({ ...a, [d]: { available: true, start: '06:00', end: '22:00' } }),
     {}
   );
-  const [formData, setFormData] = useState(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', availability: defaultAvail });
+  const [formData, setFormData] = useState(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', adminTier: '', title: '', availability: defaultAvail });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [password, setPassword] = useState(suggestedPassword);
   const [errors, setErrors] = useState({});
   const [displayedPassword, setDisplayedPassword] = useState(employee?.password || '');
 
-  useEffect(() => { setFormData(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', availability: defaultAvail }); setShowDeleteConfirm(false); setPassword(suggestedPassword); setErrors({}); setDisplayedPassword(employee?.password || ''); }, [employee, isOpen]);
+  useEffect(() => { setFormData(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', adminTier: '', title: '', availability: defaultAvail }); setShowDeleteConfirm(false); setPassword(suggestedPassword); setErrors({}); setDisplayedPassword(employee?.password || ''); }, [employee, isOpen]);
 
   const isEditingSelf = employee && currentUser && employee.email === currentUser.email;
   const isEditingOwner = employee?.isOwner === true;
@@ -34,8 +34,20 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
       setErrors({ email: 'Email must include an @ symbol' });
       return;
     }
+    if (formData.adminTier === 'admin2') {
+      const t = (formData.title || '').trim();
+      if (!t) {
+        setErrors({ title: 'Title is required for Admin 2' });
+        return;
+      }
+      if (/\s/.test(t)) {
+        setErrors({ title: 'Title must be a single word (no spaces)' });
+        return;
+      }
+    }
     setIsSaving(true);
     const saveData = { ...formData, id: formData.id || `emp-${Date.now()}` };
+    if (formData.adminTier === 'admin2') saveData.title = (formData.title || '').trim();
     if (!employee && password) saveData.password = password;
     const success = await onSave(saveData);
     setIsSaving(false);
@@ -106,16 +118,18 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
             </div>
           )}
 
-          <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: THEME.bg.tertiary }}>
-            <span className="text-xs" style={{ color: THEME.text.secondary }}>Default Role</span>
-            <select
-              value={formData.defaultSection || 'none'}
-              onChange={e => setFormData({ ...formData, defaultSection: e.target.value })}
-              className="px-2 py-0.5 rounded text-xs"
-              style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${THEME.border.default}` }}>
-              {ROLES.map(r => <option key={r.id} value={r.id}>{r.fullName}</option>)}
-            </select>
-          </div>
+          {formData.adminTier !== 'admin2' && (
+            <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: THEME.bg.tertiary }}>
+              <span className="text-xs" style={{ color: THEME.text.secondary }}>Default Role</span>
+              <select
+                value={formData.defaultSection || 'none'}
+                onChange={e => setFormData({ ...formData, defaultSection: e.target.value })}
+                className="px-2 py-0.5 rounded text-xs"
+                style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${THEME.border.default}` }}>
+                {ROLES.map(r => <option key={r.id} value={r.id}>{r.fullName}</option>)}
+              </select>
+            </div>
+          )}
 
           <div className="mt-2 p-1.5 rounded-lg flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-0" style={{ backgroundColor: formData.employmentType === 'full-time' ? THEME.accent.blue + '15' : THEME.bg.tertiary }}>
             <span className="text-xs flex items-center gap-1" style={{ color: formData.employmentType === 'full-time' ? THEME.accent.blue : THEME.text.secondary }}>
@@ -151,15 +165,32 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                   </button>
                 </div>
 
-                <div className="flex-1 p-1.5 rounded-lg flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-0" style={{ backgroundColor: formData.isAdmin ? THEME.accent.purple + '15' : THEME.bg.tertiary }}>
-                  <span className="text-xs flex items-center gap-1" style={{ color: formData.isAdmin ? THEME.accent.purple : THEME.text.muted }}>
+                <div className="flex-1 p-1.5 rounded-lg flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-0" style={{ backgroundColor: formData.isAdmin ? THEME.accent.purple + '15' : formData.adminTier === 'admin2' ? THEME.accent.blue + '15' : THEME.bg.tertiary }}>
+                  <span className="text-xs flex items-center gap-1" style={{ color: formData.isAdmin ? THEME.accent.purple : formData.adminTier === 'admin2' ? THEME.accent.blue : THEME.text.muted }}>
                     <Shield size={12} />
-                    {formData.isOwner ? 'Owner' : formData.isAdmin ? 'Admin' : 'Staff'}
+                    {formData.isOwner ? 'Owner' : formData.isAdmin ? 'Admin' : formData.adminTier === 'admin2' ? 'Admin 2' : 'Staff'}
                   </span>
                   {!formData.isOwner && canToggleAdmin && (
-                    <button onClick={() => setFormData({ ...formData, isAdmin: !formData.isAdmin, showOnSchedule: formData.isAdmin ? true : false })} className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary }}>
-                      {formData.isAdmin ? 'Revoke Admin' : 'Make Admin'}
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setFormData({ ...formData, isAdmin: false, adminTier: '', title: '', showOnSchedule: true })}
+                        className="px-2 py-0.5 rounded text-xs"
+                        style={{ backgroundColor: !formData.isAdmin && formData.adminTier !== 'admin2' ? THEME.text.muted : THEME.bg.elevated, color: !formData.isAdmin && formData.adminTier !== 'admin2' ? '#fff' : THEME.text.muted }}>
+                        Staff
+                      </button>
+                      <button
+                        onClick={() => setFormData({ ...formData, isAdmin: true, adminTier: 'admin1', title: '', showOnSchedule: false })}
+                        className="px-2 py-0.5 rounded text-xs"
+                        style={{ backgroundColor: formData.isAdmin ? THEME.accent.purple : THEME.bg.elevated, color: formData.isAdmin ? '#fff' : THEME.text.muted }}>
+                        Admin
+                      </button>
+                      <button
+                        onClick={() => setFormData({ ...formData, isAdmin: false, adminTier: 'admin2', title: formData.title || '', showOnSchedule: true, defaultSection: 'none' })}
+                        className="px-2 py-0.5 rounded text-xs"
+                        style={{ backgroundColor: formData.adminTier === 'admin2' ? THEME.accent.blue : THEME.bg.elevated, color: formData.adminTier === 'admin2' ? '#fff' : THEME.text.muted }}>
+                        Admin 2
+                      </button>
+                    </div>
                   )}
                   {!formData.isOwner && !canToggleAdmin && isEditingSelf && (
                     <span className="text-xs px-2 py-0.5 rounded" style={{ color: THEME.text.muted }}>
@@ -168,6 +199,22 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                   )}
                 </div>
               </div>
+
+              {formData.adminTier === 'admin2' && (
+                <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between gap-2" style={{ backgroundColor: THEME.bg.tertiary }}>
+                  <label className="text-xs shrink-0" style={{ color: THEME.text.secondary }}>Title</label>
+                  <input
+                    type="text"
+                    value={formData.title || ''}
+                    onChange={e => setFormData({ ...formData, title: e.target.value.slice(0, 20) })}
+                    placeholder="Manager, Buyer, VM..."
+                    className="flex-1 px-2 py-0.5 rounded text-xs"
+                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${errors.title ? THEME.status.error : THEME.border.default}` }} />
+                </div>
+              )}
+              {formData.adminTier === 'admin2' && errors.title && (
+                <p className="text-xs mt-0.5 ml-1" style={{ color: THEME.status.error }}>{errors.title}</p>
+              )}
 
               {formData.isAdmin && !formData.isOwner && (
                 <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: THEME.bg.tertiary }}>
