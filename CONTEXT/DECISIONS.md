@@ -29,6 +29,37 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-25 -- Clear dropdown covers part-timers; Auto-Fill stays FT-only
+Decision: Clear gained "All Part-Timers" + per-PT individual rows on both desktop admin (App.jsx Clear `<select>`) and mobile admin (MobileScheduleActionSheet level=`clear`). Backend wiring added a `clear-all-pt` handler branch that calls `clearWeekShifts(weekDates, partTimeEmployees)`. Auto-Fill remains full-time-only because PT default-shift logic is per-employee and Sarvi already books PT manually (decision preserved from S60-era design). One `partTimeEmployees` memo derived from `schedulableEmployees` mirrors `fullTimeEmployees`.
+Rationale: JR flagged that there was no way to clear a part-timer's week — every other clear operation existed for FT but not PT. Mirroring the FT structure (All + individuals) gives Sarvi the same precision for both groups while preserving the intentional Auto-Fill asymmetry.
+Confidence: H -- verified 2026-04-25 build PASS at HEAD `d678948`. Prod smoke pending.
+
+## 2026-04-25 -- All UI fixes apply to mobile AND desktop in one commit
+Decision: Saved as auto-memory `feedback_mobile_desktop_parity.md`. Whenever a UI bug fix or styling pattern is patched, audit ALL four schedule render paths (App.jsx desktop admin, EmployeeView desktop employee, MobileAdminView, MobileEmployeeView) plus shared components (ScheduleCell, ShiftEditorModal, etc.) and ship to every applicable surface in one commit.
+Rationale: 2026-04 had two bugs that recurred because a fix landed on only one of the four surfaces — translucent sticky day-header (`39ca4a5` fixed only MobileEmployeeView; MobileAdminView stayed broken until `daa4bbb`); and the broader pattern of asymmetric mobile/desktop UI behavior. JR explicit ask 2026-04-25: "we need to make sure all the fixes we apply are applied to both mobile and desktop if applicable."
+Confidence: H -- direct user instruction, durable rule.
+
+## 2026-04-25 -- Schedule day-header opacity: layered linear-gradient over bg.tertiary
+Decision: All four schedule grid headers (App.jsx desktop admin, EmployeeView desktop employee, MobileAdminView, MobileEmployeeView) use `background: linear-gradient(${tint}, ${tint}), ${THEME.bg.tertiary}` for today/holiday cells. The gradient is solid translucent tint, layered over an opaque bg.tertiary base. Net effect: cell looks tinted purple/amber, but is opaque — scrolling body cannot show through on sticky headers.
+Rationale: Hex-alpha shorthand (`THEME.accent.purple + '20'`) made the cell genuinely transparent; on `position: sticky` mobile headers the scrolling table body bled through. Prior commit `39ca4a5` solved this on MobileEmployeeView only; this session extended the pattern to the other three views.
+Confidence: H -- verified build PASS + visual logic at HEAD `daa4bbb`.
+
+## 2026-04-25 -- Sick reason in-cell render (admin views): italic muted, replaces struck time/hours
+Decision: When a sick event has a non-empty `note`, the desktop ScheduleCell and MobileAdminView day cell render the note as a single-line `font-style: italic` `THEME.text.muted` truncated span IN PLACE OF the struck time/hours row. Empty reason → falls back to the original struck time/hours + 0h treatment. Hover-`title` carries full text for long reasons. Sick toggle Save button no longer disabled; `handleSave` now flushes any pending `sickNote` so tap-Save-without-blur persists. Employee views unchanged (MobileEmployeeView already rendered inline; desktop employee + admin keep tooltip-only as scope decision).
+Rationale: Reason was captured but invisible to admins on touch (HTML `title` doesn't show on tap). Sarvi's primary device is iPad/phone. Design synthesized from Creative-Partner UX research files (L0-05 gestalt, L0-06 visual hierarchy, L1-06 applied UI/UX): replace the time/hours row (semantically dead when struck + 0h) instead of stacking a third row (Prägnanz / proximity). Italic differentiates as supporting metadata via STYLE not weight/color (the amber bg + red diagonal + struck text already saturate the cell's color budget). Same `text.muted` color as the struck role above keeps hierarchy: role first, reason second.
+Confidence: H -- verified 2026-04-25 localhost Playwright at HEAD `4504990` (Save-without-blur persisted reason; italic muted span rendered rgb(139,133,128); empty-reason fallback shows struck time/hours).
+Rejected alternatives:
+- Reason as a third row -- rejected, cell already 56-66px tall, would crowd.
+- Replace the role row -- rejected, audit trail loss.
+- Bold or colored reason -- rejected, competes with the struck role + amber + red stripe focal point.
+- Icon prefix (speech bubble, sticky note) -- rejected, italic alone is sufficient single differentiator.
+- THEME.text.secondary (#5C5C5C, 6:1 contrast) -- rejected, would make reason DARKER than struck role above, inverting hierarchy. Stayed muted (3.4:1, passes AA Large for italic supporting text).
+
+## 2026-04-25 -- Floor Supervisor role added (OTR green, FS glyph)
+Decision: New role `floorSupervisor` between `womens` and `floorMonitor` in ROLES order. Short label `Supervisor` (was `Super` initially; renamed per Sarvi feedback at `39c2d62`). Full label `Floor Supervisor`. OTR green `#00A84D` from THEME.roles. PDF glyph `FS` in `monitor` family (italic Medium typography). 2px ink cell border extended to both supervisory roles in PDF. Employee form's "Default Section" label renamed to "Default Role" (field stays `defaultSection` in code + Sheet — pure copy change).
+Rationale: TODO Item 2 backlog. Per-role behavior is mostly data-driven (ROLES + ROLES_BY_ID maps), so add-a-role is mechanical: one entry in constants.js, one color in theme.js, one glyph + family + cellBorder branch in pdf/generate.js, comment update in backend/Code.gs. Floor Supervisor is treated as a peer to Floor Monitor (both supervisory, both 2px ink border) but visually distinct via OTR-green color.
+Confidence: H -- verified 2026-04-25 localhost Playwright at HEAD `98920d3` then `39c2d62` (dropdown lists 8 roles with Floor Supervisor present, ShiftEditorModal role picker shows Supervisor button, selected fills rgb(0,168,77), grid cell role text renders OTR green). Prod smoke pending.
+
 ## 2026-04-24 -- ShiftEditorModal redesign (absence toggle + peer activity toggles)
 Decision: Shipped the sick shift type, then iterated the modal through JR feedback into a toggle-based design that separates absence from activity. SUPERSEDES the earlier sick-as-tab design (commit d6a83b2 DECISIONS entry) which stacked sick as a peer tab next to work/meeting/pk.
 

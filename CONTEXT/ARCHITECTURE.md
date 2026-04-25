@@ -106,7 +106,9 @@ Rules:
 
 ## Roles
 
-- `cashier` `#8B5CF6` | `backupCashier` `#A78BFA` | `mens` `#3B82F6` | `womens` `#F472B6` | `floorMonitor` `#F59E0B` | `none` `#475569`
+- `cashier` `#932378` | `backupCashier` `#B44D9A` | `backupCash` `#D08BC3` | `mens` `#0453A3` | `womens` `#EC3228` | `floorSupervisor` `#00A84D` | `floorMonitor` `#F57F20` | `none` `#64748B`
+- PDF glyph + family map (`src/pdf/generate.js`): cashier=C1/cash | backupCashier=C2/cash | backupCash=B/cash | mens=M/section | womens=W/section | floorSupervisor=FS/monitor | floorMonitor=F/monitor | none=blank
+- Supervisory roles (floorMonitor + floorSupervisor) get a 2px ink cell border in PDF
 
 ## Integrations
 
