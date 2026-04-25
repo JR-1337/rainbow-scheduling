@@ -241,8 +241,8 @@ Affirmations: 0
 
 ## [PROJECT] -- Opus 4.7 plans, Sonnet 4.6 executes
 Lesson: For non-trivial multi-file changes, spawn an Opus 4.7 subagent to produce the detailed plan; spawn a Sonnet 4.6 subagent to execute it. Sonnet does both in the same session only when a model flag prevents spawning Opus (e.g. current session running in Sonnet only mode).
-Context: JR stated 2026-04-23 "I'm gonna have opus 4.7 do the thinking and sonnet executing detailed plans" after EnterPlanMode confusion. Explicitly: "opus 4.7 plans the code and does the system 2 thinking and then a sonnet 4.6 sub agent executes the very specific plan."
-Affirmations: 0
+Context: JR stated 2026-04-23 "I'm gonna have opus 4.7 do the thinking and sonnet executing detailed plans" after EnterPlanMode confusion. Explicitly: "opus 4.7 plans the code and does the system 2 thinking and then a sonnet 4.6 sub agent executes the very specific plan." Reaffirmed 2026-04-25 during /coding-plan skill design: JR asked about Sonnet-only cost; chose to keep the split after seeing per-run cost numbers (~$1.50-2.50, 80% in Opus planning).
+Affirmations: 1
 
 ## Workflow and process
 
@@ -455,6 +455,24 @@ Lesson: A picker/toggle/button writes only the field(s) it nominally owns. Do no
 Context: 2026-04-25 -- the EmployeeFormModal tier picker (Staff/Admin/Admin 2) was writing `{isAdmin, adminTier, title, showOnSchedule, defaultSection}` per click. Two distinct regressions surfaced: (1) Admin click force-wrote `showOnSchedule: false`, hiding admin1s from grid on every tier change; (2) JR re-stated the principle as a rule: "any employee of any level's visibility persists independently of them moving levels or roles. or anything. i changed 1 setting not two. thats simple logic." Fix shipped at `5fece50` then consolidated at `303e4c5`. Helpers like `defaultSection: 'none'` for admin2 were also stripped because the render layer ignores defaultSection for hasTitle employees, making the bundle cosmetic.
 Confidence: H -- direct user instruction.
 Affirmations: 1
+
+## [GLOBAL] -- Plan file holds the plan, not the artifact being planned
+Lesson: When using plan-mode to design a deliverable (skill file, doc, code module), the plan describes what will be written and how. The artifact itself gets written to its real path post-approval. Staging the artifact inside the plan file conflates two documents and confuses review.
+Context: 2026-04-25 -- drafted SKILL.md content inside the plan file as a workaround for plan-mode's edit-only-the-plan-file rule. JR called it: "whats going on here? its written two places?" Restored normal flow: plan file holds the plan, ExitPlanMode for approval, then Write the artifact to its real path.
+Confidence: H -- direct user correction.
+Affirmations: 0
+
+## [GLOBAL] -- Long-context instruction files: hard bans at top AND bottom; cap rules at 5-7 per section
+Lesson: Architectural attention bias guarantees primacy and recency anchors carry weight; middle gets discounted. Restate the 2-3 highest-stakes constraints at top AND bottom. Cap critical rules per section at 5-7 (RECAST research arXiv:2505.19030); adherence drops sharply past that. Reserve ALL CAPS / "DO NOT" for the 2-3 truly load-bearing rules; overuse causes Claude 4.5+ to over-trigger.
+Context: 2026-04-25 -- /coding-plan SKILL.md draft. Sources: arXiv:2603.10123 (primacy/recency are architectural, not learned), arXiv:2505.19030 (RECAST cap), Anthropic long-context tips (instructions at bottom), claude-code-guide research (Opus 4.5+ over-triggers on caps).
+Confidence: H -- multi-source research, applied to working artifact.
+Affirmations: 0
+
+## [GLOBAL] -- Subagent watchdog needs triple defense, not wall-clock alone
+Lesson: Wall-clock alone misses fast loops emitting fake progress. Step-progress alone misses freeze-and-resume patterns. Tool-call cap alone misses single-tool spirals. Combine: kill on ANY of (15-min wall, 5-min step-progress stall, hard tool-call cap). Subagent brief must mandate `[step N/M started]` heartbeat lines so parent's Monitor can detect liveness.
+Context: 2026-04-25 -- /coding-plan SKILL.md Phase 7 design. JR rejected v1's wall-clock-only watchdog after pointing out it misses token-spirals. Final design covers frozen, spiraling, and looping failure modes.
+Confidence: H -- direct user challenge, alternative validated against memory of prior Playwright hangs.
+Affirmations: 0
 
 <!-- TEMPLATE
 ## [GLOBAL] -- [Lesson title]
