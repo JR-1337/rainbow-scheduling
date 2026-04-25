@@ -34,6 +34,7 @@ const ROLE_GLYPHS = {
   backupCash: 'B',
   mens: 'M',
   womens: 'W',
+  floorSupervisor: 'FS',
   floorMonitor: 'F',
   none: '',
 };
@@ -50,6 +51,7 @@ const ROLE_FAMILY = {
   backupCash: 'cash',
   mens: 'section',
   womens: 'section',
+  floorSupervisor: 'monitor',
   floorMonitor: 'monitor',
   none: 'none',
 };
@@ -138,9 +140,9 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         const roleName = role?.name || 'Shift';
         const family = ROLE_FAMILY[shift.role] || 'none';
         const glyph = ROLE_GLYPHS[shift.role] || '';
-        // Floor Monitor "owns" its perimeter: 2px ink border wins over the
+        // Supervisory roles "own" their perimeter: 2px ink border wins over the
         // surrounding 1px grey grid via border-collapse thickness rules.
-        const cellBorder = shift.role === 'floorMonitor'
+        const cellBorder = (shift.role === 'floorMonitor' || shift.role === 'floorSupervisor')
           ? `border:2px solid ${G.ink};`
           : `border:1px solid ${G.border};`;
         return `<td style="padding:5px;${cellBorder}background:${G.fill};text-align:center;position:relative;">

@@ -107,7 +107,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
           )}
 
           <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: THEME.bg.tertiary }}>
-            <span className="text-xs" style={{ color: THEME.text.secondary }}>Default Section</span>
+            <span className="text-xs" style={{ color: THEME.text.secondary }}>Default Role</span>
             <select
               value={formData.defaultSection || 'none'}
               onChange={e => setFormData({ ...formData, defaultSection: e.target.value })}

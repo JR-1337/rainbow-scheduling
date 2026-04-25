@@ -6,6 +6,7 @@ export const ROLES = [
   { id: 'backupCash', name: 'Backup', fullName: 'Backup Cash', color: THEME.roles.backupCash },
   { id: 'mens', name: "Men's", fullName: "Men's Section", color: THEME.roles.mens },
   { id: 'womens', name: "Women's", fullName: "Women's Section", color: THEME.roles.womens },
+  { id: 'floorSupervisor', name: 'Super', fullName: 'Floor Supervisor', color: THEME.roles.floorSupervisor },
   { id: 'floorMonitor', name: 'Monitor', fullName: 'Floor Monitor', color: THEME.roles.floorMonitor },
   { id: 'none', name: 'None', fullName: 'No Role', color: THEME.roles.none },
 ];
