@@ -173,19 +173,19 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                   {!formData.isOwner && canToggleAdmin && (
                     <div className="flex gap-1">
                       <button
-                        onClick={() => setFormData({ ...formData, isAdmin: false, adminTier: '', title: '', showOnSchedule: true })}
+                        onClick={() => setFormData({ ...formData, isAdmin: false, adminTier: '', title: '' })}
                         className="px-2 py-0.5 rounded text-xs"
                         style={{ backgroundColor: !formData.isAdmin && formData.adminTier !== 'admin2' ? THEME.text.muted : THEME.bg.elevated, color: !formData.isAdmin && formData.adminTier !== 'admin2' ? '#fff' : THEME.text.muted }}>
                         Staff
                       </button>
                       <button
-                        onClick={() => setFormData({ ...formData, isAdmin: true, adminTier: 'admin1', title: '', showOnSchedule: false })}
+                        onClick={() => setFormData({ ...formData, isAdmin: true, adminTier: 'admin1', title: '' })}
                         className="px-2 py-0.5 rounded text-xs"
                         style={{ backgroundColor: formData.isAdmin ? THEME.accent.purple : THEME.bg.elevated, color: formData.isAdmin ? '#fff' : THEME.text.muted }}>
                         Admin
                       </button>
                       <button
-                        onClick={() => setFormData({ ...formData, isAdmin: false, adminTier: 'admin2', title: formData.title || '', showOnSchedule: true, defaultSection: 'none' })}
+                        onClick={() => setFormData({ ...formData, isAdmin: false, adminTier: 'admin2', title: formData.title || '', defaultSection: 'none' })}
                         className="px-2 py-0.5 rounded text-xs"
                         style={{ backgroundColor: formData.adminTier === 'admin2' ? THEME.accent.blue : THEME.bg.elevated, color: formData.adminTier === 'admin2' ? '#fff' : THEME.text.muted }}>
                         Admin 2
