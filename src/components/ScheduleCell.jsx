@@ -5,6 +5,7 @@ import { ROLES_BY_ID, EVENT_TYPES } from '../constants';
 import { isStatHoliday } from '../utils/storeHours';
 import { parseTime, formatTimeShort } from '../utils/date';
 import { TaskStarTooltip } from './uiKit';
+import { hasTitle } from '../utils/employeeRender';
 
 const getAvailabilityShading = (avail, storeHours) => {
   if (!avail.available) return { top: 100, bottom: 0 };
@@ -21,12 +22,12 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, ava
   const [showTask, setShowTask] = useState(false);
   const starRef = useRef(null);
   const role = shift ? ROLES_BY_ID[shift.role] : null;
-  // Admin2: render employee.title in place of role name. Cell uses a neutral
-  // palette (muted border, tertiary bg) so it reads as "shift exists, no role".
-  const isAdmin2 = !!(shift && employee && employee.adminTier === 'admin2');
-  const admin2Label = isAdmin2 ? (employee.title || '') : '';
-  const labelText = isAdmin2 ? admin2Label : (role?.name || '');
-  const labelColor = isAdmin2 ? THEME.text.primary : role?.color;
+  // hasTitle employees (admin1 + admin2) render their freeform title in place
+  // of a role name. Cell uses neutral palette (tertiary bg, default border).
+  const isTitled = !!shift && hasTitle(employee);
+  const titleLabel = isTitled ? (employee.title || '') : '';
+  const labelText = isTitled ? titleLabel : (role?.name || '');
+  const labelColor = isTitled ? THEME.text.primary : role?.color;
   const visibleEvents = (events || []).filter(ev => EVENT_TYPES[ev.type]);
   const hasEvents = visibleEvents.length > 0;
   const eventOnly = !shift && hasEvents;
@@ -46,8 +47,8 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onClick, ava
     <>
       <div onClick={isClickable ? onClick : undefined} className={`h-14 rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
         style={{
-          backgroundColor: hasSick ? EVENT_TYPES.sick.bg : shift && isAdmin2 ? THEME.bg.tertiary : shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
-          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border : shift && isAdmin2 ? THEME.border.default : shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`
+          backgroundColor: hasSick ? EVENT_TYPES.sick.bg : shift && isTitled ? THEME.bg.tertiary : shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
+          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border : shift && isTitled ? THEME.border.default : shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`
         }}>
 
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}

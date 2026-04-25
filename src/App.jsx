@@ -30,6 +30,7 @@ import { createShiftFromAvailability, applyShiftMutation, collectPeriodShiftsFor
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { sortBySarviAdminsFTPT, employeeBucket } from './utils/employeeSort';
+import { hasTitle } from './utils/employeeRender';
 import { generateSchedulePDF } from './pdf/generate';
 import { getAuthToken, setAuthToken, clearAuth, setCachedUser, handleAuthError } from './auth';
 import { OTR, THEME, TYPE } from './theme';
@@ -2546,8 +2547,9 @@ export default function App() {
             <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: tooltipData.isDeleted ? THEME.bg.elevated : `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: tooltipData.isDeleted ? THEME.text.muted : 'white' }}>{tooltipData.employee.name.charAt(0)}</div>
             <p className="font-semibold text-xs flex items-center gap-1 flex-1" style={{ color: THEME.text.primary }}>
               {tooltipData.employee.name}
-              {tooltipData.employee.isAdmin && <Shield size={10} style={{ color: THEME.accent.purple }} />}
-              {tooltipData.employee.adminTier === 'admin2' && <Shield size={10} style={{ color: THEME.accent.blue }} />}
+              {hasTitle(tooltipData.employee) && (
+                <Shield size={10} style={{ color: tooltipData.employee.adminTier === 'admin2' ? THEME.accent.blue : THEME.accent.purple }} />
+              )}
               {tooltipData.isDeleted && <span style={{ color: THEME.text.muted }}>(Former)</span>}
             </p>
           </div>
@@ -2565,7 +2567,7 @@ export default function App() {
             <Mail size={10} className="flex-shrink-0" />
             {tooltipData.employee.email}
           </a>
-          {tooltipData.employee.adminTier === 'admin2' && tooltipData.employee.title && (
+          {hasTitle(tooltipData.employee) && tooltipData.employee.title && (
             <div className="flex items-center gap-1 mt-1" style={{ color: THEME.text.secondary, fontSize: '11px' }}>
               <span style={{ color: THEME.text.muted }}>Title:</span>
               <span style={{ color: THEME.text.primary, fontWeight: 600 }}>{tooltipData.employee.title}</span>

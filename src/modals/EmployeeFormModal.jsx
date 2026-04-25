@@ -4,6 +4,7 @@ import { THEME } from '../theme';
 import { ROLES } from '../constants';
 import { apiCall } from '../utils/api';
 import { Modal, GradientButton, Input } from '../components/primitives';
+import { hasTitle } from '../utils/employeeRender';
 export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null, currentUser = null, showToast, suggestedPassword = '' }) => {
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   // Availability is the outer eligibility window, not the booking window.
@@ -34,10 +35,10 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
       setErrors({ email: 'Email must include an @ symbol' });
       return;
     }
-    if (formData.adminTier === 'admin2') {
+    if (hasTitle(formData)) {
       const t = (formData.title || '').trim();
       if (!t) {
-        setErrors({ title: 'Title is required for Admin 2' });
+        setErrors({ title: 'Title is required for admins' });
         return;
       }
       if (/\s/.test(t)) {
@@ -47,7 +48,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
     }
     setIsSaving(true);
     const saveData = { ...formData, id: formData.id || `emp-${Date.now()}` };
-    if (formData.adminTier === 'admin2') saveData.title = (formData.title || '').trim();
+    if (hasTitle(formData)) saveData.title = (formData.title || '').trim();
     if (!employee && password) saveData.password = password;
     const success = await onSave(saveData);
     setIsSaving(false);
@@ -118,7 +119,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
             </div>
           )}
 
-          {formData.adminTier !== 'admin2' && (
+          {!hasTitle(formData) && (
             <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: THEME.bg.tertiary }}>
               <span className="text-xs" style={{ color: THEME.text.secondary }}>Default Role</span>
               <select
@@ -173,19 +174,19 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                   {!formData.isOwner && canToggleAdmin && (
                     <div className="flex gap-1">
                       <button
-                        onClick={() => setFormData({ ...formData, isAdmin: false, adminTier: '', title: '' })}
+                        onClick={() => setFormData({ ...formData, isAdmin: false, adminTier: '' })}
                         className="px-2 py-0.5 rounded text-xs"
                         style={{ backgroundColor: !formData.isAdmin && formData.adminTier !== 'admin2' ? THEME.text.muted : THEME.bg.elevated, color: !formData.isAdmin && formData.adminTier !== 'admin2' ? '#fff' : THEME.text.muted }}>
                         Staff
                       </button>
                       <button
-                        onClick={() => setFormData({ ...formData, isAdmin: true, adminTier: 'admin1', title: '' })}
+                        onClick={() => setFormData({ ...formData, isAdmin: true, adminTier: 'admin1' })}
                         className="px-2 py-0.5 rounded text-xs"
                         style={{ backgroundColor: formData.isAdmin ? THEME.accent.purple : THEME.bg.elevated, color: formData.isAdmin ? '#fff' : THEME.text.muted }}>
                         Admin
                       </button>
                       <button
-                        onClick={() => setFormData({ ...formData, isAdmin: false, adminTier: 'admin2', title: formData.title || '', defaultSection: 'none' })}
+                        onClick={() => setFormData({ ...formData, isAdmin: false, adminTier: 'admin2' })}
                         className="px-2 py-0.5 rounded text-xs"
                         style={{ backgroundColor: formData.adminTier === 'admin2' ? THEME.accent.blue : THEME.bg.elevated, color: formData.adminTier === 'admin2' ? '#fff' : THEME.text.muted }}>
                         Admin 2
@@ -200,7 +201,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                 </div>
               </div>
 
-              {formData.adminTier === 'admin2' && (
+              {hasTitle(formData) && (
                 <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between gap-2" style={{ backgroundColor: THEME.bg.tertiary }}>
                   <label className="text-xs shrink-0" style={{ color: THEME.text.secondary }}>Title</label>
                   <input

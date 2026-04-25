@@ -22,6 +22,7 @@ import { useFocusTrap } from './hooks/useFocusTrap';
 import { EVENT_TYPES } from './constants';
 import { computeDayUnionHours } from './utils/timemath';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
+import { hasTitle } from './utils/employeeRender';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE DETECTION HOOK
@@ -444,9 +445,9 @@ export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, time
           const shift = shifts[`${currentUser.id}-${dateStr}`];
           const dayEvents = (events[`${currentUser.id}-${dateStr}`] || []).filter(ev => EVENT_TYPES[ev.type]);
           const role = shift ? ROLES_BY_ID[shift.role] : null;
-          const isSelfAdmin2 = currentUser.adminTier === 'admin2';
-          const labelText = shift ? (isSelfAdmin2 ? (currentUser.title || '') : (role?.name || '')) : '';
-          const labelColor = shift ? (isSelfAdmin2 ? THEME.text.primary : (role?.color || THEME.text.primary)) : THEME.text.muted;
+          const isSelfTitled = hasTitle(currentUser);
+          const labelText = shift ? (isSelfTitled ? (currentUser.title || '') : (role?.name || '')) : '';
+          const labelColor = shift ? (isSelfTitled ? THEME.text.primary : (role?.color || THEME.text.primary)) : THEME.text.muted;
           const isTimeOff = myTimeOffDates.has(dateStr);
           const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
           const today = date.toDateString() === new Date().toDateString();
@@ -465,7 +466,7 @@ export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, time
               <div className="flex-1 flex flex-col gap-1">
                 {shift ? (
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: (isSelfAdmin2 ? THEME.bg.tertiary : (role?.color + '25')), color: labelColor }}>{labelText}</span>
+                    <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: (isSelfTitled ? THEME.bg.tertiary : (role?.color + '25')), color: labelColor }}>{labelText}</span>
                     <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)} – {formatTimeShort(shift.endTime)}</span>
                     {shift.task && (
                       <span className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: THEME.task + '20', color: THEME.task }}>

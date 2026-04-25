@@ -25,6 +25,7 @@ import { ChangePasswordModal } from '../modals/ChangePasswordModal';
 import { RequestDaysOffModal } from '../modals/RequestDaysOffModal';
 import { OfferShiftModal } from '../modals/OfferShiftModal';
 import { SwapShiftModal } from '../modals/SwapShiftModal';
+import { hasTitle } from '../utils/employeeRender';
 
 const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmpId, storeHours, isTimeOff = false, isUnavailable = false }) => {
   const [showTask, setShowTask] = useState(false);
@@ -603,9 +604,9 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
           {mobileShiftDetail && (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: currentUser.adminTier === 'admin2' ? THEME.text.primary : mobileShiftDetail.role?.color }} />
-                <span className="font-semibold" style={{ color: currentUser.adminTier === 'admin2' ? THEME.text.primary : mobileShiftDetail.role?.color, fontSize: '15px' }}>
-                  {currentUser.adminTier === 'admin2' ? (currentUser.title || '') : mobileShiftDetail.role?.name}
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: hasTitle(currentUser) ? THEME.text.primary : mobileShiftDetail.role?.color }} />
+                <span className="font-semibold" style={{ color: hasTitle(currentUser) ? THEME.text.primary : mobileShiftDetail.role?.color, fontSize: '15px' }}>
+                  {hasTitle(currentUser) ? (currentUser.title || '') : mobileShiftDetail.role?.name}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -838,9 +839,9 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
                 const shift = shifts[`${currentUser.id}-${toDateKey(date)}`];
                 if (!shift) return null;
                 const role = ROLES_BY_ID[shift.role];
-                const isSelfAdmin2 = currentUser.adminTier === 'admin2';
-                const labelText = isSelfAdmin2 ? (currentUser.title || '') : (role?.name || '');
-                const labelColor = isSelfAdmin2 ? THEME.text.primary : role?.color;
+                const isSelfTitled = hasTitle(currentUser);
+                const labelText = isSelfTitled ? (currentUser.title || '') : (role?.name || '');
+                const labelColor = isSelfTitled ? THEME.text.primary : role?.color;
                 const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
                 return (
                   <div key={toDateKey(date)} className="flex items-center gap-3 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, borderLeft: `3px solid ${labelColor}` }}>

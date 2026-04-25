@@ -26,6 +26,7 @@ import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSo
 import { MobileScheduleGrid } from './MobileEmployeeView';
 import { EVENT_TYPES } from './constants';
 import { Button } from './components/Button';
+import { hasTitle } from './utils/employeeRender';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN MOBILE HAMBURGER DRAWER
@@ -326,10 +327,10 @@ export const MobileAdminScheduleGrid = ({
                     const avail = emp.availability?.[dayName];
                     const isUnavailable = avail && !avail.available;
                     const role = shift ? ROLES_BY_ID[shift.role] : null;
-                    const isAdmin2 = emp.adminTier === 'admin2';
-                    const admin2Label = isAdmin2 ? (emp.title || '') : '';
-                    const labelText = shift ? (isAdmin2 ? admin2Label : role?.name) : '';
-                    const labelColor = shift ? (isAdmin2 ? THEME.text.primary : role?.color) : THEME.text.muted;
+                    const isTitled = hasTitle(emp);
+                    const titleLabel = isTitled ? (emp.title || '') : '';
+                    const labelText = shift ? (isTitled ? titleLabel : role?.name) : '';
+                    const labelColor = shift ? (isTitled ? THEME.text.primary : role?.color) : THEME.text.muted;
 
                     return (
                       <td key={i}
@@ -345,14 +346,14 @@ export const MobileAdminScheduleGrid = ({
                           backgroundColor: hasSick ? EVENT_TYPES.sick.bg
                             : approvedTimeOff ? THEME.text.muted + '15'
                             : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
-                            : shift && isAdmin2 ? THEME.bg.tertiary
+                            : shift && isTitled ? THEME.bg.tertiary
                             : shift ? role?.color + '25'
                             : eventOnly ? firstEventType.bg
                             : THEME.bg.tertiary,
                           border: `1px solid ${hasSick ? EVENT_TYPES.sick.border
                             : approvedTimeOff ? THEME.text.muted + '30'
                             : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
-                            : shift && isAdmin2 ? THEME.border.default
+                            : shift && isTitled ? THEME.border.default
                             : shift ? role?.color + '50'
                             : eventOnly ? firstEventType.border
                             : THEME.border.default}`,

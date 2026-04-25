@@ -9,6 +9,7 @@ import { AnimatedNumber } from '../components/uiKit';
 import { toDateKey, formatDateLong, calculateHours } from '../utils/date';
 import { isStatHoliday, DEFAULT_SHIFT } from '../utils/storeHours';
 import { getDayName } from '../utils/date';
+import { hasTitle } from '../utils/employeeRender';
 
 const getDefaultBookingTimes = (date) => {
   const dayName = getDayName(date).toLowerCase();
@@ -222,7 +223,7 @@ export const ShiftEditorModal = ({
   };
 
   const isAdmin = !!currentUser?.isAdmin;
-  const isAdmin2Target = employee?.adminTier === 'admin2';
+  const isTitledTarget = hasTitle(employee);
 
   // Render helper: the edit form for one booked activity type.
   const renderActivityForm = (type) => {
@@ -234,7 +235,7 @@ export const ShiftEditorModal = ({
             <TimePicker label="Start" value={workDraft.startTime} onChange={t => setWorkDraft({ ...workDraft, startTime: t })} />
             <TimePicker label="End" value={workDraft.endTime} onChange={t => setWorkDraft({ ...workDraft, endTime: t })} />
           </div>
-          {isAdmin2Target ? (
+          {isTitledTarget ? (
             <div className="mb-2">
               <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Title</label>
               <div className="px-2 py-1 rounded text-xs font-medium inline-block" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${THEME.border.default}` }}>
