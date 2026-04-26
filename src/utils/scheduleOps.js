@@ -102,7 +102,7 @@ export function applyShiftMutation(shiftsObj, eventsObj, s) {
       if (matchIdx >= 0) arr.splice(matchIdx, 1);
       if (arr.length > 0) nextEvents[k] = arr; else delete nextEvents[k];
     } else if (matchIdx >= 0) {
-      arr[matchIdx] = s;
+      arr[matchIdx] = { ...arr[matchIdx], ...s };
       nextEvents[k] = arr;
     } else {
       arr.push(s);

@@ -41,6 +41,7 @@ export const ShiftEditorModal = ({
   isOpen,
   onClose,
   onSave,
+  showToast,
   employee,
   date,
   existingShift,
@@ -88,11 +89,11 @@ export const ShiftEditorModal = ({
       .filter(e => e.type === 'meeting')
       .slice()
       .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
-    return existing.map(ev => ({
-      id: ev.id || `MEETING-${employee.id}-${toDateKey(date)}`,
+    return existing.map((ev, idx) => ({
+      id: ev.id || `MEETING-${employee.id}-${toDateKey(date)}-${idx}-${ev.startTime || ''}-${ev.endTime || ''}`,
       startTime: ev.startTime,
       endTime: ev.endTime,
-      note: ev.note || '',
+      note: typeof ev.note === 'string' ? ev.note : (ev.note != null ? String(ev.note) : ''),
     }));
   };
 
@@ -146,11 +147,26 @@ export const ShiftEditorModal = ({
   // so we also flush any pending reason here in case the user tapped Save
   // without first blurring the field.
   const handleSave = () => {
+    const payloads = [];
     if (sickActive && sickNote !== (existingSick?.note || '')) {
-      saveSick(true, sickNote);
+      const t = existingShift?.startTime && existingShift?.endTime
+        ? { start: existingShift.startTime, end: existingShift.endTime }
+        : getDefaultBookingTimes(date);
+      payloads.push({
+        employeeId: employee.id,
+        employeeName: employee.name,
+        date: toDateKey(date),
+        startTime: t.start,
+        endTime: t.end,
+        role: 'none',
+        task: '',
+        type: 'sick',
+        note: sickNote || '',
+        hours: calculateHours(t.start, t.end),
+      });
     }
     if (hasType('work')) {
-      onSave({
+      payloads.push({
         employeeId: employee.id,
         employeeName: employee.name,
         date: toDateKey(date),
@@ -163,10 +179,8 @@ export const ShiftEditorModal = ({
         hours: calculateHours(workDraft.startTime, workDraft.endTime),
       });
     }
-    // Meetings: iterate drafts; each one carries its own id so the backend write
-    // path replaces the matching row or appends a new one.
     meetingDrafts.forEach(draft => {
-      onSave({
+      payloads.push({
         id: draft.id,
         employeeId: employee.id,
         employeeName: employee.name,
@@ -180,9 +194,8 @@ export const ShiftEditorModal = ({
         hours: calculateHours(draft.startTime, draft.endTime),
       });
     });
-    // PK still singular.
     if (hasType('pk')) {
-      onSave({
+      payloads.push({
         employeeId: employee.id,
         employeeName: employee.name,
         date: toDateKey(date),
@@ -195,6 +208,8 @@ export const ShiftEditorModal = ({
         hours: calculateHours(pkDraft.startTime, pkDraft.endTime),
       });
     }
+    const last = payloads.length - 1;
+    payloads.forEach((p, i) => onSave(p, { quiet: i < last }));
     onClose();
   };
 
@@ -252,11 +267,17 @@ export const ShiftEditorModal = ({
 
   const clearDay = () => {
     const k = toDateKey(date);
-    if (existingShift) onSave({ employeeId: employee.id, date: k, type: 'work', deleted: true });
-    setPkBooked(false);
+    const removals = [];
+    if (existingShift) removals.push({ employeeId: employee.id, date: k, type: 'work', deleted: true });
     existingEvents.forEach(ev => {
-      onSave({ id: ev.id, employeeId: employee.id, date: k, type: ev.type, deleted: true });
+      removals.push({ id: ev.id, employeeId: employee.id, date: k, type: ev.type, deleted: true });
     });
+    setPkBooked(false);
+    const last = removals.length - 1;
+    removals.forEach((p, i) => onSave(p, { quiet: i < last }));
+    if (removals.length > 0) {
+      showToast?.('success', 'Day cleared — click SAVE to keep changes');
+    }
     onClose();
   };
 
@@ -574,9 +595,21 @@ export const ShiftEditorModal = ({
         </div>
       </div>
 
-      <div className="flex justify-between pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
-        {hasAnyData && <GradientButton danger small onClick={clearDay} ariaLabel="Clear all bookings for this day"><Trash2 size={10} /></GradientButton>}
-        <div className="flex gap-2 ml-auto">
+      <div className="flex items-center justify-between gap-2 pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
+        <div className="flex shrink-0 items-center justify-start">
+          {hasAnyData && (
+            <GradientButton
+              danger
+              small
+              onClick={clearDay}
+              ariaLabel="Clear entire day: work, meetings, PK, and sick"
+              title="Clears everything on this date for this person. Use X on each card to remove only one item."
+            >
+              <Trash2 size={10} />
+            </GradientButton>
+          )}
+        </div>
+        <div className="flex gap-2">
           <GradientButton variant="secondary" small onClick={onClose}>Cancel</GradientButton>
           <GradientButton small onClick={handleSave}><Check size={12} />Save</GradientButton>
         </div>

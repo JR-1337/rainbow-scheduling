@@ -849,11 +849,23 @@ export default function App() {
   // S61 — route by type. Work shifts live in `shifts[k]` (scalar). Meeting/PK
   // entries live in `events[k]` (array; one entry per type). Delete is type-aware
   // and only wipes the matching entry.
-  const saveShift = (s) => {
-    const { nextShifts, nextEvents, label, deleted, touched } = applyShiftMutation(shifts, events, s);
-    if (touched === 'shifts') setShifts(nextShifts);
-    else setEvents(nextEvents);
-    showToast('success', `${label} ${deleted ? 'removed' : 'updated'} — click SAVE to keep changes`);
+  // Functional updates: multiple onSave calls in one tick (modal Save, clear day)
+  // must chain on previous state; a plain setEvents(next) would drop all but the last.
+  const saveShift = (s, meta = {}) => {
+    const quiet = meta.quiet === true;
+    const type = s.type || 'work';
+    if (type === 'work') {
+      setShifts((prevShifts) => applyShiftMutation(prevShifts, events, s).nextShifts);
+    } else {
+      setEvents((prevEvents) => applyShiftMutation(shifts, prevEvents, s).nextEvents);
+    }
+    if (!quiet) {
+      const label = type === 'meeting' ? 'Meeting'
+        : type === 'pk' ? 'PK event'
+        : type === 'sick' ? 'Sick day'
+        : 'Shift';
+      showToast('success', `${label} ${s.deleted ? 'removed' : 'updated'} — click SAVE to keep changes`);
+    }
     setUnsaved(true);
     setPublished(false);
   };
@@ -1815,6 +1827,7 @@ export default function App() {
               isOpen
               onClose={() => setEditingShift(null)}
               onSave={saveShift}
+              showToast={showToast}
               employee={editingShift.employee}
               date={editingShift.date}
               existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]}
@@ -2464,7 +2477,7 @@ export default function App() {
           toDateKey(prior),
           (id, k) => (events[`${id}-${k}`] || []).some(e => e.type === 'sick')
         );
-        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
+        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
       })()}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <InactiveEmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />

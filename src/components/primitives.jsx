@@ -3,8 +3,8 @@ import { X, Check } from 'lucide-react';
 import { THEME, TYPE } from '../theme';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
-export const GradientButton = ({ children, onClick, variant = 'primary', disabled = false, small = false, danger = false, ariaLabel }) => (
-  <button onClick={onClick} disabled={disabled} aria-label={ariaLabel} title={ariaLabel}
+export const GradientButton = ({ children, onClick, variant = 'primary', disabled = false, small = false, danger = false, ariaLabel, title: titleProp }) => (
+  <button onClick={onClick} disabled={disabled} aria-label={ariaLabel} title={titleProp != null ? titleProp : ariaLabel}
     className={`${small ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm'} rounded-lg font-medium transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90`}
     style={{
       background: danger ? THEME.status.error : variant === 'primary' ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated,
