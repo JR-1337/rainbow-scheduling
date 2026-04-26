@@ -54,12 +54,6 @@ export const ShiftEditorModal = ({
   const storeHours = getStoreHoursForDate(date);
   const isHoliday = isStatHoliday(date);
 
-  const hasType = (type) => type === 'work'
-    ? !!existingShift
-    : type === 'meeting'
-      ? meetingDrafts.length > 0
-      : !!existingEvents.find(e => e.type === type);
-
   const seedFor = (type) => {
     if (type === 'work') {
       const t = getDefaultBookingTimes(date);
@@ -105,6 +99,7 @@ export const ShiftEditorModal = ({
   const [workDraft, setWorkDraft] = useState(seedFor('work'));
   const [meetingDrafts, setMeetingDrafts] = useState(() => seedMeetings());
   const [pkDraft, setPkDraft] = useState(seedFor('pk'));
+  const [pkBooked, setPkBooked] = useState(() => !!existingEvents.find(e => e.type === 'pk'));
 
   // Sick (absence) state — immediate-save toggle, separate category.
   const existingSick = existingEvents.find(e => e.type === 'sick');
@@ -115,10 +110,19 @@ export const ShiftEditorModal = ({
     setWorkDraft(seedFor('work'));
     setMeetingDrafts(seedMeetings());
     setPkDraft(seedFor('pk'));
+    setPkBooked(!!existingEvents.find(e => e.type === 'pk'));
     setSickActive(!!existingSick);
     setSickNote(existingSick?.note || '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingShift, existingEvents, date]);
+
+  const hasType = (type) => type === 'work'
+    ? !!existingShift
+    : type === 'meeting'
+      ? meetingDrafts.length > 0
+      : type === 'pk'
+        ? pkBooked
+        : !!existingEvents.find(e => e.type === type);
 
   const workHours = calculateHours(workDraft.startTime, workDraft.endTime);
   // Period projection: when sick, day contributes 0; otherwise reflect the
@@ -224,8 +228,9 @@ export const ShiftEditorModal = ({
       }
       return;
     }
-    // work / pk — existing behavior.
+    // work / pk — immediate unbook; PK uses local pkBooked so UI updates without waiting on props.
     if (hasType(type)) {
+      if (type === 'pk') setPkBooked(false);
       onSave({ employeeId: employee.id, date: toDateKey(date), type, deleted: true });
       return;
     }
@@ -242,15 +247,22 @@ export const ShiftEditorModal = ({
       note: '',
       hours: calculateHours(t.start, t.end),
     });
+    if (type === 'pk') setPkBooked(true);
   };
 
   const clearDay = () => {
     const k = toDateKey(date);
     if (existingShift) onSave({ employeeId: employee.id, date: k, type: 'work', deleted: true });
+    setPkBooked(false);
     existingEvents.forEach(ev => {
       onSave({ id: ev.id, employeeId: employee.id, date: k, type: ev.type, deleted: true });
     });
     onClose();
+  };
+
+  const removePk = () => {
+    setPkBooked(false);
+    onSave({ employeeId: employee.id, date: toDateKey(date), type: 'pk', deleted: true });
   };
 
   const hasAnyData = !!existingShift || existingEvents.length > 0;
@@ -326,7 +338,15 @@ export const ShiftEditorModal = ({
     // pk only — meeting handled via renderMeetingsSection
     return (
       <div key="pk" className="mb-2 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
-        <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: THEME.accent.blue }}>{EVENT_TYPES.pk.label}</p>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-[10px] uppercase tracking-wider" style={{ color: THEME.accent.blue }}>{EVENT_TYPES.pk.label}</p>
+          <button type="button" onClick={removePk}
+            aria-label="Remove product knowledge block"
+            className="p-0.5 rounded hover:opacity-70"
+            style={{ color: THEME.text.muted }}>
+            <X size={12} />
+          </button>
+        </div>
         <div className="grid grid-cols-2 gap-2 mb-2">
           <TimePicker label="Start" value={pkDraft.startTime} onChange={t => setPkDraft({ ...pkDraft, startTime: t })} />
           <TimePicker label="End" value={pkDraft.endTime} onChange={t => setPkDraft({ ...pkDraft, endTime: t })} />
