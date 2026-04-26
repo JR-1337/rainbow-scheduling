@@ -168,7 +168,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
   const scrollContainerRef = useRef(null);
   const NAME_COL_WIDTH = 72;
   const CELL_WIDTH = 80;
-  const CELL_HEIGHT = 66;
+  const CELL_HEIGHT = 74;
   const HEADER_HEIGHT = 52;
   
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).

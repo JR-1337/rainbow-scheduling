@@ -15,8 +15,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
   const rowRef = useRef(null);
   const hours = getEmployeeHours(employee.id);
   const { first: nameFirst, rest: nameRest } = splitNameForSchedule(employee.name);
-  const titledRow = !isDeleted && hasTitle(employee);
-  const rowGutterBg = titledRow ? THEME.action.recoverable.bg : THEME.bg.secondary;
+  const showTitleLine = !isDeleted && hasTitle(employee) && (employee.title || '').trim();
 
   const handleMouseEnter = () => {
     if (rowRef.current && onShowTooltip) {
@@ -30,7 +29,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
 
   return (
     <div className="grid gap-px schedule-row" style={{ gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, backgroundColor: THEME.border.subtle, opacity: isDeleted ? 0.5 : 1 }}>
-      <div ref={rowRef} className="p-1.5 h-full" style={{ backgroundColor: rowGutterBg }} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+      <div ref={rowRef} className="p-1.5 h-full" style={{ backgroundColor: THEME.bg.secondary }} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
         <div className="flex w-full min-h-[3rem] items-center gap-1.5">
           <div className="h-6 w-6 flex-shrink-0 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: isDeleted ? THEME.bg.elevated : `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: isDeleted ? THEME.text.muted : 'white' }}>{employee.name.split(' ').map(n => n[0]).join('')}</div>
           <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5" title={employee.name}>
@@ -38,7 +37,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
             {nameRest ? (
               <p className="truncate text-[10px] leading-tight" style={{ color: THEME.text.muted }}>{nameRest}</p>
             ) : null}
-            {titledRow && (employee.title || '').trim() ? (
+            {showTitleLine ? (
               <p className="truncate text-[10px] leading-tight" style={{ color: THEME.text.secondary }} title={employee.title}>{employee.title}</p>
             ) : null}
             <p className="shrink-0 text-xs font-semibold leading-tight" style={{ color: isDeleted ? THEME.text.muted : hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan }}><AnimatedNumber value={hours} decimals={1} suffix="h" /></p>
@@ -56,7 +55,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
         const cellEvents = events[`${employee.id}-${dateStr}`] || EMPTY_EVENTS;
         const approvedTimeOff = hasApprovedTimeOffForDate(employee.email, dateStr, timeOffRequests);
         return (
-          <div key={dateStr} className="p-0.5" style={{ backgroundColor: rowGutterBg }}>
+          <div key={dateStr} className="p-0.5" style={{ backgroundColor: THEME.bg.secondary }}>
             <ScheduleCell shift={shift} events={cellEvents} date={date} availability={av} storeHours={storeHrs} onCellClick={onCellClick} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} employee={employee} />
           </div>
         );

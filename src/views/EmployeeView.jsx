@@ -44,17 +44,17 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
 
   return (
     <>
-      <div className="h-14 rounded-lg relative overflow-hidden"
+      <div className="h-[4.5rem] rounded-lg relative overflow-hidden"
         style={{
           backgroundColor: isTimeOff ? THEME.text.muted + '15'
             : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
-            : shift && isTitledShift ? THEME.accent.blue + '22'
+            : shift && isTitledShift ? THEME.titledEmployee.shiftFill
             : shift ? role?.color + '25'
             : eventOnly ? firstEventType.bg
             : THEME.bg.tertiary,
           border: `1px solid ${isTimeOff ? THEME.text.muted + '30'
             : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
-            : shift && isTitledShift ? THEME.border.subtle
+            : shift && isTitledShift ? THEME.titledEmployee.shiftBorder
             : shift ? role?.color + '50'
             : eventOnly ? firstEventType.border
             : THEME.border.default}`,
@@ -141,8 +141,8 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
   const isMe = employee.id === loggedInEmpId;
   const { first: nameFirst, rest: nameRest } = splitNameForSchedule(employee.name);
   const titledRow = hasTitle(employee);
-  const nameCellBg = isMe ? THEME.accent.purple + '15' : titledRow ? THEME.action.recoverable.bg : THEME.bg.secondary;
-  const dayGutterBg = isMe ? THEME.accent.purple + '10' : titledRow ? THEME.action.recoverable.bg : THEME.bg.secondary;
+  const nameCellBg = isMe ? THEME.accent.purple + '15' : THEME.bg.secondary;
+  const dayGutterBg = isMe ? THEME.accent.purple + '10' : THEME.bg.secondary;
   
   // Check if employee has approved time off for a specific date
   const hasApprovedTimeOff = (dateStr) => {

@@ -56,7 +56,7 @@ export const ScheduleSkeleton = () => (
     <div style={{ display: 'grid', gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, gap: '2px' }}>
       <div className="skeleton-pulse h-10" />
       {[...Array(7)].map((_, i) => <div key={`h-${i}`} className="skeleton-pulse h-10" />)}
-      {[...Array(56)].map((_, i) => <div key={`c-${i}`} className="skeleton-pulse h-14" />)}
+      {[...Array(56)].map((_, i) => <div key={`c-${i}`} className="skeleton-pulse h-[4.5rem]" />)}
     </div>
   </div>
 );

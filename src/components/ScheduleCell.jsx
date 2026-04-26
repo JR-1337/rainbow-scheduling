@@ -43,10 +43,10 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
 
   return (
     <>
-      <div onClick={isClickable ? () => onCellClick(employee, date, shift) : undefined} className={`h-14 rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
+      <div onClick={isClickable ? () => onCellClick(employee, date, shift) : undefined} className={`h-[4.5rem] rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
         style={{
-          backgroundColor: hasSick ? EVENT_TYPES.sick.bg : shift && isTitledShift ? THEME.accent.blue + '22' : shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
-          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border : shift && isTitledShift ? THEME.border.subtle : shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`
+          backgroundColor: hasSick ? EVENT_TYPES.sick.bg : shift && isTitledShift ? THEME.titledEmployee.shiftFill : shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
+          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border : shift && isTitledShift ? THEME.titledEmployee.shiftBorder : shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`
         }}>
 
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}

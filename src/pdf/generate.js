@@ -116,7 +116,6 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     const dividerRow = `<tr><td colspan="${dividerColspan}" style="padding:0;border:0;background:${G.fill};"><div style="height:1px;background:${G.border};margin:3px 8px;"></div></td></tr>`;
     const rows = schedulable.map((emp, i) => {
       const showDivider = i > 0 && employeeBucket(emp) !== employeeBucket(schedulable[i - 1]);
-      const rowFill = hasTitle(emp) ? G.fillZebra : G.fill;
       const cells = weekDates.map(date => {
         const dateStr = toDateKey(date);
         const shift = shifts[`${emp.id}-${dateStr}`];
@@ -124,13 +123,13 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         // Approved time-off wins over events - an employee on time-off shouldn't
         // show a meeting/PK card even if one was scheduled before the request was approved.
         if (!shift && hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests)) {
-          return `<td style="padding:6px;border:1px dashed ${G.border};background:${rowFill};text-align:center;">
+          return `<td style="padding:6px;border:1px dashed ${G.border};background:${G.fill};text-align:center;">
             <div style="font-size:9px;font-weight:800;color:${G.ink};letter-spacing:1px;">OFF</div>
             <div style="font-size:7px;color:${G.textFaint};">approved</div>
           </td>`;
         }
         if (!shift && dayEvents.length === 0) {
-          return `<td style="padding:6px;border:1px solid ${G.border};background:${rowFill};"></td>`;
+          return `<td style="padding:6px;border:1px solid ${G.border};background:${G.fill};"></td>`;
         }
         if (!shift) {
           // Event-only day - banded fill + ink border.
@@ -152,7 +151,8 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         const roleTitleLine = !isTitled
           ? `<div style="font-size:10px;color:${G.ink};margin-bottom:2px;${roleNameStyle(family)}">${cleanText(roleName)}</div>`
           : '';
-        return `<td style="padding:5px;${cellBorder}background:${rowFill};text-align:center;position:relative;">
+        const shiftCellFill = isTitled ? G.fillZebra : G.fill;
+        return `<td style="padding:5px;${cellBorder}background:${shiftCellFill};text-align:center;position:relative;">
           ${glyph ? `<span style="position:absolute;top:2px;left:4px;font-size:11px;font-weight:800;color:${G.ink};line-height:1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
           ${roleTitleLine}
           <div style="font-size:9px;color:${G.text};">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
@@ -166,7 +166,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         ? `<div style="font-size:9px;color:${G.textMuted};margin-top:3px;line-height:1.25;">${cleanText(emp.title)}</div>`
         : '';
       return `${showDivider ? dividerRow : ''}<tr style="page-break-inside:avoid;">
-        <td style="padding:8px;border:1px solid ${G.border};background:${rowFill};">
+        <td style="padding:8px;border:1px solid ${G.border};background:${G.fill};">
           <div style="font-weight:700;font-size:11px;color:${G.ink};">${cleanText(emp.name)}</div>
           ${nameTitleLine}
         </td>

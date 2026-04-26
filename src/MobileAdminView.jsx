@@ -177,7 +177,7 @@ export const MobileAdminScheduleGrid = ({
   const scrollContainerRef = React.useRef(null);
   const NAME_COL_WIDTH = 72;
   const CELL_WIDTH = 80;
-  const CELL_HEIGHT = 66;
+  const CELL_HEIGHT = 74;
   const HEADER_HEIGHT = 68; // Taller to fit staffing counter
   
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
@@ -279,7 +279,6 @@ export const MobileAdminScheduleGrid = ({
               const showDivider = dividerIndices.has(empIndex);
               const { first: nameFirst, rest: nameRest } = splitNameForSchedule(emp.name);
               const titledRow = hasTitle(emp);
-              const rowGutterBg = titledRow ? THEME.action.recoverable.bg : THEME.bg.secondary;
 
               return (
                 <React.Fragment key={emp.id}>
@@ -297,7 +296,7 @@ export const MobileAdminScheduleGrid = ({
                     style={{ 
                     position: 'sticky', left: 0, zIndex: 10,
                     width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH, height: CELL_HEIGHT,
-                    backgroundColor: rowGutterBg,
+                    backgroundColor: THEME.bg.secondary,
                     borderBottom: `1px solid ${THEME.border.subtle}`,
                     borderRight: `1px solid ${THEME.border.default}`,
                     padding: '4px',
@@ -344,7 +343,7 @@ export const MobileAdminScheduleGrid = ({
                         onClick={() => isEditMode && onCellClick && onCellClick(emp, date, shift || null)}
                         style={{
                           width: CELL_WIDTH, minWidth: CELL_WIDTH, height: CELL_HEIGHT,
-                          backgroundColor: rowGutterBg,
+                          backgroundColor: THEME.bg.secondary,
                           borderBottom: `1px solid ${THEME.border.subtle}`,
                           padding: '2px',
                           cursor: isEditMode ? 'pointer' : 'default'
@@ -353,14 +352,14 @@ export const MobileAdminScheduleGrid = ({
                           backgroundColor: hasSick ? EVENT_TYPES.sick.bg
                             : approvedTimeOff ? THEME.text.muted + '15'
                             : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
-                            : shift && isTitled ? THEME.accent.blue + '22'
+                            : shift && isTitled ? THEME.titledEmployee.shiftFill
                             : shift ? role?.color + '25'
                             : eventOnly ? firstEventType.bg
                             : THEME.bg.tertiary,
                           border: `1px solid ${hasSick ? EVENT_TYPES.sick.border
                             : approvedTimeOff ? THEME.text.muted + '30'
                             : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
-                            : shift && isTitled ? THEME.border.subtle
+                            : shift && isTitled ? THEME.titledEmployee.shiftBorder
                             : shift ? role?.color + '50'
                             : eventOnly ? firstEventType.border
                             : THEME.border.default}`,
