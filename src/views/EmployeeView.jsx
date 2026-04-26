@@ -27,13 +27,14 @@ import { OfferShiftModal } from '../modals/OfferShiftModal';
 import { SwapShiftModal } from '../modals/SwapShiftModal';
 import { hasTitle, splitNameForSchedule } from '../utils/employeeRender';
 
-const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmpId, storeHours, isTimeOff = false, isUnavailable = false }) => {
+const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmpId, storeHours, employee = null, isTimeOff = false, isUnavailable = false }) => {
   const [showTask, setShowTask] = useState(false);
   const starRef = useRef(null);
   const role = shift ? ROLES_BY_ID[shift.role] : null;
   const isHoliday = isStatHoliday(date);
   const isOwnShift = shift?.employeeId === loggedInEmpId;
   const showTaskStar = shift?.task && isOwnShift;
+  const isTitledShift = !!shift && employee && hasTitle(employee);
   // Defensive: drop events with unknown type so malformed Sheet rows don't crash.
   const visibleEvents = (events || []).filter(ev => EVENT_TYPES[ev.type]);
   const hasEvents = visibleEvents.length > 0;
@@ -47,11 +48,13 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
         style={{
           backgroundColor: isTimeOff ? THEME.text.muted + '15'
             : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
+            : shift && isTitledShift ? THEME.accent.blue + '22'
             : shift ? role?.color + '25'
             : eventOnly ? firstEventType.bg
             : THEME.bg.tertiary,
           border: `1px solid ${isTimeOff ? THEME.text.muted + '30'
             : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
+            : shift && isTitledShift ? THEME.border.subtle
             : shift ? role?.color + '50'
             : eventOnly ? firstEventType.border
             : THEME.border.default}`,
@@ -75,7 +78,9 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
                 <Star size={10} fill={THEME.task} color={THEME.task} />
               </div>
             )}
-            <span className="text-xs font-semibold truncate pr-3" style={{ color: role?.color }}>{role?.name}</span>
+            {!isTitledShift ? (
+              <span className="text-xs font-semibold truncate pr-3" style={{ color: role?.color }}>{role?.name}</span>
+            ) : null}
             <div className="flex items-center justify-between">
               <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
             </div>
@@ -135,6 +140,9 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
 const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, loggedInEmpId, timeOffRequests = [] }) => {
   const isMe = employee.id === loggedInEmpId;
   const { first: nameFirst, rest: nameRest } = splitNameForSchedule(employee.name);
+  const titledRow = hasTitle(employee);
+  const nameCellBg = isMe ? THEME.accent.purple + '15' : titledRow ? THEME.action.recoverable.bg : THEME.bg.secondary;
+  const dayGutterBg = isMe ? THEME.accent.purple + '10' : titledRow ? THEME.action.recoverable.bg : THEME.bg.secondary;
   
   // Check if employee has approved time off for a specific date
   const hasApprovedTimeOff = (dateStr) => {
@@ -147,7 +155,7 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
 
   return (
     <div className="grid gap-px schedule-row" style={{ gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, backgroundColor: THEME.border.subtle }}>
-      <div className="h-full p-1.5" style={{ backgroundColor: isMe ? THEME.accent.purple + '15' : THEME.bg.secondary }} title={employee.name}>
+      <div className="h-full p-1.5" style={{ backgroundColor: nameCellBg }} title={employee.name}>
         <div className="flex w-full min-h-[2.5rem] items-center gap-1.5">
           <div className="h-6 w-6 flex-shrink-0 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: isMe ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated, color: isMe ? 'white' : THEME.text.muted }}>{employee.name.split(' ').map(n => n[0]).join('')}</div>
           <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5">
@@ -157,6 +165,9 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
             </p>
             {nameRest ? (
               <p className="truncate text-[10px] leading-tight" style={{ color: THEME.text.muted }}>{nameRest}</p>
+            ) : null}
+            {titledRow && (employee.title || '').trim() ? (
+              <p className="truncate text-[10px] leading-tight" style={{ color: THEME.text.secondary }} title={employee.title}>{employee.title}</p>
             ) : null}
           </div>
         </div>
@@ -172,8 +183,8 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
         const avail = employee.availability?.[dayName];
         const isUnavailable = avail && !avail.available;
         return (
-          <div key={dateStr} className="p-0.5" style={{ backgroundColor: isMe ? THEME.accent.purple + '10' : THEME.bg.secondary }}>
-            <EmployeeScheduleCell shift={shift ? { ...shift, employeeId: employee.id } : null} events={cellEvents} date={date} loggedInEmpId={loggedInEmpId} storeHours={storeHrs} isTimeOff={isTimeOff} isUnavailable={isUnavailable} />
+          <div key={dateStr} className="p-0.5" style={{ backgroundColor: dayGutterBg }}>
+            <EmployeeScheduleCell shift={shift ? { ...shift, employeeId: employee.id } : null} events={cellEvents} date={date} loggedInEmpId={loggedInEmpId} storeHours={storeHrs} employee={employee} isTimeOff={isTimeOff} isUnavailable={isUnavailable} />
           </div>
         );
       })}

@@ -26,7 +26,7 @@ import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSo
 import { MobileScheduleGrid } from './MobileEmployeeView';
 import { EVENT_TYPES } from './constants';
 import { Button } from './components/Button';
-import { hasTitle } from './utils/employeeRender';
+import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN MOBILE HAMBURGER DRAWER
@@ -277,7 +277,10 @@ export const MobileAdminScheduleGrid = ({
               const isLoggedIn = emp.id === loggedInUser.id;
               const weekHours = getEmployeeHours(emp.id);
               const showDivider = dividerIndices.has(empIndex);
-              
+              const { first: nameFirst, rest: nameRest } = splitNameForSchedule(emp.name);
+              const titledRow = hasTitle(emp);
+              const rowGutterBg = titledRow ? THEME.action.recoverable.bg : THEME.bg.secondary;
+
               return (
                 <React.Fragment key={emp.id}>
                   {showDivider && (
@@ -294,14 +297,19 @@ export const MobileAdminScheduleGrid = ({
                     style={{ 
                     position: 'sticky', left: 0, zIndex: 10,
                     width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH, height: CELL_HEIGHT,
-                    backgroundColor: THEME.bg.secondary,
+                    backgroundColor: rowGutterBg,
                     borderBottom: `1px solid ${THEME.border.subtle}`,
                     borderRight: `1px solid ${THEME.border.default}`,
                     padding: '4px',
                     cursor: onNameClick ? 'pointer' : 'default'
                   }}>
-                    <p className="font-semibold truncate" style={{ color: onNameClick ? THEME.accent.cyan : THEME.text.primary, fontSize: '10px', lineHeight: 1.2 }}>{emp.name.split(' ')[0]}</p>
-                    <p className="truncate" style={{ color: THEME.text.muted, fontSize: '9px', lineHeight: 1.2 }}>{emp.name.split(' ').slice(1).join(' ')}</p>
+                    <p className="font-semibold truncate" style={{ color: onNameClick ? THEME.accent.cyan : THEME.text.primary, fontSize: '10px', lineHeight: 1.2 }}>{nameFirst}</p>
+                    {nameRest ? (
+                      <p className="truncate" style={{ color: THEME.text.muted, fontSize: '9px', lineHeight: 1.2 }}>{nameRest}</p>
+                    ) : null}
+                    {titledRow && (emp.title || '').trim() ? (
+                      <p className="truncate" style={{ color: THEME.text.secondary, fontSize: '8px', lineHeight: 1.2 }} title={emp.title}>{emp.title}</p>
+                    ) : null}
                     <p style={{ color: THEME.accent.cyan, fontSize: '9px', lineHeight: 1.2 }}>{weekHours.toFixed(1)}h{emp.isAdmin ? ' ★' : ''}</p>
                   </td>
                   
@@ -328,16 +336,15 @@ export const MobileAdminScheduleGrid = ({
                     const isUnavailable = avail && !avail.available;
                     const role = shift ? ROLES_BY_ID[shift.role] : null;
                     const isTitled = hasTitle(emp);
-                    const titleLabel = isTitled ? (emp.title || '') : '';
-                    const labelText = shift ? (isTitled ? titleLabel : role?.name) : '';
-                    const labelColor = shift ? (isTitled ? THEME.text.primary : role?.color) : THEME.text.muted;
+                    const labelText = shift ? (isTitled ? '' : role?.name) : '';
+                    const labelColor = shift ? role?.color : THEME.text.muted;
 
                     return (
                       <td key={i}
                         onClick={() => isEditMode && onCellClick && onCellClick(emp, date, shift || null)}
                         style={{
                           width: CELL_WIDTH, minWidth: CELL_WIDTH, height: CELL_HEIGHT,
-                          backgroundColor: THEME.bg.secondary,
+                          backgroundColor: rowGutterBg,
                           borderBottom: `1px solid ${THEME.border.subtle}`,
                           padding: '2px',
                           cursor: isEditMode ? 'pointer' : 'default'
@@ -346,14 +353,14 @@ export const MobileAdminScheduleGrid = ({
                           backgroundColor: hasSick ? EVENT_TYPES.sick.bg
                             : approvedTimeOff ? THEME.text.muted + '15'
                             : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
-                            : shift && isTitled ? THEME.bg.tertiary
+                            : shift && isTitled ? THEME.accent.blue + '22'
                             : shift ? role?.color + '25'
                             : eventOnly ? firstEventType.bg
                             : THEME.bg.tertiary,
                           border: `1px solid ${hasSick ? EVENT_TYPES.sick.border
                             : approvedTimeOff ? THEME.text.muted + '30'
                             : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
-                            : shift && isTitled ? THEME.border.default
+                            : shift && isTitled ? THEME.border.subtle
                             : shift ? role?.color + '50'
                             : eventOnly ? firstEventType.border
                             : THEME.border.default}`,
@@ -377,37 +384,41 @@ export const MobileAdminScheduleGrid = ({
                             </div>
                           ) : shift ? (
                             <div className="p-1 h-full flex flex-col justify-between">
-                              <div className="flex items-start justify-between gap-1">
-                                <span className="font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : labelColor, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '10px' }}>{labelText}</span>
-                                {hasEvents && (
-                                  <div className="flex gap-0.5 shrink-0">
-                                    {cellEvents.length >= 3 ? (
-                                      <span
-                                        title={cellEvents.map(ev => {
+                              {(labelText || hasEvents) ? (
+                                <div className="flex items-start justify-between gap-1">
+                                  {labelText ? (
+                                    <span className="font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : labelColor, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '10px' }}>{labelText}</span>
+                                  ) : <span className="min-w-0 flex-1" />}
+                                  {hasEvents && (
+                                    <div className="flex gap-0.5 shrink-0">
+                                      {cellEvents.length >= 3 ? (
+                                        <span
+                                          title={cellEvents.map(ev => {
+                                            const et = EVENT_TYPES[ev.type];
+                                            return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
+                                          }).join('\n')}
+                                          className="rounded font-semibold leading-tight"
+                                          style={{ backgroundColor: firstEventType.bg, color: firstEventType.text, border: `1px solid ${firstEventType.border}`, fontSize: '8px', padding: '0 2px' }}>
+                                          {cellEvents.length} events
+                                        </span>
+                                      ) : (
+                                        cellEvents.map((ev, j) => {
                                           const et = EVENT_TYPES[ev.type];
-                                          return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
-                                        }).join('\n')}
-                                        className="rounded font-semibold leading-tight"
-                                        style={{ backgroundColor: firstEventType.bg, color: firstEventType.text, border: `1px solid ${firstEventType.border}`, fontSize: '8px', padding: '0 2px' }}>
-                                        {cellEvents.length} events
-                                      </span>
-                                    ) : (
-                                      cellEvents.map((ev, j) => {
-                                        const et = EVENT_TYPES[ev.type];
-                                        if (!et) return null;
-                                        return (
-                                          <span key={j}
-                                            title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
-                                            className="rounded font-semibold leading-tight"
-                                            style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>
-                                            {et.shortLabel} {formatTimeShort(ev.startTime)}
-                                          </span>
-                                        );
-                                      })
-                                    )}
-                                  </div>
-                                )}
-                              </div>
+                                          if (!et) return null;
+                                          return (
+                                            <span key={j}
+                                              title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
+                                              className="rounded font-semibold leading-tight"
+                                              style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>
+                                              {et.shortLabel} {formatTimeShort(ev.startTime)}
+                                            </span>
+                                          );
+                                        })
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : null}
                               {hasSick && cellEvents.find(ev => ev.type === 'sick')?.note ? (
                                 <span className="italic truncate block" style={{ color: THEME.text.muted, fontSize: '9px' }} title={cellEvents.find(ev => ev.type === 'sick').note}>
                                   {cellEvents.find(ev => ev.type === 'sick').note}

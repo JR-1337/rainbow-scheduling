@@ -304,14 +304,7 @@ export const ShiftEditorModal = ({
             <TimePicker label="Start" value={workDraft.startTime} onChange={t => setWorkDraft({ ...workDraft, startTime: t })} />
             <TimePicker label="End" value={workDraft.endTime} onChange={t => setWorkDraft({ ...workDraft, endTime: t })} />
           </div>
-          {isTitledTarget ? (
-            <div className="mb-2">
-              <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Title</label>
-              <div className="px-2 py-1 rounded text-xs font-medium inline-block" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${THEME.border.default}` }}>
-                {employee.title || '(no title)'}
-              </div>
-            </div>
-          ) : (
+          {!isTitledTarget ? (
             <div className="mb-2">
               <label className="block text-xs font-medium mb-1" style={{ color: THEME.text.secondary }}>Role</label>
               <div className="grid grid-cols-3 gap-1">
@@ -324,7 +317,7 @@ export const ShiftEditorModal = ({
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
           <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Task <Star size={8} fill={THEME.task} color={THEME.task} className="inline" /></label>
           <input value={workDraft.task} onChange={e => setWorkDraft({ ...workDraft, task: e.target.value })} placeholder="Optional..." className="w-full px-2 py-1.5 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
         </div>
@@ -456,6 +449,9 @@ export const ShiftEditorModal = ({
           <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: 'white' }}>{employee.name.charAt(0)}</div>
           <div>
             <p className="font-medium text-xs" style={{ color: THEME.text.primary }}>{employee.name}</p>
+            {isTitledTarget && (employee.title || '').trim() ? (
+              <p className="text-[10px] leading-snug truncate" style={{ color: THEME.text.muted }} title={employee.title}>{employee.title}</p>
+            ) : null}
             <p className="text-xs" style={{ color: THEME.text.secondary }}>{formatDateLong(date)} {isHoliday && <span style={{ color: THEME.status.warning }}>• Hol</span>}</p>
           </div>
         </div>

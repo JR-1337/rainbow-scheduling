@@ -22,12 +22,10 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
   const [showTask, setShowTask] = useState(false);
   const starRef = useRef(null);
   const role = shift ? ROLES_BY_ID[shift.role] : null;
-  // hasTitle employees (admin1 + admin2) render their freeform title in place
-  // of a role name. Cell uses neutral palette (tertiary bg, default border).
-  const isTitled = !!shift && hasTitle(employee);
-  const titleLabel = isTitled ? (employee.title || '') : '';
-  const labelText = isTitled ? titleLabel : (role?.name || '');
-  const labelColor = isTitled ? THEME.text.primary : role?.color;
+  // Titled admins: job title lives in the name column only; cell shows time/hours (+ events).
+  const isTitledShift = !!shift && hasTitle(employee);
+  const labelText = isTitledShift ? '' : (role?.name || '');
+  const labelColor = role?.color;
   const visibleEvents = (events || []).filter(ev => EVENT_TYPES[ev.type]);
   const hasEvents = visibleEvents.length > 0;
   const eventOnly = !shift && hasEvents;
@@ -47,8 +45,8 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
     <>
       <div onClick={isClickable ? () => onCellClick(employee, date, shift) : undefined} className={`h-14 rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
         style={{
-          backgroundColor: hasSick ? EVENT_TYPES.sick.bg : shift && isTitled ? THEME.bg.tertiary : shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
-          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border : shift && isTitled ? THEME.border.default : shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`
+          backgroundColor: hasSick ? EVENT_TYPES.sick.bg : shift && isTitledShift ? THEME.accent.blue + '22' : shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
+          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border : shift && isTitledShift ? THEME.border.subtle : shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`
         }}>
 
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
@@ -90,25 +88,29 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
                 <Star size={10} fill={THEME.task} color={THEME.task} />
               </div>
             )}
-            <div className="flex items-start justify-between gap-1">
-              <span className="text-xs font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : labelColor, textDecoration: hasSick ? 'line-through' : 'none' }}>{labelText}</span>
-              {hasEvents && (
-                <div className="flex gap-0.5 shrink-0">
-                  {visibleEvents.map((ev, i) => {
-                    const et = EVENT_TYPES[ev.type];
-                    if (!et) return null;
-                    return (
-                      <span key={i}
-                        title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
-                        className="rounded px-1 text-[9px] font-semibold leading-tight"
-                        style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}` }}>
-                        {et.shortLabel}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            {(labelText || hasEvents) ? (
+              <div className="flex items-start justify-between gap-1">
+                {labelText ? (
+                  <span className="text-xs font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : labelColor, textDecoration: hasSick ? 'line-through' : 'none' }}>{labelText}</span>
+                ) : <span className="min-w-0 flex-1" />}
+                {hasEvents && (
+                  <div className="flex gap-0.5 shrink-0">
+                    {visibleEvents.map((ev, i) => {
+                      const et = EVENT_TYPES[ev.type];
+                      if (!et) return null;
+                      return (
+                        <span key={i}
+                          title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
+                          className="rounded px-1 text-[9px] font-semibold leading-tight"
+                          style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}` }}>
+                          {et.shortLabel}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : null}
             {hasSick && visibleEvents.find(ev => ev.type === 'sick')?.note ? (
               <span className="text-xs italic truncate block" style={{ color: THEME.text.muted }} title={visibleEvents.find(ev => ev.type === 'sick').note}>
                 {visibleEvents.find(ev => ev.type === 'sick').note}
