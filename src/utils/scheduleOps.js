@@ -31,7 +31,7 @@ export function collectPeriodShiftsForSave(dates, employees, shiftsObj, eventsOb
       }
       dayEvents.forEach(ev => {
         const t = ev.type || 'meeting';
-        if (hasSick && (t === 'meeting' || t === 'pk')) return;
+        if (hasSick && t !== 'sick') return;
         periodShifts.push({
           id: ev.id || `${(t || 'evt').toUpperCase()}-${emp.id}-${dateStr}`,
           employeeId: emp.id,
@@ -125,11 +125,9 @@ export function applyShiftMutation(shiftsObj, eventsObj, s) {
     nextEvents = { ...eventsObj };
     let arr = (nextEvents[k] || []).filter(e => (e.type || 'work') !== type);
     if (!s.deleted && type === 'sick') {
-      // Sick cancels meetings and PK for this day (work is removed via shiftsObj).
-      arr = arr.filter(e => {
-        const t = e.type || 'work';
-        return t !== 'meeting' && t !== 'pk';
-      });
+      // Sick cancels every same-day event (meetings, PK, legacy mis-typed rows).
+      // Work lives in shiftsObj; caller deletes that row separately.
+      arr = [];
     }
     if (s.deleted) {
       if (arr.length > 0) nextEvents[k] = arr; else delete nextEvents[k];
