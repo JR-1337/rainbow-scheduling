@@ -2,14 +2,10 @@
 // so every channel carries info without hue: role = letter glyph + border style,
 // Holiday = "HOL" + heavy black border, announcement =
 // double border + italic. No hex hues anywhere - only black/white/grey shades.
-import {
-  ROLES,
-  ROLES_BY_ID,
-} from '../App';
 import { toDateKey, getWeekNumber, getDayNameShort, formatDate, formatMonthWord, formatTimeShort } from '../utils/date';
 import { isStatHoliday } from '../utils/storeHours';
 import { hasApprovedTimeOffForDate } from '../utils/requests';
-import { EVENT_TYPES, PRIMARY_CONTACT_EMAIL } from '../constants';
+import { ROLES, ROLES_BY_ID, EVENT_TYPES, PRIMARY_CONTACT_EMAIL } from '../constants';
 import { escapeHtml, stripEmoji } from '../utils/format';
 import { sortBySarviAdminsFTPT, employeeBucket } from '../utils/employeeSort';
 import { hasTitle } from '../utils/employeeRender';

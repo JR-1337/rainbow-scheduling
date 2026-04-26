@@ -1412,9 +1412,14 @@ export default function App() {
   }, []);
 
   const handleExportPDF = useCallback(async () => {
-    const { generateSchedulePDF } = await import('./pdf/generate');
-    generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement, timeOffRequests, events);
-  }, [employees, shifts, dates, startDate, endDate, currentAnnouncement, timeOffRequests, events]);
+    try {
+      const { generateSchedulePDF } = await import('./pdf/generate');
+      generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement, timeOffRequests, events);
+    } catch (e) {
+      console.error(e);
+      showToast('error', e?.message || 'Could not open PDF export. Try disabling popup blockers.');
+    }
+  }, [employees, shifts, dates, startDate, endDate, currentAnnouncement, timeOffRequests, events, showToast]);
 
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
