@@ -340,10 +340,9 @@ export const ShiftEditorModal = ({
     );
   };
 
-  // Per-meeting card. First meeting (idx=0) has no X — tab-toggle is its removal
-  // control. Meetings 2+ show a small X for surgical per-row delete.
+  // Per-meeting card. Every row has X — removes that meeting only (same onSave
+  // deleted path). Meeting tab toggle still adds first / removes last for quick taps.
   const renderMeetingRow = (draft, idx) => {
-    const showDelete = idx > 0;
     const setDraft = (next) => {
       const arr = meetingDrafts.slice();
       arr[idx] = next;
@@ -363,14 +362,12 @@ export const ShiftEditorModal = ({
           <p className="text-[10px] uppercase tracking-wider" style={{ color: THEME.accent.blue }}>
             {EVENT_TYPES.meeting.label}{meetingDrafts.length > 1 ? ` ${idx + 1}` : ''}
           </p>
-          {showDelete && (
-            <button type="button" onClick={deleteThis}
-              aria-label={`Remove meeting ${idx + 1}`}
-              className="p-0.5 rounded hover:opacity-70"
-              style={{ color: THEME.text.muted }}>
-              <X size={12} />
-            </button>
-          )}
+          <button type="button" onClick={deleteThis}
+            aria-label={meetingDrafts.length > 1 ? `Remove meeting ${idx + 1}` : 'Remove meeting'}
+            className="p-0.5 rounded hover:opacity-70"
+            style={{ color: THEME.text.muted }}>
+            <X size={12} />
+          </button>
         </div>
         <div className="grid grid-cols-2 gap-2 mb-2">
           <TimePicker label="Start" value={draft.startTime} onChange={t => setDraft({ ...draft, startTime: t })} />
