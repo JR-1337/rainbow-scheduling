@@ -123,7 +123,14 @@ export function applyShiftMutation(shiftsObj, eventsObj, s) {
   } else {
     // pk, sick — singular per (empId, date, type). Type-replace branch.
     nextEvents = { ...eventsObj };
-    const arr = (nextEvents[k] || []).filter(e => (e.type || 'work') !== type);
+    let arr = (nextEvents[k] || []).filter(e => (e.type || 'work') !== type);
+    if (!s.deleted && type === 'sick') {
+      // Sick cancels meetings and PK for this day (work is removed via shiftsObj).
+      arr = arr.filter(e => {
+        const t = e.type || 'work';
+        return t !== 'meeting' && t !== 'pk';
+      });
+    }
     if (s.deleted) {
       if (arr.length > 0) nextEvents[k] = arr; else delete nextEvents[k];
     } else {

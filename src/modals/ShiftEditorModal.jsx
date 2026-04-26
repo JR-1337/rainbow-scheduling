@@ -149,13 +149,16 @@ export const ShiftEditorModal = ({
   const handleSave = () => {
     const payloads = [];
     const k = toDateKey(date);
-    if (sickActive && existingShift) {
-      payloads.push({ employeeId: employee.id, date: k, type: 'work', deleted: true });
-    }
-    if (sickActive && sickNote !== (existingSick?.note || '')) {
+    if (sickActive) {
+      if (existingShift) {
+        payloads.push({ employeeId: employee.id, date: k, type: 'work', deleted: true });
+      }
       const t = existingShift?.startTime && existingShift?.endTime
         ? { start: existingShift.startTime, end: existingShift.endTime }
-        : getDefaultBookingTimes(date);
+        : existingSick?.startTime && existingSick?.endTime
+          ? { start: existingSick.startTime, end: existingSick.endTime }
+          : getDefaultBookingTimes(date);
+      // Always upsert sick on Save so applyShiftMutation strips meetings/PK (not only when note changes).
       payloads.push({
         employeeId: employee.id,
         employeeName: employee.name,
@@ -305,25 +308,10 @@ export const ShiftEditorModal = ({
       if (existingShift) {
         payloads.push({ employeeId: employee.id, date: k, type: 'work', deleted: true });
       }
-      existingEvents.forEach(ev => {
-        const et = ev.type || 'work';
-        if (et === 'meeting') {
-          payloads.push({
-            ...(ev.id != null ? { id: ev.id } : {}),
-            employeeId: employee.id,
-            date: k,
-            type: 'meeting',
-            deleted: true,
-            startTime: ev.startTime,
-            endTime: ev.endTime,
-          });
-        } else if (et === 'pk') {
-          payloads.push({ employeeId: employee.id, date: k, type: 'pk', deleted: true });
-        }
-      });
       const t = existingShift?.startTime && existingShift?.endTime
         ? { start: existingShift.startTime, end: existingShift.endTime }
         : getDefaultBookingTimes(date);
+      // One sick upsert strips meetings + PK in applyShiftMutation (no per-row deletes).
       payloads.push({
         employeeId: employee.id,
         employeeName: employee.name,
