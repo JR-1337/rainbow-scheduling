@@ -82,35 +82,39 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
         )}
 
         {shift ? (
-          <div className="p-1.5 h-full flex flex-col justify-between relative">
-            {shift.task && (
-              <div ref={starRef} className="absolute top-1 right-1 cursor-pointer" onMouseEnter={() => setShowTask(true)} onMouseLeave={() => setShowTask(false)}>
-                <Star size={10} fill={THEME.task} color={THEME.task} />
-              </div>
-            )}
-            {(labelText || hasEvents) ? (
-              <div className="flex items-start justify-between gap-1">
-                {labelText ? (
-                  <span className="text-xs font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : labelColor, textDecoration: hasSick ? 'line-through' : 'none' }}>{labelText}</span>
-                ) : <span className="min-w-0 flex-1" />}
-                {hasEvents && (
-                  <div className="flex gap-0.5 shrink-0">
-                    {visibleEvents.map((ev, i) => {
-                      const et = EVENT_TYPES[ev.type];
-                      if (!et) return null;
-                      return (
-                        <span key={i}
-                          title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
-                          className="rounded px-1 text-[9px] font-semibold leading-tight"
-                          style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}` }}>
-                          {et.shortLabel}
-                        </span>
-                      );
-                    })}
+          <div className="p-1.5 h-full flex flex-col justify-between relative min-h-0 min-w-0">
+            <div className="flex items-start gap-0.5 w-full min-w-0 shrink-0">
+              <div className="min-w-0 flex-1">
+                {(labelText || hasEvents) ? (
+                  <div className="flex items-start justify-between gap-1 min-w-0">
+                    {labelText ? (
+                      <span className="text-xs font-semibold truncate min-w-0" style={{ color: hasSick ? THEME.text.muted : labelColor, textDecoration: hasSick ? 'line-through' : 'none' }}>{labelText}</span>
+                    ) : <span className="min-w-0 flex-1" />}
+                    {hasEvents && (
+                      <div className="flex gap-0.5 shrink-0 min-w-0">
+                        {visibleEvents.map((ev, i) => {
+                          const et = EVENT_TYPES[ev.type];
+                          if (!et) return null;
+                          return (
+                            <span key={i}
+                              title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
+                              className="rounded px-1 text-[9px] font-semibold leading-tight"
+                              style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}` }}>
+                              {et.shortLabel}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
+                ) : null}
               </div>
-            ) : null}
+              {shift.task && (
+                <div ref={starRef} className="shrink-0 cursor-pointer self-start pt-px" onMouseEnter={() => setShowTask(true)} onMouseLeave={() => setShowTask(false)}>
+                  <Star size={10} fill={THEME.task} color={THEME.task} />
+                </div>
+              )}
+            </div>
             {hasSick && visibleEvents.find(ev => ev.type === 'sick')?.note ? (
               <span className="text-xs italic truncate block" style={{ color: THEME.text.muted }} title={visibleEvents.find(ev => ev.type === 'sick').note}>
                 {visibleEvents.find(ev => ev.type === 'sick').note}

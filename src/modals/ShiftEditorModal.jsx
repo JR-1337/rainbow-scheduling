@@ -265,6 +265,10 @@ export const ShiftEditorModal = ({
     onSave({ employeeId: employee.id, date: toDateKey(date), type: 'pk', deleted: true });
   };
 
+  const removeWork = () => {
+    onSave({ employeeId: employee.id, date: toDateKey(date), type: 'work', deleted: true });
+  };
+
   const hasAnyData = !!existingShift || existingEvents.length > 0;
 
   const saveSick = (nextActive, noteValue) => {
@@ -311,7 +315,15 @@ export const ShiftEditorModal = ({
     if (type === 'work') {
       return (
         <div key="work" className="mb-2 p-2 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.subtle}` }}>
-          <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: THEME.accent.blue }}>Work</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] uppercase tracking-wider" style={{ color: THEME.accent.blue }}>Work</p>
+            <button type="button" onClick={removeWork}
+              aria-label="Remove work shift"
+              className="p-0.5 rounded hover:opacity-70"
+              style={{ color: THEME.text.muted }}>
+              <X size={12} />
+            </button>
+          </div>
           <div className="grid grid-cols-2 gap-2 mb-2">
             <TimePicker label="Start" value={workDraft.startTime} onChange={t => setWorkDraft({ ...workDraft, startTime: t })} />
             <TimePicker label="End" value={workDraft.endTime} onChange={t => setWorkDraft({ ...workDraft, endTime: t })} />
