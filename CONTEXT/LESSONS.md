@@ -111,6 +111,11 @@ Lesson: FORMATTED_VALUE returns booleans as "TRUE"/"FALSE" strings; SERIAL_NUMBE
 Context: Attempted v2.19 read optimization; reverted.
 Affirmations: 0
 
+## [PROJECT] -- Vercel Postgres is dead (Dec 2024); migrated to Neon Marketplace
+Lesson: Any reference to "Vercel Postgres" as a current product is stale. Vercel shut it down in December 2024 and migrated existing databases to Neon. New projects use Neon directly via the Vercel Marketplace integration. Treat older comparison docs / blog posts that include Vercel Postgres as outdated.
+Context: Migration research 2026-04-26 (`docs/research/scaling-migration-options-2026-04-26.md`). External vendor fact, not a code rule.
+Affirmations: 0
+
 ## [PROJECT] -- formatTime helpers must handle undefined/null
 Lesson: `formatTimeDisplay`/`parseTime`/`formatTimeShort` receive empty times during shift creation.
 Context: Any new consumer of these helpers.
@@ -304,6 +309,11 @@ Lesson: Always Playwright-verify before claiming a perf win. S45 batchGet estima
 Context: Any perf/UX claim sourced from a subagent.
 Affirmations: 0
 
+## [PROJECT] -- Vendor / option research outputs decision axes, not a single recommendation
+Lesson: Frame option surveys by motivation ("if cost matters most -> X; if security posture matters most -> Y; if defer-the-decision -> Z"). Avoid converging on a single pick. Sidesteps predicted-savings bias and the recommender's own gravitational pull on the choice. Use case: DB migration research, vendor evaluations, hosting comparisons, library selections.
+Context: Any multi-option research deliverable for JR. Confirmed 2026-04-26 on `docs/research/scaling-migration-options-2026-04-26.md` -- splitting by motivation kept the doc useful and low-bias.
+Affirmations: 1
+
 ## [PROJECT] -- Network-level diagnostics first, then narrow
 Lesson: When user reports "spinner stops, no toast," fetch actual response (curl + browser console). If JSON is valid, bug is frontend, not backend.
 Context: S52 spent two messages speculating at backend issues; actual fix was JSON.parse('') in App.jsx line 1408.
@@ -485,6 +495,20 @@ Lesson: Wall-clock alone misses fast loops emitting fake progress. Step-progress
 Context: 2026-04-25 -- /coding-plan SKILL.md Phase 7 design. JR rejected v1's wall-clock-only watchdog after pointing out it misses token-spirals. Final design covers frozen, spiraling, and looping failure modes.
 Confidence: H -- direct user challenge, alternative validated against memory of prior Playwright hangs.
 Affirmations: 0
+
+## [GLOBAL] -- Research subagent contract: facts only, no recommendations, flag marketing-vs-technical
+Lesson: When delegating research (vendor surveys, codebase audits, migration scoping), the subagent's deliverable must be FACTS only. Forbid recommendations in the prompt. Require the agent to flag when a claim is sourced from vendor marketing copy vs vendor technical docs vs independent measurement. Synthesis + recommendation happens in the parent session, not in the gatherer.
+Context: If the research subagent recommends, the parent absorbs the agent's bias before seeing the underlying facts. Confirmed 2026-04-26 on the scaling-migration-options doc -- two parallel agents (codebase Explore + web survey general-purpose) returned cite-anchored facts; main session synthesized. Output was higher-signal than a single agent doing both gather + recommend.
+How to apply: Every research-subagent prompt includes "no recommendations, just facts; flag marketing-vs-technical-vs-independent for each claim; cite source URL or file path."
+Affirmations: 1
+Source: human (declared from session reflection)
+
+## [GLOBAL] -- Every subagent prompt ends with "flag anything the parent should double-check"
+Lesson: Add a deliverable line to every Agent prompt: "Anything you noticed that the main session should double-check, including ambiguity in the spec or unintended scope drift." Subagents that follow this catch parent-side errors the parent didn't anticipate.
+Context: 2026-04-26 -- the Sonnet executor on the PKDetailsPanel feature flagged a scope mismatch (Site A used full period, Site C used active week) that the parent's spec had introduced. Caught only because the subagent was asked to flag concerns. Without the flag-out, the inconsistency would have shipped.
+How to apply: Final section of every Agent prompt is a numbered deliverable list, last item is "flag anything the main session should double-check."
+Affirmations: 1
+Source: human (declared from session reflection)
 
 <!-- TEMPLATE
 ## [GLOBAL] -- [Lesson title]
