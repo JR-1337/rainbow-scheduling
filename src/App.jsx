@@ -34,7 +34,7 @@ import { sortBySarviAdminsFTPT, employeeBucket } from './utils/employeeSort';
 import { hasTitle } from './utils/employeeRender';
 import { getAuthToken, setAuthToken, clearAuth, setCachedUser, handleAuthError } from './auth';
 import { OTR, THEME, TYPE } from './theme';
-import { ROLES, ROLES_BY_ID, EVENT_TYPES } from './constants';
+import { ROLES, ROLES_BY_ID, EVENT_TYPES, DESKTOP_SCHEDULE_GRID_TEMPLATE } from './constants';
 import { AdminTimeOffPanel } from './panels/AdminTimeOffPanel';
 import { AdminMyTimeOffPanel } from './panels/AdminMyTimeOffPanel';
 import { AdminShiftOffersPanel } from './panels/AdminShiftOffersPanel';
@@ -2227,7 +2227,7 @@ export default function App() {
               
               {/* Schedule grid */}
               <div className="rounded-b-xl rounded-tr-xl overflow-visible relative" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderTop: 'none', zIndex: 1, boxShadow: THEME.shadow.card }}>
-                <div className="grid gap-px" style={{ gridTemplateColumns: '140px repeat(7, 1fr)', backgroundColor: THEME.border.subtle }}>
+                <div className="grid gap-px" style={{ gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, backgroundColor: THEME.border.subtle }}>
                   <div className="p-1.5" style={{ backgroundColor: THEME.bg.tertiary }}><span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>Employee</span></div>
                   {currentDates.map((date) => {
                     const sh = getStoreHoursForDate(date);

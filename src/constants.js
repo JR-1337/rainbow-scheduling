@@ -96,3 +96,6 @@ export const SWAP_STATUS_LABELS = {
   expired: 'Expired',
   revoked: 'Revoked',
 };
+
+// Desktop admin + employee schedule: name column width follows content (min 200px); day cells share the rest
+export const DESKTOP_SCHEDULE_GRID_TEMPLATE = 'minmax(200px, max-content) repeat(7, 1fr)';

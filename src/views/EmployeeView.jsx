@@ -11,7 +11,7 @@ import { toDateKey, getWeekNumber, formatDate, formatTimeDisplay, formatTimeShor
 import { isStatHoliday } from '../utils/storeHours';
 import { sortBySarviAdminsFTPT, employeeBucket } from '../utils/employeeSort';
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet, MobileAlertsSheet, computeAlertItems } from '../MobileEmployeeView';
-import { EVENT_TYPES } from '../constants';
+import { EVENT_TYPES, DESKTOP_SCHEDULE_GRID_TEMPLATE } from '../constants';
 import { MyShiftOffersPanel } from '../panels/MyShiftOffersPanel';
 import { MySwapsPanel } from '../panels/MySwapsPanel';
 import { MyRequestsPanel } from '../panels/MyRequestsPanel';
@@ -146,14 +146,14 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
   };
 
   return (
-    <div className="grid gap-px schedule-row" style={{ gridTemplateColumns: '140px repeat(7, 1fr)', backgroundColor: THEME.border.subtle }}>
+    <div className="grid gap-px schedule-row" style={{ gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, backgroundColor: THEME.border.subtle }}>
       <div className="p-1.5" style={{ backgroundColor: isMe ? THEME.accent.purple + '15' : THEME.bg.secondary }}>
-        <div className="flex items-center gap-1.5">
-          <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0" style={{ background: isMe ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated, color: isMe ? 'white' : THEME.text.muted }}>{employee.name.split(' ').map(n => n[0]).join('')}</div>
+        <div className="flex items-start gap-1.5">
+          <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5" style={{ background: isMe ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated, color: isMe ? 'white' : THEME.text.muted }}>{employee.name.split(' ').map(n => n[0]).join('')}</div>
           <div className="min-w-0 flex-1">
-            <p className="font-medium text-xs truncate flex items-center gap-1" style={{ color: isMe ? THEME.accent.purple : THEME.text.primary }}>
+            <p className="font-medium text-xs break-words leading-tight" style={{ color: isMe ? THEME.accent.purple : THEME.text.primary }}>
               {employee.name}
-              {isMe && <span className="text-xs" style={{ color: THEME.accent.cyan }}>(You)</span>}
+              {isMe && <span className="whitespace-nowrap" style={{ color: THEME.accent.cyan }}> (You)</span>}
             </p>
           </div>
         </div>
@@ -784,7 +784,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
             </div>
           )}
           <div className="rounded-b-xl rounded-tr-xl overflow-visible relative" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderTop: 'none', zIndex: 1, boxShadow: THEME.shadow.card }}>
-            <div className="grid gap-px" style={{ gridTemplateColumns: '140px repeat(7, 1fr)', backgroundColor: THEME.border.subtle }}>
+            <div className="grid gap-px" style={{ gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, backgroundColor: THEME.border.subtle }}>
               <div className="p-1.5" style={{ backgroundColor: THEME.bg.tertiary }}><span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>Employee</span></div>
               {currentDates.map((date, i) => {
                 const sh = getStoreHoursForDate(date);

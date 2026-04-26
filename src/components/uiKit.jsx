@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { DESKTOP_SCHEDULE_GRID_TEMPLATE } from '../constants';
 import { THEME } from '../theme';
 
 // P4.5 - Haptic feedback (progressive enhancement - no-op on desktop)
@@ -52,7 +53,7 @@ export const ScheduleSkeleton = () => (
     <div className="flex gap-2 mb-4">
       {[...Array(3)].map((_, i) => <div key={i} className="skeleton-pulse h-8 flex-1" />)}
     </div>
-    <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(7, 1fr)', gap: '2px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, gap: '2px' }}>
       <div className="skeleton-pulse h-10" />
       {[...Array(7)].map((_, i) => <div key={`h-${i}`} className="skeleton-pulse h-10" />)}
       {[...Array(56)].map((_, i) => <div key={`c-${i}`} className="skeleton-pulse h-14" />)}
