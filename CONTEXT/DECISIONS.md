@@ -29,6 +29,14 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-25 -- Desktop schedule name column: fixed 240px + first/rest split (match mobile)
+
+Decision: `DESKTOP_SCHEDULE_NAME_COL_PX` 240, `DESKTOP_SCHEDULE_GRID_TEMPLATE` in `constants.js`, same `gridTemplateColumns` on App header, `EmployeeRow`, `EmployeeView` body+header, `ScheduleSkeleton` (uiKit). `splitNameForSchedule` in `employeeRender.js` returns first word + rest; desktop renders line1 + line2 (muted) like `MobileAdminView` / `MobileEmployeeView`, `truncate` + `title` for overflow; admin adds week hours under. Rejected: `max-content` for col1 when each row is its own grid (header is another grid) => unequal col1 width, day columns misalign. Rejected: `line-clamp-2` on full name without first/rest (uneven name block vs mobile).
+Rationale: Full readable names, vertical alignment, parity with mobile name UX.
+Confidence: H -- build PASS at `a07ab98` 2026-04-25, JR prod phone-smoke on this work still pending
+Rejected alternatives:
+- DRY mobile and desktop with one shared `NameCell` component -- not done; low blast, possible later.
+
 ## 2026-04-25 -- Type-aware shift dedupe key (meeting allows N per emp-date; work/sick/pk stay singular)
 
 Decision: Both backend (`backend/Code.gs:1801` `keyOf` in `batchSaveShifts`) and frontend (`src/utils/scheduleOps.js` `applyShiftMutation`) split shift dedupe semantics by `type`. Singular set `{work, sick, pk}` keeps the prior 3-tuple key `${empId}-${date}-${type}`. Multi-allowed set `{meeting}` keys on `s.id` (with synthetic fallback `MEETING-{empId}-{date}` for legacy id-less rows). Frontend mirror via `MULTI_TYPES = new Set(['meeting'])`. PK bulk-create at `Code.gs:1872` `bulkCreatePKEvent` is unchanged -- its own `existingPKKeys` set still enforces PK singular invariant on its own write path.

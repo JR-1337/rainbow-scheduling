@@ -249,7 +249,7 @@ Affirmations: 1
 ## [PROJECT] -- Push and confirm deploy before handing JR a phone-smoke checklist
 Lesson: After any commit JR will phone-test, `git push origin main` AND state "pushed, Vercel redeploys in ~60s, hard-refresh first". Never hand over test steps while prod serves old bundle.
 Context: 2026-04-18 -- shipped Phase A+B+C locally, wrote 9-step checklist, JR tested on prod (still old code), results for items 5/8/9 were false negatives, wasted his time and trust.
-Affirmations: 0
+Affirmations: 1
 
 ## [PROJECT] -- Hard-refresh is not always enough; verify bundle hash from view-source
 Lesson: When JR reports "not working" after a fresh-looking reload, curl the prod URL for the current `index-*.js` hash and tell him to open `view-source:` on his phone and search for it. If absent, browser cache is the cause; if present, real bug to hunt.

@@ -36,7 +36,7 @@ Rules:
 - `src/MobileEmployeeView.jsx` -- mobile components: MobileAlertsSheet, MobileBottomNav, MobileBottomSheet
 - `src/MobileAdminView.jsx` -- admin mobile view
 - `src/theme.js` -- THEME / TYPE / OTR accent palette
-- `src/constants.js` -- ROLES / ROLES_BY_ID / REQUEST_STATUS_COLORS / OFFER/SWAP_STATUS_COLORS+LABELS / EVENT_TYPES (work/meeting/pk/sick) / PRIMARY_CONTACT_EMAIL
+- `src/constants.js` -- ROLES / ROLES_BY_ID / `DESKTOP_SCHEDULE_GRID_TEMPLATE` (240px + 7fr) / REQUEST_STATUS_COLORS / OFFER/SWAP / EVENT_TYPES / PRIMARY_CONTACT_EMAIL
 - `src/components/` -- LoginScreen, ColumnHeaderEditor, ScheduleCell, EmployeeRow, CollapsibleSection, primitives (Modal/GradientButton/Input/Checkbox/TimePicker/TooltipButton), uiKit (haptic/AnimatedNumber/StaffingBar/ScheduleSkeleton/TaskStarTooltip/GradientBackground/Logo), Button, AdaptiveModal, MobileScheduleActionSheet
 - `src/hooks/` -- useFocusTrap, useUnsavedWarning, useDismissOnOutside, useAuth, useToast, useAnnouncements, useGuardedMutation, useTooltip
 - `src/panels/` -- admin + employee list panels
@@ -51,7 +51,7 @@ Rules:
 - `src/utils/storeHoursOverrides.js` -- module-level override refs + getStoreHoursForDate (re-exported from App.jsx for legacy importers; parked sub-area-6 Context refactor will replace)
 - `src/utils/payPeriod.js` / `src/utils/requests.js` / `src/utils/api.js` / `src/utils/eventDefaults.js`
 - `src/utils/employeeSort.js` -- five-bucket display order (Sarvi, admin1, admin2, FT, PT) + bucket-transition dividers; single source of truth for admin/employee/mobile/PDF rendering
-- `src/utils/employeeRender.js` -- `hasTitle(emp)` predicate (`emp.isAdmin || emp.adminTier === 'admin2'`); single source of truth for "render by title not role" branches across 8 files (ScheduleCell, MobileAdminView, pdf/generate, ShiftEditorModal, EmployeeView, MobileEmployeeView, App.jsx tooltip, EmployeeFormModal)
+- `src/utils/employeeRender.js` -- `hasTitle(emp)`; `splitNameForSchedule(name)` for desktop+mobile name column; title branches in 8 files + desktop name cells
 - `src/utils/timemath.js` -- interval-union hours, availabilityCoversWindow
 - `backend/Code.gs` -- paste into Apps Script editor after edits
 
