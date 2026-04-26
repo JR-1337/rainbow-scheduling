@@ -155,10 +155,10 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
 
   return (
     <div className="grid gap-px schedule-row" style={{ gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, backgroundColor: THEME.border.subtle }}>
-      <div className="h-full p-1.5" style={{ backgroundColor: nameCellBg }} title={employee.name}>
-        <div className="flex w-full min-h-[2.5rem] items-center gap-1.5">
+      <div className="h-full min-h-0 p-0.5" style={{ backgroundColor: nameCellBg }} title={employee.name}>
+        <div className="flex h-[4.5rem] min-h-[4.5rem] max-h-[4.5rem] w-full items-center gap-1.5 overflow-hidden">
           <div className="h-6 w-6 flex-shrink-0 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: isMe ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated, color: isMe ? 'white' : THEME.text.muted }}>{employee.name.split(' ').map(n => n[0]).join('')}</div>
-          <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5">
+          <div className="min-h-0 min-w-0 flex-1 flex flex-col justify-center gap-0.5 overflow-hidden">
             <p className="flex min-w-0 items-center gap-1 text-xs font-medium leading-tight" style={{ color: isMe ? THEME.accent.purple : THEME.text.primary }}>
               <span className="min-w-0 truncate">{nameFirst}</span>
               {isMe && <span className="shrink-0" style={{ color: THEME.accent.cyan, fontSize: '9px' }}>(You)</span>}
@@ -167,7 +167,7 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
               <p className="truncate text-[10px] leading-tight" style={{ color: THEME.text.muted }}>{nameRest}</p>
             ) : null}
             {titledRow && (employee.title || '').trim() ? (
-              <p className="truncate text-[10px] leading-tight" style={{ color: THEME.text.secondary }} title={employee.title}>{employee.title}</p>
+              <p className="line-clamp-1 text-[10px] leading-tight" style={{ color: THEME.text.secondary }} title={employee.title}>{employee.title}</p>
             ) : null}
           </div>
         </div>
