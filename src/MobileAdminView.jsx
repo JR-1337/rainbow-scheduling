@@ -295,21 +295,36 @@ export const MobileAdminScheduleGrid = ({
                     onClick={() => onNameClick && onNameClick(emp)}
                     style={{ 
                     position: 'sticky', left: 0, zIndex: 10,
-                    width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH, height: CELL_HEIGHT,
+                    width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH,
+                    height: CELL_HEIGHT,
+                    maxHeight: CELL_HEIGHT,
+                    boxSizing: 'border-box',
+                    overflow: 'hidden',
+                    verticalAlign: 'middle',
                     backgroundColor: THEME.bg.secondary,
                     borderBottom: `1px solid ${THEME.border.subtle}`,
                     borderRight: `1px solid ${THEME.border.default}`,
                     padding: '4px',
                     cursor: onNameClick ? 'pointer' : 'default'
                   }}>
-                    <p className="font-semibold truncate" style={{ color: onNameClick ? THEME.accent.cyan : THEME.text.primary, fontSize: '10px', lineHeight: 1.2 }}>{nameFirst}</p>
-                    {nameRest ? (
-                      <p className="truncate" style={{ color: THEME.text.muted, fontSize: '9px', lineHeight: 1.2 }}>{nameRest}</p>
-                    ) : null}
-                    {titledRow && (emp.title || '').trim() ? (
-                      <p className="truncate" style={{ color: THEME.text.secondary, fontSize: '8px', lineHeight: 1.2 }} title={emp.title}>{emp.title}</p>
-                    ) : null}
-                    <p style={{ color: THEME.accent.cyan, fontSize: '9px', lineHeight: 1.2 }}>{weekHours.toFixed(1)}h{emp.isAdmin ? ' ★' : ''}</p>
+                    <div style={{
+                      height: CELL_HEIGHT - 8,
+                      maxHeight: CELL_HEIGHT - 8,
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      gap: 1,
+                    }}>
+                      <p className="font-semibold truncate shrink-0" style={{ color: onNameClick ? THEME.accent.cyan : THEME.text.primary, fontSize: '10px', lineHeight: 1.15 }}>{nameFirst}</p>
+                      {nameRest ? (
+                        <p className="truncate shrink-0" style={{ color: THEME.text.muted, fontSize: '9px', lineHeight: 1.15 }}>{nameRest}</p>
+                      ) : null}
+                      {titledRow && (emp.title || '').trim() ? (
+                        <p className="line-clamp-1 shrink-0" style={{ color: THEME.text.secondary, fontSize: '8px', lineHeight: 1.15 }} title={emp.title}>{emp.title}</p>
+                      ) : null}
+                      <p className="truncate shrink-0" style={{ color: THEME.accent.cyan, fontSize: '9px', lineHeight: 1.15 }}>{weekHours.toFixed(1)}h{emp.isAdmin ? ' ★' : ''}</p>
+                    </div>
                   </td>
                   
                   {/* Day cells */}
@@ -342,7 +357,11 @@ export const MobileAdminScheduleGrid = ({
                       <td key={i}
                         onClick={() => isEditMode && onCellClick && onCellClick(emp, date, shift || null)}
                         style={{
-                          width: CELL_WIDTH, minWidth: CELL_WIDTH, height: CELL_HEIGHT,
+                          width: CELL_WIDTH, minWidth: CELL_WIDTH,
+                          height: CELL_HEIGHT,
+                          maxHeight: CELL_HEIGHT,
+                          boxSizing: 'border-box',
+                          overflow: 'hidden',
                           backgroundColor: THEME.bg.secondary,
                           borderBottom: `1px solid ${THEME.border.subtle}`,
                           padding: '2px',

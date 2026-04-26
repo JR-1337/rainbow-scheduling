@@ -153,10 +153,11 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
     );
   };
 
+  const rowStrip = 'p-0.5 h-[calc(4.5rem+0.25rem)] max-h-[calc(4.5rem+0.25rem)] min-h-0 overflow-hidden box-border';
   return (
     <div className="grid gap-px schedule-row" style={{ gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, backgroundColor: THEME.border.subtle }}>
-      <div className="h-full min-h-0 p-0.5" style={{ backgroundColor: nameCellBg }} title={employee.name}>
-        <div className="flex h-[4.5rem] min-h-[4.5rem] max-h-[4.5rem] w-full items-center gap-1.5 overflow-hidden">
+      <div className={rowStrip} style={{ backgroundColor: nameCellBg }} title={employee.name}>
+        <div className="flex h-full min-h-0 w-full items-center gap-1.5 overflow-hidden">
           <div className="h-6 w-6 flex-shrink-0 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: isMe ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated, color: isMe ? 'white' : THEME.text.muted }}>{employee.name.split(' ').map(n => n[0]).join('')}</div>
           <div className="min-h-0 min-w-0 flex-1 flex flex-col justify-center gap-0.5 overflow-hidden">
             <p className="flex min-w-0 items-center gap-1 text-xs font-medium leading-tight" style={{ color: isMe ? THEME.accent.purple : THEME.text.primary }}>
@@ -183,7 +184,7 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
         const avail = employee.availability?.[dayName];
         const isUnavailable = avail && !avail.available;
         return (
-          <div key={dateStr} className="p-0.5" style={{ backgroundColor: dayGutterBg }}>
+          <div key={dateStr} className={rowStrip} style={{ backgroundColor: dayGutterBg }}>
             <EmployeeScheduleCell shift={shift ? { ...shift, employeeId: employee.id } : null} events={cellEvents} date={date} loggedInEmpId={loggedInEmpId} storeHours={storeHrs} employee={employee} isTimeOff={isTimeOff} isUnavailable={isUnavailable} />
           </div>
         );

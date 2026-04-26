@@ -27,10 +27,12 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
     if (onHideTooltip) onHideTooltip();
   };
 
+  // Fixed row strip: 4.5rem cell + p-0.5 vertical (0.25rem) so grid row height cannot grow from name stack min-content.
+  const rowStrip = 'p-0.5 h-[calc(4.5rem+0.25rem)] max-h-[calc(4.5rem+0.25rem)] min-h-0 overflow-hidden box-border';
   return (
     <div className="grid gap-px schedule-row" style={{ gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, backgroundColor: THEME.border.subtle, opacity: isDeleted ? 0.5 : 1 }}>
-      <div ref={rowRef} className="p-0.5 h-full min-h-0" style={{ backgroundColor: THEME.bg.secondary }} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-        <div className="flex h-[4.5rem] min-h-[4.5rem] max-h-[4.5rem] w-full items-center gap-1.5 overflow-hidden">
+      <div ref={rowRef} className={rowStrip} style={{ backgroundColor: THEME.bg.secondary }} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+        <div className="flex h-full min-h-0 w-full items-center gap-1.5 overflow-hidden">
           <div className="h-6 w-6 flex-shrink-0 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: isDeleted ? THEME.bg.elevated : `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: isDeleted ? THEME.text.muted : 'white' }}>{employee.name.split(' ').map(n => n[0]).join('')}</div>
           <div className="min-h-0 min-w-0 flex-1 flex flex-col justify-center gap-0.5 overflow-hidden" title={employee.name}>
             <p className="truncate text-xs font-semibold leading-tight" style={{ color: isDeleted ? THEME.text.muted : THEME.text.primary }}>{nameFirst}</p>
@@ -55,7 +57,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
         const cellEvents = events[`${employee.id}-${dateStr}`] || EMPTY_EVENTS;
         const approvedTimeOff = hasApprovedTimeOffForDate(employee.email, dateStr, timeOffRequests);
         return (
-          <div key={dateStr} className="p-0.5" style={{ backgroundColor: THEME.bg.secondary }}>
+          <div key={dateStr} className={rowStrip} style={{ backgroundColor: THEME.bg.secondary }}>
             <ScheduleCell shift={shift} events={cellEvents} date={date} availability={av} storeHours={storeHrs} onCellClick={onCellClick} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} employee={employee} />
           </div>
         );
