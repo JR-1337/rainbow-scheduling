@@ -286,18 +286,66 @@ export default function App() {
   // guardedMutation moved to hooks/useGuardedMutation.js
   const guardedMutation = useGuardedMutation(showToast);
 
-  // S62 — Bulk PK: one modal, one save. Backend createPKEvent is already in Code.gs (v2.21.0).
-  const handleBulkPK = async (payload) => {
-    await guardedMutation('Scheduling PK', async () => {
-      const result = await apiCall('bulkCreatePKEvent', payload);
-      if (!result.success) {
-        showToast('error', errorMsg(result, 'Failed to schedule PK'));
+  // PK editor: applies adds + removes in a single period save (batchSaveShifts).
+  // Adds: synthesize PK event rows client-side and append to events[empId-date].
+  // Removes: drop PK entries matching {date, startTime, endTime} from events[empId-date].
+  // Persistence: existing batchSaveShifts path rewrites the period — atomic with
+  // any other unsaved schedule edits in the same period.
+  const handleBulkPK = async ({ date, startTime, endTime, note, addIds = [], removeIds = [] }) => {
+    if (addIds.length === 0 && removeIds.length === 0) return;
+    await guardedMutation('Updating PK', async () => {
+      const prevEvents = events;
+      const nextEvents = { ...events };
+
+      // Apply removes
+      removeIds.forEach(empId => {
+        const key = `${empId}-${date}`;
+        const list = nextEvents[key] || [];
+        const filtered = list.filter(ev =>
+          !(ev.type === 'pk' && ev.startTime === startTime && ev.endTime === endTime)
+        );
+        if (filtered.length === 0) delete nextEvents[key];
+        else nextEvents[key] = filtered;
+      });
+
+      // Apply adds (synthesize rows; backend keyOf for type=pk uses 3-tuple so
+      // synthetic ids are not load-bearing for dedupe — we still set one for traceability)
+      addIds.forEach(empId => {
+        const emp = employees.find(e => String(e.id) === String(empId));
+        if (!emp) return;
+        const key = `${empId}-${date}`;
+        const newEvent = {
+          id: `PK-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          employeeId: empId,
+          employeeName: emp.name,
+          employeeEmail: emp.email,
+          date,
+          startTime,
+          endTime,
+          role: 'none',
+          task: '',
+          type: 'pk',
+          note: note || '',
+        };
+        nextEvents[key] = [...(nextEvents[key] || []), newEvent];
+      });
+
+      setEvents(nextEvents);
+
+      // Persist the period via the existing batch-save path
+      const { periodShifts, periodDates } = collectPeriodShiftsForSave(dates, employees, shifts, nextEvents);
+      const saveResult = await apiCall('batchSaveShifts', { shifts: periodShifts, periodDates });
+
+      if (!saveResult.success) {
+        setEvents(prevEvents);
+        showToast('error', errorMsg(saveResult, 'Failed to save PK changes'));
         return;
       }
-      const { created = [], skipped = [] } = result.data || {};
-      let msg = `PK scheduled for ${created.length}`;
-      if (skipped.length) msg += ` (${skipped.length} skipped)`;
-      showToast('success', msg);
+
+      const bits = [];
+      if (addIds.length > 0) bits.push(`+${addIds.length}`);
+      if (removeIds.length > 0) bits.push(`-${removeIds.length}`);
+      showToast('success', `PK updated (${bits.join(' / ')})`);
       setPkModalOpen(false);
       if (currentUser?.email) await loadDataFromBackend(currentUser.email);
     });
@@ -1914,6 +1962,7 @@ export default function App() {
           onClose={() => setPkModalOpen(false)}
           onSchedule={handleBulkPK}
           employees={employees}
+          events={events}
           activeWeek={activeWeek}
           week1={week1}
           week2={week2}
@@ -2508,6 +2557,7 @@ export default function App() {
         onClose={() => setPkModalOpen(false)}
         onSchedule={handleBulkPK}
         employees={employees}
+        events={events}
         activeWeek={activeWeek}
         week1={week1}
         week2={week2}

@@ -6,7 +6,7 @@ import { THEME } from '../theme';
 import { availabilityCoversWindow } from '../utils/timemath';
 import { getPKDefaultTimes } from '../utils/eventDefaults';
 
-export const PKEventModal = ({ isOpen, onClose, onSchedule, employees, activeWeek, week1, week2 }) => {
+export const PKEventModal = ({ isOpen, onClose, onSchedule, employees, events = {}, activeWeek, week1, week2 }) => {
   const today = toDateKey(new Date());
   const initialPK = getPKDefaultTimes(today);
   const [date, setDate] = useState(today);
@@ -29,6 +29,34 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees, activeWee
     }
   }, [isOpen]);
 
+  // Currently-booked PK ids for the selected date+start+end window. Drives:
+  // (1) initial check state in edit mode (already-booked = checked)
+  // (2) dirty-state computation so Save enables on add OR remove
+  // (3) note prefill in edit mode
+  const existingPKBookedIds = useMemo(() => {
+    const set = new Set();
+    let existingNote = null;
+    Object.values(events || {}).forEach(arr => {
+      (arr || []).forEach(ev => {
+        if (ev.type === 'pk' && ev.date === date && ev.startTime === start && ev.endTime === end) {
+          set.add(String(ev.employeeId));
+          if (existingNote === null && ev.note) existingNote = ev.note;
+        }
+      });
+    });
+    return { ids: set, note: existingNote };
+  }, [events, date, start, end]);
+
+  // Edit mode = at least one PK already booked at this slot. In edit mode the
+  // initial check state mirrors the booked set; toggling becomes add/remove.
+  // In create mode (zero booked) we keep the historical "auto-check eligible" UX.
+  const isEditMode = existingPKBookedIds.ids.size > 0;
+
+  // Prefill note from existing PK in edit mode (one-shot per date/time change)
+  useEffect(() => {
+    if (isEditMode && existingPKBookedIds.note && !note) setNote(existingPKBookedIds.note);
+  }, [isEditMode, existingPKBookedIds.note]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Apply day-of-week PK default when date changes, unless user has manually
   // set the times (avoids stomping intentional overrides).
   useEffect(() => {
@@ -45,21 +73,27 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees, activeWee
     const active = (employees || []).filter(e => e.active && !e.deleted && !e.isOwner);
     return active.map(e => {
       const check = availabilityCoversWindow(e.availability, date, start, end);
-      const defaultChecked = check.eligible;
+      const wasBooked = existingPKBookedIds.ids.has(String(e.id));
+      // Edit mode: initial check = currently-booked. Create mode: initial = eligibility.
+      const defaultChecked = isEditMode ? wasBooked : check.eligible;
       const checked = overrides[e.id] !== undefined ? overrides[e.id] : defaultChecked;
-      return { ...e, eligible: check.eligible, reason: check.reason, checked };
+      return { ...e, eligible: check.eligible, reason: check.reason, checked, wasBooked };
     }).sort((a, b) => {
       const aFt = a.type === 'full' ? 0 : 1;
       const bFt = b.type === 'full' ? 0 : 1;
       if (aFt !== bFt) return aFt - bFt;
       return (a.name || '').localeCompare(b.name || '');
     });
-  }, [employees, date, start, end, overrides]);
+  }, [employees, date, start, end, overrides, isEditMode, existingPKBookedIds.ids]);
 
   const fullTimers = candidates.filter(c => c.type === 'full');
   const partTimers = candidates.filter(c => c.type !== 'full');
   const checkedCount = candidates.filter(c => c.checked).length;
   const eligibleCount = candidates.filter(c => c.eligible).length;
+  // Add/remove diff vs the existing booked set. Save enables on either > 0.
+  const addIds = candidates.filter(c => c.checked && !c.wasBooked).map(c => c.id);
+  const removeIds = candidates.filter(c => !c.checked && c.wasBooked).map(c => c.id);
+  const isDirty = addIds.length > 0 || removeIds.length > 0;
 
   const toggle = (id, nextChecked) => {
     setOverrides(prev => ({ ...prev, [id]: nextChecked }));
@@ -87,18 +121,29 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees, activeWee
   // Uses the currently-viewed week (activeWeek from the schedule tabs).
   const weekDates = activeWeek === 1 ? week1 : activeWeek === 2 ? week2 : null;
   const saturdayDate = weekDates?.find(d => d instanceof Date && d.getDay() === 6);
+  const saturdayKey = saturdayDate ? toDateKey(saturdayDate) : null;
+  const isSaturdayActive = !!saturdayKey && date === saturdayKey && start === '10:00' && end === '10:45';
   const handleSaturdayQuickPick = () => {
     if (!saturdayDate) return;
-    setDate(toDateKey(saturdayDate));
-    setStart('10:00');
-    setEnd('10:45');
-    setTimesUserSet(false);
+    if (isSaturdayActive) {
+      // Toggle off: revert to today's default day + default times
+      const t = toDateKey(new Date());
+      const def = getPKDefaultTimes(t);
+      setDate(t);
+      setStart(def.start);
+      setEnd(def.end);
+      setTimesUserSet(false);
+    } else {
+      setDate(saturdayKey);
+      setStart('10:00');
+      setEnd('10:45');
+      setTimesUserSet(false);
+    }
   };
 
   const handleSchedule = () => {
-    const employeeIds = candidates.filter(c => c.checked).map(c => c.id);
-    if (employeeIds.length === 0) return;
-    onSchedule({ date, startTime: start, endTime: end, note: note.trim(), employeeIds });
+    if (!isDirty) return;
+    onSchedule({ date, startTime: start, endTime: end, note: note.trim(), addIds, removeIds });
   };
 
   const renderGroup = (label, group) => group.length === 0 ? null : (
@@ -163,11 +208,20 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees, activeWee
           <button
             type="button"
             onClick={handleSaturdayQuickPick}
-            className="px-2 py-1 rounded text-xs font-medium hover:opacity-80"
-            style={{ backgroundColor: THEME.event.pkBg, color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}` }}
-            title="Jump to this week's Saturday at the 10:00-10:45 pre-open window"
+            className="px-2.5 py-1 rounded text-xs font-medium transition-all hover:opacity-90"
+            style={{
+              // Active = filled brand-purple with white text + check glyph;
+              // tap again reverts to default day + default times.
+              backgroundColor: isSaturdayActive ? THEME.accent.purple : THEME.event.pkBg,
+              color: isSaturdayActive ? '#FFFFFF' : THEME.event.pkText,
+              border: `1px solid ${isSaturdayActive ? THEME.accent.purple : THEME.event.pkBorder}`,
+              boxShadow: isSaturdayActive ? `0 0 0 2px ${THEME.accent.purple}33` : 'none',
+            }}
+            title={isSaturdayActive
+              ? 'Saturday selected — tap to revert to default day'
+              : "Jump to this week's Saturday at the 10:00-10:45 pre-open window"}
           >
-            📅 Saturday ({toDateKey(saturdayDate).slice(5)}) · 10:00–10:45
+            {isSaturdayActive ? '✓' : '📅'} Saturday ({toDateKey(saturdayDate).slice(5)}) · 10:00–10:45
           </button>
         </div>
       )}
@@ -219,9 +273,13 @@ export const PKEventModal = ({ isOpen, onClose, onSchedule, employees, activeWee
       {/* Footer */}
       <div className="flex justify-end gap-2 pt-2 mt-1" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
         <GradientButton onClick={onClose} variant="secondary">Cancel</GradientButton>
-        <GradientButton onClick={handleSchedule} disabled={checkedCount === 0}>
+        <GradientButton onClick={handleSchedule} disabled={!isDirty}>
           <BookOpen size={14} />
-          Schedule for {checkedCount}
+          {isEditMode
+            ? (isDirty
+                ? `Save (${addIds.length > 0 ? `+${addIds.length}` : ''}${addIds.length > 0 && removeIds.length > 0 ? ' ' : ''}${removeIds.length > 0 ? `-${removeIds.length}` : ''})`
+                : 'Save')
+            : `Schedule for ${checkedCount}`}
         </GradientButton>
       </div>
     </Modal>
