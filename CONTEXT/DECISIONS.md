@@ -48,6 +48,26 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-04-26 -- PK details surfaced near announcements as a shared sibling panel
+
+Decision: New shared component `src/components/PKDetailsPanel.jsx` aggregates PK events across all employees into unique `{date, startTime, endTime}` slots within the active period. Per slot it shows day label, time range, booked count, employee names (first 3 + `+N more`), and optional note. Returns null when no PK in period (non-invasive guarantee). Mounted as a sibling AFTER the announcement panel on 4 paths: desktop admin grid (`src/App.jsx` ~L2376), mobile admin comms tab (`src/App.jsx` ~L1888), desktop employee grid (`src/views/EmployeeView.jsx` ~L860), mobile employee alerts sheet (`src/MobileEmployeeView.jsx` ~L767). All 4 scoped to full pay period (`dates`, not `currentDates`) to match announcement scope.
+Rationale: JR's polish list item — "PK details visible near announcements when PK is booked." Single shared component prevents drift across 4 surfaces (mobile/desktop x admin/employee). Sibling-not-nested keeps announcement components untouched, satisfying "non-invasive." Period-scope (vs week-scope) matches announcement scope so the PK panel always shows what the admin/employee should know about for the period they are viewing.
+Confidence: H -- verified 2026-04-26 build PASS at `0fe138c` (modern 488.13 kB / 123.25 kB gzip, +2.46 raw / +0.56 gzip vs `1d26daf`; legacy 508.75 / 124.83). Smoke skipped per JR direction; prod phone-smoke pending.
+Rejected alternatives:
+- Embed PK summary INSIDE the announcement panel components -- rejected, requires modifying 4 announcement components, breaks the non-invasive rule, couples PK rendering to announcement state.
+- Week-scope (`currentDates`) on employee paths -- rejected, would split the source-of-truth between admin (period) and employee (week); employees viewing the schedule for the period should see all PK they may need to attend, not only this-week PK.
+- Show only future PK or hide past PK -- rejected, period view is calendar-aligned not now-aligned; PK already booked in earlier-week shows correct context for the whole period.
+
+## 2026-04-26 -- Bulk-clear PK by day from outside the modal (unsaved-mutation pattern)
+
+Decision: New per-day PK clear affordance lives on the Schedule Clear dropdown (desktop) and Clear sheet (mobile). Per-day rows appear ONLY when >=1 PK booking exists on that date in the active week. Tap opens `AutoPopulateConfirmModal` with new `clear-pk-day` variant ("Clear all N PK booking(s) on Day, Month DD?"); confirm fires `clearPKForDate(dateStr)` which mutates `events` state + sets unsaved (matches `clearWeekShifts` pattern). Admin clicks SAVE on schedule to persist via existing `batchSaveShifts` path. New helper `daysWithPKInWeek(weekDates)` (App.jsx, useCallback-wrapped for prop identity stability) is shared between the desktop dropdown and the mobile sheet via prop.
+Rationale: JR's polish list item — needed an affordance to clear all PK on a chosen day in one move without opening PKEventModal. Per-day granularity (not all-PK-in-week) gives precise control. Unsaved-mutation pattern matches `clearWeekShifts` semantics so admin can review + undo by not saving (different from inside-modal Save which fires immediate `batchSaveShifts`). This split is intentional: outside-modal = unsaved-with-undo, inside-modal = immediate-save-with-revert-on-failure.
+Confidence: H -- verified 2026-04-26 build PASS at `63420ce` (modern 485.67 kB / 122.69 kB gzip, +1.93 raw / +0.68 gzip vs `78f02d7`; legacy 506.33 / 124.34). Smoke skipped per JR direction; prod phone-smoke pending.
+Rejected alternatives:
+- Always-visible "Clear All PK This Week" entry (no per-day granularity) -- rejected, too coarse; admin often wants to clear one specific day.
+- Persist immediately like the modal -- rejected, breaks UX symmetry with `clearWeekShifts` (admin expects unsaved + SAVE step on Schedule grid mutations).
+- Backend `bulkDeletePKByDate` handler -- rejected, client-side mutate + existing `batchSaveShifts` is sufficient and avoids manual-deploy friction (same rationale as the 2026-04-26 PKEventModal dual-mode decision).
+
 ## 2026-04-26 -- PKEventModal dual-mode (create + edit) via existing-events derivation
 
 Decision: `src/modals/PKEventModal.jsx` accepts a new `events` prop. The modal computes `existingPKBookedIds` for the selected `{date, startTime, endTime}` window. When the set is non-empty (`isEditMode = true`), initial check state mirrors the booked set instead of availability eligibility; Save dirty-state covers adds AND removes (`isDirty = addIds.length + removeIds.length > 0`); Save label reads `Save (+N -M)`. When empty (create mode), the historical eligibility-default UX is preserved. `handleBulkPK` in `src/App.jsx` drops the `bulkCreatePKEvent` API call in favor of the unified period-save path: adds synthesize PK event rows client-side, removes drop matching entries from `events[empId-date]`, both persist atomically via existing `apiCall('batchSaveShifts')`. Reverts state on failure. Saturday quick-pick button gains an active-state visual (filled brand accent + 2px glowing ring + `✓` glyph) and toggle-back behavior (tap-again reverts date + times to today's defaults).
