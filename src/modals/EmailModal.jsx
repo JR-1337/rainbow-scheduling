@@ -86,7 +86,14 @@ www.rainbowjeans.com`;
     }
   };
 
-  const handleClose = () => { setSent(false); setSending(false); setResults([]); onComplete(); onClose(); };
+  const handleClose = () => {
+    const finishedEmailStep = sent;
+    setSent(false);
+    setSending(false);
+    setResults([]);
+    if (finishedEmailStep) onComplete?.();
+    onClose();
+  };
 
   const selectedCount = Object.values(selected).filter(Boolean).length;
 
