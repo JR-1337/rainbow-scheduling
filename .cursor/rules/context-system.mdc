@@ -35,9 +35,11 @@ Start each session by reading `TODO.md`, `DECISIONS.md`, `ARCHITECTURE.md`. Add 
 
 ## Module Adapters
 
-None currently. Module adapters live at `.cursor/rules/module-{module-name}.mdc` with `alwaysApply: false` and scoped `globs`. Create only when the subtree has distinct runtime, conventions, or an external integration. Keep under 100 lines.
+PDF: editing `src/pdf/generate.js` -> read `CONTEXT/pdf-print-layout.md` first (layout problem registry).
 
-Candidate boundaries if growth warrants: `backend/` (Apps Script), `src/pdf/` + `src/email/`, future payroll-aggregator.
+None other at `.cursor/rules/module-*.mdc`. Module adapters live there with `alwaysApply: false` and scoped `globs`. Create only when the subtree has distinct runtime, conventions, or an external integration. Keep under 100 lines.
+
+Candidate boundaries if growth warrants: `backend/` (Apps Script), `src/email/`, future payroll-aggregator.
 
 ## Mid-Chat Re-Read
 

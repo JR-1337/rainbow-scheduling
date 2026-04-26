@@ -42,7 +42,7 @@ Rules:
 - `src/panels/` -- admin + employee list panels
 - `src/modals/` -- request/offer/swap/settings/password/shift-editor modals
 - `src/auth.js` -- stateless HMAC session token + cached user + auth-failure callback
-- `src/pdf/generate.js` -- PDF via HTML + window.open + browser print
+- `src/pdf/generate.js` -- PDF via HTML + window.open + browser print; layout tradeoffs in `CONTEXT/pdf-print-layout.md`
 - `src/email/build.js` -- plaintext email body builder
 - `src/utils/format.js` -- parseLocalDate, formatDate, escapeHtml, stripEmoji
 - `src/utils/date.js` -- pure date/time helpers (toDateKey, parseTime, formatTimeShort, ...)

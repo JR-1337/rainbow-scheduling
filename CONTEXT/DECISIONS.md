@@ -29,6 +29,12 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-25 -- PDF schedule print: problem registry for layout work (read before redesign)
+
+Decision: Canonical write-up is `CONTEXT/pdf-print-layout.md`. Summarizes competing goals (row uniformity vs no clipping vs density), what was tried, and candidate approaches not yet implemented (continuation rows, font scaling, abbrev+codes, appendix page, jsPDF/server PDF, print-only CSS). Agents touching `src/pdf/generate.js` must read it; boot adapters point here.
+Rationale: JR asked to surface the design space for Claude Code, not only the latest code state.
+Confidence: M -- registry evolves as PDF approach changes; verify when a candidate ships.
+
 ## 2026-04-25 -- Desktop schedule name column: fixed 240px + first/rest split (match mobile)
 
 Decision: `DESKTOP_SCHEDULE_NAME_COL_PX` 240, `DESKTOP_SCHEDULE_GRID_TEMPLATE` in `constants.js`, same `gridTemplateColumns` on App header, `EmployeeRow`, `EmployeeView` body+header, `ScheduleSkeleton` (uiKit). `splitNameForSchedule` in `employeeRender.js` returns first word + rest; desktop renders line1 + line2 (muted) like `MobileAdminView` / `MobileEmployeeView`, `truncate` + `title` for overflow; admin adds week hours under. Rejected: `max-content` for col1 when each row is its own grid (header is another grid) => unequal col1 width, day columns misalign. Rejected: `line-clamp-2` on full name without first/rest (uneven name block vs mobile).

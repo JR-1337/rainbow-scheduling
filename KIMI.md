@@ -40,9 +40,11 @@ Confidence format on DECISIONS and inferred LESSONS entries:
 
 ## Module Adapters
 
-None currently. Create `{module-name}/KIMI.md` only when the subtree has distinct runtime, conventions, or an external integration. Keep module adapters under 100 lines.
+- **PDF export** -- before changing `src/pdf/generate.js`, read `CONTEXT/pdf-print-layout.md` (competing layout goals + options not yet built).
 
-Candidate boundaries if growth warrants: `backend/` (Apps Script), `src/pdf/` + `src/email/`, future payroll-aggregator module.
+None other. Create `{module-name}/KIMI.md` only when the subtree has distinct runtime, conventions, or an external integration. Keep module adapters under 100 lines.
+
+Candidate boundaries if growth warrants: `backend/` (Apps Script), `src/email/`, future payroll-aggregator module.
 
 ## Boundaries
 

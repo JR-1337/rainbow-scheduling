@@ -40,7 +40,9 @@ Confidence format on DECISIONS and inferred LESSONS entries:
 
 ## Module Adapters
 
-None currently. Create `{module-name}/CLAUDE.md` only when the subtree has distinct runtime, conventions, or an external integration. Keep module adapters under 100 lines. Module adapters own local purpose, key files, conventions, boundaries -- nothing project-wide.
+- **PDF export** -- before changing `src/pdf/generate.js`, read `CONTEXT/pdf-print-layout.md` (competing layout goals + options not yet built).
+
+None other. Create `{module-name}/CLAUDE.md` only when the subtree has distinct runtime, conventions, or an external integration. Keep module adapters under 100 lines. Module adapters own local purpose, key files, conventions, boundaries -- nothing project-wide.
 
 Candidate boundaries if growth warrants: `backend/` (Apps Script), `src/pdf/` + `src/email/` (output layer), future payroll-aggregator module.
 
