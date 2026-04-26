@@ -99,17 +99,19 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       const hol = isStatHoliday(d);
       // Holiday: heavy black top border + "HOL" caption in addition to yellow bg,
       // so the marker survives greyscale printing.
-      return `<th style="padding:8px 4px;border:1px solid ${G.border};${hol ? `border-top:3px solid ${G.ink};` : ''}background:${hol ? G.fillZebra : G.fillZebra};font-size:11px;text-align:center;width:11%;">
+      return `<th style="padding:8px 4px;border:1px solid ${G.border};${hol ? `border-top:3px solid ${G.ink};` : ''}background:${hol ? G.fillZebra : G.fillZebra};font-size:11px;text-align:center;">
         ${hol ? `<div style="font-size:7px;font-weight:800;color:${G.ink};letter-spacing:1px;">HOL</div>` : ''}
         <div style="font-weight:700;color:${G.text};text-transform:uppercase;font-size:9px;">${getDayNameShort(d)}</div>
         <div style="font-size:16px;font-weight:700;color:${G.ink};">${d.getDate()}</div>
       </th>`;
     }).join('');
 
+    // Meeting/PK: indicator only (shortLabel + time) — no note/details on print.
     const eventBadgeHtml = (evs) => evs.map(ev => {
       const et = EVENT_TYPES[ev.type];
       if (!et) return '';
-      return `<div style="font-size:7px;color:${G.textMuted};margin-top:2px;line-height:1.3;"><strong style="color:${G.ink};">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` · ${cleanText(ev.note)}` : ''}</div>`;
+      const detailNote = ev.note && ev.type !== 'meeting' && ev.type !== 'pk' ? ` · ${cleanText(ev.note)}` : '';
+      return `<div style="font-size:7px;color:${G.textMuted};margin-top:2px;line-height:1.3;"><strong style="color:${G.ink};">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${detailNote}</div>`;
     }).join('');
 
     const dividerColspan = weekDates.length + 1;
@@ -156,8 +158,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
           ${glyph ? `<span style="position:absolute;top:2px;left:4px;font-size:11px;font-weight:800;color:${G.ink};line-height:1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
           ${roleTitleLine}
           <div style="font-size:9px;color:${G.text};">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
-          <div style="font-size:8px;color:${G.textMuted};">${shift.hours}h</div>
-          ${shift.task ? `<div style="font-size:7px;color:${G.ink};font-weight:700;margin-top:2px;line-height:1.3;word-break:break-word;">★ ${cleanText(shift.task)}</div>` : ''}
+          <div style="font-size:8px;color:${G.textMuted};">${shift.hours}h${shift.task ? ` <span style="color:${G.ink};font-weight:800;" title="Has task — see app">★</span>` : ''}</div>
           ${eventBadgeHtml(dayEvents)}
         </td>`;
       }).join('');
@@ -166,8 +167,8 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         ? `<div style="font-size:9px;color:${G.textMuted};margin-top:3px;line-height:1.25;">${cleanText(emp.title)}</div>`
         : '';
       return `${showDivider ? dividerRow : ''}<tr style="page-break-inside:avoid;">
-        <td style="padding:8px;border:1px solid ${G.border};background:${G.fill};">
-          <div style="font-weight:700;font-size:11px;color:${G.ink};">${cleanText(emp.name)}</div>
+        <td style="padding:8px;border:1px solid ${G.border};background:${G.fill};width:22%;min-width:120px;">
+          <div style="font-weight:700;font-size:11px;color:${G.ink};line-height:1.25;word-wrap:break-word;">${cleanText(emp.name)}</div>
           ${nameTitleLine}
         </td>
         ${cells}
@@ -185,7 +186,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       return `<td style="padding:6px;border:1px solid ${G.border};background:${G.fillZebra};text-align:center;font-size:13px;font-weight:700;color:${G.ink};">${count}</td>`;
     }).join('');
     const headcountRow = `<tr style="page-break-inside:avoid;">
-      <td style="padding:8px;border:1px solid ${G.border};background:${G.fillZebra};font-size:9px;font-weight:700;color:${G.text};text-transform:uppercase;letter-spacing:1px;">Scheduled</td>
+      <td style="padding:8px;border:1px solid ${G.border};background:${G.fillZebra};width:22%;min-width:120px;font-size:9px;font-weight:700;color:${G.text};text-transform:uppercase;letter-spacing:1px;">Scheduled</td>
       ${headcountCells}
     </tr>`;
 
@@ -195,8 +196,8 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
           <h3 style="margin:0;color:#ffffff;font-size:14px;font-weight:700;">Week ${weekNum}</h3>
           <p style="margin:2px 0 0;color:#dddddd;font-size:11px;">${formatDate(weekDates[0])} - ${formatDate(weekDates[6])}</p>
         </div>
-        <table style="width:100%;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
-          <thead style="display:table-header-group;"><tr><th style="padding:8px;border:1px solid ${G.border};background:${G.fillZebra};width:15%;font-size:10px;text-align:left;color:${G.text};text-transform:uppercase;">Employee</th>${headers}</tr></thead>
+        <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
+          <thead style="display:table-header-group;"><tr><th style="padding:8px;border:1px solid ${G.border};background:${G.fillZebra};width:22%;min-width:120px;font-size:10px;text-align:left;color:${G.text};text-transform:uppercase;">Employee</th>${headers}</tr></thead>
           <tbody>${rows}${headcountRow}</tbody>
         </table>
       </div>
