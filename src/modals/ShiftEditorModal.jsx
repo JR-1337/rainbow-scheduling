@@ -148,6 +148,10 @@ export const ShiftEditorModal = ({
   // without first blurring the field.
   const handleSave = () => {
     const payloads = [];
+    const k = toDateKey(date);
+    if (sickActive && existingShift) {
+      payloads.push({ employeeId: employee.id, date: k, type: 'work', deleted: true });
+    }
     if (sickActive && sickNote !== (existingSick?.note || '')) {
       const t = existingShift?.startTime && existingShift?.endTime
         ? { start: existingShift.startTime, end: existingShift.endTime }
@@ -155,7 +159,7 @@ export const ShiftEditorModal = ({
       payloads.push({
         employeeId: employee.id,
         employeeName: employee.name,
-        date: toDateKey(date),
+        date: k,
         startTime: t.start,
         endTime: t.end,
         role: 'none',
@@ -165,11 +169,11 @@ export const ShiftEditorModal = ({
         hours: calculateHours(t.start, t.end),
       });
     }
-    if (hasType('work')) {
+    if (hasType('work') && !sickActive) {
       payloads.push({
         employeeId: employee.id,
         employeeName: employee.name,
-        date: toDateKey(date),
+        date: k,
         startTime: workDraft.startTime,
         endTime: workDraft.endTime,
         role: workDraft.role,
@@ -293,14 +297,18 @@ export const ShiftEditorModal = ({
   const hasAnyData = !!existingShift || existingEvents.length > 0;
 
   const saveSick = (nextActive, noteValue) => {
+    const k = toDateKey(date);
     if (nextActive) {
+      if (existingShift) {
+        onSave({ employeeId: employee.id, date: k, type: 'work', deleted: true }, { quiet: true });
+      }
       const t = existingShift?.startTime && existingShift?.endTime
         ? { start: existingShift.startTime, end: existingShift.endTime }
         : getDefaultBookingTimes(date);
       onSave({
         employeeId: employee.id,
         employeeName: employee.name,
-        date: toDateKey(date),
+        date: k,
         startTime: t.start,
         endTime: t.end,
         role: 'none',
@@ -310,7 +318,7 @@ export const ShiftEditorModal = ({
         hours: calculateHours(t.start, t.end),
       });
     } else {
-      onSave({ employeeId: employee.id, date: toDateKey(date), type: 'sick', deleted: true });
+      onSave({ employeeId: employee.id, date: k, type: 'sick', deleted: true });
     }
   };
 

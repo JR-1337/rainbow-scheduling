@@ -26,11 +26,12 @@ export const buildEmailContent = (emp, shifts, dates, periodInfo, adminContacts 
     const shift = shifts[k];
     const dayEvents = (events[k] || []).filter(ev => EVENT_TYPES[ev.type]);
     if (!shift && dayEvents.length === 0) return;
+    const hasSick = dayEvents.some(e => e.type === 'sick');
 
     const dayStr = formatDateLong(date);
     let line = `  ${dayStr}`;
 
-    if (shift) {
+    if (shift && !hasSick) {
       const role = ROLES_BY_ID[shift.role];
       const timeStr = `${formatTimeDisplay(shift.startTime)} - ${formatTimeDisplay(shift.endTime)}`;
       line += `\n  ${timeStr} • ${shift.hours}h • ${role?.fullName || 'No Role'}`;

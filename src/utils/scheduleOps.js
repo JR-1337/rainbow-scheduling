@@ -9,8 +9,12 @@ export function collectPeriodShiftsForSave(dates, employees, shiftsObj, eventsOb
     periodDates.push(dateStr);
     employees.forEach(emp => {
       const key = `${emp.id}-${dateStr}`;
+      const dayEvents = eventsObj[key] || [];
+      const hasSick = dayEvents.some(e => e.type === 'sick');
       const workShift = shiftsObj[key];
-      if (workShift) {
+      // Sick means not working that day — do not persist a work row alongside it
+      // (cleans Sheet + backend consumers that only read type=work rows).
+      if (workShift && !hasSick) {
         periodShifts.push({
           id: workShift.id || `shift-${emp.id}-${dateStr}`,
           employeeId: emp.id,
@@ -25,7 +29,7 @@ export function collectPeriodShiftsForSave(dates, employees, shiftsObj, eventsOb
           note: ''
         });
       }
-      (eventsObj[key] || []).forEach(ev => {
+      dayEvents.forEach(ev => {
         periodShifts.push({
           id: ev.id || `${(ev.type || 'evt').toUpperCase()}-${emp.id}-${dateStr}`,
           employeeId: emp.id,

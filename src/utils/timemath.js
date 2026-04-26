@@ -33,8 +33,8 @@ export function mergeIntervals(intervals) {
 export function computeDayUnionHours(entries) {
   if (!entries || entries.length === 0) return 0;
   // Sick overrides the day: any sick entry zeros the total so rollups reflect
-  // time actually worked, not time originally scheduled. Work row stays in the
-  // sheet for audit; compliance reads through this helper.
+  // time actually worked. Work rows are removed when sick is saved; legacy
+  // rows still zero out here until the next schedule save.
   if (entries.some(e => e && e.type === 'sick')) return 0;
   const good = [];
   let fallbackHours = 0;
