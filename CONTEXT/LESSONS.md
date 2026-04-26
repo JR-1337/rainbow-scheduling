@@ -468,6 +468,13 @@ Context: 2026-04-25 -- /coding-plan SKILL.md draft. Sources: arXiv:2603.10123 (p
 Confidence: H -- multi-source research, applied to working artifact.
 Affirmations: 0
 
+## [GLOBAL] -- Rejected Agent() calls may keep running orphan-style
+Lesson: When the harness reports an `Agent(...)` call as rejected by the user, the spawned subagent may already have started and continue executing tools (Playwright, Bash, etc.) for many minutes while the parent believes nothing is happening. Race condition between the user-press-reject and the agent's first tool call going through.
+Context: 2026-04-25 -- /coding-plan Phase 7 spawned `coding-plan-smoker`; harness returned a "tool use rejected" error. Parent assumed the agent was killed; in fact the agent ran for ~25 minutes calling Playwright snapshot/click/evaluate, eventually getting confused about state (page reloads kicked it into employee view; clicked "Edit Employee" instead of cell). User asked "is playwright running?" twice before parent checked the transcript dir and discovered the orphan.
+How to apply: After ANY `Agent(...)` rejection, immediately check `~/.claude/projects/<project-slug>/<session-uuid>/subagents/` for new `agent-<id>.jsonl` files written in the last few minutes. If one exists, the agent is live. Surface to the user immediately; do not claim "Playwright hasn't run" without checking the transcript dir first. `TaskStop`/`TaskOutput` may not recognize the agentId -- escalate to user so they can interrupt manually.
+Affirmations: 0
+Source: human (Opus 4.7 observation)
+
 ## [GLOBAL] -- Subagent watchdog needs triple defense, not wall-clock alone
 Lesson: Wall-clock alone misses fast loops emitting fake progress. Step-progress alone misses freeze-and-resume patterns. Tool-call cap alone misses single-tool spirals. Combine: kill on ANY of (15-min wall, 5-min step-progress stall, hard tool-call cap). Subagent brief must mandate `[step N/M started]` heartbeat lines so parent's Monitor can detect liveness.
 Context: 2026-04-25 -- /coding-plan SKILL.md Phase 7 design. JR rejected v1's wall-clock-only watchdog after pointing out it misses token-spirals. Final design covers frozen, spiraling, and looping failure modes.
