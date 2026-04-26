@@ -234,7 +234,16 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       @page { margin: 0.3in; size: landscape; }
       .no-print { display: none !important; }
-      tr { page-break-inside: avoid; }
+      /* One pay-period week per sheet: never split a week across pages; week 2 starts fresh. */
+      .wk-block {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .wk-block + .wk-block {
+        break-before: page;
+        page-break-before: always;
+      }
+      tr { page-break-inside: avoid; break-inside: avoid; }
       thead { display: table-header-group; }
     }
     body { font-family: 'Inter', Arial, sans-serif; padding: 20px; margin: 0 auto; max-width: 1100px; background: #ffffff; color: ${G.text}; }
