@@ -24,6 +24,7 @@ import { computeDayUnionHours } from './utils/timemath';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
 import { hasTitle } from './utils/employeeRender';
 import { EventGlyphPill } from './components/EventGlyphPill';
+import { PKDetailsPanel } from './components/PKDetailsPanel';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE DETECTION HOOK
@@ -736,7 +737,7 @@ const relativeTime = (t) => {
   return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-export const MobileAlertsSheet = ({ isOpen, onClose, currentUser, announcement, timeOffRequests = [], shiftOffers = [], shiftSwaps = [], onOpened }) => {
+export const MobileAlertsSheet = ({ isOpen, onClose, currentUser, announcement, events = {}, dates = [], timeOffRequests = [], shiftOffers = [], shiftSwaps = [], onOpened }) => {
   const items = useMemo(
     () => computeAlertItems(currentUser, timeOffRequests, shiftOffers, shiftSwaps),
     [currentUser, timeOffRequests, shiftOffers, shiftSwaps]
@@ -761,6 +762,10 @@ export const MobileAlertsSheet = ({ isOpen, onClose, currentUser, announcement, 
           <p className="text-xs whitespace-pre-wrap" style={{ color: THEME.text.secondary }}>{announcement.message}</p>
         </div>
       )}
+
+      <div className="mb-3">
+        <PKDetailsPanel events={events} dates={dates} />
+      </div>
 
       <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: THEME.text.muted }}>
         Recent updates

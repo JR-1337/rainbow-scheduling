@@ -23,6 +23,7 @@ import { useTooltip } from './hooks/useTooltip';
 import { EmployeeRow } from './components/EmployeeRow';
 import ColumnHeaderCell from './components/ColumnHeaderCell';
 import { MobileScheduleActionSheet } from './components/MobileScheduleActionSheet';
+import { PKDetailsPanel } from './components/PKDetailsPanel';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
 import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents, filterToLivePeriods } from './utils/apiTransforms';
@@ -1876,14 +1877,19 @@ export default function App() {
             />
           ) : mobileAdminTab === 'comms' ? (
             /* Announcements */
-            <MobileAnnouncementPanel
-              announcement={currentAnnouncement}
-              onAnnouncementChange={setCurrentAnnouncement}
-              onSave={saveAnnouncement}
-              onClear={clearAnnouncement}
-              isEditMode={isCurrentPeriodEditMode}
-              isSaving={savingAnnouncement}
-            />
+            <>
+              <MobileAnnouncementPanel
+                announcement={currentAnnouncement}
+                onAnnouncementChange={setCurrentAnnouncement}
+                onSave={saveAnnouncement}
+                onClear={clearAnnouncement}
+                isEditMode={isCurrentPeriodEditMode}
+                isSaving={savingAnnouncement}
+              />
+              <div className="mt-3 px-4">
+                <PKDetailsPanel events={events} dates={dates} />
+              </div>
+            </>
           ) : null}
         </main>
         
@@ -2367,7 +2373,12 @@ export default function App() {
                   )}
                 </div>
               )}
-              
+
+              {/* PK details for this period — sibling of announcement */}
+              <div className="mb-2">
+                <PKDetailsPanel events={events} dates={dates} />
+              </div>
+
               {/* Schedule grid */}
               <div className="rounded-b-xl rounded-tr-xl overflow-visible relative" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderTop: 'none', zIndex: 1, boxShadow: THEME.shadow.card }}>
                 <div className="grid gap-px" style={{ gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, backgroundColor: THEME.border.subtle }}>

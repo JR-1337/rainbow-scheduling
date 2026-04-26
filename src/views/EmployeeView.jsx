@@ -27,6 +27,7 @@ import { OfferShiftModal } from '../modals/OfferShiftModal';
 import { SwapShiftModal } from '../modals/SwapShiftModal';
 import { hasTitle, splitNameForSchedule } from '../utils/employeeRender';
 import { EventGlyphPill } from '../components/EventGlyphPill';
+import { PKDetailsPanel } from '../components/PKDetailsPanel';
 
 const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmpId, storeHours, employee = null, isTimeOff = false, isUnavailable = false }) => {
   const [showTask, setShowTask] = useState(false);
@@ -612,6 +613,8 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
           onClose={() => setMobileAlertsOpen(false)}
           currentUser={currentUser}
           announcement={hasAnnouncement ? announcement : null}
+          events={events}
+          dates={dates}
           timeOffRequests={timeOffRequests}
           shiftOffers={shiftOffers}
           shiftSwaps={shiftSwaps}
@@ -854,6 +857,11 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
             </div>
           )}
           
+          {/* PK details for this period — sibling of announcement */}
+          <div className="mt-3">
+            <PKDetailsPanel events={events} dates={dates} />
+          </div>
+
           {/* My Schedule Summary */}
           <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, boxShadow: THEME.shadow.cardSm }}>
             <h3 className="text-sm font-semibold mb-2" style={{ color: THEME.text.primary }}>Your Schedule This Period</h3>
