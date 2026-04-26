@@ -86,7 +86,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 
   // Announcement: italic body + "[!]" prefix + heavy left bar + double top border.
   const announcementHtml = (announcement && announcement.message) ? `
-    <div style="margin:15px 0;padding:15px;background:${G.fillZebra};border-radius:4px;border-left:6px solid ${G.ink};border-top:3px double ${G.ink};">
+    <div style="margin:8px 0;padding:15px;background:${G.fillZebra};border-radius:4px;border-left:6px solid ${G.ink};border-top:3px double ${G.ink};">
       ${announcement.subject ? `<h3 style="margin:0 0 10px;color:${G.ink};font-size:13px;font-weight:800;letter-spacing:0.5px;">[!] ${cleanText(announcement.subject)}</h3>` : `<h3 style="margin:0 0 10px;color:${G.ink};font-size:13px;font-weight:800;">[!] Announcement</h3>`}
       <div style="color:${G.text};font-size:11px;line-height:1.6;white-space:pre-wrap;font-style:italic;">${cleanText(announcement.message)}</div>
     </div>
@@ -297,12 +297,12 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     <button class="print-btn" onclick="window.print()">Print Schedule</button>
     <span style="margin-left:15px;color:${G.textFaint};font-size:11px;">Review the preview below, then click Print.</span>
   </div>
-  <div style="text-align:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid ${G.ink};">
-    <div style="font-family:'Josefin Sans',sans-serif;margin-bottom:5px;">
+  <div style="text-align:center;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid ${G.ink};">
+    <div style="font-family:'Josefin Sans',sans-serif;margin-bottom:3px;">
       <span style="color:${G.textMuted};font-size:10px;letter-spacing:3px;">OVER THE</span><br>
       <span style="color:${G.ink};font-size:24px;letter-spacing:4px;font-weight:700;">RAINBOW</span>
     </div>
-    <p style="margin:8px 0 0;font-size:12px;"><span style="color:${G.ink};font-weight:700;">Staff Schedule</span></p>
+    <p style="margin:4px 0 0;font-size:12px;"><span style="color:${G.ink};font-weight:700;">Staff Schedule</span></p>
     <p style="margin:5px 0 0;color:${G.textMuted};font-size:11px;">Week ${weekNum1} & ${weekNum2} • ${formatMonthWord(periodInfo.startDate)} ${periodInfo.startDate.getDate()} - ${formatMonthWord(periodInfo.endDate)} ${periodInfo.endDate.getDate()}, ${periodInfo.startDate.getFullYear()}</p>
   </div>
 

@@ -30,6 +30,7 @@ Current compromise (after 2026-04-25): `min-height` on cells, content **wraps**,
 - Fixed inner box (~64px) + `overflow:hidden` + ellipsis on events -- uniform but clipped; rejected by JR.
 - Single-line events joined with ` · ` + nowrap -- clipped; rejected.
 - Taller fixed row + wrap -- still risks clip if max-height enforced; moving away from hard max.
+- **Tightened header-to-body spacing** (2026-04-26) -- header div margin-bottom 25->12 + padding-bottom 15->8, inner block margins shrunk, announcement wrapper margin 15->8. Saves ~20-27px between OTR wordmark and first table row; row-height behavior unchanged.
 
 ## Solutions NOT fully explored (candidates for future work)
 
