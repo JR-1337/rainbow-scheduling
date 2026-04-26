@@ -24,6 +24,7 @@ export function AutoPopulateConfirmModal({ state, onClose, onConfirm }) {
           {state.type === 'clear-week' && `Clear Week ${state.week} for ${state.employee?.name}?`}
           {state.type === 'clear-all' && `Clear All Full-Time Shifts for Week ${state.week}?`}
           {state.type === 'clear-all-pt' && `Clear All Part-Time Shifts for Week ${state.week}?`}
+          {state.type === 'clear-pk-day' && `Clear all ${state.count || ''} PK booking${state.count === 1 ? '' : 's'} on ${state.date ? state.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'this day'}?`}
         </p>
 
         <p className="text-xs mb-4" style={{ color: THEME.text.secondary }}>

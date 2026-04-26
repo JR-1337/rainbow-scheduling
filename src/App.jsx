@@ -616,6 +616,24 @@ export default function App() {
   // Part-time employees (Clear dropdown can target them; Auto-Fill stays FT-only by design)
   const partTimeEmployees = useMemo(() => schedulableEmployees.filter(e => e.employmentType === 'part-time'), [schedulableEmployees]);
   
+  // Days within the given week that have >=1 PK event booked (any employee, any time slot).
+  // Used by Clear dropdown to offer a per-day bulk-PK clear without opening PKEventModal.
+  const daysWithPKInWeek = useCallback((weekDates) => {
+    const out = [];
+    for (const date of weekDates) {
+      const dateStr = toDateKey(date);
+      let count = 0;
+      for (const emp of schedulableEmployees) {
+        const list = events[`${emp.id}-${dateStr}`] || [];
+        for (const ev of list) {
+          if (ev.type === 'pk') count++;
+        }
+      }
+      if (count > 0) out.push({ dateStr, date, count });
+    }
+    return out;
+  }, [events, schedulableEmployees]);
+
   // Admin contacts (admins who are not owner, for display purposes)
   const adminContacts = useMemo(() => employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted), [employees]);
   
@@ -765,6 +783,29 @@ export default function App() {
     return removedCount;
   };
   
+  // Clear all PK events on a specific date across all employees. Mirrors clearWeekShifts
+  // pattern: mutates events state, marks unsaved, returns count. Admin clicks SAVE on
+  // schedule to persist via existing batchSaveShifts path.
+  const clearPKForDate = (dateStr) => {
+    const newEvents = { ...events };
+    let removedCount = 0;
+    schedulableEmployees.forEach(emp => {
+      const key = `${emp.id}-${dateStr}`;
+      const list = newEvents[key] || [];
+      const filtered = list.filter(ev => ev.type !== 'pk');
+      if (filtered.length !== list.length) {
+        removedCount += list.length - filtered.length;
+        if (filtered.length === 0) delete newEvents[key];
+        else newEvents[key] = filtered;
+      }
+    });
+    if (removedCount > 0) {
+      setEvents(newEvents);
+      setUnsaved(true);
+    }
+    return removedCount;
+  };
+
   // Handle auto-populate confirmation
   const handleAutoPopulateConfirm = () => {
     if (!autoPopulateConfirm) return;
@@ -795,6 +836,10 @@ export default function App() {
     } else if (type === 'clear-all-pt') {
       const count = clearWeekShifts(weekDates, partTimeEmployees);
       showToast('success', `Removed ${count} shifts for part-time employees`);
+    } else if (type === 'clear-pk-day' && autoPopulateConfirm.dateStr) {
+      const count = clearPKForDate(autoPopulateConfirm.dateStr);
+      if (count > 0) showToast('success', `Removed ${count} PK booking${count === 1 ? '' : 's'}`);
+      else showToast('warning', 'No PK bookings to remove');
     }
 
     setAutoPopulateConfirm(null);
@@ -2010,6 +2055,7 @@ export default function App() {
           setAutoPopulateConfirm={setAutoPopulateConfirm}
           showToast={showToast}
           onOpenPKModal={() => setPkModalOpen(true)}
+          daysWithPKInWeek={daysWithPKInWeek}
         />
 
         {/* Toast */}
@@ -2244,7 +2290,13 @@ export default function App() {
                       const val = e.target.value;
                       e.target.value = '';
                       if (!val) return;
-                      if (val === '__all_ft__') {
+                      if (val.startsWith('__pk_day__:')) {
+                        const dateStr = val.slice('__pk_day__:'.length);
+                        const currentWeekDates = activeWeek === 1 ? week1 : week2;
+                        const day = currentWeekDates.find(d => toDateKey(d) === dateStr);
+                        const dayCount = day ? (daysWithPKInWeek(currentWeekDates).find(x => x.dateStr === dateStr)?.count || 0) : 0;
+                        if (day) setAutoPopulateConfirm({ type: 'clear-pk-day', dateStr, date: day, count: dayCount, week: activeWeek });
+                      } else if (val === '__all_ft__') {
                         setAutoPopulateConfirm({ type: 'clear-all', week: activeWeek });
                       } else if (val === '__all_pt__') {
                         setAutoPopulateConfirm({ type: 'clear-all-pt', week: activeWeek });
@@ -2270,6 +2322,15 @@ export default function App() {
                         <option key={emp.id} value={emp.id}>{emp.name}</option>
                       ))}
                     </optgroup>
+                    {daysWithPKInWeek(activeWeek === 1 ? week1 : week2).length > 0 && (
+                      <optgroup label="— PK by day —">
+                        {daysWithPKInWeek(activeWeek === 1 ? week1 : week2).map(({ dateStr, date, count }) => (
+                          <option key={dateStr} value={`__pk_day__:${dateStr}`}>
+                            {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} — {count} PK
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
 
                   <div className="w-px h-4" style={{ backgroundColor: THEME.border.default }} />

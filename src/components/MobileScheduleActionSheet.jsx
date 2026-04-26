@@ -18,6 +18,7 @@ export const MobileScheduleActionSheet = ({
   setAutoPopulateConfirm,
   showToast,
   onOpenPKModal,
+  daysWithPKInWeek,
 }) => {
   const [level, setLevel] = useState('root');
 
@@ -168,6 +169,20 @@ export const MobileScheduleActionSheet = ({
               onClick={() => fire(() => setAutoPopulateConfirm({ type: 'clear-week', employee: emp, week: activeWeek }))}
             />
           ))}
+          {daysWithPKInWeek && daysWithPKInWeek(weekDates).length > 0 && (
+            <>
+              <div className="px-4 pt-3 pb-1 text-[10px] uppercase tracking-wider" style={{ color: THEME.text.muted }}>PK by day</div>
+              {daysWithPKInWeek(weekDates).map(({ dateStr, date, count }) => (
+                <Row
+                  key={`pk-${dateStr}`}
+                  icon={<Trash2 size={18} style={{ color: THEME.event.pkText }} />}
+                  label={`${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} — ${count} PK`}
+                  accent={THEME.event.pkText}
+                  onClick={() => fire(() => setAutoPopulateConfirm({ type: 'clear-pk-day', dateStr, date, count, week: activeWeek }))}
+                />
+              ))}
+            </>
+          )}
         </div>
       )}
 
