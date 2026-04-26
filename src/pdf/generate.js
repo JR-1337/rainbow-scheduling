@@ -102,17 +102,18 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       </th>`;
     }).join('');
 
-    // Events: one compressed line so row height never grows (full detail stays in app).
+    // Events: one wrapped line per item so nothing is ellipsis-clipped; row height
+    // follows the tallest cell in that table row (all day columns stay aligned).
     const eventBadgeHtml = (evs) => {
       if (!evs.length) return '';
-      const parts = evs.map((ev) => {
+      const lines = evs.map((ev) => {
         const et = EVENT_TYPES[ev.type];
         if (!et) return '';
         const detailNote = ev.note && ev.type !== 'meeting' && ev.type !== 'pk' ? ` ${cleanText(ev.note)}` : '';
-        return `<strong style="color:${G.ink};">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${detailNote}`;
+        return `<div style="font-size:6px;line-height:1.25;color:${G.textMuted};word-break:break-word;hyphens:auto;margin-top:1px;"><strong style="color:${G.ink};">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${detailNote}</div>`;
       }).filter(Boolean);
-      if (!parts.length) return '';
-      return `<div style="font-size:6px;line-height:1.2;color:${G.textMuted};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${parts.join(' · ')}</div>`;
+      if (!lines.length) return '';
+      return `<div style="margin-top:2px;">${lines.join('')}</div>`;
     };
 
     const dividerColspan = weekDates.length + 1;
@@ -126,19 +127,19 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         // Approved time-off wins over events - an employee on time-off shouldn't
         // show a meeting/PK card even if one was scheduled before the request was approved.
         if (!shift && hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests)) {
-          return `<td style="padding:4px;border:1px dashed ${G.border};background:${G.fill};text-align:center;">
-            <div style="height:64px;max-height:64px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+          return `<td style="padding:4px;border:1px dashed ${G.border};background:${G.fill};text-align:center;vertical-align:middle;">
+            <div class="pdf-cell-inner" style="min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
               <div style="font-size:9px;font-weight:800;color:${G.ink};letter-spacing:1px;line-height:1.1;">OFF</div>
               <div style="font-size:7px;color:${G.textFaint};line-height:1.1;">approved</div>
             </div>
           </td>`;
         }
         if (!shift && dayEvents.length === 0) {
-          return `<td style="padding:4px;border:1px solid ${G.border};background:${G.fill};"><div style="height:64px;max-height:64px;overflow:hidden;"></div></td>`;
+          return `<td style="padding:4px;border:1px solid ${G.border};background:${G.fill};vertical-align:top;"><div class="pdf-cell-inner" style="min-height:52px;"></div></td>`;
         }
         if (!shift) {
-          return `<td style="padding:4px;border:2px solid ${G.ink};background:${G.fillZebra};text-align:center;">
-            <div style="height:64px;max-height:64px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;">
+          return `<td style="padding:4px;border:2px solid ${G.ink};background:${G.fillZebra};text-align:left;vertical-align:top;">
+            <div class="pdf-cell-inner" style="min-height:52px;display:flex;flex-direction:column;justify-content:flex-start;">
               ${eventBadgeHtml(dayEvents)}
             </div>
           </td>`;
@@ -155,16 +156,16 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
           ? `border:2px solid ${G.ink};`
           : `border:1px solid ${G.border};`;
         const roleTitleLine = !isTitled
-          ? `<div style="font-size:8px;color:${G.ink};line-height:1.1;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${roleNameStyle(family)}">${cleanText(roleName)}</div>`
+          ? `<div style="font-size:7px;color:${G.ink};line-height:1.2;margin-bottom:1px;word-break:break-word;${roleNameStyle(family)}">${cleanText(roleName)}</div>`
           : '';
         const shiftCellFill = isTitled ? G.fillZebra : G.fill;
         const glyphPad = glyph ? 'padding-left:12px;' : '';
-        return `<td style="padding:4px;${cellBorder}background:${shiftCellFill};text-align:center;">
-          <div style="position:relative;height:64px;max-height:64px;overflow:hidden;${glyphPad}">
-            ${glyph ? `<span style="position:absolute;top:0;left:0;font-size:9px;font-weight:800;color:${G.ink};line-height:1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
+        return `<td style="padding:4px;${cellBorder}background:${shiftCellFill};text-align:left;vertical-align:top;">
+          <div class="pdf-cell-inner" style="position:relative;min-height:52px;${glyphPad}">
+            ${glyph ? `<span style="position:absolute;top:0;left:0;font-size:8px;font-weight:800;color:${G.ink};line-height:1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
             ${roleTitleLine}
-            <div style="font-size:8px;color:${G.text};line-height:1.15;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
-            <div style="font-size:7px;color:${G.textMuted};line-height:1.15;">${shift.hours}h${shift.task ? ` <span style="color:${G.ink};font-weight:800;">★</span>` : ''}</div>
+            <div style="font-size:8px;color:${G.text};line-height:1.2;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
+            <div style="font-size:7px;color:${G.textMuted};line-height:1.2;">${shift.hours}h${shift.task ? ` <span style="color:${G.ink};font-weight:800;">★</span>` : ''}</div>
             ${eventBadgeHtml(dayEvents)}
           </div>
         </td>`;
@@ -172,10 +173,10 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 
       const titleStr = hasTitle(emp) && (emp.title || '').trim() ? cleanText(emp.title.trim()) : '';
       return `${showDivider ? dividerRow : ''}<tr class="schedule-row" style="page-break-inside:avoid;">
-        <td style="padding:4px;border:1px solid ${G.border};background:${G.fill};width:22%;min-width:120px;">
-          <div style="height:64px;max-height:64px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:2px;">
-            <div style="font-weight:700;font-size:10px;color:${G.ink};line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;">${cleanText(emp.name)}</div>
-            ${titleStr ? `<div style="font-size:8px;color:${G.textMuted};line-height:1.15;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${titleStr}</div>` : ''}
+        <td style="padding:4px;border:1px solid ${G.border};background:${G.fill};width:22%;min-width:120px;vertical-align:top;">
+          <div class="pdf-cell-inner" style="min-height:52px;display:flex;flex-direction:column;justify-content:center;gap:2px;">
+            <div style="font-weight:700;font-size:9px;color:${G.ink};line-height:1.2;word-break:break-word;">${cleanText(emp.name)}</div>
+            ${titleStr ? `<div style="font-size:7px;color:${G.textMuted};line-height:1.2;word-break:break-word;">${titleStr}</div>` : ''}
           </div>
         </td>
         ${cells}
@@ -190,13 +191,13 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         if (evs && evs.some(e => e.type === 'sick')) return n;
         return n + 1;
       }, 0);
-      return `<td style="padding:4px;border:1px solid ${G.border};background:${G.fillZebra};text-align:center;">
-        <div style="height:64px;max-height:64px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${G.ink};">${count}</div>
+      return `<td style="padding:4px;border:1px solid ${G.border};background:${G.fillZebra};text-align:center;vertical-align:middle;">
+        <div class="pdf-cell-inner" style="min-height:52px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${G.ink};">${count}</div>
       </td>`;
     }).join('');
     const headcountRow = `<tr class="schedule-row" style="page-break-inside:avoid;">
-      <td style="padding:4px;border:1px solid ${G.border};background:${G.fillZebra};width:22%;min-width:120px;">
-        <div style="height:64px;max-height:64px;overflow:hidden;display:flex;align-items:center;font-size:9px;font-weight:700;color:${G.text};text-transform:uppercase;letter-spacing:1px;">Scheduled</div>
+      <td style="padding:4px;border:1px solid ${G.border};background:${G.fillZebra};width:22%;min-width:120px;vertical-align:middle;">
+        <div class="pdf-cell-inner" style="min-height:52px;display:flex;align-items:center;font-size:9px;font-weight:700;color:${G.text};text-transform:uppercase;letter-spacing:1px;">Scheduled</div>
       </td>
       ${headcountCells}
     </tr>`;
@@ -261,12 +262,14 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     body { font-family: 'Inter', Arial, sans-serif; padding: 20px; margin: 0 auto; max-width: 1100px; background: #ffffff; color: ${G.text}; }
     .print-btn { background: ${G.ink}; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
     .print-btn:hover { background: ${G.text}; }
-    /* Fixed row geometry: every body row matches; overflow clips long content (detail lives in app). */
+    /* Row height follows the tallest cell in that row (table layout); min-height
+       keeps sparse rows from collapsing. No ellipsis — content wraps inside cells. */
     .schedule-grid tbody tr.schedule-row td {
-      height: 72px;
-      max-height: 72px;
-      overflow: hidden;
+      min-height: 60px;
       vertical-align: top;
+      box-sizing: border-box;
+    }
+    .schedule-grid .pdf-cell-inner {
       box-sizing: border-box;
     }
     .schedule-grid tbody tr.pdf-divider td {
