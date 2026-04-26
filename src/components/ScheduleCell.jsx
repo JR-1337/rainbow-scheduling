@@ -6,6 +6,7 @@ import { isStatHoliday } from '../utils/storeHours';
 import { parseTime, formatTimeShort } from '../utils/date';
 import { TaskStarTooltip } from './uiKit';
 import { hasTitle } from '../utils/employeeRender';
+import { EventGlyphPill } from './EventGlyphPill';
 
 const getAvailabilityShading = (avail, storeHours) => {
   if (!avail.available) return { top: 100, bottom: 0 };
@@ -90,22 +91,7 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
                     {labelText ? (
                       <span className="text-xs font-semibold truncate min-w-0" style={{ color: hasSick ? THEME.text.muted : labelColor, textDecoration: hasSick ? 'line-through' : 'none' }}>{labelText}</span>
                     ) : <span className="min-w-0 flex-1" />}
-                    {hasEvents && (
-                      <div className="flex gap-0.5 shrink-0 min-w-0">
-                        {visibleEvents.map((ev, i) => {
-                          const et = EVENT_TYPES[ev.type];
-                          if (!et) return null;
-                          return (
-                            <span key={i}
-                              title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
-                              className="rounded px-1 text-[9px] font-semibold leading-tight"
-                              style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}` }}>
-                              {et.shortLabel}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
+                    {hasEvents && !hasSick && <EventGlyphPill events={visibleEvents} size="md" />}
                   </div>
                 ) : null}
               </div>

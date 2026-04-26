@@ -27,6 +27,7 @@ import { MobileScheduleGrid } from './MobileEmployeeView';
 import { EVENT_TYPES } from './constants';
 import { Button } from './components/Button';
 import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
+import { EventGlyphPill } from './components/EventGlyphPill';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN MOBILE HAMBURGER DRAWER
@@ -407,34 +408,7 @@ export const MobileAdminScheduleGrid = ({
                                   {labelText ? (
                                     <span className="font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : labelColor, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '10px' }}>{labelText}</span>
                                   ) : <span className="min-w-0 flex-1" />}
-                                  {hasEvents && (
-                                    <div className="flex gap-0.5 shrink-0">
-                                      {cellEvents.length >= 3 ? (
-                                        <span
-                                          title={cellEvents.map(ev => {
-                                            const et = EVENT_TYPES[ev.type];
-                                            return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
-                                          }).join('\n')}
-                                          className="rounded font-semibold leading-tight"
-                                          style={{ backgroundColor: firstEventType.bg, color: firstEventType.text, border: `1px solid ${firstEventType.border}`, fontSize: '8px', padding: '0 2px' }}>
-                                          {cellEvents.length} events
-                                        </span>
-                                      ) : (
-                                        cellEvents.map((ev, j) => {
-                                          const et = EVENT_TYPES[ev.type];
-                                          if (!et) return null;
-                                          return (
-                                            <span key={j}
-                                              title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
-                                              className="rounded font-semibold leading-tight"
-                                              style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>
-                                              {et.shortLabel} {formatTimeShort(ev.startTime)}
-                                            </span>
-                                          );
-                                        })
-                                      )}
-                                    </div>
-                                  )}
+                                  {hasEvents && !hasSick && <EventGlyphPill events={cellEvents} size="sm" />}
                                 </div>
                               ) : null}
                               {hasSick && cellEvents.find(ev => ev.type === 'sick')?.note ? (

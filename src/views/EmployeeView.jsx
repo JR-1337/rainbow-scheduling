@@ -26,6 +26,7 @@ import { RequestDaysOffModal } from '../modals/RequestDaysOffModal';
 import { OfferShiftModal } from '../modals/OfferShiftModal';
 import { SwapShiftModal } from '../modals/SwapShiftModal';
 import { hasTitle, splitNameForSchedule } from '../utils/employeeRender';
+import { EventGlyphPill } from '../components/EventGlyphPill';
 
 const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmpId, storeHours, employee = null, isTimeOff = false, isUnavailable = false }) => {
   const [showTask, setShowTask] = useState(false);
@@ -72,34 +73,25 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
             <span className="text-xs" style={{ color: THEME.text.muted, fontSize: '9px' }}>Unavailable</span>
           </div>
         ) : shift ? (
-          <div className="p-1.5 h-full flex flex-col justify-between relative">
-            {showTaskStar && (
-              <div ref={starRef} className="absolute top-1 right-1 cursor-pointer" onMouseEnter={() => setShowTask(true)} onMouseLeave={() => setShowTask(false)}>
-                <Star size={10} fill={THEME.task} color={THEME.task} />
-              </div>
-            )}
-            {!isTitledShift ? (
-              <span className="text-xs font-semibold truncate pr-3" style={{ color: role?.color }}>{role?.name}</span>
-            ) : null}
-            <div className={`flex w-full min-w-0 items-center justify-between ${isTitledShift ? 'mt-auto' : ''}`}>
-              <span className="text-xs min-w-0 truncate pr-1" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
+          <div className="p-1.5 h-full flex flex-col justify-between min-h-0 min-w-0">
+            {/* Row 1: role label + events pill */}
+            <div className="flex items-start justify-between gap-1 min-w-0">
+              {!isTitledShift ? (
+                <span className="text-xs font-semibold truncate min-w-0" style={{ color: role?.color }}>{role?.name}</span>
+              ) : <span className="min-w-0 flex-1" />}
+              {hasEvents && <EventGlyphPill events={visibleEvents} size="md" />}
             </div>
-            {hasEvents && (
-              <div className="absolute bottom-0 right-0 flex gap-0.5 p-0.5">
-                {visibleEvents.map((ev, j) => {
-                  const et = EVENT_TYPES[ev.type];
-                  if (!et) return null;
-                  return (
-                    <span key={j}
-                      title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
-                      className="rounded font-semibold leading-tight"
-                      style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>
-                      {et.shortLabel}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
+            {/* Row 2: time + (task star if own shift) */}
+            <div className="flex w-full min-w-0 items-center justify-between">
+              <span className="text-xs min-w-0 truncate" style={{ color: THEME.text.secondary }}>
+                {formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}
+              </span>
+              {showTaskStar && (
+                <span ref={starRef} className="shrink-0 cursor-pointer pl-1" onMouseEnter={() => setShowTask(true)} onMouseLeave={() => setShowTask(false)}>
+                  <Star size={10} fill={THEME.task} color={THEME.task} />
+                </span>
+              )}
+            </div>
           </div>
         ) : eventOnly ? (
           <div className="p-1.5 h-full flex flex-col justify-between"

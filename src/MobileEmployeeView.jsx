@@ -23,6 +23,7 @@ import { EVENT_TYPES } from './constants';
 import { computeDayUnionHours } from './utils/timemath';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
 import { hasTitle } from './utils/employeeRender';
+import { EventGlyphPill } from './components/EventGlyphPill';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE DETECTION HOOK
@@ -332,34 +333,23 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                               <span style={{ color: THEME.text.muted, fontSize: '8px' }}>Unavailable</span>
                             </div>
                           ) : shift ? (
-                            <div className="p-1 h-full flex flex-col justify-between">
-                              <div className="flex items-start justify-between gap-1">
-                                <span className="font-semibold truncate" style={{ color: role?.color, fontSize: '10px' }}>{role?.name}</span>
-                                {hasEvents && (
-                                  <div className="flex gap-0.5 shrink-0">
-                                    {cellEvents.map((ev, j) => {
-                                      const et = EVENT_TYPES[ev.type];
-                                      if (!et) return null;
-                                      return (
-                                        <span key={j}
-                                          title={`${et.label} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`}
-                                          className="rounded font-semibold leading-tight"
-                                          style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>
-                                          {et.shortLabel}
-                                        </span>
-                                      );
-                                    })}
-                                  </div>
+                            <div className="p-1 h-full flex flex-col justify-between min-w-0">
+                              {/* Row 1: role + events pill */}
+                              <div className="flex items-start justify-between gap-1 min-w-0">
+                                <span className="font-semibold truncate min-w-0" style={{ color: role?.color, fontSize: '10px' }}>{role?.name}</span>
+                                {hasEvents && <EventGlyphPill events={cellEvents} size="sm" />}
+                              </div>
+                              {/* Row 2: time + task star (own shift only) */}
+                              <div className="flex items-center justify-between min-w-0">
+                                <span className="truncate min-w-0" style={{ color: THEME.text.secondary, fontSize: '9px' }}>
+                                  {formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}
+                                </span>
+                                {isOwnShift && shift.task && (
+                                  <span className="shrink-0 pl-1">
+                                    <Star size={10} fill={THEME.task} color={THEME.task} />
+                                  </span>
                                 )}
                               </div>
-                              <div>
-                                <span style={{ color: THEME.text.secondary, fontSize: '9px' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
-                              </div>
-                              {isOwnShift && shift.task && (
-                                <div className="flex items-center justify-end">
-                                  <Star size={8} fill={THEME.task} color={THEME.task} />
-                                </div>
-                              )}
                             </div>
                           ) : eventOnly ? (
                             <div className="p-1 h-full flex flex-col justify-between"
