@@ -8,7 +8,8 @@ Read trigger: before redesigning PDF layout, row geometry, or export pipeline.
 
 ## Output path today
 
-- `src/pdf/generate.js` -- `generateSchedulePDF` builds HTML string, Blob, `window.open`, user prints.
+- `src/pdf/generate.js` -- `generateSchedulePDF` builds HTML string, Blob URL, navigates print tab.
+- `src/App.jsx` -- opens `about:blank` **synchronously** on button click, then `import('./pdf/generate')`, then passes that tab to `generateSchedulePDF` (popup blockers fire if `window.open` runs only after `await`).
 - Grayscale only (break-room B&W printer); role = glyph + typography, not hue.
 - `@page { size: landscape; margin: 0.3in; }` in embedded `<style>`.
 - Data: same schedulable employees + two week blocks as in-app (sort, buckets, dividers).

@@ -1411,14 +1411,29 @@ export default function App() {
     setEmpFormOpen(true);
   }, []);
 
-  const handleExportPDF = useCallback(async () => {
-    try {
-      const { generateSchedulePDF } = await import('./pdf/generate');
-      generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement, timeOffRequests, events);
-    } catch (e) {
-      console.error(e);
-      showToast('error', e?.message || 'Could not open PDF export. Try disabling popup blockers.');
+  // Open the tab synchronously on click; dynamic import runs after await and
+  // would make window.open() non-user-gesture -> popup blocked in Chrome/Safari.
+  const handleExportPDF = useCallback(() => {
+    const printWindow = window.open('about:blank', '_blank', 'width=1100,height=750');
+    if (!printWindow) {
+      showToast('error', 'Could not open print window. Allow popups for this site.');
+      return;
     }
+    try {
+      printWindow.opener = null;
+    } catch (_) { /* noop */ }
+    (async () => {
+      try {
+        const { generateSchedulePDF } = await import('./pdf/generate');
+        generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement, timeOffRequests, events, printWindow);
+      } catch (e) {
+        console.error(e);
+        try {
+          printWindow.close();
+        } catch (_) { /* noop */ }
+        showToast('error', e?.message || 'Could not build print view.');
+      }
+    })();
   }, [employees, shifts, dates, startDate, endDate, currentAnnouncement, timeOffRequests, events, showToast]);
 
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];

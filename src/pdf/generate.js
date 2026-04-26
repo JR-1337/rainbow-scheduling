@@ -60,7 +60,9 @@ const roleNameStyle = (family) => {
 };
 
 // S64 Stage 7 - events carry meeting/PK entries per `${empId}-${date}` key.
-export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = [], events = {}) => {
+// `targetWindow`: optional tab opened synchronously from the click handler (before
+// dynamic import). Browsers block window.open() after await; App passes a blank tab.
+export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = [], events = {}, targetWindow = null) => {
   const week1 = dates.slice(0, 7);
   const week2 = dates.slice(7, 14);
   const weekNum1 = getWeekNumber(week1[0]);
@@ -312,13 +314,21 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  const printWindow = window.open(url, '_blank', 'width=1100,height=750');
-  if (!printWindow) {
-    // iOS Safari popup-blocked path. Do NOT fall back to <a download>:
-    // Safari iOS ignores the download attr on blob URLs and saves the
-    // raw blob as "*.blob". Navigate the current tab instead -- the
-    // document has its own in-page Print button.
-    window.location.href = url;
+  if (targetWindow) {
+    try {
+      targetWindow.opener = null;
+    } catch (_) { /* noop */ }
+    targetWindow.location.href = url;
+  } else {
+    const printWindow = window.open(url, '_blank', 'width=1100,height=750');
+    if (!printWindow) {
+      // iOS Safari popup-blocked path. Do NOT fall back to <a download>:
+      // Safari iOS ignores the download attr on blob URLs and saves the
+      // raw blob as "*.blob". Navigate the current tab instead -- the
+      // document has its own in-page Print button.
+      window.location.href = url;
+    }
   }
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  // Do not revoke quickly: some browsers unload blob documents when the URL is revoked.
+  setTimeout(() => URL.revokeObjectURL(url), 600000);
 };
