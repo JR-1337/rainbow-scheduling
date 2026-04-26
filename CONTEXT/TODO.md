@@ -21,6 +21,7 @@ Rules:
 
 ## Active
 
+- **RAINBOW-PITCH restructure -- plan ready for execution.** Plan file at `~/.claude/plans/rainbow-pitch-restructure-2026-04-26.md` (v2 with audit changelog, ~830 lines). Covers: pricing rewrite ($1500 + $497/mo from month 1; Y1 $7464 / 3-yr $19,392 / saved $71,964), repetition cuts + ESA single-mention on Today.jsx Safety net, Phase2.jsx narrative restructure (4 directions), AskRainbow chatbot slide (Claude Haiku 4.5 + Gemini fallback, Vercel `/api/ask-rainbow`, 15-req/6-hr rate limit), memory + DECISIONS updates, build + JR review gate (no auto-push). Pre-flight DONE: deletions committed `3ba799a` on RAINBOW-PITCH main; ANTHROPIC_API_KEY in Vercel env + redeploy triggered (Gemini fallback intentionally not configured). Next session: read plan + spawn Sonnet 4.6 subagent to execute.
 - Desktop name column (240px, splitNameForSchedule) on Vercel -- next: JR prod-smoke grid alignment, long/short names, hover full name
 - JR to manually delete `TEST-ADMIN1-SMOKE` employee from Employees tab -- Playwright smoke test data left on prod when smoke hung at cleanup step
 - Future-proofing audit -- research doc shipped 2026-04-26 at `docs/research/scaling-migration-options-2026-04-26.md`. Decision-axes captured (CF Worker SWR / Supabase ca-central-1 / Neon / D1 / self-hosted). Apps Script 7-8s floor identified as the highest-impact lever, not DB choice. Next: JR picks motivation OR ships CF Worker cache (already in Blocked) to defer the cliff

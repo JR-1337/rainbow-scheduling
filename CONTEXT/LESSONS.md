@@ -356,10 +356,10 @@ Lesson: Phase 2 capability does not count. "They both lack X" turns into "compet
 Context: Alternatives slide; same root as no-predicted-savings.
 Affirmations: 0
 
-## [PROJECT] -- Family tree: Amy is Dan's sister, Joel is Dan's brother, Scott is ops mgr, Sarvi is NOT family
-Lesson: Check this before any family-framed copy.
-Context: Got corrected mid-draft.
-Affirmations: 0
+## [PROJECT] -- Family tree: Joel is owner+father, Amy + Dan are his children + inherit, Scott is ops mgr, Sarvi is NOT family
+Lesson: Joel is the owner and the father. Amy + Dan are Joel's children (siblings to each other) who help run and will inherit the store. Scott is the ops manager (family relation unspecified). Sarvi is the GM (merchandising, accessory buying, HR) and JR's girlfriend, not a family member. Check this before any family-framed copy.
+Context: Corrected by JR direct statement 2026-04-26 after prior incorrect tree had Joel as Dan's brother and Dan as owner.
+Affirmations: 1
 
 ## [PROJECT] -- Schedule work = full admin envelope, not just grid-writing
 Lesson: Envelope = schedules + management talks + time-off + swaps + sick calls + push + off-hours. Use envelope number in ROI, not grid hours alone.
@@ -502,6 +502,18 @@ Context: If the research subagent recommends, the parent absorbs the agent's bia
 How to apply: Every research-subagent prompt includes "no recommendations, just facts; flag marketing-vs-technical-vs-independent for each claim; cite source URL or file path."
 Affirmations: 1
 Source: human (declared from session reflection)
+
+## [PROJECT] -- Topics JR has explicitly closed stay closed
+Lesson: When JR says "do not mention X again" or "stop pushing X", drop X from every downstream artifact for the rest of the session: plan sections, audit findings, AskUserQuestion options, clarifications. Do not surface X again unless an external constraint forces it back. The "again" is the close.
+Context: 2026-04-26 -- JR said "do not push esa more", then later "ESA is mentioned once how i said last time and no more", then "your obsession with the esa rules must end" -- three separate messages because I kept relitigating ESA placement after each close. Cost time + trust.
+How to apply: After any explicit close, scan the open artifact (plan, draft, current question) for the closed topic, remove or flatten, then move on. Treat the close as a hard rule, not a preference.
+Affirmations: 0
+
+## [PROJECT] -- Steel-man contradicting research before defending current design
+Lesson: When JR provides external research/docs that conflict with my current view of the work, default to steel-manning the research's strongest version before pushing back. If I disagree, the disagreement must cite concrete content from the research, not status-quo bias.
+Context: 2026-04-26 -- first pitch-deck proposal dismissed the trial-lawyer angle, the chatbot quick-question framing, and several visual treatments without weighing them. JR redirected: "i think you're too attached to your design and not fully considering the benefits of any of these changes." Forced a full restart of the proposal.
+How to apply: When an external doc proposes a change to existing work, write the case FOR the change first (specific, concrete) before the case AGAINST. If "against" still wins, it should win on substance, not on "current works."
+Affirmations: 0
 
 ## [GLOBAL] -- Every subagent prompt ends with "flag anything the parent should double-check"
 Lesson: Add a deliverable line to every Agent prompt: "Anything you noticed that the main session should double-check, including ambiguity in the spec or unintended scope drift." Subagents that follow this catch parent-side errors the parent didn't anticipate.
