@@ -22,6 +22,26 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-04-25 -- Desktop schedule name column: fixed 240px + first/rest split (match mobile)
+
+Decision: `DESKTOP_SCHEDULE_NAME_COL_PX` 240, `DESKTOP_SCHEDULE_GRID_TEMPLATE` in `constants.js`, same `gridTemplateColumns` on App header, `EmployeeRow`, `EmployeeView` body+header, `ScheduleSkeleton` (uiKit). `splitNameForSchedule` in `employeeRender.js` returns first word + rest; desktop renders line1 + line2 (muted) like `MobileAdminView` / `MobileEmployeeView`, `truncate` + `title` for overflow; admin adds week hours under. Rejected: `max-content` for col1 when each row is its own grid (header is another grid) => unequal col1 width, day columns misalign. Rejected: `line-clamp-2` on full name without first/rest (uneven name block vs mobile).
+Rationale: Full readable names, vertical alignment, parity with mobile name UX.
+Confidence: H -- build PASS at `a07ab98` 2026-04-25, JR prod phone-smoke on this work still pending
+Rejected alternatives:
+- DRY mobile and desktop with one shared `NameCell` component -- not done; low blast, possible later.
+
+## 2026-04-25 -- Sick day event wipe + PDF sync popup + title field + legend events
+
+Decision: (1) `applyShiftMutation` sick upsert clears `events[k]` to `[]` then pushes sick so meetings/PK/legacy rows cannot remain. `collectPeriodShiftsForSave`: if `hasSick`, only emit `ev.type===sick` from `dayEvents`. (2) `handleExportPDF` opens `about:blank` in click handler, then `import('./pdf/generate')`, then `generateSchedulePDF(..., printWindow)` assigns blob URL; `window.open` after `await` was popup-blocked. `revokeObjectURL` delayed 600000ms. (3) `EmployeeFormModal`: titled employees may save empty `title`; space validation only when trimmed non-empty; AlertTriangle strip like ShiftEditor; non-titled save forces `title: ''`. (4) PDF legend adds MTG, PK, SICK from `EVENT_TYPES` after role glyphs.
+Rationale: JR sick+meeting persistence, dead PDF button post lazy-load, title backspace save, legend consistency.
+Confidence: M -- `npm run build` PASS at `0d3220e` 2026-04-25; prod smoke pending
+
+## 2026-04-25 -- PDF schedule print: problem registry for layout work (read before redesign)
+
+Decision: Canonical write-up is `CONTEXT/pdf-print-layout.md`. Summarizes competing goals (row uniformity vs no clipping vs density), what was tried, and candidate approaches not yet implemented (continuation rows, font scaling, abbrev+codes, appendix page, jsPDF/server PDF, print-only CSS). Agents touching `src/pdf/generate.js` must read it; boot adapters point here.
+Rationale: JR asked to surface the design space for Claude Code, not only the latest code state.
+Confidence: M -- registry evolves as PDF approach changes; verify when a candidate ships.
+
 ## 2026-04-25 -- Perf-fix wave 2: ColumnHeaderCell extract + scheduledByDate lookup
 Decision: One scoped commit (`1d0ccb1`) closing two tightly-coupled audit findings (HIGH "Column header recomputation in render loop" + MED "getScheduledCount O(n^2)") together. (1) New `src/components/ColumnHeaderCell.jsx` -- `React.memo`-wrapped, receives primitives only (`isToday`, `isHoliday`, `storeOpen`, `storeClose`, `scheduled`, `target`, `hasOverride`, `canEdit`, `isPast`) plus a stable `Date` prop and a stable `onClick` callback, so memo busts only on real state change. Internal style objects + closure stay inside the memo body (allocation only on memo MISS, per s014 lesson that internal JSX is invisible to memo). (2) New `scheduledByDate` useMemo above `getScheduledCount` in `src/App.jsx` pre-computes per-date headcount once per render, deps `[currentDateStrs, schedulableEmployees, shifts, events]`. (3) `getScheduledCount` body becomes `(date) => scheduledByDate[toDateKey(date)] || 0`; `useCallback` wrapper + signature preserved so the prop passed to MobileAdminView at L1595 stays identity-stable (mobile picks up the speedup for free without a separate refactor). (4) Stable `handleColumnHeaderClick` useCallback wraps `setEditingColumnDate` for the new component prop.
 Rationale: Audit at `docs/perf-audit-app-jsx-2026-04-25.md` flagged 49 inline style objects per parent re-render in the desktop column header `.map()` (App.jsx:2215-2247) plus `getScheduledCount` filtering all `schedulableEmployees` per-date (App.jsx:616-624) -- O(n_emp * n_dates) per parent state change. Re-verified the cited lines BEFORE scoping (lesson from s014 ScheduleCell misdiagnosis); this time the audit's prescription matched reality. Pre-computed lookup map + memoized cell component cuts re-render work to O(n_dates) lookup + per-cell memo equality checks; cells skip work entirely on parent state changes that don't touch their props.

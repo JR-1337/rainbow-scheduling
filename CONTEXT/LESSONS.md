@@ -522,6 +522,24 @@ How to apply: Final section of every Agent prompt is a numbered deliverable list
 Affirmations: 1
 Source: human (declared from session reflection)
 
+## [PROJECT] -- Pitch-facing copy uses "high-priced lawyer with charm" voice; no preamble, no SaaS hero phrases
+Lesson: All pitch-deck copy and chatbot responses use a charming, force-of-logic trial-lawyer voice. NO opening preamble ("That's a fair question", "Great question", "And the honest answer is", "That's the right question"). First sentence is the answer. Three-beat rhythms welcome. Banned phrases: "let's prove it together", "we've got you covered", "infinitely better", "crush", "destroy", "annihilate", emoji peppering, exclamation marks beyond one per response.
+Context: 2026-04-26 -- s024 chatbot iteration. JR rejected "the wording is clunky. try again. think about it in a new way. like a high priced lawyer with charm convincing someone." Earlier iteration shipped lines like "Rainbow takes them out of the operation" (bureaucratic) and "Rainbow makes them stop" (ambiguous pronoun). Rewrote to lawyer-with-charm: "The pen-and-paper schedule was never free. Sarvi has been quietly picking up the tab. Rainbow settles it -- week after week, without ever sending an invoice."
+How to apply: Before shipping pitch-facing copy: read it aloud. Does it open with a softener? Does it have a single consistent metaphor? Does it land in 1-2 punchy paragraphs? If any answer is no, rewrite.
+Affirmations: 0
+
+## [PROJECT] -- The Carman family does not backfill Sarvi when scheduling breaks; pitch must reflect that
+Lesson: At OTR the family (Joel/Amy/Dan/Scott) does NOT cover for missing staff or call replacements. Sarvi absorbs all scheduling-related crisis recovery alone. Any pitch framing that suggests "the family steps up when the schedule breaks" or "the cost spreads to the family" is factually wrong and JR will reject it. The cost spreads to (a) Sarvi alone (operationally), (b) the business invisibly (payroll surprises, OT, lost sales), (c) staff on the floor who absorb gaps, (d) the single-point-of-failure risk on Sarvi.
+Context: 2026-04-26 -- s024. I drafted Ripple slide first-card option "THE FAMILY DESK / Every scheduling shortfall lands at the family's door." JR rejected: "none of these are great because they all fall at sarvis feet. not the family. they dont cover or call replacements. they sit on their hands and sarvi does it." Reframed to "THE INVISIBLE BILL / OTR pays the cost without ever seeing the cause" landing the cost on the business itself.
+How to apply: When framing "who carries the cost" or "what happens when scheduling breaks" in pitch copy, never imply family-side recovery work. Land the cost on Sarvi (concentrated), the business (invisibly), or the floor / staff. Family-firm risk-aversion is fair to mention; family-firm operational labor is not.
+Affirmations: 0
+
+## [PROJECT] -- No "rounding" language in any pitch artifact (deck, spec, chatbot, price sheet)
+Lesson: Sweep ban on "rounding", "rounding rule", "rounding ambiguity" across pitch deck, spec sheet, chatbot system prompt, and price sheet. Reason: Amy rounds up manually because she chooses to; ADP doesn't enforce rounding; "stops time-rounding ambiguity" was a fabricated value claim. Counterpoint replacement reasons must use other angles: modern phone-first punch flow, real-time dashboard for Sarvi, ADP-formatted handoff, automated promo commission tracking.
+Context: 2026-04-26 -- s024. JR direction: "STOP SAYING ROUNDING. there's other reasons. use those." Phase2.jsx had "rounding rule Amy approves baked in" + "Precision in, no rounding ambiguity." Bot system prompt previously had "Stops time-rounding ambiguity." All swept.
+How to apply: Before shipping pitch copy, grep `rounding\|rounded` across pitch artifacts. CSS class `rounded` (Tailwind border-radius) is fine; conceptual "rounding" claims about time/payroll are not.
+Affirmations: 0
+
 <!-- TEMPLATE
 ## [GLOBAL] -- [Lesson title]
 Lesson: [what to do or avoid, in one sentence]

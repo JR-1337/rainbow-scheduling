@@ -48,6 +48,48 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-04-26 -- Pitch chatbot v4: Sonnet 4.6 + extended thinking + heavily-revised system prompt
+
+Decision: AskRainbow.jsx posts to `/api/ask-rainbow` which calls Anthropic Claude Sonnet 4.6 with extended thinking enabled (budget_tokens 2048, max_tokens 4096). Gemini 2.5 Flash fallback path stays in code dormant (no key configured). System prompt restored from JR's original "trial lawyer for John Richmond" template with verbatim TONE block at the bottom, NO PREAMBLE rule (banned "That's a fair question" and similar softening intros). 11 FACTS IN EVIDENCE blocks plus a WHAT FITTING ACTUALLY MEANS context bank (12 bullets, applies broadly to fee, trial, training, customization, risk, ownership, support, data setup, branding, accountability questions) plus a WHAT THE APP DOES NOT DO TODAY block (Phase 2 leak fix). 14-hour defense paragraph supplies fall-back arguments if Sarvi's hour count is challenged. Rate limit 15 req per IP per 6 hours, in-memory bucket. Per-IP query capture to Apps Script -> Sheet still parked.
+Rationale: Haiku's first-shipped answers leaned on the "Sarvi 14 hours" anchor every time and led with "That's a fair question" preambles. JR forced reframe toward varied evidence, no preamble, lawyer-with-charm voice. Sonnet 4.6 + extended thinking improves multi-fact synthesis quality. The fitting-context bank gives the bot operational vocabulary applicable to many objection types, not just fee-justification.
+Confidence: H -- direct user direction 2026-04-26 + live-prod verification HEAD `8eca952` returning multi-evidence answers with no preamble.
+Supersedes: 2026-04-26 -- Pitch chatbot architecture: Claude Haiku 4.5 primary + Gemini fallback via Vercel serverless (entry below in this file).
+
+## 2026-04-26 -- Supabase Postgres ca-central is a Phase 1 fitting deliverable, not Phase 2
+
+Decision: Pitch deck + Spec sheet + chatbot system prompt all commit to Supabase Postgres in the Canada Central region as the data plane post-fitting. Migration off Apps Script + Google Sheets happens during the 3-month fitting trial; OTR's data is in Supabase before any 9-month commitment starts. Auth model (login type, role-access boundaries, password policy, MFA / magic-link options) chosen during fitting per OTR preference. Sarvi's direct-edit workflow preserved either via admin-grid affordances OR mirrored Sheets export -- decided during fitting per the Sheets-direct-edit constraint decision (below).
+Rationale: PIPEDA + SOC 2 compliance posture needed an answer in the pitch; "still on Sheets" reads weak in a sales context. Committing to Supabase ca-central makes the data-ownership story concrete and removes the Apps Script 7-8s perceived-latency floor. Customer-visible promise; JR carries the migration cost during fitting.
+Confidence: H -- direct user direction 2026-04-26 (selected "Phase 1 fitting deliverable" out of 3 alternatives).
+Rejected alternatives:
+- Available if compliance/scale demands -- rejected: weaker pitch, defers commitment.
+- Phase 2 hardening track -- rejected: leaves fitting on Sheets, postpones the auth + compliance answer.
+
+## 2026-04-26 -- $497/mo recurring is an open retainer; hosting passed through; 12-mo continuity contract on offer
+
+Decision: The $497/month recurring fee is framed as an open retainer covering bug fixes, support response within hours, ongoing minor dev work, and security patches -- no hour cap. Hosting infrastructure (Supabase ca-central) is passed through to OTR at cost, not absorbed into the monthly. New scope or major feature work is quoted fixed-price separately at $125/hr. Bug fixes are always included for as long as OTR runs the app. Continuity guarantee: 12-month service contract on offer + source-code escrow at trial-end so OTR holds the keys regardless of John's availability.
+Rationale: Hour-capped retainer creates "watch the clock" friction with the customer that undercuts the trust pitch. JR will not work on the system without payment so the open retainer is sustainable for him; the trade-off is hosting passthrough so OTR carries variable infrastructure cost. Continuity contract preempts the "what if you disappear" objection without raising it unprompted.
+Confidence: H -- direct user direction 2026-04-26 (selected "Open retainer (always-available)" out of 3 alternatives).
+Rejected alternatives:
+- Capped retainer (X hrs/month included) -- rejected: clean expectation but creates clock-watching friction.
+- Tier-based (bug fixes always, features quoted) -- rejected: under-promises on the developer-relationship value JR conveys.
+
+## 2026-04-26 -- Pitch pricing restructured: $1,500 implementation + $497/mo from month 1
+
+Decision: The pitch deck and price sheet present the offering as a one-time $1,500 implementation fee plus $497/mo starting month 1, structured as a 3-month fitting trial followed by a 9-month commitment. Year 1 visible $7,464; 3-year total $19,392; net to OTR $71,964 over 3 years. Implementation fee covers fitting Rainbow to OTR's workflow, Sarvi's process tweaks, staff training, and feedback rounds. Internal lever (waive monthly during trial OR waive implementation fee for higher trial monthly) is JR's only and never printed.
+Rationale: The prior $2K-post-trial structure put a large back-loaded ask between the customer and the commitment moment. Front-loading the implementation as work-product justification (training, fitting, feedback) removes the "what am I paying for after the trial?" objection and makes the monthly look smaller relative to the visible Year 1 total. Supersedes the S47 pricing decision.
+Confidence: H -- direct user direction 2026-04-26.
+Rejected alternatives:
+- Keep $2K post-trial activation -- rejected: the back-loaded large ask reads as a hidden fee at the worst possible moment.
+- $1500 paid in 3-month installments during fitting -- rejected: less clean than a single upfront line; smooths cash but blurs what the fee is FOR.
+- $1500 due at month 3 (post-fitting) -- rejected: removes the early-commitment signal the upfront ask provides.
+
+## 2026-04-26 -- Pitch chatbot architecture: Claude Haiku 4.5 primary + Gemini fallback via Vercel serverless (Superseded)
+
+Decision: Pitch deck gains a new slide AskRainbow.jsx between Proposal and Phase2. Interactive Q&A backed by a Vercel serverless function (`/api/ask-rainbow`) that calls Anthropic Claude Haiku 4.5 by default, falling back to Google Gemini 2.5 Flash if `ANTHROPIC_API_KEY` is unset. Per-IP rate limit: 15 requests / 6 hours, in-memory bucket. System prompt anchored in sourced facts only (Gap stable-scheduling, Cornell ILR turnover, CAP replacement cost, Springer family-firms) with hard-banned ESA mentions unless user asks first. Charming-trial-lawyer voice; never escalates.
+Rationale: JR's family will think objections faster than the deck can answer them. The chatbot turns the room from "presentation" into "demonstration" without changing the deck's measured tone. Vercel function keeps the API key server-side. Claude Haiku is cheap (~$0.001/answer) and matches JR's existing tooling; Gemini fallback preserves optionality.
+Confidence: H -- direct user direction 2026-04-26 + sourced research 2026-04-26.
+Superseded by: 2026-04-26 -- Pitch chatbot v4: Sonnet 4.6 + extended thinking + heavily-revised system prompt (top of this file).
+
 ## 2026-04-26 -- Migration off Sheets must preserve Sarvi's direct-edit workflow
 
 Decision: Any migration off Google Sheets (to Postgres / Supabase / Neon / D1 / self-hosted) must include EITHER (a) an admin UI that lets Sarvi edit DB rows directly with the same affordances she has in Sheets today (sort, filter, paste a column, tweak a single cell), OR (b) a sync layer that mirrors DB writes back to a Sheets copy so Sarvi's existing Sheets-based workflow keeps working and her edits feed back into the DB. Locked as a pre-design constraint, not an open question. Loss of the Sheets escape hatch is a hard adoption blocker, not a tradeoff.
@@ -91,27 +133,7 @@ Rejected alternatives:
 - Modal `clearWeekShifts`-style pattern (mutate + setUnsaved + admin clicks schedule Save later) -- rejected, modal Save should persist immediately like the prior bulkCreatePKEvent UX did.
 - Initial checks default to UNION of `wasBooked or eligible` in edit mode -- rejected, would auto-add eligible-but-unbooked people on every reopen which surprises admins.
 
-## 2026-04-25 -- Sick day event wipe + PDF sync popup + title field + legend events
-
-Decision: (1) `applyShiftMutation` sick upsert clears `events[k]` to `[]` then pushes sick so meetings/PK/legacy rows cannot remain. `collectPeriodShiftsForSave`: if `hasSick`, only emit `ev.type===sick` from `dayEvents`. (2) `handleExportPDF` opens `about:blank` in click handler, then `import('./pdf/generate')`, then `generateSchedulePDF(..., printWindow)` assigns blob URL; `window.open` after `await` was popup-blocked. `revokeObjectURL` delayed 600000ms. (3) `EmployeeFormModal`: titled employees may save empty `title`; space validation only when trimmed non-empty; AlertTriangle strip like ShiftEditor; non-titled save forces `title: ''`. (4) PDF legend adds MTG, PK, SICK from `EVENT_TYPES` after role glyphs.
-Rationale: JR sick+meeting persistence, dead PDF button post lazy-load, title backspace save, legend consistency.
-Confidence: M -- `npm run build` PASS at `0d3220e` 2026-04-25; prod smoke pending
-
-## 2026-04-25 -- PDF schedule print: problem registry for layout work (read before redesign)
-
-Decision: Canonical write-up is `CONTEXT/pdf-print-layout.md`. Summarizes competing goals (row uniformity vs no clipping vs density), what was tried, and candidate approaches not yet implemented (continuation rows, font scaling, abbrev+codes, appendix page, jsPDF/server PDF, print-only CSS). Agents touching `src/pdf/generate.js` must read it; boot adapters point here.
-Rationale: JR asked to surface the design space for Claude Code, not only the latest code state.
-Confidence: M -- registry evolves as PDF approach changes; verify when a candidate ships.
-
-## 2026-04-25 -- Desktop schedule name column: fixed 240px + first/rest split (match mobile)
-
-Decision: `DESKTOP_SCHEDULE_NAME_COL_PX` 240, `DESKTOP_SCHEDULE_GRID_TEMPLATE` in `constants.js`, same `gridTemplateColumns` on App header, `EmployeeRow`, `EmployeeView` body+header, `ScheduleSkeleton` (uiKit). `splitNameForSchedule` in `employeeRender.js` returns first word + rest; desktop renders line1 + line2 (muted) like `MobileAdminView` / `MobileEmployeeView`, `truncate` + `title` for overflow; admin adds week hours under. Rejected: `max-content` for col1 when each row is its own grid (header is another grid) => unequal col1 width, day columns misalign. Rejected: `line-clamp-2` on full name without first/rest (uneven name block vs mobile).
-Rationale: Full readable names, vertical alignment, parity with mobile name UX.
-Confidence: H -- build PASS at `a07ab98` 2026-04-25, JR prod phone-smoke on this work still pending
-Rejected alternatives:
-- DRY mobile and desktop with one shared `NameCell` component -- not done; low blast, possible later.
-
-<!-- Older entries graduated to CONTEXT/archive/decisions-archive.md on 2026-04-26 -->
+<!-- Older entries graduated to CONTEXT/archive/decisions-archive.md on 2026-04-26 (s022) and 2026-04-26 (s024 -- desktop name col, sick day events, PDF print registry) -->
 
 <!-- TEMPLATE
 ## YYYY-MM-DD -- [Decision title]
