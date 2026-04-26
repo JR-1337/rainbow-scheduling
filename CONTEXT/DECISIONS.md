@@ -99,7 +99,7 @@ Confidence: H -- direct user direction 2026-04-26 ("we could create a system tha
 ## 2026-04-26 -- Apps Script 7-8s call floor is internal migration motivation only, not pitch material
 
 Decision: The Apps Script web-app ~7-8s call floor (documented in `CONTEXT/LESSONS.md` and `backend/Code.gs:85`) is the dominant user-perceived latency in the current stack and the strongest reason to migrate off Apps Script. It does NOT appear in pitch decks, customer-facing copy, or family-facing demo material. Migration urgency is captured internally; current performance number is not surfaced.
-Rationale: JR direction 2026-04-26 -- "I don't want the 8 second lag times in the pitch. appscript is our current system. it's enough to know that I should migrate away from it asap." Pitch math leads with confirmed customer cost-of-doing-nothing (Sarvi 14 hrs/wk, $25,480/yr) and product cost; current-stack lag is not a pitch claim. Internal: confirms migration sequencing -- Apps Script departure is the highest-impact move; DB choice is secondary (per `docs/research/scaling-migration-options-2026-04-26.md`).
+Rationale: JR direction 2026-04-26 -- "I don't want the 8 second lag times in the pitch. appscript is our current system. it's enough to know that I should migrate away from it asap." Pitch math leads with confirmed customer cost-of-doing-nothing (Sarvi 14 hrs/wk, $30,452/yr; $91,356 over 3 yr) and product cost; current-stack lag is not a pitch claim. Internal: confirms migration sequencing -- Apps Script departure is the highest-impact move; DB choice is secondary (per `docs/research/scaling-migration-options-2026-04-26.md`).
 Confidence: H -- direct user direction 2026-04-26.
 
 ## 2026-04-26 -- PK details surfaced near announcements as a shared sibling panel

@@ -288,7 +288,7 @@ Context: Splitting a top-level directive into sub-scope questions signals audit-
 Affirmations: 0
 
 ## [PROJECT] -- Echo user-stated facts before saving to memory or plan
-Lesson: State the number/fact back verbatim before persisting. S47 saved wrong "24/16/$29,120" via extrapolation; JR corrected to "34/14/$25,480" days later.
+Lesson: State the number/fact back verbatim before persisting. S47 saved wrong "24/16/$29,120" via extrapolation; JR corrected to "34/14/$25,480" days later, then to "35/14/$30,452" in s024 (2026-04-26) when the deck was rebuilt. Each correction caught downstream artifacts that had to be re-swept.
 Context: Any project-fact save that affects downstream artifacts.
 Affirmations: 0
 
@@ -337,7 +337,7 @@ Context: Pitch deck, leave-behinds, family-facing text.
 Affirmations: 0
 
 ## [PROJECT] -- No fabricated stats for concreteness
-Lesson: Only use Sarvi-confirmed (34 staff, 14 hr/wk), statutory (O. Reg. 189/24 $5K), or pure arithmetic from those. Range with "roughly" if not sourced.
+Lesson: Only use Sarvi-confirmed (35 staff, 14 hr/wk, $30,452/yr current-state cost), statutory (O. Reg. 189/24 $5K), or pure arithmetic from those. Range with "roughly" if not sourced.
 Context: "7-10 decisions per person" and "500 cells" got caught.
 Affirmations: 0
 
