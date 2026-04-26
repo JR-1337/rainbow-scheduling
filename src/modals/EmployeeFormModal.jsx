@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Loader, UserCheck, UserX, Shield, Clock, Key, Check } from 'lucide-react';
+import { Trash2, Loader, UserCheck, UserX, Shield, Clock, Key, Check, AlertTriangle } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES } from '../constants';
 import { apiCall } from '../utils/api';
@@ -37,18 +37,15 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
     }
     if (hasTitle(formData)) {
       const t = (formData.title || '').trim();
-      if (!t) {
-        setErrors({ title: 'Title is required for admins' });
-        return;
-      }
-      if (/\s/.test(t)) {
-        setErrors({ title: 'Title must be a single word (no spaces)' });
+      if (t && /\s/.test(t)) {
+        setErrors({ title: 'Title must be one word with no spaces (e.g. Manager, not Asst Manager).' });
         return;
       }
     }
     setIsSaving(true);
     const saveData = { ...formData, id: formData.id || `emp-${Date.now()}` };
     if (hasTitle(formData)) saveData.title = (formData.title || '').trim();
+    else saveData.title = '';
     if (!employee && password) saveData.password = password;
     const success = await onSave(saveData);
     setIsSaving(false);
@@ -202,19 +199,42 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
               </div>
 
               {hasTitle(formData) && (
-                <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between gap-2" style={{ backgroundColor: THEME.bg.tertiary }}>
-                  <label className="text-xs shrink-0" style={{ color: THEME.text.secondary }}>Title</label>
-                  <input
-                    type="text"
-                    value={formData.title || ''}
-                    onChange={e => setFormData({ ...formData, title: e.target.value.slice(0, 20) })}
-                    placeholder="Manager, Buyer, VM..."
-                    className="flex-1 px-2 py-0.5 rounded text-xs"
-                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${errors.title ? THEME.status.error : THEME.border.default}` }} />
+                <div className="mt-2">
+                  <div className="p-1.5 rounded-lg flex items-center justify-between gap-2" style={{ backgroundColor: THEME.bg.tertiary }}>
+                    <label className="text-xs shrink-0" style={{ color: THEME.text.secondary }}>Title</label>
+                    <input
+                      type="text"
+                      value={formData.title || ''}
+                      onChange={e => {
+                        const title = e.target.value.slice(0, 20);
+                        setFormData({ ...formData, title });
+                        setErrors(prev => {
+                          if (!prev.title) return prev;
+                          const next = { ...prev };
+                          delete next.title;
+                          return next;
+                        });
+                      }}
+                      placeholder="Manager, Buyer, VM..."
+                      className="flex-1 px-2 py-0.5 rounded text-xs"
+                      style={{
+                        backgroundColor: THEME.bg.elevated,
+                        color: THEME.text.primary,
+                        border: `1px solid ${errors.title || /\s/.test(formData.title || '') ? THEME.status.warning : THEME.border.default}`,
+                      }} />
+                  </div>
+                  <p className="text-xs mt-1 ml-0.5" style={{ color: THEME.text.muted }}>
+                    Optional. One word only (no spaces). Clear the field to remove the label from the schedule.
+                  </p>
+                  {(errors.title || /\s/.test(formData.title || '')) && (
+                    <div className="p-2 rounded-lg mt-1.5 flex items-start gap-2" style={{ backgroundColor: THEME.status.warning + '20', border: `1px solid ${THEME.status.warning}` }}>
+                      <AlertTriangle size={14} style={{ color: THEME.status.warning, flexShrink: 0, marginTop: 2 }} />
+                      <p className="text-xs leading-snug" style={{ color: THEME.text.secondary }}>
+                        {errors.title || 'Title cannot include spaces. Use one word (e.g. Manager) or hyphenate (e.g. Asst-Manager).'}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
-              {formData.adminTier === 'admin2' && errors.title && (
-                <p className="text-xs mt-0.5 ml-1" style={{ color: THEME.status.error }}>{errors.title}</p>
               )}
 
               {formData.isAdmin && !formData.isOwner && (
