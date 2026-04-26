@@ -81,8 +81,8 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
             {!isTitledShift ? (
               <span className="text-xs font-semibold truncate pr-3" style={{ color: role?.color }}>{role?.name}</span>
             ) : null}
-            <div className="flex items-center justify-between">
-              <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
+            <div className={`flex w-full min-w-0 items-center justify-between ${isTitledShift ? 'mt-auto' : ''}`}>
+              <span className="text-xs min-w-0 truncate pr-1" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
             </div>
             {hasEvents && (
               <div className="absolute bottom-0 right-0 flex gap-0.5 p-0.5">

@@ -116,9 +116,9 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
                 {visibleEvents.find(ev => ev.type === 'sick').note}
               </span>
             ) : (
-              <div className="flex items-center justify-between">
-                <span className="text-xs" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
-                <span className="text-xs font-medium" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none' }}>{hasSick ? '0' : shift.hours}h</span>
+              <div className={`flex w-full min-w-0 items-center justify-between ${!(labelText || hasEvents) ? 'mt-auto' : ''}`}>
+                <span className="text-xs min-w-0 truncate pr-1" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
+                <span className="shrink-0 text-xs font-medium" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none' }}>{hasSick ? '0' : shift.hours}h</span>
               </div>
             )}
           </div>
