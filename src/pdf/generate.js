@@ -95,23 +95,28 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       const hol = isStatHoliday(d);
       // Holiday: heavy black top border + "HOL" caption in addition to yellow bg,
       // so the marker survives greyscale printing.
-      return `<th style="padding:8px 4px;border:1px solid ${G.border};${hol ? `border-top:3px solid ${G.ink};` : ''}background:${hol ? G.fillZebra : G.fillZebra};font-size:11px;text-align:center;">
-        ${hol ? `<div style="font-size:7px;font-weight:800;color:${G.ink};letter-spacing:1px;">HOL</div>` : ''}
-        <div style="font-weight:700;color:${G.text};text-transform:uppercase;font-size:9px;">${getDayNameShort(d)}</div>
-        <div style="font-size:16px;font-weight:700;color:${G.ink};">${d.getDate()}</div>
+      return `<th style="height:52px;max-height:52px;padding:4px;border:1px solid ${G.border};${hol ? `border-top:3px solid ${G.ink};` : ''}background:${hol ? G.fillZebra : G.fillZebra};font-size:11px;text-align:center;vertical-align:middle;overflow:hidden;box-sizing:border-box;">
+        ${hol ? `<div style="font-size:7px;font-weight:800;color:${G.ink};letter-spacing:1px;line-height:1;">HOL</div>` : ''}
+        <div style="font-weight:700;color:${G.text};text-transform:uppercase;font-size:9px;line-height:1.1;">${getDayNameShort(d)}</div>
+        <div style="font-size:15px;font-weight:700;color:${G.ink};line-height:1.1;">${d.getDate()}</div>
       </th>`;
     }).join('');
 
-    // Meeting/PK: indicator only (shortLabel + time) — no note/details on print.
-    const eventBadgeHtml = (evs) => evs.map(ev => {
-      const et = EVENT_TYPES[ev.type];
-      if (!et) return '';
-      const detailNote = ev.note && ev.type !== 'meeting' && ev.type !== 'pk' ? ` · ${cleanText(ev.note)}` : '';
-      return `<div style="font-size:7px;color:${G.textMuted};margin-top:2px;line-height:1.3;"><strong style="color:${G.ink};">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${detailNote}</div>`;
-    }).join('');
+    // Events: one compressed line so row height never grows (full detail stays in app).
+    const eventBadgeHtml = (evs) => {
+      if (!evs.length) return '';
+      const parts = evs.map((ev) => {
+        const et = EVENT_TYPES[ev.type];
+        if (!et) return '';
+        const detailNote = ev.note && ev.type !== 'meeting' && ev.type !== 'pk' ? ` ${cleanText(ev.note)}` : '';
+        return `<strong style="color:${G.ink};">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${detailNote}`;
+      }).filter(Boolean);
+      if (!parts.length) return '';
+      return `<div style="font-size:6px;line-height:1.2;color:${G.textMuted};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${parts.join(' · ')}</div>`;
+    };
 
     const dividerColspan = weekDates.length + 1;
-    const dividerRow = `<tr><td colspan="${dividerColspan}" style="padding:0;border:0;background:${G.fill};"><div style="height:1px;background:${G.border};margin:3px 8px;"></div></td></tr>`;
+    const dividerRow = `<tr class="pdf-divider"><td colspan="${dividerColspan}" style="padding:0;border:0;background:${G.fill};"><div style="height:1px;background:${G.border};margin:3px 8px;"></div></td></tr>`;
     const rows = schedulable.map((emp, i) => {
       const showDivider = i > 0 && employeeBucket(emp) !== employeeBucket(schedulable[i - 1]);
       const cells = weekDates.map(date => {
@@ -121,18 +126,21 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         // Approved time-off wins over events - an employee on time-off shouldn't
         // show a meeting/PK card even if one was scheduled before the request was approved.
         if (!shift && hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests)) {
-          return `<td style="padding:6px;border:1px dashed ${G.border};background:${G.fill};text-align:center;">
-            <div style="font-size:9px;font-weight:800;color:${G.ink};letter-spacing:1px;">OFF</div>
-            <div style="font-size:7px;color:${G.textFaint};">approved</div>
+          return `<td style="padding:4px;border:1px dashed ${G.border};background:${G.fill};text-align:center;">
+            <div style="height:64px;max-height:64px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+              <div style="font-size:9px;font-weight:800;color:${G.ink};letter-spacing:1px;line-height:1.1;">OFF</div>
+              <div style="font-size:7px;color:${G.textFaint};line-height:1.1;">approved</div>
+            </div>
           </td>`;
         }
         if (!shift && dayEvents.length === 0) {
-          return `<td style="padding:6px;border:1px solid ${G.border};background:${G.fill};"></td>`;
+          return `<td style="padding:4px;border:1px solid ${G.border};background:${G.fill};"><div style="height:64px;max-height:64px;overflow:hidden;"></div></td>`;
         }
         if (!shift) {
-          // Event-only day - banded fill + ink border.
-          return `<td style="padding:5px;border:2px solid ${G.ink};background:${G.fillZebra};text-align:center;">
-            ${eventBadgeHtml(dayEvents)}
+          return `<td style="padding:4px;border:2px solid ${G.ink};background:${G.fillZebra};text-align:center;">
+            <div style="height:64px;max-height:64px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;">
+              ${eventBadgeHtml(dayEvents)}
+            </div>
           </td>`;
         }
         const isTitled = hasTitle(emp);
@@ -147,25 +155,28 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
           ? `border:2px solid ${G.ink};`
           : `border:1px solid ${G.border};`;
         const roleTitleLine = !isTitled
-          ? `<div style="font-size:10px;color:${G.ink};margin-bottom:2px;${roleNameStyle(family)}">${cleanText(roleName)}</div>`
+          ? `<div style="font-size:8px;color:${G.ink};line-height:1.1;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${roleNameStyle(family)}">${cleanText(roleName)}</div>`
           : '';
         const shiftCellFill = isTitled ? G.fillZebra : G.fill;
-        return `<td style="padding:5px;${cellBorder}background:${shiftCellFill};text-align:center;position:relative;">
-          ${glyph ? `<span style="position:absolute;top:2px;left:4px;font-size:11px;font-weight:800;color:${G.ink};line-height:1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
-          ${roleTitleLine}
-          <div style="font-size:9px;color:${G.text};">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
-          <div style="font-size:8px;color:${G.textMuted};">${shift.hours}h${shift.task ? ` <span style="color:${G.ink};font-weight:800;" title="Has task — see app">★</span>` : ''}</div>
-          ${eventBadgeHtml(dayEvents)}
+        const glyphPad = glyph ? 'padding-left:12px;' : '';
+        return `<td style="padding:4px;${cellBorder}background:${shiftCellFill};text-align:center;">
+          <div style="position:relative;height:64px;max-height:64px;overflow:hidden;${glyphPad}">
+            ${glyph ? `<span style="position:absolute;top:0;left:0;font-size:9px;font-weight:800;color:${G.ink};line-height:1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
+            ${roleTitleLine}
+            <div style="font-size:8px;color:${G.text};line-height:1.15;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
+            <div style="font-size:7px;color:${G.textMuted};line-height:1.15;">${shift.hours}h${shift.task ? ` <span style="color:${G.ink};font-weight:800;">★</span>` : ''}</div>
+            ${eventBadgeHtml(dayEvents)}
+          </div>
         </td>`;
       }).join('');
 
-      const nameTitleLine = hasTitle(emp) && (emp.title || '').trim()
-        ? `<div style="font-size:9px;color:${G.textMuted};margin-top:3px;line-height:1.25;">${cleanText(emp.title)}</div>`
-        : '';
-      return `${showDivider ? dividerRow : ''}<tr style="page-break-inside:avoid;">
-        <td style="padding:8px;border:1px solid ${G.border};background:${G.fill};width:22%;min-width:120px;">
-          <div style="font-weight:700;font-size:11px;color:${G.ink};line-height:1.25;word-wrap:break-word;">${cleanText(emp.name)}</div>
-          ${nameTitleLine}
+      const titleStr = hasTitle(emp) && (emp.title || '').trim() ? cleanText(emp.title.trim()) : '';
+      return `${showDivider ? dividerRow : ''}<tr class="schedule-row" style="page-break-inside:avoid;">
+        <td style="padding:4px;border:1px solid ${G.border};background:${G.fill};width:22%;min-width:120px;">
+          <div style="height:64px;max-height:64px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:2px;">
+            <div style="font-weight:700;font-size:10px;color:${G.ink};line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;">${cleanText(emp.name)}</div>
+            ${titleStr ? `<div style="font-size:8px;color:${G.textMuted};line-height:1.15;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${titleStr}</div>` : ''}
+          </div>
         </td>
         ${cells}
       </tr>`;
@@ -179,10 +190,14 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         if (evs && evs.some(e => e.type === 'sick')) return n;
         return n + 1;
       }, 0);
-      return `<td style="padding:6px;border:1px solid ${G.border};background:${G.fillZebra};text-align:center;font-size:13px;font-weight:700;color:${G.ink};">${count}</td>`;
+      return `<td style="padding:4px;border:1px solid ${G.border};background:${G.fillZebra};text-align:center;">
+        <div style="height:64px;max-height:64px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${G.ink};">${count}</div>
+      </td>`;
     }).join('');
-    const headcountRow = `<tr style="page-break-inside:avoid;">
-      <td style="padding:8px;border:1px solid ${G.border};background:${G.fillZebra};width:22%;min-width:120px;font-size:9px;font-weight:700;color:${G.text};text-transform:uppercase;letter-spacing:1px;">Scheduled</td>
+    const headcountRow = `<tr class="schedule-row" style="page-break-inside:avoid;">
+      <td style="padding:4px;border:1px solid ${G.border};background:${G.fillZebra};width:22%;min-width:120px;">
+        <div style="height:64px;max-height:64px;overflow:hidden;display:flex;align-items:center;font-size:9px;font-weight:700;color:${G.text};text-transform:uppercase;letter-spacing:1px;">Scheduled</div>
+      </td>
       ${headcountCells}
     </tr>`;
 
@@ -192,8 +207,8 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
           <h3 style="margin:0;color:#ffffff;font-size:14px;font-weight:700;">Week ${weekNum}</h3>
           <p style="margin:2px 0 0;color:#dddddd;font-size:11px;">${formatDate(weekDates[0])} - ${formatDate(weekDates[6])}</p>
         </div>
-        <table style="width:100%;table-layout:fixed;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
-          <thead style="display:table-header-group;"><tr><th style="padding:8px;border:1px solid ${G.border};background:${G.fillZebra};width:22%;min-width:120px;font-size:10px;text-align:left;color:${G.text};text-transform:uppercase;">Employee</th>${headers}</tr></thead>
+        <table class="schedule-grid" style="width:100%;table-layout:fixed;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
+          <thead style="display:table-header-group;"><tr><th style="height:52px;max-height:52px;padding:6px;border:1px solid ${G.border};background:${G.fillZebra};width:22%;min-width:120px;font-size:10px;text-align:left;color:${G.text};text-transform:uppercase;vertical-align:middle;overflow:hidden;box-sizing:border-box;">Employee</th>${headers}</tr></thead>
           <tbody>${rows}${headcountRow}</tbody>
         </table>
       </div>
@@ -246,6 +261,21 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     body { font-family: 'Inter', Arial, sans-serif; padding: 20px; margin: 0 auto; max-width: 1100px; background: #ffffff; color: ${G.text}; }
     .print-btn { background: ${G.ink}; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
     .print-btn:hover { background: ${G.text}; }
+    /* Fixed row geometry: every body row matches; overflow clips long content (detail lives in app). */
+    .schedule-grid tbody tr.schedule-row td {
+      height: 72px;
+      max-height: 72px;
+      overflow: hidden;
+      vertical-align: top;
+      box-sizing: border-box;
+    }
+    .schedule-grid tbody tr.pdf-divider td {
+      height: auto !important;
+      max-height: 10px !important;
+      overflow: visible !important;
+      padding: 0 !important;
+      line-height: 0 !important;
+    }
   </style>
 </head>
 <body style="background:#ffffff;">
