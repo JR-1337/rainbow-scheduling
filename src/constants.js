@@ -97,5 +97,8 @@ export const SWAP_STATUS_LABELS = {
   revoked: 'Revoked',
 };
 
-// Desktop admin + employee schedule: name column width follows content (min 200px); day cells share the rest
-export const DESKTOP_SCHEDULE_GRID_TEMPLATE = 'minmax(200px, max-content) repeat(7, 1fr)';
+// Desktop: header grid + one grid per body row -- first column track must be identical (fixed px
+// width; no max-content on col 1 or day columns drift). Name column matches mobile: first name line +
+// rest on second line (splitNameForSchedule) + truncate; full name on hover via title=.
+export const DESKTOP_SCHEDULE_NAME_COL_PX = 240;
+export const DESKTOP_SCHEDULE_GRID_TEMPLATE = `${DESKTOP_SCHEDULE_NAME_COL_PX}px repeat(7, 1fr)`;

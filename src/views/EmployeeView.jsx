@@ -25,7 +25,7 @@ import { ChangePasswordModal } from '../modals/ChangePasswordModal';
 import { RequestDaysOffModal } from '../modals/RequestDaysOffModal';
 import { OfferShiftModal } from '../modals/OfferShiftModal';
 import { SwapShiftModal } from '../modals/SwapShiftModal';
-import { hasTitle } from '../utils/employeeRender';
+import { hasTitle, splitNameForSchedule } from '../utils/employeeRender';
 
 const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmpId, storeHours, isTimeOff = false, isUnavailable = false }) => {
   const [showTask, setShowTask] = useState(false);
@@ -132,9 +132,9 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
   );
 });
 
-const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, loggedInEmpId, getEmployeeHours, timeOffRequests = [] }) => {
-  const hours = getEmployeeHours(employee.id);
+const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, loggedInEmpId, timeOffRequests = [] }) => {
   const isMe = employee.id === loggedInEmpId;
+  const { first: nameFirst, rest: nameRest } = splitNameForSchedule(employee.name);
   
   // Check if employee has approved time off for a specific date
   const hasApprovedTimeOff = (dateStr) => {
@@ -147,14 +147,17 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
 
   return (
     <div className="grid gap-px schedule-row" style={{ gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, backgroundColor: THEME.border.subtle }}>
-      <div className="p-1.5" style={{ backgroundColor: isMe ? THEME.accent.purple + '15' : THEME.bg.secondary }}>
-        <div className="flex items-start gap-1.5">
-          <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5" style={{ background: isMe ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated, color: isMe ? 'white' : THEME.text.muted }}>{employee.name.split(' ').map(n => n[0]).join('')}</div>
-          <div className="min-w-0 flex-1">
-            <p className="font-medium text-xs break-words leading-tight" style={{ color: isMe ? THEME.accent.purple : THEME.text.primary }}>
-              {employee.name}
-              {isMe && <span className="whitespace-nowrap" style={{ color: THEME.accent.cyan }}> (You)</span>}
+      <div className="h-full p-1.5" style={{ backgroundColor: isMe ? THEME.accent.purple + '15' : THEME.bg.secondary }} title={employee.name}>
+        <div className="flex w-full min-h-[2.5rem] items-center gap-1.5">
+          <div className="h-6 w-6 flex-shrink-0 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: isMe ? `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})` : THEME.bg.elevated, color: isMe ? 'white' : THEME.text.muted }}>{employee.name.split(' ').map(n => n[0]).join('')}</div>
+          <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5">
+            <p className="flex min-w-0 items-center gap-1 text-xs font-medium leading-tight" style={{ color: isMe ? THEME.accent.purple : THEME.text.primary }}>
+              <span className="min-w-0 truncate">{nameFirst}</span>
+              {isMe && <span className="shrink-0" style={{ color: THEME.accent.cyan, fontSize: '9px' }}>(You)</span>}
             </p>
+            {nameRest ? (
+              <p className="truncate text-[10px] leading-tight" style={{ color: THEME.text.muted }}>{nameRest}</p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -804,7 +807,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
               return (
                 <React.Fragment key={e.id}>
                   {showDivider && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
-                  <EmployeeViewRow employee={e} dates={currentDates} shifts={shifts} events={events} loggedInEmpId={currentUser.id} getEmployeeHours={getEmpHours} timeOffRequests={timeOffRequests} />
+                  <EmployeeViewRow employee={e} dates={currentDates} shifts={shifts} events={events} loggedInEmpId={currentUser.id} timeOffRequests={timeOffRequests} />
                 </React.Fragment>
               );
             })}</div>
