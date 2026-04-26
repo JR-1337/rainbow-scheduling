@@ -48,6 +48,17 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-04-26 -- PKEventModal dual-mode (create + edit) via existing-events derivation
+
+Decision: `src/modals/PKEventModal.jsx` accepts a new `events` prop. The modal computes `existingPKBookedIds` for the selected `{date, startTime, endTime}` window. When the set is non-empty (`isEditMode = true`), initial check state mirrors the booked set instead of availability eligibility; Save dirty-state covers adds AND removes (`isDirty = addIds.length + removeIds.length > 0`); Save label reads `Save (+N -M)`. When empty (create mode), the historical eligibility-default UX is preserved. `handleBulkPK` in `src/App.jsx` drops the `bulkCreatePKEvent` API call in favor of the unified period-save path: adds synthesize PK event rows client-side, removes drop matching entries from `events[empId-date]`, both persist atomically via existing `apiCall('batchSaveShifts')`. Reverts state on failure. Saturday quick-pick button gains an active-state visual (filled brand accent + 2px glowing ring + `✓` glyph) and toggle-back behavior (tap-again reverts date + times to today's defaults).
+Rationale: Bug JR hit -- deselecting a booked person left Save greyed, modal couldn't edit existing PK. Old modal was create-only; this unifies create + edit on one surface so admin doesn't need a separate "delete PK" path. Single period-save also makes adds + removes atomic from the user's perspective. Saturday button visual: prior outline-only style was insufficient feedback that "save will book on Saturday" -- explicit JR instruction ("more distinct"); toggle-back is the natural inverse.
+Confidence: H -- verified 2026-04-26 build PASS at `78f02d7` (modern 483.74 kB / 122.01 kB gzip, +1.77 raw / +0.74 gzip vs `5f5f16f`); localhost Playwright full round-trip PASS (book on Sat May 2 -> reopen edit mode -> deselect -> Save (-1) enabled -> save -> back to create mode), 0 console errors. Prod phone-smoke pending.
+Rejected alternatives:
+- Add backend `bulkDeletePKEvent` handler symmetric with `bulkCreatePKEvent` -- rejected, requires JR manual deploy + new auth + new audit; client-side mutate plus existing `batchSaveShifts` is sufficient and avoids deploy friction.
+- Keep `bulkCreatePKEvent` for adds + add only `bulkDeletePKEvent` for removes -- rejected, splits the save path into two API calls, breaks atomicity from user's perspective.
+- Modal `clearWeekShifts`-style pattern (mutate + setUnsaved + admin clicks schedule Save later) -- rejected, modal Save should persist immediately like the prior bulkCreatePKEvent UX did.
+- Initial checks default to UNION of `wasBooked or eligible` in edit mode -- rejected, would auto-add eligible-but-unbooked people on every reopen which surprises admins.
+
 ## 2026-04-25 -- Sick day event wipe + PDF sync popup + title field + legend events
 
 Decision: (1) `applyShiftMutation` sick upsert clears `events[k]` to `[]` then pushes sick so meetings/PK/legacy rows cannot remain. `collectPeriodShiftsForSave`: if `hasSick`, only emit `ev.type===sick` from `dayEvents`. (2) `handleExportPDF` opens `about:blank` in click handler, then `import('./pdf/generate')`, then `generateSchedulePDF(..., printWindow)` assigns blob URL; `window.open` after `await` was popup-blocked. `revokeObjectURL` delayed 600000ms. (3) `EmployeeFormModal`: titled employees may save empty `title`; space validation only when trimmed non-empty; AlertTriangle strip like ShiftEditor; non-titled save forces `title: ''`. (4) PDF legend adds MTG, PK, SICK from `EVENT_TYPES` after role glyphs.
