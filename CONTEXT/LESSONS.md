@@ -128,6 +128,11 @@ Lesson: Use `word-break` CSS in PDF generators.
 Context: `src/pdf/generate.js`.
 Affirmations: 0
 
+## [PROJECT] -- PDF export must open the print tab before `await import()`
+Lesson: Lazy-loading `generateSchedulePDF` after `await` breaks user-gesture popup policy; Chrome and Safari block `window.open`. Open `about:blank` synchronously on click, then navigate that tab to the blob URL after the chunk loads.
+Context: 2026-04-25 fix `8affd22` after perf wave 1 moved PDF to dynamic import.
+Affirmations: 0
+
 ## [PROJECT] -- `THEME.bg.primary` is page-level only
 Lesson: Inner UI elements (inputs, tab bars, cells in cards) must use `bg.tertiary` or `bg.secondary`.
 Context: Switching `bg.primary` to dark broke ~10 inner elements that assumed it was light.
