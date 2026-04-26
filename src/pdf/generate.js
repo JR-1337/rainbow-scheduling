@@ -228,6 +228,15 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     </span>`;
   }).join('');
 
+  const eventLegendItems = ['meeting', 'pk', 'sick'].map((key) => {
+    const et = EVENT_TYPES[key];
+    if (!et) return '';
+    return `<span style="margin-right:15px;font-size:10px;display:inline-flex;align-items:center;gap:5px;">
+      <span style="font-weight:800;font-size:10px;color:${G.ink};letter-spacing:0.3px;">${et.shortLabel}</span>
+      <span style="color:${G.text};">${escapeHtml(et.label)}</span>
+    </span>`;
+  }).join('');
+
   const adminContactsHtml = adminContacts.length > 0 ? `
     <div style="margin-top:12px;padding:10px 15px;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
       <div style="font-weight:700;font-size:9px;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Contact Admin</div>
@@ -303,7 +312,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 
   <div style="margin-top:20px;padding:12px 15px;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
     <div style="margin-bottom:6px;font-weight:700;font-size:9px;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;">Legend</div>
-    <div>${legendItems}<span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="color:${G.ink};font-weight:700;">★</span><span style="color:${G.text};">Has Task</span></span><span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="display:inline-block;padding:1px 6px;border:1px dashed ${G.border};font-weight:800;color:${G.ink};font-size:8px;letter-spacing:1px;">OFF</span><span style="color:${G.text};">Approved Time Off</span></span></div>
+    <div>${legendItems}${eventLegendItems}<span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="color:${G.ink};font-weight:700;">★</span><span style="color:${G.text};">Has Task</span></span><span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="display:inline-block;padding:1px 6px;border:1px dashed ${G.border};font-weight:800;color:${G.ink};font-size:8px;letter-spacing:1px;">OFF</span><span style="color:${G.text};">Approved Time Off</span></span></div>
   </div>
   ${adminContactsHtml}
   <div style="margin-top:20px;padding-top:12px;border-top:1px solid ${G.border};text-align:center;font-size:9px;color:${G.textFaint};">
