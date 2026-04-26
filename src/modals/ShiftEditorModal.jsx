@@ -183,34 +183,36 @@ export const ShiftEditorModal = ({
         hours: calculateHours(workDraft.startTime, workDraft.endTime),
       });
     }
-    meetingDrafts.forEach(draft => {
-      payloads.push({
-        id: draft.id,
-        employeeId: employee.id,
-        employeeName: employee.name,
-        date: toDateKey(date),
-        startTime: draft.startTime,
-        endTime: draft.endTime,
-        role: 'none',
-        task: '',
-        type: 'meeting',
-        note: draft.note,
-        hours: calculateHours(draft.startTime, draft.endTime),
+    if (!sickActive) {
+      meetingDrafts.forEach(draft => {
+        payloads.push({
+          id: draft.id,
+          employeeId: employee.id,
+          employeeName: employee.name,
+          date: toDateKey(date),
+          startTime: draft.startTime,
+          endTime: draft.endTime,
+          role: 'none',
+          task: '',
+          type: 'meeting',
+          note: draft.note,
+          hours: calculateHours(draft.startTime, draft.endTime),
+        });
       });
-    });
-    if (hasType('pk')) {
-      payloads.push({
-        employeeId: employee.id,
-        employeeName: employee.name,
-        date: toDateKey(date),
-        startTime: pkDraft.startTime,
-        endTime: pkDraft.endTime,
-        role: 'none',
-        task: '',
-        type: 'pk',
-        note: pkDraft.note,
-        hours: calculateHours(pkDraft.startTime, pkDraft.endTime),
-      });
+      if (hasType('pk')) {
+        payloads.push({
+          employeeId: employee.id,
+          employeeName: employee.name,
+          date: toDateKey(date),
+          startTime: pkDraft.startTime,
+          endTime: pkDraft.endTime,
+          role: 'none',
+          task: '',
+          type: 'pk',
+          note: pkDraft.note,
+          hours: calculateHours(pkDraft.startTime, pkDraft.endTime),
+        });
+      }
     }
     const last = payloads.length - 1;
     payloads.forEach((p, i) => onSave(p, { quiet: i < last }));
@@ -299,13 +301,30 @@ export const ShiftEditorModal = ({
   const saveSick = (nextActive, noteValue) => {
     const k = toDateKey(date);
     if (nextActive) {
+      const payloads = [];
       if (existingShift) {
-        onSave({ employeeId: employee.id, date: k, type: 'work', deleted: true }, { quiet: true });
+        payloads.push({ employeeId: employee.id, date: k, type: 'work', deleted: true });
       }
+      existingEvents.forEach(ev => {
+        const et = ev.type || 'work';
+        if (et === 'meeting') {
+          payloads.push({
+            ...(ev.id != null ? { id: ev.id } : {}),
+            employeeId: employee.id,
+            date: k,
+            type: 'meeting',
+            deleted: true,
+            startTime: ev.startTime,
+            endTime: ev.endTime,
+          });
+        } else if (et === 'pk') {
+          payloads.push({ employeeId: employee.id, date: k, type: 'pk', deleted: true });
+        }
+      });
       const t = existingShift?.startTime && existingShift?.endTime
         ? { start: existingShift.startTime, end: existingShift.endTime }
         : getDefaultBookingTimes(date);
-      onSave({
+      payloads.push({
         employeeId: employee.id,
         employeeName: employee.name,
         date: k,
@@ -317,6 +336,10 @@ export const ShiftEditorModal = ({
         note: noteValue || '',
         hours: calculateHours(t.start, t.end),
       });
+      const last = payloads.length - 1;
+      payloads.forEach((p, i) => onSave(p, { quiet: i < last }));
+      setMeetingDrafts([]);
+      setPkBooked(false);
     } else {
       onSave({ employeeId: employee.id, date: k, type: 'sick', deleted: true });
     }

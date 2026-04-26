@@ -30,8 +30,10 @@ export function collectPeriodShiftsForSave(dates, employees, shiftsObj, eventsOb
         });
       }
       dayEvents.forEach(ev => {
+        const t = ev.type || 'meeting';
+        if (hasSick && (t === 'meeting' || t === 'pk')) return;
         periodShifts.push({
-          id: ev.id || `${(ev.type || 'evt').toUpperCase()}-${emp.id}-${dateStr}`,
+          id: ev.id || `${(t || 'evt').toUpperCase()}-${emp.id}-${dateStr}`,
           employeeId: emp.id,
           employeeName: emp.name,
           employeeEmail: emp.email,
@@ -40,7 +42,7 @@ export function collectPeriodShiftsForSave(dates, employees, shiftsObj, eventsOb
           endTime: ev.endTime,
           role: ev.role || 'none',
           task: '',
-          type: ev.type || 'meeting',
+          type: t,
           note: ev.note || '',
           hours: typeof ev.hours === 'number' ? ev.hours : calculateHours(ev.startTime, ev.endTime)
         });
@@ -104,6 +106,12 @@ export function applyShiftMutation(shiftsObj, eventsObj, s) {
       : -1;
     if (s.deleted) {
       if (matchIdx >= 0) arr.splice(matchIdx, 1);
+      else if (s.id == null && s.startTime && s.endTime) {
+        const legacyIdx = arr.findIndex(e =>
+          (e.type || 'work') === 'meeting' &&
+          e.startTime === s.startTime && e.endTime === s.endTime);
+        if (legacyIdx >= 0) arr.splice(legacyIdx, 1);
+      }
       if (arr.length > 0) nextEvents[k] = arr; else delete nextEvents[k];
     } else if (matchIdx >= 0) {
       arr[matchIdx] = { ...arr[matchIdx], ...s };
