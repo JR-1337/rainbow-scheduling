@@ -53,17 +53,13 @@ A `.some()` scan over `timeOffRequests` fires per cell per render; with 35 emplo
 
 Sonnet's logic looks right but the fix changes user-visible behavior on the mobile employee view shift-detail sheet. Wants JR to eyeball the current behavior on prod before I touch it -- low risk it has been discussed already and the current behavior is intentional for a reason that was not captured in code or comments.
 
-### D-1 -- Sick-day rendering missing on paths 2 (desktop employee) + 4 (mobile employee)
+### D-1 -- Sick-day rendering missing on paths 2 (desktop employee) + 4 (mobile employee) -- SHIPPED `cf86f14`
 
-Paths 1 (desktop admin ScheduleCell) and 3 (mobile admin grid) handle `hasSick` with cross-hatch overlay + strikethrough. Paths 2 (`EmployeeScheduleCell` in `EmployeeView.jsx`) and 4 (`MobileScheduleGrid`) have no `hasSick` branch -- a sick event renders only via `EventGlyphPill` (the badge), no cell-level styling.
+JR confirmed Sarvi wants all staff to see sick. Patched both employee paths to match the admin paths (red diagonal stripe overlay + muted/strikethrough role + time + sick-note fallback). All 4 paths now render sick identically. Sick overrides time-off and unavailable. EventGlyphPill suppressed when hasSick to avoid double-badge.
 
-Sonnet's flag-out caveat: only matters if employees can see sick events for themselves or others in their period view. If sick is admin-only data and never reaches the employee-facing payload, this is invisible. Verify the `getAllData` response composition before adding render branches to 2 paths.
+### D-2 -- Hours/star differences between admin paths -- INTENTIONAL, DO NOT TOUCH
 
-If the audit confirms sick events do appear in employee data, the fix needs the parity rule: patch all 4 paths (or confirm 1+3 stay as-is and 2+4 get the same treatment) in one commit. Defer.
-
-### D-2 -- Hours/star differences between admin paths
-
-Desktop admin (`EmployeeRow`) renders hours with `AnimatedNumber` + OT color coding. Mobile admin (`MobileAdminScheduleGrid`) shows `weekHours.toFixed(1)h` + `★` for admins. Different implementation, possibly intentional. Defer; needs JR to say whether parity is desired.
+JR confirmed: admin1 (real admins) and admin2 (management we don't want touching anything) intentionally have different access. The hours/star divergence flows from this access tier design. Leave as-is.
 
 ### D-3 -- "N/A" vs "Unavailable" copy divergence
 
