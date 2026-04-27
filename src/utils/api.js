@@ -3,7 +3,7 @@
 
 import { getAuthToken, handleAuthError } from '../auth';
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbznGQ-pC1r48r1VDscs7Oqs0_jMZN3X3eB7h_L9ZsIXS8sYNSLEj0lUK8s1PtG5So5XoA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxk8FBvUhwWa1DPbFiDVEhqa1tPzfTGqYqnYPiSmYTu9UbXvSXddI0xy-5hQl8kkfpSSQ/exec';
 
 export const apiCall = async (action, payload = {}, onProgress) => {
   // S37: auto-attach session token (if present) to every payload so no caller
