@@ -303,7 +303,10 @@ function handleRequest(action, payload) {
 
       // Announcements
       'saveAnnouncement': () => saveAnnouncement(payload),
-      'deleteAnnouncement': () => deleteAnnouncement(payload)
+      'deleteAnnouncement': () => deleteAnnouncement(payload),
+
+      // Email
+      'sendBrandedScheduleEmail': () => sendBrandedScheduleEmail(payload)
     };
 
     if (!handlers[action]) {
@@ -2056,14 +2059,84 @@ function checkExpiredRequests() {
 // EMAIL NOTIFICATIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function sendEmail(to, subject, body) {
+// Backend-side branded HTML wrapper for notification emails.
+// Mirrors the frontend buildBrandedHtml.js template; they drift independently
+// (no shared config infra) which is acceptable per plan Decision 8.
+// Default accent = OTR Blue (#0453A3). Does NOT import frontend modules.
+var OTR_NAVY_ = '#0D0E22';
+var OTR_WHITE_ = '#FDFEFC';
+var OTR_ACCENT_DEFAULT_ = '#0453A3';
+
+function BRANDED_EMAIL_WRAPPER_HTML_(content, accentHex) {
+  var accent = accentHex || OTR_ACCENT_DEFAULT_;
+  var accentTint = accent + '15';
+  // Escape HTML entities in content string before injecting.
+  // content is already a formatted plaintext body; convert newlines to <br>.
+  var safeContent = String(content || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"></head>' +
+    '<body style="margin:0;padding:0;background-color:' + OTR_WHITE_ + ';font-family:Arial,Helvetica,sans-serif;">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="' + OTR_WHITE_ + '" style="background-color:' + OTR_WHITE_ + ';">' +
+    '<tr><td align="center" style="padding:24px 12px;">' +
+    '<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;border-collapse:collapse;border:1px solid #E5E7EB;border-top:2px solid ' + accent + ';">' +
+    '<tr><td style="background-color:' + OTR_NAVY_ + ';padding:20px 24px;">' +
+    '<div style="font-size:22px;font-weight:900;color:' + OTR_WHITE_ + ';letter-spacing:2px;text-transform:uppercase;">RAINBOW</div>' +
+    '<div style="font-size:12px;color:' + accent + ';margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">OTR Scheduling</div>' +
+    '</td></tr>' +
+    '<tr><td style="padding:20px 24px;background-color:#FFFFFF;">' +
+    '<div style="font-size:14px;color:' + OTR_NAVY_ + ';line-height:1.6;">' + safeContent + '</div>' +
+    '</td></tr>' +
+    '<tr><td style="padding:16px 24px;background-color:#F5F3F0;border-top:1px solid #E5E7EB;">' +
+    '<div style="font-size:12px;color:#8B8580;text-align:center;">Over the Rainbow &bull; <a href="https://www.rainbowjeans.com" style="color:#8B8580;">www.rainbowjeans.com</a></div>' +
+    '<div style="font-size:11px;color:#ABABAB;text-align:center;margin-top:4px;">This is an automated message from the OTR Scheduling App.</div>' +
+    '</td></tr>' +
+    '</table></td></tr></table>' +
+    '</body></html>';
+}
+
+function sendEmail(to, subject, body, options) {
   try {
-    MailApp.sendEmail({ to, subject, body, name: 'OTR Scheduling' });
-    Logger.log(`Email sent to ${to}: ${subject}`);
+    var opts = options || {};
+    var mailParams = { to: to, subject: subject, body: body, name: 'OTR Scheduling' };
+    if (opts.html === true) {
+      mailParams.htmlBody = BRANDED_EMAIL_WRAPPER_HTML_(body);
+    }
+    MailApp.sendEmail(mailParams);
+    Logger.log('Email sent to ' + to + ': ' + subject);
     return { success: true };
   } catch (error) {
-    Logger.log(`Failed to send email to ${to}: ${error.toString()}`);
+    Logger.log('Failed to send email to ' + to + ': ' + error.toString());
     return { success: false, error: error.toString() };
+  }
+}
+
+// Send a fully-formed branded schedule email built by the frontend.
+// Accepts { to, subject, htmlBody, plaintextBody } from the frontend EmailModal.
+// Auth gate: any logged-in admin (same pattern as saveAnnouncement).
+function sendBrandedScheduleEmail(payload) {
+  var authResult = verifyAuth(payload);
+  if (!authResult.success) return authResult;
+  var caller = authResult.data;
+  if (!caller || !caller.isAdmin) {
+    return { success: false, error: { code: 'FORBIDDEN', message: 'Admin access required.' } };
+  }
+  var to = payload.to;
+  var subject = payload.subject;
+  var htmlBody = payload.htmlBody;
+  var plaintextBody = payload.plaintextBody;
+  if (!to || !subject || !htmlBody) {
+    return { success: false, error: { code: 'INVALID_PARAMS', message: 'Missing required fields: to, subject, htmlBody.' } };
+  }
+  try {
+    MailApp.sendEmail({ to: to, subject: subject, body: plaintextBody || '', htmlBody: htmlBody, name: 'OTR Scheduling' });
+    Logger.log('Branded schedule email sent to ' + to + ': ' + subject);
+    return { success: true };
+  } catch (error) {
+    Logger.log('Failed to send branded schedule email to ' + to + ': ' + error.toString());
+    return { success: false, error: { code: 'SEND_FAILED', message: error.toString() } };
   }
 }
 
@@ -2078,7 +2151,8 @@ function sendScheduleChangeNotification_(caller, summary) {
   const callerName = caller.name || caller.email || 'Unknown admin';
   sendEmail(CONFIG.ADMIN_EMAIL,
     `Schedule edited by ${callerName}`,
-    `${callerName} just saved changes to the schedule.\n\n${summary}\n\nReview in the scheduling app.`
+    `${callerName} just saved changes to the schedule.\n\n${summary}\n\nReview in the scheduling app.`,
+    { html: true }
   );
 }
 
@@ -2087,35 +2161,40 @@ function sendScheduleChangeNotification_(caller, summary) {
 function sendTimeOffSubmittedEmail(employeeName, dates, reason) {
   sendEmail(CONFIG.ADMIN_EMAIL,
     `${employeeName} requested time off: ${formatDateRange(dates)}`,
-    `${employeeName} has submitted a time off request.\n\nDates: ${formatDateRange(dates)}\nReason: ${reason || 'Not provided'}\n\nPlease review in the scheduling app.`
+    `${employeeName} has submitted a time off request.\n\nDates: ${formatDateRange(dates)}\nReason: ${reason || 'Not provided'}\n\nPlease review in the scheduling app.`,
+    { html: true }
   );
 }
 
 function sendTimeOffApprovedEmail(employeeEmail, employeeName, dates, adminName) {
   sendEmail(employeeEmail,
-    `✅ Time Off Approved — ${formatDateRange(dates)}`,
-    `Hi ${employeeName},\n\nYour time off request has been approved!\n\nDates: ${formatDateRange(dates)}\nApproved by: ${adminName}\n\nYou are not scheduled to work on these dates.`
+    `Time Off Approved - ${formatDateRange(dates)}`,
+    `Hi ${employeeName},\n\nYour time off request has been approved!\n\nDates: ${formatDateRange(dates)}\nApproved by: ${adminName}\n\nYou are not scheduled to work on these dates.`,
+    { html: true }
   );
 }
 
 function sendTimeOffDeniedEmail(employeeEmail, employeeName, dates, reason) {
   sendEmail(employeeEmail,
-    `Time Off Request Denied — ${formatDateRange(dates)}`,
-    `Hi ${employeeName},\n\nUnfortunately, your time off request could not be approved.\n\nDates requested: ${formatDateRange(dates)}\nReason: ${reason || 'No reason provided'}\n\nIf you have questions, please speak with your manager.`
+    `Time Off Request Denied - ${formatDateRange(dates)}`,
+    `Hi ${employeeName},\n\nUnfortunately, your time off request could not be approved.\n\nDates requested: ${formatDateRange(dates)}\nReason: ${reason || 'No reason provided'}\n\nIf you have questions, please speak with your manager.`,
+    { html: true }
   );
 }
 
 function sendTimeOffCancelledEmail(employeeName, dates) {
   sendEmail(CONFIG.ADMIN_EMAIL,
     `${employeeName} cancelled their time off request`,
-    `${employeeName} has cancelled their pending time off request.\n\nOriginally requested: ${formatDateRange(dates)}\n\nNo action needed.`
+    `${employeeName} has cancelled their pending time off request.\n\nOriginally requested: ${formatDateRange(dates)}\n\nNo action needed.`,
+    { html: true }
   );
 }
 
 function sendTimeOffRevokedEmail(employeeEmail, employeeName, dates, reason, adminName) {
   sendEmail(employeeEmail,
-    `⚠️ Time Off Revoked — ${formatDateRange(dates)}`,
-    `Hi ${employeeName},\n\nYour previously approved time off has been revoked.\n\nDates: ${formatDateRange(dates)}\nReason: ${reason || 'No reason provided'}\nRevoked by: ${adminName}\n\nPlease check the schedule — you may now be expected to work on these dates.`
+    `Time Off Revoked - ${formatDateRange(dates)}`,
+    `Hi ${employeeName},\n\nYour previously approved time off has been revoked.\n\nDates: ${formatDateRange(dates)}\nReason: ${reason || 'No reason provided'}\nRevoked by: ${adminName}\n\nPlease check the schedule -- you may now be expected to work on these dates.`,
+    { html: true }
   );
 }
 
@@ -2124,50 +2203,54 @@ function sendTimeOffRevokedEmail(employeeEmail, employeeName, dates, reason, adm
 function sendOfferSubmittedEmail(recipientEmail, recipientName, offererName, shiftDate, shiftStart, shiftEnd, shiftRole) {
   sendEmail(recipientEmail,
     `${offererName} wants to give you their shift on ${formatDateDisplay(shiftDate)}`,
-    `Hi ${recipientName},\n\n${offererName} would like to give you their shift:\n\nDate: ${formatDateDisplay(shiftDate)}\nTime: ${formatTimeDisplay(shiftStart)} – ${formatTimeDisplay(shiftEnd)}\nRole: ${shiftRole}\n\nPlease log into the scheduling app to accept or decline.`
+    `Hi ${recipientName},\n\n${offererName} would like to give you their shift:\n\nDate: ${formatDateDisplay(shiftDate)}\nTime: ${formatTimeDisplay(shiftStart)} - ${formatTimeDisplay(shiftEnd)}\nRole: ${shiftRole}\n\nPlease log into the scheduling app to accept or decline.`,
+    { html: true }
   );
 }
 
 function sendOfferAcceptedEmail(offererName, recipientName, shiftDate, shiftStart, shiftEnd, shiftRole) {
   sendEmail(CONFIG.ADMIN_EMAIL,
-    `${recipientName} accepted shift from ${offererName} — needs your approval`,
-    `A shift offer has been accepted and needs your approval.\n\nFrom: ${offererName}\nTo: ${recipientName}\nDate: ${formatDateDisplay(shiftDate)}\nTime: ${formatTimeDisplay(shiftStart)} – ${formatTimeDisplay(shiftEnd)}\nRole: ${shiftRole}\n\nPlease review in the scheduling app.`
+    `${recipientName} accepted shift from ${offererName} - needs your approval`,
+    `A shift offer has been accepted and needs your approval.\n\nFrom: ${offererName}\nTo: ${recipientName}\nDate: ${formatDateDisplay(shiftDate)}\nTime: ${formatTimeDisplay(shiftStart)} - ${formatTimeDisplay(shiftEnd)}\nRole: ${shiftRole}\n\nPlease review in the scheduling app.`,
+    { html: true }
   );
 }
 
 function sendOfferDeclinedEmail(offererEmail, offererName, recipientName, shiftDate, note) {
   sendEmail(offererEmail,
     `${recipientName} declined your shift offer`,
-    `Hi ${offererName},\n\n${recipientName} has declined your shift offer for ${formatDateDisplay(shiftDate)}.\n\nTheir note: ${note || 'No note provided'}\n\nYou are still scheduled to work this shift.`
+    `Hi ${offererName},\n\n${recipientName} has declined your shift offer for ${formatDateDisplay(shiftDate)}.\n\nTheir note: ${note || 'No note provided'}\n\nYou are still scheduled to work this shift.`,
+    { html: true }
   );
 }
 
 function sendOfferCancelledEmail(recipientEmail, recipientName, offererName, shiftDate) {
   sendEmail(recipientEmail,
     `${offererName} cancelled their shift offer`,
-    `Hi ${recipientName},\n\n${offererName} has cancelled their offer to give you their shift on ${formatDateDisplay(shiftDate)}.\n\nNo action needed.`
+    `Hi ${recipientName},\n\n${offererName} has cancelled their offer to give you their shift on ${formatDateDisplay(shiftDate)}.\n\nNo action needed.`,
+    { html: true }
   );
 }
 
 function sendOfferApprovedEmail(offererEmail, recipientEmail, offererName, recipientName, shiftDate, shiftStart, shiftEnd, shiftRole) {
-  const subject = `✅ Shift transfer approved — ${formatDateDisplay(shiftDate)}`;
-  const body = `The shift transfer has been approved!\n\nDate: ${formatDateDisplay(shiftDate)}\nTime: ${formatTimeDisplay(shiftStart)} – ${formatTimeDisplay(shiftEnd)}\nRole: ${shiftRole}\n\nPreviously: ${offererName}\nNow assigned to: ${recipientName}\n\nThe schedule has been updated.`;
-  sendEmail(offererEmail, subject, body);
-  sendEmail(recipientEmail, subject, body);
+  const subject = `Shift transfer approved - ${formatDateDisplay(shiftDate)}`;
+  const body = `The shift transfer has been approved!\n\nDate: ${formatDateDisplay(shiftDate)}\nTime: ${formatTimeDisplay(shiftStart)} - ${formatTimeDisplay(shiftEnd)}\nRole: ${shiftRole}\n\nPreviously: ${offererName}\nNow assigned to: ${recipientName}\n\nThe schedule has been updated.`;
+  sendEmail(offererEmail, subject, body, { html: true });
+  sendEmail(recipientEmail, subject, body, { html: true });
 }
 
 function sendOfferRejectedEmail(offererEmail, recipientEmail, offererName, recipientName, shiftDate, note) {
   const subject = `Shift transfer rejected`;
   const body = `The shift transfer request has been rejected by management.\n\nDate: ${formatDateDisplay(shiftDate)}\nOriginal holder: ${offererName}\nWould-be recipient: ${recipientName}\n\nAdmin note: ${note || 'No reason provided'}\n\n${offererName} remains assigned to this shift.`;
-  sendEmail(offererEmail, subject, body);
-  sendEmail(recipientEmail, subject, body);
+  sendEmail(offererEmail, subject, body, { html: true });
+  sendEmail(recipientEmail, subject, body, { html: true });
 }
 
 function sendOfferRevokedEmail(offererEmail, recipientEmail, offererName, recipientName, shiftDate, shiftStart, shiftEnd, note) {
-  const subject = `⚠️ Shift transfer revoked`;
-  const body = `A previously approved shift transfer has been revoked.\n\nDate: ${formatDateDisplay(shiftDate)}\nTime: ${formatTimeDisplay(shiftStart)} – ${formatTimeDisplay(shiftEnd)}\nReason: ${note || 'No reason provided'}\n\nThe shift has been returned to ${offererName}.`;
-  sendEmail(offererEmail, subject, body);
-  sendEmail(recipientEmail, subject, body);
+  const subject = `Shift transfer revoked`;
+  const body = `A previously approved shift transfer has been revoked.\n\nDate: ${formatDateDisplay(shiftDate)}\nTime: ${formatTimeDisplay(shiftStart)} - ${formatTimeDisplay(shiftEnd)}\nReason: ${note || 'No reason provided'}\n\nThe shift has been returned to ${offererName}.`;
+  sendEmail(offererEmail, subject, body, { html: true });
+  sendEmail(recipientEmail, subject, body, { html: true });
 }
 
 // ----- SHIFT SWAPS -----
@@ -2175,50 +2258,54 @@ function sendOfferRevokedEmail(offererEmail, recipientEmail, offererName, recipi
 function sendSwapSubmittedEmail(partnerEmail, partnerName, initiatorName, initiatorShift, partnerShift) {
   sendEmail(partnerEmail,
     `${initiatorName} wants to swap shifts with you`,
-    `Hi ${partnerName},\n\n${initiatorName} would like to swap shifts with you.\n\nThey're offering: ${formatDateDisplay(initiatorShift.date)}, ${formatTimeDisplay(initiatorShift.start)} – ${formatTimeDisplay(initiatorShift.end)} (${initiatorShift.role})\nThey want yours: ${formatDateDisplay(partnerShift.date)}, ${formatTimeDisplay(partnerShift.start)} – ${formatTimeDisplay(partnerShift.end)} (${partnerShift.role})\n\nPlease log into the scheduling app to accept or decline.`
+    `Hi ${partnerName},\n\n${initiatorName} would like to swap shifts with you.\n\nThey're offering: ${formatDateDisplay(initiatorShift.date)}, ${formatTimeDisplay(initiatorShift.start)} - ${formatTimeDisplay(initiatorShift.end)} (${initiatorShift.role})\nThey want yours: ${formatDateDisplay(partnerShift.date)}, ${formatTimeDisplay(partnerShift.start)} - ${formatTimeDisplay(partnerShift.end)} (${partnerShift.role})\n\nPlease log into the scheduling app to accept or decline.`,
+    { html: true }
   );
 }
 
 function sendSwapAcceptedEmail(initiatorName, partnerName, request) {
   sendEmail(CONFIG.ADMIN_EMAIL,
-    `${partnerName} accepted swap from ${initiatorName} — needs your approval`,
-    `A shift swap has been accepted and needs your approval.\n\n${initiatorName}'s shift: ${formatDateDisplay(request.initiatorShiftDate)}, ${formatTimeDisplay(request.initiatorShiftStart)} – ${formatTimeDisplay(request.initiatorShiftEnd)} (${request.initiatorShiftRole})\n${partnerName}'s shift: ${formatDateDisplay(request.partnerShiftDate)}, ${formatTimeDisplay(request.partnerShiftStart)} – ${formatTimeDisplay(request.partnerShiftEnd)} (${request.partnerShiftRole})\n\nBoth employees have agreed. Please review in the scheduling app.`
+    `${partnerName} accepted swap from ${initiatorName} - needs your approval`,
+    `A shift swap has been accepted and needs your approval.\n\n${initiatorName}'s shift: ${formatDateDisplay(request.initiatorShiftDate)}, ${formatTimeDisplay(request.initiatorShiftStart)} - ${formatTimeDisplay(request.initiatorShiftEnd)} (${request.initiatorShiftRole})\n${partnerName}'s shift: ${formatDateDisplay(request.partnerShiftDate)}, ${formatTimeDisplay(request.partnerShiftStart)} - ${formatTimeDisplay(request.partnerShiftEnd)} (${request.partnerShiftRole})\n\nBoth employees have agreed. Please review in the scheduling app.`,
+    { html: true }
   );
 }
 
 function sendSwapDeclinedEmail(initiatorEmail, initiatorName, partnerName, note) {
   sendEmail(initiatorEmail,
     `${partnerName} declined your swap request`,
-    `Hi ${initiatorName},\n\n${partnerName} has declined your shift swap request.\n\nTheir note: ${note || 'No note provided'}\n\nYour shifts remain unchanged.`
+    `Hi ${initiatorName},\n\n${partnerName} has declined your shift swap request.\n\nTheir note: ${note || 'No note provided'}\n\nYour shifts remain unchanged.`,
+    { html: true }
   );
 }
 
 function sendSwapCancelledEmail(partnerEmail, partnerName, initiatorName) {
   sendEmail(partnerEmail,
     `${initiatorName} cancelled their swap request`,
-    `Hi ${partnerName},\n\n${initiatorName} has cancelled their swap request.\n\nNo action needed — your schedule is unchanged.`
+    `Hi ${partnerName},\n\n${initiatorName} has cancelled their swap request.\n\nNo action needed -- your schedule is unchanged.`,
+    { html: true }
   );
 }
 
 function sendSwapApprovedEmail(initiatorEmail, partnerEmail, initiatorName, partnerName, request) {
-  const subject = `✅ Shift swap approved`;
-  const body = `Your shift swap has been approved!\n\n${initiatorName} now works: ${formatDateDisplay(request.partnerShiftDate)}, ${formatTimeDisplay(request.partnerShiftStart)} – ${formatTimeDisplay(request.partnerShiftEnd)} (${request.partnerShiftRole})\n${partnerName} now works: ${formatDateDisplay(request.initiatorShiftDate)}, ${formatTimeDisplay(request.initiatorShiftStart)} – ${formatTimeDisplay(request.initiatorShiftEnd)} (${request.initiatorShiftRole})\n\nThe schedule has been updated.`;
-  sendEmail(initiatorEmail, subject, body);
-  sendEmail(partnerEmail, subject, body);
+  const subject = `Shift swap approved`;
+  const body = `Your shift swap has been approved!\n\n${initiatorName} now works: ${formatDateDisplay(request.partnerShiftDate)}, ${formatTimeDisplay(request.partnerShiftStart)} - ${formatTimeDisplay(request.partnerShiftEnd)} (${request.partnerShiftRole})\n${partnerName} now works: ${formatDateDisplay(request.initiatorShiftDate)}, ${formatTimeDisplay(request.initiatorShiftStart)} - ${formatTimeDisplay(request.initiatorShiftEnd)} (${request.initiatorShiftRole})\n\nThe schedule has been updated.`;
+  sendEmail(initiatorEmail, subject, body, { html: true });
+  sendEmail(partnerEmail, subject, body, { html: true });
 }
 
 function sendSwapRejectedEmail(initiatorEmail, partnerEmail, initiatorName, partnerName, note) {
   const subject = `Shift swap rejected`;
   const body = `Your shift swap request has been rejected by management.\n\nAdmin note: ${note || 'No reason provided'}\n\nBoth employees keep their original shifts.`;
-  sendEmail(initiatorEmail, subject, body);
-  sendEmail(partnerEmail, subject, body);
+  sendEmail(initiatorEmail, subject, body, { html: true });
+  sendEmail(partnerEmail, subject, body, { html: true });
 }
 
 function sendSwapRevokedEmail(initiatorEmail, partnerEmail, initiatorName, partnerName, note) {
-  const subject = `⚠️ Shift swap revoked`;
+  const subject = `Shift swap revoked`;
   const body = `A previously approved shift swap has been revoked.\n\nReason: ${note || 'No reason provided'}\n\nBoth shifts have been returned to their original owners. Please check the schedule.`;
-  sendEmail(initiatorEmail, subject, body);
-  sendEmail(partnerEmail, subject, body);
+  sendEmail(initiatorEmail, subject, body, { html: true });
+  sendEmail(partnerEmail, subject, body, { html: true });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
