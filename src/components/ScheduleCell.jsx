@@ -8,6 +8,8 @@ import { TaskStarTooltip } from './uiKit';
 import { hasTitle } from '../utils/employeeRender';
 import { EventGlyphPill } from './EventGlyphPill';
 import SickStripeOverlay from './SickStripeOverlay';
+import { computeCellStyles } from '../utils/scheduleCellStyles';
+import EventOnlyCell from './EventOnlyCell';
 
 const getAvailabilityShading = (avail, storeHours) => {
   if (!avail.available) return { top: 100, bottom: 0 };
@@ -47,8 +49,7 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
     <>
       <div onClick={isClickable ? () => onCellClick(employee, date, shift) : undefined} className={`h-[4.5rem] rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
         style={{
-          backgroundColor: hasSick ? EVENT_TYPES.sick.bg : shift && isTitledShift ? THEME.titledEmployee.shiftFill : shift ? role?.color + '25' : eventOnly ? firstEventType.bg : THEME.bg.tertiary,
-          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border : shift && isTitledShift ? THEME.titledEmployee.shiftBorder : shift ? role?.color + '50' : eventOnly ? firstEventType.border : THEME.border.default}`
+          ...computeCellStyles({ hasSick, isTimeOff: hasApprovedTimeOff, isUnavailable: isFullyUnavailable, isTitled: isTitledShift, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: true }),
         }}>
 
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
@@ -108,34 +109,7 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
             )}
           </div>
         ) : eventOnly ? (
-          <div className="p-1.5 h-full flex flex-col justify-between relative"
-            title={visibleEvents.map(ev => {
-              const et = EVENT_TYPES[ev.type];
-              return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
-            }).join('\n')}>
-            {visibleEvents.length === 2 ? (
-              <div className="flex flex-col gap-0.5">
-                {visibleEvents.map((ev, i) => {
-                  const et = EVENT_TYPES[ev.type] || firstEventType;
-                  return (
-                    <div key={i} className="flex items-center gap-0.5">
-                      <span className="rounded font-semibold leading-tight" style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '10px', padding: '0 2px' }}>{et.shortLabel}</span>
-                      <span style={{ color: et.text, opacity: 0.8, fontSize: '9px' }}>{formatTimeShort(ev.startTime)}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <>
-                <span className="text-xs font-semibold truncate" style={{ color: firstEventType.text }}>
-                  {visibleEvents.length === 1 ? firstEventType.shortLabel : `${visibleEvents.length} events`}
-                </span>
-                <span className="text-xs" style={{ color: firstEventType.text, opacity: 0.8 }}>
-                  {formatTimeShort(firstEvent.startTime)}-{formatTimeShort(firstEvent.endTime)}
-                </span>
-              </>
-            )}
-          </div>
+          <EventOnlyCell events={visibleEvents} firstEventType={firstEventType} firstEvent={firstEvent} size="md" />
         ) : (
           !isDeleted && !isLocked && (
             <div className="h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

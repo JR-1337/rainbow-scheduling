@@ -27,6 +27,10 @@ import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
 import { EventGlyphPill } from './components/EventGlyphPill';
 import { PKDetailsPanel } from './components/PKDetailsPanel';
 import SickStripeOverlay from './components/SickStripeOverlay';
+import { computeCellStyles } from './utils/scheduleCellStyles';
+import EventOnlyCell from './components/EventOnlyCell';
+import MobileBottomNavShell from './components/MobileBottomNav';
+import MobileDrawerShell from './components/MobileDrawerShell';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE DETECTION HOOK
@@ -51,23 +55,14 @@ export const useIsMobile = () => {
 // HAMBURGER MENU DRAWER
 // ═══════════════════════════════════════════════════════════════════════════════
 export const MobileMenuDrawer = ({ isOpen, onClose, currentUser, onLogout, onOpenShiftChanges, onOpenChangePassword, adminContacts = [], children }) => {
-  if (!isOpen) return null;
-  
   return (
-    <div className="fixed inset-0 z-[200]" onClick={onClose}>
-      {/* Backdrop */}
-      <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} />
-      
-      {/* Drawer */}
-      <div 
-        className="absolute top-0 left-0 h-full w-64 sm:w-72 overflow-y-auto"
-        style={{ backgroundColor: THEME.bg.secondary, borderRight: `1px solid ${THEME.border.default}` }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* User Header */}
+    <MobileDrawerShell
+      open={isOpen}
+      onClose={onClose}
+      header={
         <div className="p-4" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" 
+            <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
               style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}>
               {currentUser.name.split(' ').map(n => n[0]).join('')}
             </div>
@@ -77,61 +72,61 @@ export const MobileMenuDrawer = ({ isOpen, onClose, currentUser, onLogout, onOpe
             </div>
           </div>
         </div>
-        
-        {/* Shift Changes Button */}
-        <div className="p-3" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
-          <button
-            onClick={() => { onOpenShiftChanges(); onClose(); }}
-            className="w-full px-4 py-3 text-sm font-medium rounded-lg flex items-center gap-3 hover:opacity-90"
-            style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}
-          >
-            <Calendar size={16} />
-            Shift Changes
-          </button>
-        </div>
-        
-        {/* Request Panels */}
-        <div className="p-2 space-y-1 flex-1 overflow-y-auto" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
-          {children}
-        </div>
-        
-        {/* Admin Contacts */}
-        {adminContacts.length > 0 && (
-          <div className="p-3" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
-            <p className="text-xs font-semibold mb-2" style={{ color: THEME.text.muted }}>CONTACT ADMIN</p>
-            {adminContacts.map(admin => (
-              <div key={admin.id} className="flex items-center gap-2 text-xs py-1">
-                <Shield size={10} style={{ color: THEME.accent.purple }} />
-                <span style={{ color: THEME.text.primary }}>{admin.name}</span>
-                <a href={`mailto:${admin.email}`} className="truncate" style={{ color: THEME.accent.cyan, fontSize: '10px' }}>{admin.email}</a>
-              </div>
-            ))}
-          </div>
-        )}
-        
-        {/* Change Password + Logout */}
-        <div className="p-3 space-y-2">
-          {onOpenChangePassword && (
-            <button
-              onClick={() => { onOpenChangePassword(); onClose(); }}
-              className="w-full px-4 py-2.5 text-sm font-medium rounded-lg flex items-center gap-3"
-              style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}` }}
-            >
-              <Key size={16} />
-              Change Password
-            </button>
-          )}
-          <button
-            onClick={() => { onLogout(); onClose(); }}
-            className="w-full px-4 py-3 text-sm font-medium rounded-lg flex items-center gap-3"
-            style={{ backgroundColor: THEME.bg.tertiary, color: THEME.status.error, border: `1px solid ${THEME.status.error}30` }}
-          >
-            <LogOut size={16} />
-            Sign Out
-          </button>
-        </div>
+      }
+    >
+      {/* Shift Changes Button */}
+      <div className="p-3" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
+        <button
+          onClick={() => { onOpenShiftChanges(); onClose(); }}
+          className="w-full px-4 py-3 text-sm font-medium rounded-lg flex items-center gap-3 hover:opacity-90"
+          style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}
+        >
+          <Calendar size={16} />
+          Shift Changes
+        </button>
       </div>
-    </div>
+
+      {/* Request Panels */}
+      <div className="p-2 space-y-1 flex-1 overflow-y-auto" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
+        {children}
+      </div>
+
+      {/* Admin Contacts */}
+      {adminContacts.length > 0 && (
+        <div className="p-3" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: THEME.text.muted }}>CONTACT ADMIN</p>
+          {adminContacts.map(admin => (
+            <div key={admin.id} className="flex items-center gap-2 text-xs py-1">
+              <Shield size={10} style={{ color: THEME.accent.purple }} />
+              <span style={{ color: THEME.text.primary }}>{admin.name}</span>
+              <a href={`mailto:${admin.email}`} className="truncate" style={{ color: THEME.accent.cyan, fontSize: '10px' }}>{admin.email}</a>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Change Password + Logout */}
+      <div className="p-3 space-y-2">
+        {onOpenChangePassword && (
+          <button
+            onClick={() => { onOpenChangePassword(); onClose(); }}
+            className="w-full px-4 py-2.5 text-sm font-medium rounded-lg flex items-center gap-3"
+            style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary, border: `1px solid ${THEME.border.default}` }}
+          >
+            <Key size={16} />
+            Change Password
+          </button>
+        )}
+        <button
+          onClick={() => { onLogout(); onClose(); }}
+          className="w-full px-4 py-3 text-sm font-medium rounded-lg flex items-center gap-3"
+          style={{ backgroundColor: THEME.bg.tertiary, color: THEME.status.error, border: `1px solid ${THEME.status.error}30` }}
+        >
+          <LogOut size={16} />
+          Sign Out
+        </button>
+      </div>
+    </MobileDrawerShell>
   );
 };
 
@@ -305,19 +300,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                           onClick={(shift || hasEvents) && onShiftClick ? () => onShiftClick({ employee: emp, date, dateStr, shift, role, events: cellEvents }) : undefined}
                           style={{
                             cursor: (shift || hasEvents) && onShiftClick ? 'pointer' : 'default',
-                            backgroundColor: hasSick ? EVENT_TYPES.sick.bg
-                              : isTimeOff ? THEME.text.muted + '15'
-                              : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
-                              : shift ? role?.color + '25'
-                              : eventOnly ? firstEventType.bg
-                              : THEME.bg.tertiary,
-                            border: `1px solid ${hasSick ? EVENT_TYPES.sick.border
-                              : isTimeOff ? THEME.text.muted + '30'
-                              : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
-                              : shift ? role?.color + '50'
-                              : eventOnly ? firstEventType.border
-                              : THEME.border.default}`,
-                            opacity: !hasSick && isTimeOff ? 0.7 : !hasSick && isUnavailable && !shift && !hasEvents ? 0.5 : 1,
+                            ...computeCellStyles({ hasSick, isTimeOff, isUnavailable, isTitled: false, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: false }),
                             height: CELL_HEIGHT - 4
                           }}
                         >
@@ -365,34 +348,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                               )}
                             </div>
                           ) : eventOnly ? (
-                            <div className="p-1 h-full flex flex-col justify-between"
-                              title={cellEvents.map(ev => {
-                                const et = EVENT_TYPES[ev.type];
-                                return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
-                              }).join('\n')}>
-                              {cellEvents.length === 2 ? (
-                                <div className="flex flex-col gap-0.5">
-                                  {cellEvents.map((ev, i) => {
-                                    const et = EVENT_TYPES[ev.type] || firstEventType;
-                                    return (
-                                      <div key={i} className="flex items-center gap-0.5">
-                                        <span className="rounded font-semibold leading-tight" style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>{et.shortLabel}</span>
-                                        <span style={{ color: et.text, opacity: 0.8, fontSize: '7px' }}>{formatTimeShort(ev.startTime)}</span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              ) : (
-                                <>
-                                  <span className="font-semibold truncate" style={{ color: firstEventType.text, fontSize: '10px' }}>
-                                    {cellEvents.length === 1 ? firstEventType.shortLabel : `${cellEvents.length} events`}
-                                  </span>
-                                  <span style={{ color: firstEventType.text, opacity: 0.8, fontSize: '9px' }}>
-                                    {formatTimeShort(firstEvent.startTime)}-{formatTimeShort(firstEvent.endTime)}
-                                  </span>
-                                </>
-                              )}
-                            </div>
+                            <EventOnlyCell events={cellEvents} firstEventType={firstEventType} firstEvent={firstEvent} size="sm" />
                           ) : null}
                         </div>
                       </td>
@@ -540,52 +496,12 @@ export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, time
 // ═══════════════════════════════════════════════════════════════════════════════
 export const MobileBottomNav = ({ activeTab, onTabChange, hasNotifications = false }) => {
   const tabs = [
-    { key: 'schedule', icon: Calendar, label: 'Schedule' },
-    { key: 'requests', icon: ArrowRightLeft, label: 'Requests' },
-    { key: 'alerts', icon: Bell, label: 'Alerts', badge: hasNotifications },
-    { key: 'more', icon: Menu, label: 'More' },
+    { key: 'schedule', icon: Calendar, label: 'Schedule', badge: null },
+    { key: 'requests', icon: ArrowRightLeft, label: 'Requests', badge: null },
+    { key: 'alerts', icon: Bell, label: 'Alerts', badge: { type: 'dot', show: hasNotifications } },
+    { key: 'more', icon: Menu, label: 'More', badge: null },
   ];
-  return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-[100] border-t"
-      style={{
-        backgroundColor: THEME.bg.secondary,
-        borderColor: THEME.border.subtle,
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}
-      aria-label="Primary"
-    >
-      <div className="flex justify-around items-stretch h-14">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
-          const active = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => { haptic(); onTabChange(tab.key); }}
-              className="flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[44px]"
-              style={{ color: active ? THEME.accent.blue : THEME.text.muted }}
-              aria-label={tab.label}
-              aria-current={active ? 'page' : undefined}
-            >
-              <div className="relative">
-                <Icon size={20} />
-                {tab.badge && (
-                  <div
-                    className="absolute -top-1 -right-1 w-2 h-2 rounded-full"
-                    style={{ backgroundColor: '#F87171' }}
-                  />
-                )}
-              </div>
-              <span style={{ fontSize: '10px', fontWeight: active ? 600 : 400 }}>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </nav>
-  );
+  return <MobileBottomNavShell tabs={tabs} activeKey={activeTab} onTabClick={onTabChange} />;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

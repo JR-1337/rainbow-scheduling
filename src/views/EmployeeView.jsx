@@ -31,6 +31,8 @@ import { EventGlyphPill } from '../components/EventGlyphPill';
 import { PKDetailsPanel } from '../components/PKDetailsPanel';
 import SickStripeOverlay from '../components/SickStripeOverlay';
 import { hasApprovedTimeOffForDate } from '../utils/requests';
+import { computeCellStyles } from '../utils/scheduleCellStyles';
+import EventOnlyCell from '../components/EventOnlyCell';
 
 const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmpId, storeHours, employee = null, isTimeOff = false, isUnavailable = false }) => {
   const [showTask, setShowTask] = useState(false);
@@ -53,23 +55,7 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
   return (
     <>
       <div className="h-[4.5rem] rounded-lg relative overflow-hidden"
-        style={{
-          backgroundColor: hasSick ? EVENT_TYPES.sick.bg
-            : isTimeOff ? THEME.text.muted + '15'
-            : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
-            : shift && isTitledShift ? THEME.titledEmployee.shiftFill
-            : shift ? role?.color + '25'
-            : eventOnly ? firstEventType.bg
-            : THEME.bg.tertiary,
-          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border
-            : isTimeOff ? THEME.text.muted + '30'
-            : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
-            : shift && isTitledShift ? THEME.titledEmployee.shiftBorder
-            : shift ? role?.color + '50'
-            : eventOnly ? firstEventType.border
-            : THEME.border.default}`,
-          opacity: !hasSick && isTimeOff ? 0.7 : !hasSick && isUnavailable && !shift && !hasEvents ? 0.5 : 1
-        }}>
+        style={computeCellStyles({ hasSick, isTimeOff, isUnavailable, isTitled: isTitledShift, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: false })}>
 
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
 
@@ -120,34 +106,7 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
             )}
           </div>
         ) : eventOnly ? (
-          <div className="p-1.5 h-full flex flex-col justify-between"
-            title={visibleEvents.map(ev => {
-              const et = EVENT_TYPES[ev.type];
-              return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
-            }).join('\n')}>
-            {visibleEvents.length === 2 ? (
-              <div className="flex flex-col gap-0.5">
-                {visibleEvents.map((ev, i) => {
-                  const et = EVENT_TYPES[ev.type] || firstEventType;
-                  return (
-                    <div key={i} className="flex items-center gap-0.5">
-                      <span className="rounded font-semibold leading-tight" style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '10px', padding: '0 2px' }}>{et.shortLabel}</span>
-                      <span style={{ color: et.text, opacity: 0.8, fontSize: '9px' }}>{formatTimeShort(ev.startTime)}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <>
-                <span className="text-xs font-semibold truncate" style={{ color: firstEventType.text }}>
-                  {visibleEvents.length === 1 ? firstEventType.shortLabel : `${visibleEvents.length} events`}
-                </span>
-                <span className="text-xs" style={{ color: firstEventType.text, opacity: 0.8 }}>
-                  {formatTimeShort(firstEvent.startTime)}-{formatTimeShort(firstEvent.endTime)}
-                </span>
-              </>
-            )}
-          </div>
+          <EventOnlyCell events={visibleEvents} firstEventType={firstEventType} firstEvent={firstEvent} size="md" />
         ) : null}
       </div>
       {showTaskStar && <TaskStarTooltip task={shift?.task} show={showTask} triggerRef={starRef} />}

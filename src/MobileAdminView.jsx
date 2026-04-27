@@ -30,6 +30,10 @@ import { Button } from './components/Button';
 import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
 import { EventGlyphPill } from './components/EventGlyphPill';
 import SickStripeOverlay from './components/SickStripeOverlay';
+import { computeCellStyles } from './utils/scheduleCellStyles';
+import EventOnlyCell from './components/EventOnlyCell';
+import MobileBottomNavShell from './components/MobileBottomNav';
+import MobileDrawerShell from './components/MobileDrawerShell';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN MOBILE HAMBURGER DRAWER
@@ -39,21 +43,14 @@ export const MobileAdminDrawer = ({
   onOpenChangePassword, onOpenSettings, onOpenOwnRequests, onOpenPK, onExportPDF, onOpenStaff,
   pendingRequestCount = 0
 }) => {
-  if (!isOpen) return null;
-  
   return (
-    <div className="fixed inset-0 z-[200]" onClick={onClose}>
-      <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} />
-      
-      <div 
-        className="absolute top-0 left-0 h-full w-64 sm:w-72 overflow-y-auto"
-        style={{ backgroundColor: THEME.bg.secondary, borderRight: `1px solid ${THEME.border.default}` }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* User Header */}
+    <MobileDrawerShell
+      open={isOpen}
+      onClose={onClose}
+      header={
         <div className="p-4" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" 
+            <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
               style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: THEME.accent.text }}>
               {currentUser.name.split(' ').map(n => n[0]).join('')}
             </div>
@@ -68,102 +65,102 @@ export const MobileAdminDrawer = ({
             </div>
           </div>
         </div>
-        
-        {/* Quick Actions */}
-        <div className="p-3 space-y-2" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
-          {/* Own Shift Changes */}
+      }
+    >
+      {/* Quick Actions */}
+      <div className="p-3 space-y-2" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
+        {/* Own Shift Changes */}
+        <Button
+          variant="primary"
+          size="md"
+          leftIcon={Calendar}
+          fullWidth
+          onClick={() => { onOpenOwnRequests(); onClose(); }}
+          className="hover:opacity-90"
+          style={{ justifyContent: 'flex-start', gap: 12 }}
+        >
+          My Shift Changes
+        </Button>
+        {/* Schedule PK (bulk) */}
+        {onOpenPK && (
           <Button
-            variant="primary"
+            variant="secondary"
             size="md"
-            leftIcon={Calendar}
+            leftIcon={BookOpen}
             fullWidth
-            onClick={() => { onOpenOwnRequests(); onClose(); }}
-            className="hover:opacity-90"
+            onClick={() => { onOpenPK(); onClose(); }}
+            style={{ backgroundColor: THEME.event.pkBg, color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}`, justifyContent: 'flex-start', gap: 12 }}
+          >
+            Schedule PK
+          </Button>
+        )}
+        {/* Staff */}
+        {onOpenStaff && (
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={Users}
+            fullWidth
+            onClick={() => { onOpenStaff(); onClose(); }}
             style={{ justifyContent: 'flex-start', gap: 12 }}
           >
-            My Shift Changes
+            Staff
           </Button>
-          {/* Schedule PK (bulk) */}
-          {onOpenPK && (
-            <Button
-              variant="secondary"
-              size="md"
-              leftIcon={BookOpen}
-              fullWidth
-              onClick={() => { onOpenPK(); onClose(); }}
-              style={{ backgroundColor: THEME.event.pkBg, color: THEME.event.pkText, border: `1px solid ${THEME.event.pkBorder}`, justifyContent: 'flex-start', gap: 12 }}
-            >
-              Schedule PK
-            </Button>
-          )}
-          {/* Staff */}
-          {onOpenStaff && (
-            <Button
-              variant="secondary"
-              size="md"
-              leftIcon={Users}
-              fullWidth
-              onClick={() => { onOpenStaff(); onClose(); }}
-              style={{ justifyContent: 'flex-start', gap: 12 }}
-            >
-              Staff
-            </Button>
-          )}
-          {/* Admin Settings */}
-          {onOpenSettings && (
-            <Button
-              variant="secondary"
-              size="md"
-              leftIcon={Settings}
-              fullWidth
-              onClick={() => { onOpenSettings(); onClose(); }}
-              style={{ justifyContent: 'flex-start', gap: 12 }}
-            >
-              Admin Settings
-            </Button>
-          )}
-          {/* Export Schedule PDF */}
-          {onExportPDF && (
-            <Button
-              variant="secondary"
-              size="md"
-              leftIcon={FileText}
-              fullWidth
-              onClick={() => { onExportPDF(); onClose(); }}
-              style={{ justifyContent: 'flex-start', gap: 12 }}
-            >
-              Export Schedule PDF
-            </Button>
-          )}
-        </div>
-
-        {/* Change Password + Logout */}
-        <div className="p-3 space-y-2">
-          {onOpenChangePassword && (
-            <Button
-              variant="secondary"
-              size="md"
-              leftIcon={Key}
-              fullWidth
-              onClick={() => { onOpenChangePassword(); onClose(); }}
-              style={{ justifyContent: 'flex-start', gap: 12 }}
-            >
-              Change Password
-            </Button>
-          )}
+        )}
+        {/* Admin Settings */}
+        {onOpenSettings && (
           <Button
-            variant="destructiveOutline"
+            variant="secondary"
             size="md"
-            leftIcon={LogOut}
+            leftIcon={Settings}
             fullWidth
-            onClick={() => { onLogout(); onClose(); }}
+            onClick={() => { onOpenSettings(); onClose(); }}
             style={{ justifyContent: 'flex-start', gap: 12 }}
           >
-            Sign Out
+            Admin Settings
           </Button>
-        </div>
+        )}
+        {/* Export Schedule PDF */}
+        {onExportPDF && (
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={FileText}
+            fullWidth
+            onClick={() => { onExportPDF(); onClose(); }}
+            style={{ justifyContent: 'flex-start', gap: 12 }}
+          >
+            Export Schedule PDF
+          </Button>
+        )}
       </div>
-    </div>
+
+      {/* Change Password + Logout */}
+      <div className="p-3 space-y-2">
+        {onOpenChangePassword && (
+          <Button
+            variant="secondary"
+            size="md"
+            leftIcon={Key}
+            fullWidth
+            onClick={() => { onOpenChangePassword(); onClose(); }}
+            style={{ justifyContent: 'flex-start', gap: 12 }}
+          >
+            Change Password
+          </Button>
+        )}
+        <Button
+          variant="destructiveOutline"
+          size="md"
+          leftIcon={LogOut}
+          fullWidth
+          onClick={() => { onLogout(); onClose(); }}
+          style={{ justifyContent: 'flex-start', gap: 12 }}
+        >
+          Sign Out
+        </Button>
+      </div>
+    </MobileDrawerShell>
   );
 };
 
@@ -368,21 +365,7 @@ export const MobileAdminScheduleGrid = ({
                           cursor: isEditMode ? 'pointer' : 'default'
                         }}>
                         <div className="h-full rounded-md relative overflow-hidden" style={{
-                          backgroundColor: hasSick ? EVENT_TYPES.sick.bg
-                            : approvedTimeOff ? THEME.text.muted + '15'
-                            : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
-                            : shift && isTitled ? THEME.titledEmployee.shiftFill
-                            : shift ? role?.color + '25'
-                            : eventOnly ? firstEventType.bg
-                            : THEME.bg.tertiary,
-                          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border
-                            : approvedTimeOff ? THEME.text.muted + '30'
-                            : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
-                            : shift && isTitled ? THEME.titledEmployee.shiftBorder
-                            : shift ? role?.color + '50'
-                            : eventOnly ? firstEventType.border
-                            : THEME.border.default}`,
-                          opacity: approvedTimeOff ? 0.7 : isUnavailable && !shift && !hasEvents ? 0.5 : 1,
+                          ...computeCellStyles({ hasSick, isTimeOff: approvedTimeOff, isUnavailable, isTitled, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: false }),
                           height: CELL_HEIGHT - 4
                         }}>
                           {hasSick && <SickStripeOverlay />}
@@ -423,34 +406,7 @@ export const MobileAdminScheduleGrid = ({
                               )}
                             </div>
                           ) : eventOnly ? (
-                            <div className="p-1 h-full flex flex-col justify-between"
-                              title={cellEvents.map(ev => {
-                                const et = EVENT_TYPES[ev.type];
-                                return `${et?.label || ev.type} ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${ev.note ? ` — ${ev.note}` : ''}`;
-                              }).join('\n')}>
-                              {cellEvents.length === 2 ? (
-                                <div className="flex flex-col gap-0.5">
-                                  {cellEvents.map((ev, i) => {
-                                    const et = EVENT_TYPES[ev.type] || firstEventType;
-                                    return (
-                                      <div key={i} className="flex items-center gap-0.5">
-                                        <span className="rounded font-semibold leading-tight" style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: '8px', padding: '0 2px' }}>{et.shortLabel}</span>
-                                        <span style={{ color: et.text, opacity: 0.8, fontSize: '7px' }}>{formatTimeShort(ev.startTime)}</span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              ) : (
-                                <>
-                                  <span className="font-semibold truncate" style={{ color: firstEventType.text, fontSize: '10px' }}>
-                                    {cellEvents.length === 1 ? firstEventType.shortLabel : `${cellEvents.length} events`}
-                                  </span>
-                                  <span style={{ color: firstEventType.text, opacity: 0.8, fontSize: '9px' }}>
-                                    {formatTimeShort(firstEvent.startTime)}-{formatTimeShort(firstEvent.endTime)}
-                                  </span>
-                                </>
-                              )}
-                            </div>
+                            <EventOnlyCell events={cellEvents} firstEventType={firstEventType} firstEvent={firstEvent} size="sm" />
                           ) : null}
                         </div>
                       </td>
@@ -621,52 +577,10 @@ export const MobileEmployeeQuickView = ({ isOpen, onClose, employee }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 export const MobileAdminBottomNav = ({ activeTab, onTabChange, pendingCount = 0 }) => {
   const tabs = [
-    { key: 'schedule', icon: Calendar, label: 'Schedule' },
-    { key: 'requests', icon: ClipboardList, label: 'Requests', badge: pendingCount > 0, badgeCount: pendingCount },
-    { key: 'comms', icon: MessageSquare, label: 'Comms' },
-    { key: 'more', icon: Menu, label: 'More' },
+    { key: 'schedule', icon: Calendar, label: 'Schedule', badge: null },
+    { key: 'requests', icon: ClipboardList, label: 'Requests', badge: { type: 'count', value: pendingCount } },
+    { key: 'comms', icon: MessageSquare, label: 'Comms', badge: null },
+    { key: 'more', icon: Menu, label: 'More', badge: null },
   ];
-  return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-[100] border-t"
-      style={{
-        backgroundColor: THEME.bg.secondary,
-        borderColor: THEME.border.subtle,
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}
-      aria-label="Primary"
-    >
-      <div className="flex justify-around items-stretch h-14">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
-          const active = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => { haptic(); onTabChange(tab.key); }}
-              className="flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[44px]"
-              style={{ color: active ? THEME.accent.blue : THEME.text.muted }}
-              aria-label={tab.badgeCount ? `${tab.label} (${tab.badgeCount} pending)` : tab.label}
-              aria-current={active ? 'page' : undefined}
-            >
-              <div className="relative">
-                <Icon size={20} />
-                {tab.badge && (
-                  <div
-                    className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: '#F87171', fontSize: '9px', fontWeight: 700, color: '#FFFFFF' }}
-                  >
-                    {tab.badgeCount > 9 ? '9+' : tab.badgeCount}
-                  </div>
-                )}
-              </div>
-              <span style={{ fontSize: '10px', fontWeight: active ? 600 : 400 }}>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </nav>
-  );
+  return <MobileBottomNavShell tabs={tabs} activeKey={activeTab} onTabClick={onTabChange} />;
 };
