@@ -4,7 +4,7 @@
 
 Read `CONTEXT/TODO.md`, `CONTEXT/DECISIONS.md`, and `CONTEXT/LESSONS.md` (only if preferences may affect approach), then resume from `State` and `Next Step Prompt`. First reply: 1-2 short sentences, a `Pass-forward:` line, and exactly 1 direct question about how to proceed.
 
-Pass-forward: Email migration is half-shipped on prod -- frontend points at new otr.scheduler-owned `/exec` URL but backend still sends as John because Apps Script versioned deployments bind to original deployer's identity, not current script-project owner; full investigation at `docs/email-migration-investigation.md` with Path A fix steps.
+Pass-forward: JR chose nuke-and-pave Option A at session close -- next session walks otr.scheduler through Drive `Make a copy` of Rainbow Sheet -> bound script copies along otr-owned -> RUN any function from editor (auth popup MUST appear) -> Deploy New -> send URL back -> swap `api.js` + push + smoke. Skip the failed transfer-then-redeploy path; emails still came from John due to versioned-deployment binding (see `docs/email-migration-investigation.md` for full reasoning, Option B fallback if Option A also fails).
 
 ## State
 
@@ -133,12 +133,20 @@ Pass-forward: Email migration is half-shipped on prod -- frontend points at new 
 
 ## Next Step Prompt
 
-Per HANDOFF check order:
+JR DECIDED at session close: nuke-and-pave Option A. The investigation doc's "Path A" (archive + redeploy on the existing transferred script) is OFF the table -- versioned deployment binding makes that route too risky. Skip it.
 
-- (a) Shipped-but-unverified: 4 commits this session need JR phone-smoke (consolidation pass + F10 stabilization). Less urgent than the active blocker.
-- (b) External gates: email migration is mid-flight on prod with documented fix path. JR direct involvement required (Apps Script editor + browser auth flow).
-- (c) Top active TODO: email migration completion.
+Execute Option A from this handoff's `This Session -> Email migration progress` section:
 
-(a), (b), (c) all converge on the same thing: finish the email migration. Most natural next move: ask JR (1) ready to attempt Path A on the deployment? If yes, walk through `docs/email-migration-investigation.md` Path A: incognito as otr.scheduler -> Manage Deployments -> archive existing -> editor code area -> select `sendEmail` -> Run button -> auth popup MUST appear -> Allow all scopes -> Deploy New -> send new URL. Then I swap `api.js`, push, monitor Vercel, retest with `From:` + `Return-Path:` check. If Path A also fails (auth popup still doesn't appear, or sender still wrong), pivot to Path B (one-line `GmailApp.sendEmail({from:})` change in `Code.gs`).
+1. Walk JR through Drive (signed in as `otr.scheduler@gmail.com`) -> open the current Rainbow Sheet (already shared with otr) -> File -> Make a copy -> save as "Rainbow Scheduling (otr)" in otr's My Drive.
+2. The copy is owned by otr from inception. Bound Apps Script comes along, also otr-owned from creation -- no transferred-deployment ghost.
+3. Have JR open the copy's bound script (Extensions -> Apps Script).
+4. From the editor's code area, select function `sendEmail` (or any function) and click Run. **Auth popup MUST appear here.** If it doesn't, OAuth metadata followed the copy and Option A failed -- pivot to Option B (truly fresh from scratch, see `This Session -> Email migration` Option B steps in TODO.md). If it does appear, click through as `otr.scheduler@gmail.com`, Advanced -> Allow all scopes.
+5. Deploy -> New deployment, gear -> Web app, Execute as Me, Anyone, Deploy.
+6. Have JR copy the new `/exec` URL and paste it in chat.
+7. Update `src/utils/api.js:6` with the new URL, run `npm run build`, commit + push.
+8. Wait ~90s for Vercel, hard-refresh prod.
+9. Trigger a fresh email (any backend action -- approve a request, edit a published shift). Note the timestamp.
+10. Open the email -> three-dot menu -> Show original. Read `From:` AND `Return-Path:` headers. Both MUST read `otr.scheduler@gmail.com`. If yes -> migration COMPLETE; mark TODO Active item Completed; bundle A-7 dead `callerEmail` branch removal into a follow-up Apps Script edit + redeploy.
+11. Once verified, JR + Sarvi log in to the migrated app. Their existing passwords carry over with the copied Employees data; no reset needed unless something broke.
 
 If switching harnesses, read shared CONTEXT first; AGENTS.md is canonical -- shims rarely need repair.
