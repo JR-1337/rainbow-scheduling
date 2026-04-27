@@ -277,6 +277,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
   // Perf: memoize date-key arrays so inner loops are O(N) strings, not O(N) ISO allocations
   const currentDateStrs = useMemo(() => currentDates.map(toDateKey), [currentDates]);
   const allDateStrs = useMemo(() => dates.map(toDateKey), [dates]);
+  const week2DateStrs = useMemo(() => week2.map(toDateKey), [week2]);
   const todayStr = useMemo(() => toDateKey(new Date()), []);
 
   const getEmpHours = useCallback((id) => {
@@ -287,6 +288,18 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
     }
     return t;
   }, [currentDateStrs, shifts]);
+
+  // Stable callback for week2 name-column hours. Mirrors getEmpHours but loops
+  // over week2DateStrs. Previously an inline arrow that allocated a new function
+  // on every render, defeating MobileScheduleGrid's React.memo.
+  const getEmpHoursWeek2 = useCallback((id) => {
+    let t = 0;
+    for (let i = 0; i < week2DateStrs.length; i++) {
+      const s = shifts[`${id}-${week2DateStrs[i]}`];
+      if (s) t += s.hours || 0;
+    }
+    return t;
+  }, [week2DateStrs, shifts]);
 
   // Period total for summary stats
   const getPeriodHours = useCallback((id) => {
@@ -436,11 +449,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
               events={events}
               dates={mobileActiveTab === 'week1' ? mobileWeek1 : mobileWeek2}
               loggedInUser={currentUser}
-              getEmployeeHours={mobileActiveTab === 'week1' ? getEmpHours : (id) => {
-                let t = 0;
-                mobileWeek2.forEach(d => { const s = shifts[`${id}-${toDateKey(d)}`]; if (s) t += s.hours || 0; });
-                return t;
-              }}
+              getEmployeeHours={mobileActiveTab === 'week1' ? getEmpHours : getEmpHoursWeek2}
               timeOffRequests={timeOffRequests}
               onShiftClick={(info) => { haptic(); setMobileShiftDetail(info); }}
             />
