@@ -255,11 +255,10 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       @page { margin: 0.3in; size: landscape; }
       .no-print { display: none !important; }
-      /* One pay-period week per sheet: never split a week across pages; week 2 starts fresh. */
-      .wk-block {
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
+      /* Week 2 always starts a fresh page. Week 1 flows naturally below the
+         header instead of being pushed whole to page 2 when the 14-row block
+         can't fit alongside the header (caused the big page-1 gap). Row-level
+         break protection (tr rule below) still keeps individual rows intact. */
       .wk-block + .wk-block {
         break-before: page;
         page-break-before: always;
