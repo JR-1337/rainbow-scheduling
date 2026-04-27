@@ -77,7 +77,7 @@ ${scheduleLines.join('\n\n')}
 Total Hours: ${totalHours.toFixed(1)}h
 ───────────────────────────────────
 
-📎 Full schedule PDF attached
+Full schedule rendered above. Contact admin with any questions.
 
 ${adminLine}
 
