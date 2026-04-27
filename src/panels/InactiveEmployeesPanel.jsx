@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { UserCheck, UserX, Trash2, Shield, Edit3 } from 'lucide-react';
+import { UserCheck, Shield, Edit3, Trash2 } from 'lucide-react';
 import { THEME } from '../theme';
 import { Modal } from '../components/primitives';
 
@@ -7,6 +7,7 @@ import { Modal } from '../components/primitives';
 // admins can browse Active / Inactive / Deleted from one panel on desktop too.
 export const InactiveEmployeesPanel = ({ isOpen, onClose, employees, onEdit, onReactivate, onDelete }) => {
   const [filter, setFilter] = useState('active');
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const { active, inactive, deleted } = useMemo(() => ({
     active: employees.filter(e => e.active && !e.deleted && !e.isOwner),
@@ -74,6 +75,11 @@ export const InactiveEmployeesPanel = ({ isOpen, onClose, employees, onEdit, onR
                     <Edit3 size={10} />Edit
                   </button>
                 )}
+                {filter === 'active' && (
+                  <button onClick={() => setConfirmDelete(emp)} className="px-2 py-1 rounded text-xs flex items-center gap-1" style={{ backgroundColor: THEME.action.destructiveTonal.bg, color: THEME.action.destructiveTonal.fg, border: `1px solid ${THEME.action.destructiveTonal.border}` }}>
+                    <Trash2 size={10} />Delete
+                  </button>
+                )}
                 {filter === 'inactive' && (
                   <>
                     <button onClick={() => onReactivate(emp.id)} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: THEME.status.success + '20', color: THEME.status.success }}>Reactivate</button>
@@ -92,6 +98,20 @@ export const InactiveEmployeesPanel = ({ isOpen, onClose, employees, onEdit, onR
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setConfirmDelete(null)}>
+          <div className="rounded-xl p-4 max-w-sm w-full" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: THEME.status.error }}>
+              <Trash2 size={14} />Delete {confirmDelete.name}?
+            </h3>
+            <p className="text-xs mb-3" style={{ color: THEME.text.secondary }}>This removes {confirmDelete.name} from the active roster. Their past shifts stay on the schedule. You can restore from the Deleted tab.</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setConfirmDelete(null)} className="px-3 py-1.5 rounded text-xs" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.primary }}>Cancel</button>
+              <button onClick={() => { onDelete(confirmDelete.id); setConfirmDelete(null); }} className="px-3 py-1.5 rounded text-xs font-medium" style={{ backgroundColor: THEME.status.error, color: '#fff' }}>Delete</button>
+            </div>
+          </div>
         </div>
       )}
     </Modal>
