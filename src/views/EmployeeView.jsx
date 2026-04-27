@@ -658,9 +658,9 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
           {mobileShiftDetail && (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: hasTitle(currentUser) ? THEME.text.primary : mobileShiftDetail.role?.color }} />
-                <span className="font-semibold" style={{ color: hasTitle(currentUser) ? THEME.text.primary : mobileShiftDetail.role?.color, fontSize: '15px' }}>
-                  {hasTitle(currentUser) ? (currentUser.title || '') : mobileShiftDetail.role?.name}
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: hasTitle(mobileShiftDetail.employee) ? THEME.text.primary : mobileShiftDetail.role?.color }} />
+                <span className="font-semibold" style={{ color: hasTitle(mobileShiftDetail.employee) ? THEME.text.primary : mobileShiftDetail.role?.color, fontSize: '15px' }}>
+                  {hasTitle(mobileShiftDetail.employee) ? (mobileShiftDetail.employee.title || '') : mobileShiftDetail.role?.name}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3">

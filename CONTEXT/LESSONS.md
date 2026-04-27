@@ -440,6 +440,18 @@ Lesson: A component-presence grep incorrectly reports gaps. Hover tooltips, cond
 Context: 2026-04-23 parity audit -- Explore subagent misreported 2 of 3 gaps (Employee Quick View "missing" on desktop; Hidden section "missing" on mobile). Both existed; the actual gap was narrower (one missing Edit button). Subagent used keyword search only.
 Affirmations: 0
 
+## [PROJECT] -- Admin1 vs admin2 access tiers are intentional, not drift
+Lesson: Two admin tiers exist by design. Admin1 = real admins (Sarvi, Joel) who can edit. Admin2 = management (Amy, Dan, Scott) who view but should NOT touch anything. Hours/star/OT visibility, edit affordances, and other capability differences between the desktop admin path and mobile admin path flow from this tier split. Do not "fix" them as drift in audits.
+Context: 2026-04-27 (s028) -- Sonnet codebase audit flagged hours+star differences between EmployeeRow (desktop admin) and MobileAdminScheduleGrid (mobile admin) as Category D drift. JR confirmed intentional: "admin1 are the real admins and admin2 are management that we don't want touching anything." Capability divergence across admin surfaces is the access model, not a bug.
+How to apply: Before flagging an admin-surface inconsistency as drift, check whether the divergence gates on tier (`adminTier === 'admin1'` or equivalent). If yes, leave it alone.
+Affirmations: 0
+
+## [PROJECT] -- Titled employees show their title; untitled show their role
+Lesson: Admins can have a title (e.g. "GM", "Owner"). Employees do not. When rendering a role/title pill anywhere (cell label, shift-detail sheet, PDF, email), check `hasTitle(theShiftOwner)` -- the EMPLOYEE WHOSE SHIFT IS BEING DISPLAYED, never the logged-in viewer. `hasTitle(currentUser)` is wrong because it shows the viewer's title on someone else's shift.
+Context: 2026-04-27 (s028) -- Sonnet audit caught `src/views/EmployeeView.jsx:633-635` mobile shift-detail bottom sheet using `hasTitle(currentUser)`. Sarvi tapping Joel's shift showed "GM" instead of "Owner"; Sarvi tapping a cashier's shift showed "GM" instead of "Cashier". Fixed to `hasTitle(mobileShiftDetail.employee)`.
+How to apply: Any new render path that shows a role/title pill must derive the title check from the shift's owner, not the viewer. Grid cells already do this correctly; copy their pattern.
+Affirmations: 0
+
 ## [PROJECT] -- Display sort: Sarvi, other admins alpha, FT alpha, PT alpha
 Lesson: Four buckets in order. Sarvi pinned top; other non-owner admins (with showOnSchedule where the list filters them) next alpha; then full-time non-admins alpha; then part-time non-admins alpha. Two discreet dividers render on bucket transitions. Single source of truth: `src/utils/employeeSort.js` (`sortBySarviAdminsFTPT`, `employeeBucket`, `computeDividerIndices`).
 Context: Admin grid (App.jsx), employee view (views/EmployeeView.jsx), mobile admin + mobile employee (MobileAdminView, MobileEmployeeView), PDF (src/pdf/generate.js). Shipped 2026-04-20; supersedes prior 3-bucket rule.
