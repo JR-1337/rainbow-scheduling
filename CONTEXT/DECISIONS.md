@@ -48,6 +48,18 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-04-27 (s027) -- Mobile schedule name column tightened to 60px + card restructured to title-eyebrow / first / last / hours across all 4 schedule render paths
+
+Decision: NAME_COL_WIDTH lowered from 72 to 60 in `MobileAdminView.jsx` and `MobileEmployeeView.jsx`. `tableLayout: 'fixed'` added to the schedule `<table>` so width declarations enforce against unbreakable strings (e.g. TEST-ADMIN1-SMOKE was expanding the column to 117px on 390px viewports because table-layout:auto fits the longest token). `maxWidth: NAME_COL_WIDTH` added to the sticky `<td>` as a hard cap. Card layout reordered across all 4 schedule render paths (mobile admin/employee + desktop EmployeeRow + desktop EmployeeView): title eyebrow on top (small caps, muted, 9px mobile / 9px desktop, +0.4px tracking), first name as focal point (12px font-semibold mobile / text-xs desktop), last name underneath (9px / 10px desktop muted), hours line at bottom (admin paths only). All `<p>` use `truncate` so first-name overflow clips with ellipsis.
+Rationale: JR caught mobile staff list rendering at ~30% of viewport ("takes up half the screen") because table auto-layout was breaking the 72px declaration. Three-part fix layers: tighten the declared width, switch to fixed table-layout so the declaration enforces, and add a maxWidth so even fixed layout cannot grow beyond the cap. Card restructure follows JR's spec (title above first, first above last, clip on overflow) and the visual-hierarchy / typography research read this session (Creative-Partner `L0-06`, `L0-07`, `L1-07`, `applied-app-ui.md`): squint test passes via 12px focal + ALL-CAPS muted eyebrow + 9px tertiary; condensed cell tolerates the weak 12:9 size ratio because tracking + uppercase + muted color push the eyebrow back visually. All 4 paths in one commit per mobile-desktop parity rule.
+Confidence: H -- verified 2026-04-27 build PASS at `41844d6` then `8978161` (eyebrow bump 7px -> 9px); Playwright prod smoke at bundle `index-DbbdHU0t.js` confirmed cell width = 60px (was 117px), TEST-ADMIN1-SMOKE clipped to "TEST-..." with ellipsis, console errors 0; eyebrow visual not yet verified because no employee in current Sheet has `emp.title` populated.
+
+## 2026-04-27 (s027) -- Cornell ILR (2021) provenance source-verified to ILR Review (2022, Choper/Schneider/Harknett, "Uncertain Time", Shift Project)
+
+Decision: The "21-35% / 7-month" turnover stat carried in chatbot FACT 2 + Ripple.jsx Card 4 is now cited as ILR Review (2022, Choper/Schneider/Harknett, "Uncertain Time: Precarious Schedules and Job Turnover in the U.S. Service Sector"), Shift Project panel of 1,827 hourly retail and food-service workers. Year corrected from 2021 to 2022 (working paper appeared 2019; journal publication January 2022). 21% on-call + 35% short-notice + 7-month follow-up window all confirmed via web search of the SAGE journal page + Equitable Growth working-paper PDF + Harvard Shift Project page. Provenance check that was open since s026 audit is closed.
+Rationale: s026 anti-pattern flagged the stat as not source-verified inside `pitchdeck/pitchDeckResearch4OTR.md`; the rule was either resolve URL or replace with Bergman/Song M&SOM 2023. Resolve path won because the citation is real and well-anchored, just had wrong year + missing paper title. Family Googling now lands on the actual paper.
+Confidence: H -- verified via web search 2026-04-27, three-source convergence (SAGE doi 10.1177/00197939211048484 + Equitable Growth + Harvard Shift Project) + chatbot FACT 2 + Ripple.jsx Card 4 updated at HEAD `fc48565` on RAINBOW-PITCH prod.
+
 ## 2026-04-26 (s026) -- Recurring fee scope reframed as operational care, no retainer language; OTR pays all hosting providers directly
 
 Decision: $497/month is described in Spec.jsx §9 and Price.jsx Monthly fee row as covering operational care of the system: monitoring and uptime, automated backups, dependency and security patching, schema migrations as Sarvi's needs evolve, small fitting adjustments after the trial, and onboarding new staff to the admin tools. Bug fixes in shipped features always included. New scope or major feature work quoted fixed-price separately. Hosting reframed: OTR pays all hosting providers directly at cost (Supabase ca-central named for Canadian work-data compliance); Rainbow handles setup and ongoing management. No "retainer" word anywhere in customer-facing artifacts.
@@ -90,15 +102,6 @@ Rejected alternatives:
 - Available if compliance/scale demands -- rejected: weaker pitch, defers commitment.
 - Phase 2 hardening track -- rejected: leaves fitting on Sheets, postpones the auth + compliance answer.
 
-## 2026-04-26 -- $497/mo recurring is an open retainer; hosting passed through; 12-mo continuity contract on offer
-
-Decision: The $497/month recurring fee is framed as an open retainer covering bug fixes, support response within hours, ongoing minor dev work, and security patches -- no hour cap. Hosting infrastructure (Supabase ca-central) is passed through to OTR at cost, not absorbed into the monthly. New scope or major feature work is quoted fixed-price separately at $125/hr. Bug fixes are always included for as long as OTR runs the app. Continuity guarantee: 12-month service contract on offer + source-code escrow at trial-end so OTR holds the keys regardless of John's availability.
-Rationale: Hour-capped retainer creates "watch the clock" friction with the customer that undercuts the trust pitch. JR will not work on the system without payment so the open retainer is sustainable for him; the trade-off is hosting passthrough so OTR carries variable infrastructure cost. Continuity contract preempts the "what if you disappear" objection without raising it unprompted.
-Confidence: H -- direct user direction 2026-04-26 (selected "Open retainer (always-available)" out of 3 alternatives).
-Rejected alternatives:
-- Capped retainer (X hrs/month included) -- rejected: clean expectation but creates clock-watching friction.
-- Tier-based (bug fixes always, features quoted) -- rejected: under-promises on the developer-relationship value JR conveys.
-
 ## 2026-04-26 -- Pitch pricing restructured: $1,500 implementation + $497/mo from month 1
 
 Decision: The pitch deck and price sheet present the offering as a one-time $1,500 implementation fee plus $497/mo starting month 1, structured as a 3-month fitting trial followed by a 9-month commitment. Year 1 visible $7,464; 3-year total $19,392; net to OTR $71,964 over 3 years. Implementation fee covers fitting Rainbow to OTR's workflow, Sarvi's process tweaks, staff training, and feedback rounds. Internal lever (waive monthly during trial OR waive implementation fee for higher trial monthly) is JR's only and never printed.
@@ -108,13 +111,6 @@ Rejected alternatives:
 - Keep $2K post-trial activation -- rejected: the back-loaded large ask reads as a hidden fee at the worst possible moment.
 - $1500 paid in 3-month installments during fitting -- rejected: less clean than a single upfront line; smooths cash but blurs what the fee is FOR.
 - $1500 due at month 3 (post-fitting) -- rejected: removes the early-commitment signal the upfront ask provides.
-
-## 2026-04-26 -- Pitch chatbot architecture: Claude Haiku 4.5 primary + Gemini fallback via Vercel serverless (Superseded)
-
-Decision: Pitch deck gains a new slide AskRainbow.jsx between Proposal and Phase2. Interactive Q&A backed by a Vercel serverless function (`/api/ask-rainbow`) that calls Anthropic Claude Haiku 4.5 by default, falling back to Google Gemini 2.5 Flash if `ANTHROPIC_API_KEY` is unset. Per-IP rate limit: 15 requests / 6 hours, in-memory bucket. System prompt anchored in sourced facts only (Gap stable-scheduling, Cornell ILR turnover, CAP replacement cost, Springer family-firms) with hard-banned ESA mentions unless user asks first. Charming-trial-lawyer voice; never escalates.
-Rationale: JR's family will think objections faster than the deck can answer them. The chatbot turns the room from "presentation" into "demonstration" without changing the deck's measured tone. Vercel function keeps the API key server-side. Claude Haiku is cheap (~$0.001/answer) and matches JR's existing tooling; Gemini fallback preserves optionality.
-Confidence: H -- direct user direction 2026-04-26 + sourced research 2026-04-26.
-Superseded by: 2026-04-26 -- Pitch chatbot v4: Sonnet 4.6 + extended thinking + heavily-revised system prompt (top of this file).
 
 ## 2026-04-26 -- Migration off Sheets must preserve Sarvi's direct-edit workflow
 
