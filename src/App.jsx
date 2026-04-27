@@ -27,7 +27,7 @@ import { PKDetailsPanel } from './components/PKDetailsPanel';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
 import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents, filterToLivePeriods } from './utils/apiTransforms';
-import { getFutureShiftDates, formatFutureShiftsBlockMessage, serializeEmployeeForApi } from './utils/employees';
+import { getFutureShiftDates, formatFutureShiftsBlockMessage, serializeEmployeeForApi, filterSchedulableEmployees } from './utils/employees';
 import { createShiftFromAvailability, applyShiftMutation, collectPeriodShiftsForSave, transferShiftBetweenEmployees, swapShiftsBetweenEmployees } from './utils/scheduleOps';
 import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
@@ -605,11 +605,7 @@ export default function App() {
   
   // Active employees for scheduling (exclude owner, exclude admins unless showOnSchedule)
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
-  const schedulableEmployees = useMemo(() => sortBySarviAdminsFTPT(
-    employees
-      .filter(e => e.active && !e.deleted && !e.isOwner)
-      .filter(e => !e.isAdmin || e.showOnSchedule)
-  ), [employees]);
+  const schedulableEmployees = useMemo(() => sortBySarviAdminsFTPT(filterSchedulableEmployees(employees)), [employees]);
   
   // Full-time employees only (for auto-populate feature)
   const fullTimeEmployees = useMemo(() => schedulableEmployees.filter(e => e.employmentType === 'full-time'), [schedulableEmployees]);

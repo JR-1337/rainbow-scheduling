@@ -18,6 +18,12 @@ export function formatFutureShiftsBlockMessage(verb, name, futureDates) {
   return `Cannot ${verb}: ${name} has ${futureDates.length} future shift(s): ${formatted}${moreText}. Remove or reassign shifts first.`;
 }
 
+export function filterSchedulableEmployees(employees) {
+  return employees
+    .filter(e => e.active && !e.deleted && !e.isOwner)
+    .filter(e => !e.isAdmin || e.showOnSchedule);
+}
+
 export function serializeEmployeeForApi(emp, overrides = {}) {
   const merged = { ...emp, ...overrides };
   return {

@@ -22,12 +22,14 @@ import { GradientBackground, haptic } from './components/uiKit';
 import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } from './utils/date';
 import { isStatHoliday } from './utils/storeHours';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
+import { hasApprovedTimeOffForDate } from './utils/requests';
 
 import { MobileScheduleGrid } from './MobileEmployeeView';
 import { EVENT_TYPES } from './constants';
 import { Button } from './components/Button';
 import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
 import { EventGlyphPill } from './components/EventGlyphPill';
+import SickStripeOverlay from './components/SickStripeOverlay';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN MOBILE HAMBURGER DRAWER
@@ -341,10 +343,7 @@ export const MobileAdminScheduleGrid = ({
                     const eventOnly = !shift && hasEvents;
                     const hasSick = cellEvents.some(ev => ev.type === 'sick');
 
-                    const approvedTimeOff = timeOffRequests.some(r =>
-                      r.email === emp.email && r.status === 'approved' &&
-                      r.datesRequested?.split(',').includes(dateStr)
-                    );
+                    const approvedTimeOff = hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests);
 
                     const dayName = getDayName(date);
                     const avail = emp.availability?.[dayName];
@@ -386,13 +385,7 @@ export const MobileAdminScheduleGrid = ({
                           opacity: approvedTimeOff ? 0.7 : isUnavailable && !shift && !hasEvents ? 0.5 : 1,
                           height: CELL_HEIGHT - 4
                         }}>
-                          {hasSick && (
-                            <div aria-hidden="true"
-                              className="absolute inset-0 pointer-events-none"
-                              style={{
-                                background: 'linear-gradient(to top right, transparent calc(50% - 1px), #DC2626 calc(50% - 1px), #DC2626 calc(50% + 1px), transparent calc(50% + 1px))',
-                              }} />
-                          )}
+                          {hasSick && <SickStripeOverlay />}
                           {approvedTimeOff && !shift && !hasEvents ? (
                             <div className="flex items-center justify-center h-full">
                               <span style={{ color: THEME.text.muted, fontSize: '9px' }}>Time Off</span>

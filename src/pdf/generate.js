@@ -9,6 +9,7 @@ import { ROLES, ROLES_BY_ID, EVENT_TYPES, PRIMARY_CONTACT_EMAIL } from '../const
 import { escapeHtml, stripEmoji } from '../utils/format';
 import { sortBySarviAdminsFTPT, employeeBucket } from '../utils/employeeSort';
 import { hasTitle } from '../utils/employeeRender';
+import { filterSchedulableEmployees } from '../utils/employees';
 
 const cleanText = (s) => escapeHtml(stripEmoji(s));
 
@@ -70,11 +71,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 
   // Filter schedulable employees (exclude owner, exclude admins unless showOnSchedule).
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
-  const schedulable = sortBySarviAdminsFTPT(
-    employees
-      .filter(e => e.active && !e.deleted && !e.isOwner)
-      .filter(e => !e.isAdmin || e.showOnSchedule)
-  );
+  const schedulable = sortBySarviAdminsFTPT(filterSchedulableEmployees(employees));
 
   // PDF contact row shows the primary store contact only (Sarvi). If her record
   // isn't found, fall back to any active non-owner admin so the PDF still lists

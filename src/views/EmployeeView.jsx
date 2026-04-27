@@ -10,6 +10,7 @@ import { CURRENT_PERIOD_INDEX } from '../utils/payPeriod';
 import { toDateKey, getWeekNumber, formatDate, formatTimeDisplay, formatTimeShort, getDayName } from '../utils/date';
 import { isStatHoliday } from '../utils/storeHours';
 import { sortBySarviAdminsFTPT, employeeBucket } from '../utils/employeeSort';
+import { filterSchedulableEmployees } from '../utils/employees';
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet, MobileAlertsSheet, computeAlertItems } from '../MobileEmployeeView';
 import { EVENT_TYPES, DESKTOP_SCHEDULE_GRID_TEMPLATE } from '../constants';
 import { MyShiftOffersPanel } from '../panels/MyShiftOffersPanel';
@@ -28,6 +29,8 @@ import { SwapShiftModal } from '../modals/SwapShiftModal';
 import { hasTitle, splitNameForSchedule } from '../utils/employeeRender';
 import { EventGlyphPill } from '../components/EventGlyphPill';
 import { PKDetailsPanel } from '../components/PKDetailsPanel';
+import SickStripeOverlay from '../components/SickStripeOverlay';
+import { hasApprovedTimeOffForDate } from '../utils/requests';
 
 const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmpId, storeHours, employee = null, isTimeOff = false, isUnavailable = false }) => {
   const [showTask, setShowTask] = useState(false);
@@ -70,13 +73,7 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
 
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
 
-        {hasSick && (
-          <div aria-hidden="true"
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'linear-gradient(to top right, transparent calc(50% - 1px), #DC2626 calc(50% - 1px), #DC2626 calc(50% + 1px), transparent calc(50% + 1px))',
-            }} />
-        )}
+        {hasSick && <SickStripeOverlay />}
 
         {hasSick && !shift ? (
           <div className="p-1.5 h-full flex flex-col items-center justify-center">
@@ -165,15 +162,6 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
   const nameCellBg = isMe ? THEME.accent.purple + '15' : THEME.bg.secondary;
   const dayGutterBg = isMe ? THEME.accent.purple + '10' : THEME.bg.secondary;
   
-  // Check if employee has approved time off for a specific date
-  const hasApprovedTimeOff = (dateStr) => {
-    return timeOffRequests.some(req => 
-      req.email === employee.email && 
-      req.status === 'approved' &&
-      req.datesRequested?.split(',').includes(dateStr)
-    );
-  };
-
   const rowStrip = 'p-0.5 h-[calc(4.5rem+0.25rem)] max-h-[calc(4.5rem+0.25rem)] min-h-0 overflow-hidden box-border';
   return (
     <div className="grid gap-px schedule-row" style={{ gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, backgroundColor: THEME.border.subtle }}>
@@ -200,7 +188,7 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
         const dateStr = toDateKey(date);
         const shift = shifts[`${employee.id}-${dateStr}`];
         const cellEvents = events[`${employee.id}-${dateStr}`] || [];
-        const isTimeOff = hasApprovedTimeOff(dateStr);
+        const isTimeOff = hasApprovedTimeOffForDate(employee.email, dateStr, timeOffRequests);
         const dayName = getDayName(date);
         const avail = employee.availability?.[dayName];
         const isUnavailable = avail && !avail.available;
@@ -322,11 +310,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
   
   // Schedulable employees (exclude owner, exclude admins unless showOnSchedule).
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
-  const schedulableEmployees = sortBySarviAdminsFTPT(
-    employees
-      .filter(e => e.active && !e.deleted && !e.isOwner)
-      .filter(e => !e.isAdmin || e.showOnSchedule)
-  );
+  const schedulableEmployees = useMemo(() => sortBySarviAdminsFTPT(filterSchedulableEmployees(employees)), [employees]);
   
   // Admin contacts for employee-facing display: Sarvi only (other admins hidden per JR)
   const adminContacts = employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted && e.name?.toLowerCase() === 'sarvi');
@@ -826,7 +810,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
               <div className="p-1.5" style={{ backgroundColor: THEME.bg.tertiary }}><span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>Employee</span></div>
               {currentDates.map((date, i) => {
                 const sh = getStoreHoursForDate(date);
-                const today = date.toDateString() === new Date().toDateString();
+                const today = toDateKey(date) === todayStr;
                 const hol = isStatHoliday(date);
                 return (
                   <div key={toDateKey(date)} className="p-1 text-center" style={{ background: today ? `linear-gradient(${THEME.accent.purple}20, ${THEME.accent.purple}20), ${THEME.bg.tertiary}` : hol ? `linear-gradient(${THEME.status.warning}15, ${THEME.status.warning}15), ${THEME.bg.tertiary}` : THEME.bg.tertiary, borderBottom: today ? `2px solid ${THEME.accent.purple}` : hol ? `2px solid ${THEME.status.warning}` : 'none' }}>

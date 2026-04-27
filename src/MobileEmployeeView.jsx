@@ -22,9 +22,11 @@ import { useFocusTrap } from './hooks/useFocusTrap';
 import { EVENT_TYPES } from './constants';
 import { computeDayUnionHours } from './utils/timemath';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
+import { hasApprovedTimeOffForDate } from './utils/requests';
 import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
 import { EventGlyphPill } from './components/EventGlyphPill';
 import { PKDetailsPanel } from './components/PKDetailsPanel';
+import SickStripeOverlay from './components/SickStripeOverlay';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE DETECTION HOOK
@@ -178,15 +180,8 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
 
   // Indices where a divider should render (bucket transition, skips empty buckets).
   const dividerIndices = useMemo(() => computeDividerIndices(sortedEmployees), [sortedEmployees]);
-  
-  const hasApprovedTimeOff = (emp, dateStr) => {
-    return timeOffRequests.some(req => 
-      req.email === emp.email && 
-      req.status === 'approved' &&
-      req.datesRequested?.split(',').includes(dateStr)
-    );
-  };
-  
+  const todayStr = useMemo(() => toDateKey(new Date()), []);
+
   return (
     <div className="rounded-xl overflow-hidden" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
       {/* CSS for frozen columns/rows */}
@@ -224,7 +219,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
               {/* Day headers - frozen top */}
               {dates.map((date, i) => {
                 const sh = getStoreHoursForDate(date);
-                const today = date.toDateString() === new Date().toDateString();
+                const today = toDateKey(date) === todayStr;
                 const hol = isStatHoliday(date);
                 return (
                   <th key={i} style={{
@@ -290,7 +285,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                     const firstEvent = hasEvents ? cellEvents[0] : null;
                     const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
                     const eventOnly = !shift && hasEvents;
-                    const isTimeOff = hasApprovedTimeOff(emp, dateStr);
+                    const isTimeOff = hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests);
                     const dayName = getDayName(date);
                     const avail = emp.availability?.[dayName];
                     const isUnavailable = avail && !avail.available;
@@ -326,13 +321,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                             height: CELL_HEIGHT - 4
                           }}
                         >
-                          {hasSick && (
-                            <div aria-hidden="true"
-                              className="absolute inset-0 pointer-events-none"
-                              style={{
-                                background: 'linear-gradient(to top right, transparent calc(50% - 1px), #DC2626 calc(50% - 1px), #DC2626 calc(50% + 1px), transparent calc(50% + 1px))',
-                              }} />
-                          )}
+                          {hasSick && <SickStripeOverlay />}
                           {hasSick && !shift ? (
                             <div className="flex flex-col items-center justify-center h-full">
                               <span style={{ color: THEME.text.muted, fontSize: '9px', fontWeight: 600 }}>Sick</span>
@@ -426,6 +415,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
 export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, timeOffRequests = [] }) => {
   const week1 = dates.slice(0, 7), week2 = dates.slice(7, 14);
   const weekNum1 = getWeekNumber(week1[0]), weekNum2 = getWeekNumber(week2[0]);
+  const todayStr = useMemo(() => toDateKey(new Date()), []);
 
   // S64 Stage 8.1 — union-count work+events so a 9-5 work + 3-5 PK = 8h, not 10h.
   // Shift count stays work-only (matches S60 semantics).
@@ -480,7 +470,7 @@ export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, time
           const labelColor = shift ? (isSelfTitled ? THEME.text.primary : (role?.color || THEME.text.primary)) : THEME.text.muted;
           const isTimeOff = myTimeOffDates.has(dateStr);
           const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-          const today = date.toDateString() === new Date().toDateString();
+          const today = toDateKey(date) === todayStr;
 
           return (
             <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg" style={{

@@ -7,6 +7,7 @@ import { parseTime, formatTimeShort } from '../utils/date';
 import { TaskStarTooltip } from './uiKit';
 import { hasTitle } from '../utils/employeeRender';
 import { EventGlyphPill } from './EventGlyphPill';
+import SickStripeOverlay from './SickStripeOverlay';
 
 const getAvailabilityShading = (avail, storeHours) => {
   if (!avail.available) return { top: 100, bottom: 0 };
@@ -56,13 +57,7 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
             right). Additive to the amber bg + struck work text — makes the
             "not here" state unmistakable even in a glance at a dense grid.
             Not OTR brand red (#EC3228); uses red-600 (#DC2626). */}
-        {hasSick && (
-          <div aria-hidden="true"
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'linear-gradient(to top right, transparent calc(50% - 1px), #DC2626 calc(50% - 1px), #DC2626 calc(50% + 1px), transparent calc(50% + 1px))',
-            }} />
-        )}
+        {hasSick && <SickStripeOverlay />}
 
         {isFullyUnavailable && !shift && !isDeleted && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
