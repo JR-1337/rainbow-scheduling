@@ -399,7 +399,7 @@ export const MobileAdminScheduleGrid = ({
                             </div>
                           ) : isUnavailable && !shift && !hasEvents ? (
                             <div className="flex items-center justify-center h-full">
-                              <span style={{ color: THEME.text.muted, fontSize: '8px' }}>N/A</span>
+                              <span style={{ color: THEME.text.muted, fontSize: '8px' }}>Unavailable</span>
                             </div>
                           ) : shift ? (
                             <div className="p-1 h-full flex flex-col justify-between">

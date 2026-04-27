@@ -68,8 +68,17 @@ const chunkedBatchSave = async (payload, onProgress) => {
   let failedChunks = 0;
   const totalChunks = Math.ceil(shifts.length / CHUNK_SIZE);
 
-  // S61 — 3-tuple form `${empId}-${date}-${type}` matches backend `keyOf`.
-  const allShiftKeys = shifts.map(s => `${s.employeeId}-${s.date}-${s.type || 'work'}`);
+  // s028 -- mirror backend keyOf in Code.gs:1806 exactly. Singular types
+  // (work, sick, pk) use the 3-tuple synthetic key; non-singular (meetings)
+  // use the row's real id when present so existing rows survive in place
+  // instead of getting dropped + re-appended at the end of the Sheet.
+  const SINGULAR_TYPES = { work: 1, sick: 1, pk: 1 };
+  const keyOfShift = (s) => {
+    const t = s.type || 'work';
+    if (SINGULAR_TYPES[t]) return `${s.employeeId}-${s.date}-${t}`;
+    return s.id ? String(s.id) : `${t.toUpperCase()}-${s.employeeId}-${s.date}`;
+  };
+  const allShiftKeys = shifts.map(keyOfShift);
 
   for (let i = 0; i < shifts.length; i += CHUNK_SIZE) {
     const chunk = shifts.slice(i, i + CHUNK_SIZE);
