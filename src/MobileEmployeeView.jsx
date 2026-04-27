@@ -8,7 +8,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   ChevronLeft, ChevronRight, X, Calendar, Star, Eye, LogOut, Shield,
-  Loader, ArrowRightLeft, ArrowRight, Bell, Menu, Key, Check, MessageSquare, Ban
+  Loader, ArrowRightLeft, Bell, Menu, Key, Check, MessageSquare, Ban
 } from 'lucide-react';
 
 import {

@@ -142,7 +142,7 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
     return timeOffRequests.some(req => 
       req.email === employee.email && 
       req.status === 'approved' &&
-      req.datesRequested.split(',').includes(dateStr)
+      req.datesRequested?.split(',').includes(dateStr)
     );
   };
 
@@ -328,7 +328,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
   }, [allDateStrs, shifts]);
   
   const myTotalHours = getPeriodHours(currentUser.id);
-  const myShiftsCount = dates.filter(d => shifts[`${currentUser.id}-${toDateKey(d)}`]).length;
+  const myShiftsCount = allDateStrs.reduce((n, ds) => shifts[`${currentUser.id}-${ds}`] ? n + 1 : n, 0);
   
   const handleSelectRequestType = (type) => {
     setRequestModalOpen(false);

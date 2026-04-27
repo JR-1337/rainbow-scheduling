@@ -9,13 +9,13 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  ChevronLeft, ChevronRight, X, Calendar, Star, Eye, LogOut, Shield,
-  Loader, ArrowRightLeft, ArrowRight, Bell, Menu, Key, Settings,
-  Check, ClipboardList, MessageSquare, User, Save, Mail, AlertCircle, Edit3, BookOpen, FileText, Users
+  X, Calendar, Star, LogOut, Shield,
+  Loader, Menu, Key, Settings,
+  ClipboardList, MessageSquare, User, Save, Mail, Edit3, BookOpen, FileText, Users
 } from 'lucide-react';
 
 import {
-  THEME, TYPE, ROLES, ROLES_BY_ID,
+  THEME, ROLES_BY_ID,
   getStoreHoursForDate
 } from './App';
 import { GradientBackground, haptic } from './components/uiKit';
@@ -346,7 +346,7 @@ export const MobileAdminScheduleGrid = ({
                       r.datesRequested?.split(',').includes(dateStr)
                     );
 
-                    const dayName = getDayName(date).toLowerCase();
+                    const dayName = getDayName(date);
                     const avail = emp.availability?.[dayName];
                     const isUnavailable = avail && !avail.available;
                     const role = shift ? ROLES_BY_ID[shift.role] : null;
