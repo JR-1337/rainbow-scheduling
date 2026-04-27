@@ -361,9 +361,9 @@ Lesson: Joel is the owner and the father. Amy + Dan are Joel's children (sibling
 Context: Corrected by JR direct statement 2026-04-26 after prior incorrect tree had Joel as Dan's brother and Dan as owner.
 Affirmations: 1
 
-## [PROJECT] -- Schedule work = full admin envelope, not just grid-writing
-Lesson: Envelope = schedules + management talks + time-off + swaps + sick calls + push + off-hours. Use envelope number in ROI, not grid hours alone.
-Context: Slide 2 framing.
+## [PROJECT] -- Schedule work = full admin scope, not just grid-writing
+Lesson: The 14-hour figure covers schedules + management talks + time-off + swaps + sick calls + push + off-hours. Use that fuller number in ROI, not grid hours alone. Avoid the word "envelope" in customer-facing copy -- JR flagged it as opaque jargon (s027 sweep); use "scheduling work" / "the time Sarvi spends on the schedule" instead.
+Context: Slide 2 framing + chatbot FACT 3 + ROI math.
 Affirmations: 0
 
 ## [PROJECT] -- Statutory claims must match ontario.ca authoritative source
