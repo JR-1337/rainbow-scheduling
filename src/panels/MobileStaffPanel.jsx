@@ -73,30 +73,17 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
               </div>
               <div className="flex gap-1 flex-shrink-0">
                 {filter === 'active' && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      size="md"
-                      leftIcon={Edit3}
-                      iconSize={14}
-                      onClick={() => onEdit(emp)}
-                      aria-label={`Edit ${emp.name}`}
-                      style={{ backgroundColor: THEME.bg.elevated }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="md"
-                      leftIcon={Trash2}
-                      iconSize={14}
-                      onClick={() => setConfirmDelete(emp)}
-                      aria-label={`Delete ${emp.name}`}
-                      style={{ backgroundColor: THEME.status.error + '20', border: 'none' }}
-                    >
-                      Delete
-                    </Button>
-                  </>
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    leftIcon={Edit3}
+                    iconSize={14}
+                    onClick={() => onEdit(emp)}
+                    aria-label={`Edit ${emp.name}`}
+                    style={{ backgroundColor: THEME.bg.elevated }}
+                  >
+                    Edit
+                  </Button>
                 )}
                 {filter === 'inactive' && (
                   <>

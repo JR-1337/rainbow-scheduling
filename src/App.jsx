@@ -43,7 +43,7 @@ import { AdminShiftSwapsPanel } from './panels/AdminShiftSwapsPanel';
 import { MyShiftOffersPanel } from './panels/MyShiftOffersPanel';
 import { MySwapsPanel } from './panels/MySwapsPanel';
 import { MyRequestsPanel } from './panels/MyRequestsPanel';
-import { InactiveEmployeesPanel } from './panels/InactiveEmployeesPanel';
+import { EmployeesPanel } from './panels/EmployeesPanel';
 import { MobileStaffPanel } from './panels/MobileStaffPanel';
 import { ShiftEditorModal } from './modals/ShiftEditorModal';
 import { PKEventModal } from './modals/PKEventModal';
@@ -2173,7 +2173,7 @@ export default function App() {
                     Add Employee
                   </button>
                   <button role="menuitem" onClick={() => { setAdminMenuOpen(false); setInactivePanelOpen(true); }} className="w-full flex items-center justify-between gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.text.primary }}>
-                    <span className="flex items-center gap-2"><Users size={14} style={{ color: THEME.text.secondary }} />Manage Staff</span>
+                    <span className="flex items-center gap-2"><Users size={14} style={{ color: THEME.text.secondary }} />Employees</span>
                     {inactiveCount > 0 && <span className="text-xs" style={{ color: THEME.text.muted, fontSize: '10px' }}>{inactiveCount} inactive</span>}
                   </button>
                   <button role="menuitem" onClick={() => { setAdminMenuOpen(false); setSettingsOpen(true); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.text.primary }}>
@@ -2617,7 +2617,7 @@ export default function App() {
         return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
       })()}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
-      <InactiveEmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onEdit={(emp) => { setInactivePanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
+      <EmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onEdit={(emp) => { setInactivePanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
       <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />
       <ChangePasswordModal isOpen={mobileAdminChangePasswordOpen} onClose={() => setMobileAdminChangePasswordOpen(false)} currentUser={currentUser} />
       <PKEventModal
