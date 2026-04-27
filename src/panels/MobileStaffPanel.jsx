@@ -6,6 +6,7 @@ import { Button } from '../components/Button';
 
 export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, onReactivate, onDelete }) => {
   const [filter, setFilter] = useState('active');
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const { active, inactive, deleted } = useMemo(() => ({
     active: employees.filter(e => e.active && !e.deleted),
@@ -72,17 +73,30 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
               </div>
               <div className="flex gap-1 flex-shrink-0">
                 {filter === 'active' && (
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    leftIcon={Edit3}
-                    iconSize={14}
-                    onClick={() => onEdit(emp)}
-                    aria-label={`Edit ${emp.name}`}
-                    style={{ backgroundColor: THEME.bg.elevated }}
-                  >
-                    Edit
-                  </Button>
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      leftIcon={Edit3}
+                      iconSize={14}
+                      onClick={() => onEdit(emp)}
+                      aria-label={`Edit ${emp.name}`}
+                      style={{ backgroundColor: THEME.bg.elevated }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="md"
+                      leftIcon={Trash2}
+                      iconSize={14}
+                      onClick={() => setConfirmDelete(emp)}
+                      aria-label={`Delete ${emp.name}`}
+                      style={{ backgroundColor: THEME.status.error + '20', border: 'none' }}
+                    >
+                      Delete
+                    </Button>
+                  </>
                 )}
                 {filter === 'inactive' && (
                   <>
@@ -99,7 +113,7 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
                       size="md"
                       leftIcon={Trash2}
                       iconSize={14}
-                      onClick={() => onDelete(emp.id)}
+                      onClick={() => setConfirmDelete(emp)}
                       aria-label={`Remove ${emp.name}`}
                       style={{ backgroundColor: THEME.status.error + '20', border: 'none' }}
                     >
@@ -140,6 +154,20 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
           >
             Add Employee
           </Button>
+        </div>
+      )}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setConfirmDelete(null)}>
+          <div className="rounded-xl p-4 max-w-sm w-full" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: THEME.status.error }}>
+              <Trash2 size={14} />Delete {confirmDelete.name}?
+            </h3>
+            <p className="text-xs mb-3" style={{ color: THEME.text.secondary }}>This removes {confirmDelete.name} from the active roster. Their past shifts stay on the schedule. You can restore from the Deleted tab.</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" size="md" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+              <Button variant="destructive" size="md" onClick={() => { onDelete(confirmDelete.id); setConfirmDelete(null); }} style={{ backgroundColor: THEME.status.error, color: '#fff' }}>Delete</Button>
+            </div>
+          </div>
         </div>
       )}
     </MobileBottomSheet>
