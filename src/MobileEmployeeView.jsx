@@ -296,6 +296,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                     const isUnavailable = avail && !avail.available;
                     const role = shift ? ROLES_BY_ID[shift.role] : null;
                     const isOwnShift = emp.id === loggedInUser.id;
+                    const hasSick = cellEvents.some(ev => ev.type === 'sick');
 
                     return (
                       <td key={i} style={{
@@ -309,21 +310,39 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                           onClick={(shift || hasEvents) && onShiftClick ? () => onShiftClick({ employee: emp, date, dateStr, shift, role, events: cellEvents }) : undefined}
                           style={{
                             cursor: (shift || hasEvents) && onShiftClick ? 'pointer' : 'default',
-                            backgroundColor: isTimeOff ? THEME.text.muted + '15'
+                            backgroundColor: hasSick ? EVENT_TYPES.sick.bg
+                              : isTimeOff ? THEME.text.muted + '15'
                               : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
                               : shift ? role?.color + '25'
                               : eventOnly ? firstEventType.bg
                               : THEME.bg.tertiary,
-                            border: `1px solid ${isTimeOff ? THEME.text.muted + '30'
+                            border: `1px solid ${hasSick ? EVENT_TYPES.sick.border
+                              : isTimeOff ? THEME.text.muted + '30'
                               : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
                               : shift ? role?.color + '50'
                               : eventOnly ? firstEventType.border
                               : THEME.border.default}`,
-                            opacity: isTimeOff ? 0.7 : isUnavailable && !shift && !hasEvents ? 0.5 : 1,
+                            opacity: !hasSick && isTimeOff ? 0.7 : !hasSick && isUnavailable && !shift && !hasEvents ? 0.5 : 1,
                             height: CELL_HEIGHT - 4
                           }}
                         >
-                          {isTimeOff && !shift && !hasEvents ? (
+                          {hasSick && (
+                            <div aria-hidden="true"
+                              className="absolute inset-0 pointer-events-none"
+                              style={{
+                                background: 'linear-gradient(to top right, transparent calc(50% - 1px), #DC2626 calc(50% - 1px), #DC2626 calc(50% + 1px), transparent calc(50% + 1px))',
+                              }} />
+                          )}
+                          {hasSick && !shift ? (
+                            <div className="flex flex-col items-center justify-center h-full">
+                              <span style={{ color: THEME.text.muted, fontSize: '9px', fontWeight: 600 }}>Sick</span>
+                              {cellEvents.find(ev => ev.type === 'sick')?.note && (
+                                <span className="italic truncate block" style={{ color: THEME.text.muted, fontSize: '8px', maxWidth: '100%', padding: '0 2px' }} title={cellEvents.find(ev => ev.type === 'sick').note}>
+                                  {cellEvents.find(ev => ev.type === 'sick').note}
+                                </span>
+                              )}
+                            </div>
+                          ) : isTimeOff && !shift && !hasEvents ? (
                             <div className="flex items-center justify-center h-full">
                               <span style={{ color: THEME.text.muted, fontSize: '9px' }}>Time Off</span>
                             </div>
@@ -335,20 +354,26 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                             <div className="p-1 h-full flex flex-col justify-between min-w-0">
                               {/* Row 1: role + events pill */}
                               <div className="flex items-start justify-between gap-1 min-w-0">
-                                <span className="font-semibold truncate min-w-0" style={{ color: role?.color, fontSize: '10px' }}>{role?.name}</span>
-                                {hasEvents && <EventGlyphPill events={cellEvents} size="sm" />}
+                                <span className="font-semibold truncate min-w-0" style={{ color: hasSick ? THEME.text.muted : role?.color, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '10px' }}>{role?.name}</span>
+                                {hasEvents && !hasSick && <EventGlyphPill events={cellEvents} size="sm" />}
                               </div>
-                              {/* Row 2: time + task star (own shift only) */}
-                              <div className="flex items-center justify-between min-w-0">
-                                <span className="truncate min-w-0" style={{ color: THEME.text.secondary, fontSize: '9px' }}>
-                                  {formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}
+                              {hasSick && cellEvents.find(ev => ev.type === 'sick')?.note ? (
+                                <span className="italic truncate block" style={{ color: THEME.text.muted, fontSize: '9px' }} title={cellEvents.find(ev => ev.type === 'sick').note}>
+                                  {cellEvents.find(ev => ev.type === 'sick').note}
                                 </span>
-                                {isOwnShift && shift.task && (
-                                  <span className="shrink-0 pl-1">
-                                    <Star size={10} fill={THEME.task} color={THEME.task} />
+                              ) : (
+                                /* Row 2: time + task star (own shift only) */
+                                <div className="flex items-center justify-between min-w-0">
+                                  <span className="truncate min-w-0" style={{ color: hasSick ? THEME.text.muted : THEME.text.secondary, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '9px' }}>
+                                    {formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}
                                   </span>
-                                )}
-                              </div>
+                                  {isOwnShift && shift.task && !hasSick && (
+                                    <span className="shrink-0 pl-1">
+                                      <Star size={10} fill={THEME.task} color={THEME.task} />
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           ) : eventOnly ? (
                             <div className="p-1 h-full flex flex-col justify-between"

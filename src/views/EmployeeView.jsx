@@ -43,29 +43,51 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
   const eventOnly = !shift && hasEvents;
   const firstEvent = hasEvents ? visibleEvents[0] : null;
   const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
+  // Sick overrides the day: cell reads as "not here", work row is struck through
+  // but still visible. Parity with ScheduleCell + MobileAdminScheduleGrid.
+  const hasSick = visibleEvents.some(ev => ev.type === 'sick');
 
   return (
     <>
       <div className="h-[4.5rem] rounded-lg relative overflow-hidden"
         style={{
-          backgroundColor: isTimeOff ? THEME.text.muted + '15'
+          backgroundColor: hasSick ? EVENT_TYPES.sick.bg
+            : isTimeOff ? THEME.text.muted + '15'
             : isUnavailable && !shift && !hasEvents ? THEME.bg.tertiary
             : shift && isTitledShift ? THEME.titledEmployee.shiftFill
             : shift ? role?.color + '25'
             : eventOnly ? firstEventType.bg
             : THEME.bg.tertiary,
-          border: `1px solid ${isTimeOff ? THEME.text.muted + '30'
+          border: `1px solid ${hasSick ? EVENT_TYPES.sick.border
+            : isTimeOff ? THEME.text.muted + '30'
             : isUnavailable && !shift && !hasEvents ? THEME.border.subtle
             : shift && isTitledShift ? THEME.titledEmployee.shiftBorder
             : shift ? role?.color + '50'
             : eventOnly ? firstEventType.border
             : THEME.border.default}`,
-          opacity: isTimeOff ? 0.7 : isUnavailable && !shift && !hasEvents ? 0.5 : 1
+          opacity: !hasSick && isTimeOff ? 0.7 : !hasSick && isUnavailable && !shift && !hasEvents ? 0.5 : 1
         }}>
 
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
 
-        {isTimeOff && !shift && !hasEvents ? (
+        {hasSick && (
+          <div aria-hidden="true"
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'linear-gradient(to top right, transparent calc(50% - 1px), #DC2626 calc(50% - 1px), #DC2626 calc(50% + 1px), transparent calc(50% + 1px))',
+            }} />
+        )}
+
+        {hasSick && !shift ? (
+          <div className="p-1.5 h-full flex flex-col items-center justify-center">
+            <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>Sick</span>
+            {visibleEvents.find(ev => ev.type === 'sick')?.note && (
+              <span className="italic truncate block mt-0.5" style={{ color: THEME.text.muted, fontSize: '9px' }} title={visibleEvents.find(ev => ev.type === 'sick').note}>
+                {visibleEvents.find(ev => ev.type === 'sick').note}
+              </span>
+            )}
+          </div>
+        ) : isTimeOff && !shift && !hasEvents ? (
           <div className="p-1.5 h-full flex flex-col items-center justify-center">
             <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>Time Off</span>
           </div>
@@ -78,21 +100,27 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
             {/* Row 1: role label + events pill */}
             <div className="flex items-start justify-between gap-1 min-w-0">
               {!isTitledShift ? (
-                <span className="text-xs font-semibold truncate min-w-0" style={{ color: role?.color }}>{role?.name}</span>
+                <span className="text-xs font-semibold truncate min-w-0" style={{ color: hasSick ? THEME.text.muted : role?.color, textDecoration: hasSick ? 'line-through' : 'none' }}>{role?.name}</span>
               ) : <span className="min-w-0 flex-1" />}
-              {hasEvents && <EventGlyphPill events={visibleEvents} size="md" />}
+              {hasEvents && !hasSick && <EventGlyphPill events={visibleEvents} size="md" />}
             </div>
-            {/* Row 2: time + (task star if own shift) */}
-            <div className="flex w-full min-w-0 items-center justify-between">
-              <span className="text-xs min-w-0 truncate" style={{ color: THEME.text.secondary }}>
-                {formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}
+            {hasSick && visibleEvents.find(ev => ev.type === 'sick')?.note ? (
+              <span className="text-xs italic truncate block" style={{ color: THEME.text.muted }} title={visibleEvents.find(ev => ev.type === 'sick').note}>
+                {visibleEvents.find(ev => ev.type === 'sick').note}
               </span>
-              {showTaskStar && (
-                <span ref={starRef} className="shrink-0 cursor-pointer pl-1" onMouseEnter={() => setShowTask(true)} onMouseLeave={() => setShowTask(false)}>
-                  <Star size={10} fill={THEME.task} color={THEME.task} />
+            ) : (
+              /* Row 2: time + (task star if own shift) */
+              <div className="flex w-full min-w-0 items-center justify-between">
+                <span className="text-xs min-w-0 truncate" style={{ color: hasSick ? THEME.text.muted : THEME.text.secondary, textDecoration: hasSick ? 'line-through' : 'none' }}>
+                  {formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}
                 </span>
-              )}
-            </div>
+                {showTaskStar && (
+                  <span ref={starRef} className="shrink-0 cursor-pointer pl-1" onMouseEnter={() => setShowTask(true)} onMouseLeave={() => setShowTask(false)}>
+                    <Star size={10} fill={THEME.task} color={THEME.task} />
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         ) : eventOnly ? (
           <div className="p-1.5 h-full flex flex-col justify-between"
