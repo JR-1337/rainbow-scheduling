@@ -82,12 +82,18 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     : employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
 
   // Announcement: italic body + "[!]" prefix + heavy left bar + double top border.
-  const announcementHtml = (announcement && announcement.message) ? `
+  // Always rendered (even empty) so Sarvi has space to handwrite notes on the printout.
+  const hasAnnouncement = announcement && announcement.message;
+  const announcementHtml = hasAnnouncement ? `
     <div style="margin:8px 0;padding:15px;background:${G.fillZebra};border-radius:4px;border-left:6px solid ${G.ink};border-top:3px double ${G.ink};">
       ${announcement.subject ? `<h3 style="margin:0 0 10px;color:${G.ink};font-size:13px;font-weight:800;letter-spacing:0.5px;">[!] ${cleanText(announcement.subject)}</h3>` : `<h3 style="margin:0 0 10px;color:${G.ink};font-size:13px;font-weight:800;">[!] Announcement</h3>`}
       <div style="color:${G.text};font-size:11px;line-height:1.6;white-space:pre-wrap;font-style:italic;">${cleanText(announcement.message)}</div>
     </div>
-  ` : '';
+  ` : `
+    <div style="margin:8px 0;padding:10px 15px;background:#ffffff;border-radius:4px;border-left:6px solid ${G.borderSoft};border-top:3px double ${G.borderSoft};min-height:40px;">
+      <h3 style="margin:0 0 4px;color:${G.textFaint};font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">Notes</h3>
+    </div>
+  `;
 
   const makeWeekTable = (weekDates, weekNum) => {
     const headers = weekDates.map(d => {
@@ -255,11 +261,10 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       @page { margin: 0.3in; size: landscape; }
       .no-print { display: none !important; }
-      /* One pay-period week per sheet: never split a week across pages; week 2 starts fresh. */
-      .wk-block {
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
+      /* Week 2 always starts a fresh page. Week 1 flows naturally so it begins
+         immediately below the header instead of being pushed to page 2 when the
+         whole 14-row block can't fit (which leaves a huge gap on page 1). Row-
+         level break protection (the tr rule below) keeps individual rows intact. */
       .wk-block + .wk-block {
         break-before: page;
         page-break-before: always;
