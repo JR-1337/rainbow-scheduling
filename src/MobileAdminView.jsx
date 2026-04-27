@@ -318,7 +318,7 @@ export const MobileAdminScheduleGrid = ({
                       gap: 1,
                     }}>
                       {titledRow && (emp.title || '').trim() ? (
-                        <p className="truncate shrink-0" style={{ color: THEME.text.muted, fontSize: '7px', lineHeight: 1.0, letterSpacing: '0.4px', textTransform: 'uppercase' }}>{emp.title}</p>
+                        <p className="truncate shrink-0" style={{ color: THEME.text.muted, fontSize: '9px', lineHeight: 1.0, letterSpacing: '0.4px', textTransform: 'uppercase' }}>{emp.title}</p>
                       ) : null}
                       <p className="font-semibold truncate shrink-0" style={{ color: onNameClick ? THEME.accent.cyan : THEME.text.primary, fontSize: '12px', lineHeight: 1.1 }}>{nameFirst}</p>
                       {nameRest ? (

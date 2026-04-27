@@ -270,7 +270,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                     padding: '4px', verticalAlign: 'middle', overflow: 'hidden'
                   }} title={emp.name}>
                     {titledRow && (emp.title || '').trim() ? (
-                      <p className="truncate" style={{ color: THEME.text.muted, fontSize: '7px', lineHeight: 1.0, letterSpacing: '0.4px', textTransform: 'uppercase' }}>{emp.title}</p>
+                      <p className="truncate" style={{ color: THEME.text.muted, fontSize: '9px', lineHeight: 1.0, letterSpacing: '0.4px', textTransform: 'uppercase' }}>{emp.title}</p>
                     ) : null}
                     <p className="font-semibold truncate" style={{ color: isMe ? THEME.accent.purple : THEME.text.primary, fontSize: '12px', lineHeight: 1.1 }}>
                       {nameFirst}{isMe ? ' (You)' : ''}
