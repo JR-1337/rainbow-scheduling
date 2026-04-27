@@ -1,79 +1,98 @@
-import { UserCheck, UserX, Trash2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { UserCheck, UserX, Trash2, Shield, Edit3 } from 'lucide-react';
 import { THEME } from '../theme';
 import { Modal } from '../components/primitives';
 
-export const InactiveEmployeesPanel = ({ isOpen, onClose, employees, onReactivate, onDelete }) => {
-  const inactiveEmps = employees.filter(e => !e.active && !e.deleted && !e.isOwner);
-  const deletedEmps = employees.filter(e => e.deleted && !e.isOwner);
+// Desktop Manage Staff panel. Mirrors mobile MobileStaffPanel chip filter so
+// admins can browse Active / Inactive / Deleted from one panel on desktop too.
+export const InactiveEmployeesPanel = ({ isOpen, onClose, employees, onEdit, onReactivate, onDelete }) => {
+  const [filter, setFilter] = useState('active');
+
+  const { active, inactive, deleted } = useMemo(() => ({
+    active: employees.filter(e => e.active && !e.deleted && !e.isOwner),
+    inactive: employees.filter(e => !e.active && !e.deleted && !e.isOwner),
+    deleted: employees.filter(e => e.deleted && !e.isOwner),
+  }), [employees]);
+
+  const counts = { active: active.length, inactive: inactive.length, deleted: deleted.length };
+  const list = filter === 'active' ? active : filter === 'inactive' ? inactive : deleted;
 
   if (!isOpen) return null;
 
+  const chip = (id, label, color) => {
+    const isActive = filter === id;
+    return (
+      <button
+        key={id}
+        onClick={() => setFilter(id)}
+        className="px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5"
+        style={{
+          backgroundColor: isActive ? color + '25' : THEME.bg.tertiary,
+          color: isActive ? color : THEME.text.muted,
+          border: `1px solid ${isActive ? color + '60' : THEME.border.subtle}`,
+        }}
+      >
+        {label}
+        <span className="px-1.5 rounded-full" style={{ backgroundColor: isActive ? color + '30' : THEME.bg.elevated, color: isActive ? color : THEME.text.muted, fontSize: 10 }}>{counts[id]}</span>
+      </button>
+    );
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Manage Staff" size="md">
-      {inactiveEmps.length === 0 && deletedEmps.length === 0 ? (
+      <div className="flex gap-2 mb-3">
+        {chip('active', 'Active', THEME.status.success)}
+        {chip('inactive', 'Inactive', THEME.status.warning)}
+        {chip('deleted', 'Deleted', THEME.text.muted)}
+      </div>
+
+      {list.length === 0 ? (
         <div className="text-center py-6">
           <UserCheck size={32} style={{ color: THEME.text.muted }} className="mx-auto mb-2" />
-          <p className="text-sm" style={{ color: THEME.text.secondary }}>All employees are active!</p>
+          <p className="text-sm" style={{ color: THEME.text.secondary }}>No {filter} employees.</p>
         </div>
       ) : (
-        <>
-          {inactiveEmps.length > 0 && (
-            <div className="mb-4">
-              <h3 className="text-xs font-semibold mb-2 flex items-center gap-1" style={{ color: THEME.status.warning }}>
-                <UserX size={12} /> Inactive ({inactiveEmps.length})
-              </h3>
-              <div className="space-y-1">
-                {inactiveEmps.map(emp => (
-                  <div key={emp.id} className="p-2 rounded-lg flex items-center justify-between" style={{ backgroundColor: THEME.bg.tertiary }}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}>{emp.name.charAt(0)}</div>
-                      <div>
-                        <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>{emp.name}</p>
-                        <p className="text-xs" style={{ color: THEME.text.muted }}>{emp.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      <button onClick={() => onReactivate(emp.id)} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: THEME.status.success + '20', color: THEME.status.success }}>Reactivate</button>
-                      <button onClick={() => onDelete(emp.id)} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: THEME.status.error + '20', color: THEME.status.error }}>Remove</button>
-                    </div>
-                  </div>
-                ))}
+        <div className="space-y-1">
+          {filter === 'deleted' && (
+            <p className="text-xs mb-2" style={{ color: THEME.text.muted }}>These employees' past shifts are preserved on the schedule.</p>
+          )}
+          {list.map(emp => (
+            <div key={emp.id} className="p-2 rounded-lg flex items-center justify-between" style={{ backgroundColor: THEME.bg.tertiary }}>
+              <div className={`flex items-center gap-2 flex-1 min-w-0 ${filter === 'deleted' ? 'opacity-60' : ''}`}>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}>{emp.name.charAt(0)}</div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium flex items-center gap-1" style={{ color: THEME.text.primary }}>
+                    {emp.name}
+                    {emp.isAdmin && <Shield size={10} style={{ color: THEME.accent.purple }} />}
+                  </p>
+                  <p className="text-xs truncate" style={{ color: THEME.text.muted }}>{emp.email}</p>
+                </div>
+              </div>
+              <div className="flex gap-1">
+                {filter === 'active' && onEdit && (
+                  <button onClick={() => onEdit(emp)} className="px-2 py-1 rounded text-xs flex items-center gap-1" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${THEME.border.subtle}` }}>
+                    <Edit3 size={10} />Edit
+                  </button>
+                )}
+                {filter === 'inactive' && (
+                  <>
+                    <button onClick={() => onReactivate(emp.id)} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: THEME.status.success + '20', color: THEME.status.success }}>Reactivate</button>
+                    <button onClick={() => onDelete(emp.id)} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: THEME.status.error + '20', color: THEME.status.error }}>Remove</button>
+                  </>
+                )}
+                {filter === 'deleted' && (
+                  <button
+                    onClick={() => onReactivate(emp.id)}
+                    className="px-2 py-1 rounded text-xs font-medium hover:opacity-80"
+                    style={{ backgroundColor: THEME.action.recoverable.bg, color: THEME.action.recoverable.fg, border: `1px solid ${THEME.action.recoverable.border}` }}
+                  >
+                    Restore
+                  </button>
+                )}
               </div>
             </div>
-          )}
-
-          {deletedEmps.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold mb-2 flex items-center gap-1" style={{ color: THEME.text.muted }}>
-                <Trash2 size={12} /> Removed - History Only ({deletedEmps.length})
-              </h3>
-              <p className="text-xs mb-2" style={{ color: THEME.text.muted }}>These employees' past shifts are preserved on the schedule.</p>
-              <div className="space-y-1">
-                {deletedEmps.map(emp => (
-                  <div key={emp.id} className="p-2 rounded-lg flex items-center justify-between" style={{ backgroundColor: THEME.bg.tertiary }}>
-                    {/* Opacity is applied to the identity region only so the Restore
-                        button does not read as disabled (opacity on the parent row
-                        attenuates interactive affordance -- see plan Item 10). */}
-                    <div className="flex items-center gap-2 opacity-60">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}>{emp.name.charAt(0)}</div>
-                      <p className="text-xs" style={{ color: THEME.text.muted }}>{emp.name}</p>
-                    </div>
-                    {/* Restore is a recoverable administrative action: tonal OTR brand
-                        blue (not green 'go', not red 'danger'). Full opacity so it
-                        reads clearly as clickable on the attenuated row. */}
-                    <button
-                      onClick={() => onReactivate(emp.id)}
-                      className="px-2 py-1 rounded text-xs font-medium hover:opacity-80"
-                      style={{ backgroundColor: THEME.action.recoverable.bg, color: THEME.action.recoverable.fg, border: `1px solid ${THEME.action.recoverable.border}` }}
-                    >
-                      Restore
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
     </Modal>
   );

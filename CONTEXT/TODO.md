@@ -38,6 +38,7 @@ Rules:
 - Payroll aggregator path 1 -- blocked by demo go-ahead; see Blocked
 - [PARKED, do not surface] Staff-cell action menu -- raised 2026-04-18, explore later, do not ask
 - [PARKED, do not surface] In-app accept/decline notification for Sarvi on shift switches -- raised 2026-04-27 s032; discuss separately after EmailModal conversion ships; do not ask
+- Prevent duplicate-email employees -- raised 2026-04-27. Today the Sheet allows two rows with the same email (Gary Scott row 14 admin + Gary row 32 staff, both gary.scott434@gmail.com). EmployeeFormModal save path needs a "email already exists" guard before insert/update; consider mirror-check in backend/Code.gs saveEmployee for safety. Surfaced because mobile schedule grid showed both Gary records.
 
 ## Blocked
 
