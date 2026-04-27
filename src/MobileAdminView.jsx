@@ -176,7 +176,7 @@ export const MobileAdminScheduleGrid = ({
   isEditMode = false, onCellClick, onNameClick, onHeaderClick
 }) => {
   const scrollContainerRef = React.useRef(null);
-  const NAME_COL_WIDTH = 72;
+  const NAME_COL_WIDTH = 60;
   const CELL_WIDTH = 80;
   const CELL_HEIGHT = 74;
   const HEADER_HEIGHT = 68; // Taller to fit staffing counter
@@ -197,7 +197,7 @@ export const MobileAdminScheduleGrid = ({
         className="overflow-auto"
         style={{ maxHeight: 'calc(100vh - 200px)', WebkitOverflowScrolling: 'touch' }}
       >
-        <table style={{ width: totalWidth, borderCollapse: 'separate', borderSpacing: 0 }}>
+        <table style={{ width: totalWidth, borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
           <thead>
             <tr>
               {/* Frozen corner */}
@@ -296,7 +296,7 @@ export const MobileAdminScheduleGrid = ({
                     onClick={() => onNameClick && onNameClick(emp)}
                     style={{ 
                     position: 'sticky', left: 0, zIndex: 10,
-                    width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH,
+                    width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH, maxWidth: NAME_COL_WIDTH,
                     height: CELL_HEIGHT,
                     maxHeight: CELL_HEIGHT,
                     boxSizing: 'border-box',
@@ -307,7 +307,7 @@ export const MobileAdminScheduleGrid = ({
                     borderRight: `1px solid ${THEME.border.default}`,
                     padding: '4px',
                     cursor: onNameClick ? 'pointer' : 'default'
-                  }}>
+                  }} title={emp.name}>
                     <div style={{
                       height: CELL_HEIGHT - 8,
                       maxHeight: CELL_HEIGHT - 8,
@@ -317,14 +317,14 @@ export const MobileAdminScheduleGrid = ({
                       justifyContent: 'center',
                       gap: 1,
                     }}>
-                      <p className="font-semibold truncate shrink-0" style={{ color: onNameClick ? THEME.accent.cyan : THEME.text.primary, fontSize: '10px', lineHeight: 1.15 }}>{nameFirst}</p>
-                      {nameRest ? (
-                        <p className="truncate shrink-0" style={{ color: THEME.text.muted, fontSize: '9px', lineHeight: 1.15 }}>{nameRest}</p>
-                      ) : null}
                       {titledRow && (emp.title || '').trim() ? (
-                        <p className="line-clamp-1 shrink-0" style={{ color: THEME.text.secondary, fontSize: '8px', lineHeight: 1.15 }} title={emp.title}>{emp.title}</p>
+                        <p className="truncate shrink-0" style={{ color: THEME.text.muted, fontSize: '7px', lineHeight: 1.0, letterSpacing: '0.4px', textTransform: 'uppercase' }}>{emp.title}</p>
                       ) : null}
-                      <p className="truncate shrink-0" style={{ color: THEME.accent.cyan, fontSize: '9px', lineHeight: 1.15 }}>{weekHours.toFixed(1)}h{emp.isAdmin ? ' ★' : ''}</p>
+                      <p className="font-semibold truncate shrink-0" style={{ color: onNameClick ? THEME.accent.cyan : THEME.text.primary, fontSize: '12px', lineHeight: 1.1 }}>{nameFirst}</p>
+                      {nameRest ? (
+                        <p className="truncate shrink-0" style={{ color: THEME.text.muted, fontSize: '9px', lineHeight: 1.1 }}>{nameRest}</p>
+                      ) : null}
+                      <p className="truncate shrink-0" style={{ color: THEME.accent.cyan, fontSize: '9px', lineHeight: 1.1 }}>{weekHours.toFixed(1)}h{emp.isAdmin ? ' ★' : ''}</p>
                     </div>
                   </td>
                   

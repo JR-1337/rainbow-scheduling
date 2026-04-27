@@ -22,7 +22,7 @@ import { useFocusTrap } from './hooks/useFocusTrap';
 import { EVENT_TYPES } from './constants';
 import { computeDayUnionHours } from './utils/timemath';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
-import { hasTitle } from './utils/employeeRender';
+import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
 import { EventGlyphPill } from './components/EventGlyphPill';
 import { PKDetailsPanel } from './components/PKDetailsPanel';
 
@@ -168,7 +168,7 @@ export const MobileAnnouncementPopup = ({ isOpen, onClose, announcement }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, loggedInUser, getEmployeeHours, timeOffRequests = [], onShiftClick }) => {
   const scrollContainerRef = useRef(null);
-  const NAME_COL_WIDTH = 72;
+  const NAME_COL_WIDTH = 60;
   const CELL_WIDTH = 80;
   const CELL_HEIGHT = 74;
   const HEADER_HEIGHT = 52;
@@ -197,7 +197,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
           max-height: calc(100vh - 180px);
         }
         .mobile-grid-scroll::-webkit-scrollbar { display: none; }
-        .mobile-grid-table { border-collapse: separate; border-spacing: 0; }
+        .mobile-grid-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         .mobile-grid-table th, .mobile-grid-table td { white-space: nowrap; }
         .mobile-grid-table thead th { position: sticky; top: 0; z-index: 20; }
         .mobile-grid-table tbody td:first-child, .mobile-grid-table thead th:first-child { 
@@ -248,6 +248,8 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
               const hours = getEmployeeHours(emp.id);
               const isMe = emp.id === loggedInUser.id;
               const showDivider = dividerIndices.has(empIndex);
+              const { first: nameFirst, rest: nameRest } = splitNameForSchedule(emp.name);
+              const titledRow = hasTitle(emp);
               return (
                 <React.Fragment key={emp.id}>
                   {showDivider && (
@@ -260,26 +262,22 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                   <tr>
                   {/* Name cell - frozen left */}
                   <td style={{
-                    width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH,
+                    width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH, maxWidth: NAME_COL_WIDTH,
                     background: isMe ? `linear-gradient(${THEME.accent.purple}20, ${THEME.accent.purple}20), ${THEME.bg.secondary}` : THEME.bg.secondary,
                     borderRight: `1px solid ${THEME.border.default}`,
                     borderBottom: `1px solid ${THEME.border.subtle}`,
                     borderLeft: isMe ? `3px solid ${THEME.accent.purple}` : 'none',
-                    padding: '4px', verticalAlign: 'middle'
-                  }}>
-                    <p className="font-medium truncate flex items-center gap-1" style={{
-                      color: isMe ? THEME.accent.purple : THEME.text.primary,
-                      fontSize: '12px', lineHeight: 1.2
-                    }}>
-                      {emp.name.split(' ')[0]}
-                      {isMe && <span style={{ color: THEME.accent.cyan, fontSize: '9px' }}>(You)</span>}
+                    padding: '4px', verticalAlign: 'middle', overflow: 'hidden'
+                  }} title={emp.name}>
+                    {titledRow && (emp.title || '').trim() ? (
+                      <p className="truncate" style={{ color: THEME.text.muted, fontSize: '7px', lineHeight: 1.0, letterSpacing: '0.4px', textTransform: 'uppercase' }}>{emp.title}</p>
+                    ) : null}
+                    <p className="font-semibold truncate" style={{ color: isMe ? THEME.accent.purple : THEME.text.primary, fontSize: '12px', lineHeight: 1.1 }}>
+                      {nameFirst}{isMe ? ' (You)' : ''}
                     </p>
-                    <p className="truncate" style={{
-                      color: THEME.text.muted,
-                      fontSize: '10px', lineHeight: 1.2
-                    }}>
-                      {emp.name.split(' ').slice(1).join(' ')}
-                    </p>
+                    {nameRest ? (
+                      <p className="truncate" style={{ color: THEME.text.muted, fontSize: '9px', lineHeight: 1.1 }}>{nameRest}</p>
+                    ) : null}
                   </td>
                   
                   {/* Shift cells */}

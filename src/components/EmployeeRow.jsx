@@ -35,12 +35,12 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
         <div className="flex h-full min-h-0 w-full items-center gap-1.5 overflow-hidden">
           <div className="h-6 w-6 flex-shrink-0 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: isDeleted ? THEME.bg.elevated : `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: isDeleted ? THEME.text.muted : 'white' }}>{employee.name.split(' ').map(n => n[0]).join('')}</div>
           <div className="min-h-0 min-w-0 flex-1 flex flex-col justify-center gap-0.5 overflow-hidden" title={employee.name}>
+            {showTitleLine ? (
+              <p className="truncate text-[9px] uppercase tracking-wide leading-none" style={{ color: THEME.text.muted }} title={employee.title}>{employee.title}</p>
+            ) : null}
             <p className="truncate text-xs font-semibold leading-tight" style={{ color: isDeleted ? THEME.text.muted : THEME.text.primary }}>{nameFirst}</p>
             {nameRest ? (
               <p className="truncate text-[10px] leading-tight" style={{ color: THEME.text.muted }}>{nameRest}</p>
-            ) : null}
-            {showTitleLine ? (
-              <p className="line-clamp-1 text-[10px] leading-tight" style={{ color: THEME.text.secondary }} title={employee.title}>{employee.title}</p>
             ) : null}
             <p className="shrink-0 truncate text-xs font-semibold leading-tight" style={{ color: isDeleted ? THEME.text.muted : hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan }}><AnimatedNumber value={hours} decimals={1} suffix="h" /></p>
           </div>
