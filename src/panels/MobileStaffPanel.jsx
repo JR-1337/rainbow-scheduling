@@ -39,6 +39,23 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
     );
   };
 
+  if (confirmDelete) {
+    return (
+      <MobileBottomSheet isOpen={isOpen} onClose={() => setConfirmDelete(null)} title="Remove employee?">
+        <div className="py-2">
+          <h3 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: THEME.status.error }}>
+            <Trash2 size={14} />Remove {confirmDelete.name}?
+          </h3>
+          <p className="text-xs mb-3" style={{ color: THEME.text.secondary }}>This removes {confirmDelete.name} from the active roster. Their past shifts stay on the schedule. You can restore from the Deleted tab.</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" size="md" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+            <Button variant="destructive" size="md" leftIcon={Trash2} iconSize={14} onClick={() => { onDelete(confirmDelete.id); setConfirmDelete(null); }} style={{ backgroundColor: THEME.status.error, color: '#fff' }}>Remove</Button>
+          </div>
+        </div>
+      </MobileBottomSheet>
+    );
+  }
+
   return (
     <MobileBottomSheet isOpen={isOpen} onClose={onClose} title="Staff">
       <div className="flex gap-2 mb-3 sticky top-0 z-10 pb-2" style={{ backgroundColor: THEME.bg.secondary }}>
@@ -141,20 +158,6 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
           >
             Add Employee
           </Button>
-        </div>
-      )}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setConfirmDelete(null)}>
-          <div className="rounded-xl p-4 max-w-sm w-full" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: THEME.status.error }}>
-              <Trash2 size={14} />Delete {confirmDelete.name}?
-            </h3>
-            <p className="text-xs mb-3" style={{ color: THEME.text.secondary }}>This removes {confirmDelete.name} from the active roster. Their past shifts stay on the schedule. You can restore from the Deleted tab.</p>
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" size="md" onClick={() => setConfirmDelete(null)}>Cancel</Button>
-              <Button variant="destructive" size="md" onClick={() => { onDelete(confirmDelete.id); setConfirmDelete(null); }} style={{ backgroundColor: THEME.status.error, color: '#fff' }}>Delete</Button>
-            </div>
-          </div>
         </div>
       )}
     </MobileBottomSheet>

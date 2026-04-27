@@ -2143,7 +2143,7 @@ export default function App() {
               My Requests
             </button>
 
-            {/* Account / admin menu — collapses Add Employee, Manage Staff, Settings, Sign Out */}
+            {/* Account / admin menu — collapses Add Employee, Employees, Settings, Sign Out */}
             <div className="relative" ref={adminMenuRef}>
               <button
                 onClick={() => setAdminMenuOpen(v => !v)}
@@ -2413,7 +2413,7 @@ export default function App() {
                 
                 {/* Former Staff (deleted employees with shifts) removed from the
                     main grid per Sarvi (2026-04-18). Records + shift data are
-                    preserved in the backend; restore via Manage Staff if needed. */}
+                    preserved in the backend; restore via Employees if needed. */}
               </div>
               
               {/* Legend */}
