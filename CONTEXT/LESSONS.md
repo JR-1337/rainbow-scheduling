@@ -101,6 +101,12 @@ Lesson: FORMATTED_VALUE returns booleans as "TRUE"/"FALSE" strings; SERIAL_NUMBE
 Context: Attempted v2.19 read optimization; reverted.
 Affirmations: 0
 
+## [PROJECT] -- Apps Script versioned deployments bind to original deployer, not current script owner
+Lesson: Transferring ownership of an Apps Script project does NOT transfer existing Web App deployments. The `/exec` URL keeps running under whoever first deployed it, even after the script project's owner changes. The "Manage deployments" panel is viewer-contextual: showing "Execute as: Me (new-owner)" to the new owner is a UI label, not the actual binding. To switch sender (the account `MailApp.sendEmail` runs from), must (1) archive the existing deployment, (2) sign in as new owner in incognito and run ANY function from the script editor to force fresh OAuth grant on the new owner, (3) only THEN Deploy New. Auth popup MUST appear in step 2; if it doesn't, OAuth fell back on the prior deployer's grant and emails will still send from the old account. Confirmed via Google docs: "You cannot transfer ownership of versioned deployments." Burned this on the email-sender migration 2026-04-27 s030; URL swap shipped at `8b64f4e` but emails still came from John because deployment was still John's under the hood. Full investigation at `docs/email-migration-investigation.md` (4 loops). Walkthrough at `docs/email-migration-walkthrough.md`.
+Context: Any time a script project's ownership changes mid-life, plus `MailApp.sendEmail` (or any Google service that runs as executing identity) is in play. Also relevant for any future script ownership transfer the team does.
+Confidence: H -- Google deployment docs + observed prod behavior 2026-04-27.
+Affirmations: 0
+
 ## [PROJECT] -- Vercel Postgres is dead (Dec 2024); migrated to Neon Marketplace
 Lesson: Any reference to "Vercel Postgres" as a current product is stale. Vercel shut it down in December 2024 and migrated existing databases to Neon. New projects use Neon directly via the Vercel Marketplace integration. Treat older comparison docs / blog posts that include Vercel Postgres as outdated.
 Context: Migration research 2026-04-26 (`docs/research/scaling-migration-options-2026-04-26.md`). External vendor fact, not a code rule.
