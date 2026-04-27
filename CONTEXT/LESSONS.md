@@ -39,11 +39,6 @@ Lesson: When a form <select> has a fixed Array.from length for options (e.g. hou
 Context: 2026-04-19 -- EmployeeFormModal availability/defaultShift dropdowns capped at 19:00. v2.24.0 widener wrote 20:00 to Mon-Fri end. Playwright smoke showed Sadie's Mon end as 06:00 in the UI even though the sheet had 20:00. Saving would have silently truncated back to 06:00. Fix: extend range to 22:00 (length 17).
 Affirmations: 0
 
-## [PROJECT] -- Trailing-underscore functions are hidden from Apps Script editor dropdown
-Lesson: Apps Script functions ending with `_` are filtered out of the editor's function-name dropdown in the new editor UI. For one-shot migrations that need to be picked from the dropdown, provide a public wrapper (no underscore) that calls the underscore version.
-Context: 2026-04-19 -- `widenAvailabilityForPK_` invisible in dropdown; added `runWidenAvailabilityForPK` wrapper. Both deleted after the one-shot ran.
-Affirmations: 0
-
 ## [PROJECT] -- Check for visual obstruction before re-chasing a "doesn't render" bug
 Lesson: When a bug report says "X saves but doesn't show in UI," verify X is actually missing from the DOM before digging into load/key/state code. Sheet had 4 PK rows that DID render; the real issue was an `absolute bottom-0 right-0` badge layering over the work-shift's hours row, making the PK "disappear" visually while the shift appeared unchanged.
 Context: 2026-04-24 Bug 5 investigation. Handoff inherited "top-nav PK doesn't render" framing from a prior session; Sheet inspection via Drive MCP showed the events existed; prod smoke showed PK badge WAS rendered but was obscuring shift content. Shifted scope from "re-render bug" to "visual overlap fix" mid-session.
@@ -67,11 +62,6 @@ Affirmations: 0
 ## [PROJECT] -- Style-override on a Button variant is a smell
 Lesson: If you find yourself passing `style={{ backgroundColor, color, border }}` into a `<Button variant="...">`, codify it as a new variant instead. The override defeats the tokenization.
 Context: Sign Out drawer button shipped as `variant="secondary"` + 3-line style override for error-tone. Introducing `destructiveOutline` variant removed the override entirely.
-Affirmations: 0
-
-## [PROJECT] -- AdaptiveModal hot-resize survives mid-modal without remount
-Lesson: `useIsMobile()` resize listener triggers a re-render but React reconciles children; internal modal state (selected step, form fields) survives the bottom-sheet <-> centered-card switch. Worth trusting when rolling new AdaptiveModal call sites.
-Context: Playwright smoke 2026-04-18 hot-resized 390->1280 mid-RequestTimeOffModal; modal transformed without closing or losing state.
 Affirmations: 0
 
 ## [PROJECT] -- AdaptiveModal mobile path doesn't render the icon prop
@@ -523,22 +513,22 @@ Affirmations: 1
 Source: human (declared from session reflection)
 
 ## [PROJECT] -- Pitch-facing copy uses "high-priced lawyer with charm" voice; no preamble, no SaaS hero phrases
-Lesson: All pitch-deck copy and chatbot responses use a charming, force-of-logic trial-lawyer voice. NO opening preamble ("That's a fair question", "Great question", "And the honest answer is", "That's the right question"). First sentence is the answer. Three-beat rhythms welcome. Banned phrases: "let's prove it together", "we've got you covered", "earns your trust" / "earns the trust", "infinitely better", "crush", "destroy", "annihilate", emoji peppering, exclamation marks beyond one per response. JR's voice calibration (s025): straight shooter who is charming and likes metaphor.
-Context: 2026-04-26 -- s024 chatbot iteration plus s025 deck-wide application plus s026 stat-weave + Spec.jsx alignment. JR rejected "the wording is clunky. try again. think about it in a new way. like a high priced lawyer with charm convincing someone." s025 applied across all 7 prose-heavy slides (Cover, Cost, Ripple, Today, Alternatives, Proposal, Phase2) with JR driving voice picks per card. Banned phrase "earns the trust" was caught and removed from Proposal subhead + Phase2 footer in s025. s026 reapplied during evidence-weave on Cost/Ripple/Proposal stats and Spec.jsx alignment pass without voice regression. PROPOSE GRADUATION: Affirmations counter at 2; this lesson is a stable cross-session preference and ready to graduate to a durable convention or to a [GLOBAL] cross-project lesson if other pitch projects appear.
-How to apply: Before shipping pitch-facing copy: read it aloud. Does it open with a softener? Does it have a single consistent metaphor? Does it land in 1-2 punchy paragraphs? If any answer is no, rewrite.
+Lesson: All pitch-deck copy and chatbot responses use a charming, force-of-logic trial-lawyer voice. No opening preamble ("That's a fair question", "Great question", "And the honest answer is"). First sentence is the answer. Banned phrases: "let's prove it together", "we've got you covered", "earns your trust" / "earns the trust", "infinitely better", "crush", "destroy", "annihilate", emoji peppering, exclamation marks beyond one per response.
+Context: s024 chatbot, s025 deck-wide (7 slides), s026 evidence-weave + Spec.jsx -- consistent across three sessions. PROPOSE GRADUATION: Affirmations 2; ready for durable convention or [GLOBAL] cross-project if other pitch projects appear.
+How to apply: Read pitch copy aloud before shipping. Opens with a softener? Lacks a single metaphor? Spans more than 2 punchy paragraphs? Rewrite.
 Affirmations: 2
 
 ## [PROJECT] -- The Carman family does not backfill Sarvi when scheduling breaks; pitch must reflect that
-Lesson: At OTR the family (Joel/Amy/Dan/Scott) does NOT cover for missing staff or call replacements. Sarvi absorbs all scheduling-related crisis recovery alone. Any pitch framing that suggests "the family steps up when the schedule breaks" or "the cost spreads to the family" is factually wrong and JR will reject it. The cost spreads to (a) Sarvi alone (operationally), (b) the business invisibly (payroll surprises, OT, lost sales), (c) staff on the floor who absorb gaps, (d) the single-point-of-failure risk on Sarvi.
-Context: 2026-04-26 -- s024. I drafted Ripple slide first-card option "THE FAMILY DESK / Every scheduling shortfall lands at the family's door." JR rejected: "none of these are great because they all fall at sarvis feet. not the family. they dont cover or call replacements. they sit on their hands and sarvi does it." Reframed to "THE INVISIBLE BILL / OTR pays the cost without ever seeing the cause" landing the cost on the business itself.
-How to apply: When framing "who carries the cost" or "what happens when scheduling breaks" in pitch copy, never imply family-side recovery work. Land the cost on Sarvi (concentrated), the business (invisibly), or the floor / staff. Family-firm risk-aversion is fair to mention; family-firm operational labor is not.
+Lesson: Family (Joel/Amy/Dan/Scott) does NOT cover missing staff or call replacements. Sarvi absorbs all scheduling crisis recovery alone. Cost lands on (a) Sarvi operationally, (b) the business invisibly (payroll surprises, OT, lost sales), (c) staff on floor, (d) single-point-of-failure risk on Sarvi.
+Context: s024 -- Ripple "FAMILY DESK" framing rejected ("they sit on their hands and sarvi does it"). Reframed to "INVISIBLE BILL" landing cost on business.
+How to apply: Never imply family-side recovery work. Family-firm risk-aversion is fair; family-firm operational labor is not.
 Affirmations: 0
 
 ## [PROJECT] -- Don't name JR personally in pitch DECK slides; spec/price body + footer + chatbot exempt
+Lesson: Pitch-deck slide copy (`src/slides/*.jsx` in RAINBOW-PITCH) refers to the product builder as "Rainbow" or "the developer," never "John." Single-point-of-failure read in family-firm sales context. Scoped exemptions: Spec.jsx body in service-contract / continuity sections; Spec.jsx + Price.jsx footer attributions ("Prepared by John Richmond"); chatbot system prompt in `api/ask-rainbow.js` (deliberately framed as "trial lawyer for John Richmond").
+Context: s025 JR direction on Proposal Card 3 + Phase2 footer. s026 Spec.jsx alignment respected scope (John only in continuity body + footer + chatbot).
+How to apply: Deck slide edits default to "Rainbow" / "the developer." Spec/price body: continuity context can name John; everything else defaults to Rainbow.
 Affirmations: 1
-Lesson: Pitch-deck slide copy (`src/slides/*.jsx` in RAINBOW-PITCH) refers to the product builder as "Rainbow" or "the developer," never "John." Naming the developer in deck slides creates a single-point-of-failure read in a family-firm sales context. Scoped exemptions: Spec.jsx body sections that name John in service-contract / continuity context; Spec.jsx + Price.jsx footer attributions ("Prepared by John Richmond"); the chatbot system prompt in `api/ask-rainbow.js` (where the bot is deliberately framed as "trial lawyer for John Richmond").
-Context: 2026-04-26 s025 -- JR direction on Proposal.jsx Card 3 ("I don't want to be named personally"). Same session swept Phase2.jsx direction 5 ("authored alongside OTR and maintained by Rainbow," was "by John with OTR"). JR confirmed exemptions for Spec body, Spec/Price footers, and chatbot prompt in same session. s026 affirmation: Spec.jsx alignment pass touched §1, §3, §6, §9, §11, header, footer -- preserved "John" only in Spec body continuity paragraph + footer attribution per the scope rule, and in chatbot system prompt; deck slides remained untouched on naming.
-How to apply: When writing or editing deck slide copy, default to "Rainbow" or "the developer." Before any spec/price body edit, check the scope: continuity contract context can name John; non-continuity body should still default to Rainbow.
 
 ## [PROJECT] -- No "rounding" language in any pitch artifact (deck, spec, chatbot, price sheet)
 Lesson: Sweep ban on "rounding", "rounding rule", "rounding ambiguity" across pitch deck, spec sheet, chatbot system prompt, and price sheet. Reason: Amy rounds up manually because she chooses to; ADP doesn't enforce rounding; "stops time-rounding ambiguity" was a fabricated value claim. Counterpoint replacement reasons must use other angles: modern phone-first punch flow, real-time dashboard for Sarvi, ADP-formatted handoff, automated promo commission tracking.
