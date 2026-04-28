@@ -244,6 +244,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       .wk-block + .wk-block {
         break-before: page;
         page-break-before: always;
+        padding-top: 5mm;
       }
       tr { page-break-inside: avoid; break-inside: avoid; }
       thead { display: table-header-group; }
