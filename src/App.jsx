@@ -47,7 +47,7 @@ import { MyRequestsPanel } from './panels/MyRequestsPanel';
 import { EmployeesPanel } from './panels/EmployeesPanel';
 import { MobileStaffPanel } from './panels/MobileStaffPanel';
 import { ShiftEditorModal } from './modals/ShiftEditorModal';
-import { PKEventModal } from './modals/PKEventModal';
+import { PKModal } from './modals/PKModal';
 import { RequestTimeOffModal } from './modals/RequestTimeOffModal';
 import { CommunicationsPanel } from './panels/CommunicationsPanel';
 import { AdminSettingsModal } from './modals/AdminSettingsModal';
@@ -289,53 +289,52 @@ export default function App() {
   // guardedMutation moved to hooks/useGuardedMutation.js
   const guardedMutation = useGuardedMutation(showToast);
 
-  // PK editor: applies adds + removes in a single period save (batchSaveShifts).
-  // Adds: synthesize PK event rows client-side and append to events[empId-date].
-  // Removes: drop PK entries matching {date, startTime, endTime} from events[empId-date].
-  // Persistence: existing batchSaveShifts path rewrites the period — atomic with
-  // any other unsaved schedule edits in the same period.
-  const handleBulkPK = async ({ date, startTime, endTime, note, addIds = [], removeIds = [] }) => {
-    if (addIds.length === 0 && removeIds.length === 0) return;
-    await guardedMutation('Updating PK', async () => {
+  // PK editor: unified handler for PKModal (CREATE + REMOVE modes).
+  // CREATE: addIds (new bookings) + removeBookings (single-slot removals from diff).
+  // REMOVE: removeBookings array of per-booking tuples across the visible week.
+  // Persistence: batchSaveShifts path rewrites the period — atomic with any other unsaved edits.
+  const handlePKConfirm = async ({ mode, date, startTime, endTime, note, addIds = [], removeBookings = [] }) => {
+    if (addIds.length === 0 && removeBookings.length === 0) return;
+    await guardedMutation(mode === 'create' ? 'Updating PK' : 'Removing PK', async () => {
       const prevEvents = events;
       const nextEvents = { ...events };
 
-      // Apply removes
-      removeIds.forEach(empId => {
-        const key = `${empId}-${date}`;
+      // Apply removals — each tuple targets a specific (empId, date, startTime, endTime) booking
+      removeBookings.forEach(({ empId, date: bDate, startTime: bStart, endTime: bEnd }) => {
+        const key = `${empId}-${bDate}`;
         const list = nextEvents[key] || [];
         const filtered = list.filter(ev =>
-          !(ev.type === 'pk' && ev.startTime === startTime && ev.endTime === endTime)
+          !(ev.type === 'pk' && ev.startTime === bStart && ev.endTime === bEnd)
         );
         if (filtered.length === 0) delete nextEvents[key];
         else nextEvents[key] = filtered;
       });
 
-      // Apply adds (synthesize rows; backend keyOf for type=pk uses 3-tuple so
-      // synthetic ids are not load-bearing for dedupe — we still set one for traceability)
-      addIds.forEach(empId => {
-        const emp = employees.find(e => String(e.id) === String(empId));
-        if (!emp) return;
-        const key = `${empId}-${date}`;
-        const newEvent = {
-          id: `PK-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          employeeId: empId,
-          employeeName: emp.name,
-          employeeEmail: emp.email,
-          date,
-          startTime,
-          endTime,
-          role: 'none',
-          task: '',
-          type: 'pk',
-          note: note || '',
-        };
-        nextEvents[key] = [...(nextEvents[key] || []), newEvent];
-      });
+      // Apply adds (CREATE mode only — single date/start/end slot)
+      if (mode === 'create') {
+        addIds.forEach(empId => {
+          const emp = employees.find(e => String(e.id) === String(empId));
+          if (!emp) return;
+          const key = `${empId}-${date}`;
+          const newEvent = {
+            id: `PK-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            employeeId: empId,
+            employeeName: emp.name,
+            employeeEmail: emp.email,
+            date,
+            startTime,
+            endTime,
+            role: 'none',
+            task: '',
+            type: 'pk',
+            note: note || '',
+          };
+          nextEvents[key] = [...(nextEvents[key] || []), newEvent];
+        });
+      }
 
       setEvents(nextEvents);
 
-      // Persist the period via the existing batch-save path
       const { periodShifts, periodDates } = collectPeriodShiftsForSave(dates, employees, shifts, nextEvents);
       const saveResult = await apiCall('batchSaveShifts', { shifts: periodShifts, periodDates });
 
@@ -347,7 +346,7 @@ export default function App() {
 
       const bits = [];
       if (addIds.length > 0) bits.push(`+${addIds.length}`);
-      if (removeIds.length > 0) bits.push(`-${removeIds.length}`);
+      if (removeBookings.length > 0) bits.push(`-${removeBookings.length}`);
       showToast('success', `PK updated (${bits.join(' / ')})`);
       setPkModalOpen(false);
       if (currentUser?.email) await loadDataFromBackend(currentUser.email);
@@ -615,24 +614,6 @@ export default function App() {
   // Part-time employees (Clear dropdown can target them; Auto-Fill stays FT-only by design)
   const partTimeEmployees = useMemo(() => schedulableEmployees.filter(e => e.employmentType === 'part-time'), [schedulableEmployees]);
   
-  // Days within the given week that have >=1 PK event booked (any employee, any time slot).
-  // Used by Clear dropdown to offer a per-day bulk-PK clear without opening PKEventModal.
-  const daysWithPKInWeek = useCallback((weekDates) => {
-    const out = [];
-    for (const date of weekDates) {
-      const dateStr = toDateKey(date);
-      let count = 0;
-      for (const emp of schedulableEmployees) {
-        const list = events[`${emp.id}-${dateStr}`] || [];
-        for (const ev of list) {
-          if (ev.type === 'pk') count++;
-        }
-      }
-      if (count > 0) out.push({ dateStr, date, count });
-    }
-    return out;
-  }, [events, schedulableEmployees]);
-
   // Admin contacts (admins who are not owner, for display purposes)
   const adminContacts = useMemo(() => employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted), [employees]);
   
@@ -1635,6 +1616,19 @@ export default function App() {
     />
   );
 
+  const pkModalEl = (
+    <PKModal
+      isOpen={pkModalOpen}
+      onClose={() => setPkModalOpen(false)}
+      onConfirm={handlePKConfirm}
+      employees={employees}
+      events={events}
+      activeWeek={activeWeek}
+      week1={week1}
+      week2={week2}
+    />
+  );
+
   // Logo click returns admin to "home": schedule tab, current pay period, week 1,
   // scrolled to top. Stateful (not a full reload) so unsaved drafts/modals the
   // admin may have in flight don't get wiped.
@@ -2083,17 +2077,8 @@ export default function App() {
           onComplete={() => { setPublished(true); setUnsaved(false); }}
         />
 
-        {/* S62 — Bulk PK modal (mobile admin) */}
-        <PKEventModal
-          isOpen={pkModalOpen}
-          onClose={() => setPkModalOpen(false)}
-          onSchedule={handleBulkPK}
-          employees={employees}
-          events={events}
-          activeWeek={activeWeek}
-          week1={week1}
-          week2={week2}
-        />
+        {/* S36 — Unified PK modal (mobile admin) */}
+        {pkModalEl}
 
         {/* Employee Form Modal (mobile admin: reached via MobileStaffPanel) */}
         <EmployeeFormModal
@@ -2648,16 +2633,7 @@ export default function App() {
       <EmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onEdit={(emp) => { setInactivePanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
       <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />
       <ChangePasswordModal isOpen={mobileAdminChangePasswordOpen} onClose={() => setMobileAdminChangePasswordOpen(false)} currentUser={currentUser} />
-      <PKEventModal
-        isOpen={pkModalOpen}
-        onClose={() => setPkModalOpen(false)}
-        onSchedule={handleBulkPK}
-        employees={employees}
-        events={events}
-        activeWeek={activeWeek}
-        week1={week1}
-        week2={week2}
-      />
+      {pkModalEl}
       {editingColumnDate && (
         <ColumnHeaderEditor
           date={editingColumnDate}
