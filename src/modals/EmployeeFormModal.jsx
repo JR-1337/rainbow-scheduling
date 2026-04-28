@@ -43,14 +43,16 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
       }
     }
     const normalizedEmail = formData.email.trim().toLowerCase();
-    const collision = employees.find(e =>
-      !e.deleted &&
-      e.id !== formData.id &&
-      (e.email || '').trim().toLowerCase() === normalizedEmail
-    );
-    if (collision) {
-      setErrors({ email: `This email is already used by ${collision.name}. Use a different email.` });
-      return;
+    if (normalizedEmail) {
+      const collision = employees.find(e =>
+        !e.deleted &&
+        e.id !== formData.id &&
+        (e.email || '').trim().toLowerCase() === normalizedEmail
+      );
+      if (collision) {
+        setErrors({ email: `This email is already used by ${collision.name}. Use a different email.` });
+        return;
+      }
     }
     setIsSaving(true);
     const saveData = { ...formData, id: formData.id || `emp-${Date.now()}` };
