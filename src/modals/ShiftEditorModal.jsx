@@ -259,13 +259,14 @@ export const ShiftEditorModal = ({
       return;
     }
     const t = type === 'work' ? getDefaultBookingTimes(date) : getDefaultEventTimes(type, date);
+    const newShiftRole = type === 'work' ? (employee?.defaultSection || 'none') : 'none';
     onSave({
       employeeId: employee.id,
       employeeName: employee.name,
       date: toDateKey(date),
       startTime: t.start,
       endTime: t.end,
-      role: 'none',
+      role: newShiftRole,
       task: '',
       type,
       note: '',
