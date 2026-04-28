@@ -61,7 +61,7 @@ export const ShiftEditorModal = ({
       return {
         startTime: existingShift?.startTime || t.start,
         endTime: existingShift?.endTime || t.end,
-        role: existingShift?.role || 'none',
+        role: existingShift?.role || employee?.defaultSection || 'none',
         task: existingShift?.task || '',
       };
     }
