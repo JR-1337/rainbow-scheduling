@@ -24,10 +24,18 @@ Rules:
 ## Components
 
 - Frontend -- React 18 + Vite + Tailwind + Lucide -- `src/`
-- Backend -- Google Apps Script -- `backend/Code.gs` (~2583 lines, v2.25.0 live + four editor-only backfills appended 2026-04-24)
+- Backend -- Google Apps Script -- `backend/Code.gs` (~2503 lines, v2.26.0 live as of s034 redeploy)
 - Data -- Google Sheets (5 tabs) -- schema in `docs/schemas/sheets-schema.md`
 - Deploy -- Vercel auto on push (frontend) + Apps Script manual (backend)
 - Email -- MailApp as "OTR Scheduling"
+
+## Deploy topology
+
+- Sheet `RAINBOW SCHEDULING DATABASE` owner == `otr.scheduler@gmail.com` (file id `1LlhhT9f6ewEfWqdoe0-j5hnVNKiA1pSfEFBAzSo3v8A`)
+- Apps Script project lives in `otr.scheduler@gmail.com` Drive as STANDALONE (not container-bound to the Sheet)
+- Live `/exec` deploy fingerprint: `AKfycbxk8FBvUhwWa1DPbFiDVEhqa1tPzfTGqYqnYPiSmYTu9UbXvSXddI0xy-5hQl8kkfpSSQ` (in `src/utils/api.js:6`)
+- Access: script.google.com directly while otr.scheduler is the active session. Extensions -> Apps Script from the Sheet returns "can't be found" because no binding exists
+- s031 nuke-and-pave (commit `33afa4b`) moved Sheet + Script + Deploy + email-sender identity to otr.scheduler in one Make-a-copy
 
 ## Key Files
 
