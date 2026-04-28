@@ -21,7 +21,8 @@ Rules:
 
 ## Active
 
-- **PK modal redesign (next session, /coding-plan).** Build a dedicated PK modal in the autofill/clear modal's design language (segmented mode toggle + checkbox list + prominent confirm). Covers PK CREATION (date + hour + employee -- replaces today's PKEventModal flow) AND granular REMOVAL (per-booking checkboxes, not just per-day). Mobile + desktop parity via AdaptiveModal. Old PKEventModal stays in place until the new one ships. JR-driven spec at kickoff.
+Anchor: soliton kintsugi
+
 - **JR manual cleanup -- Natalie Sirkin Week 18 (Apr 27 - May 3) shifts cleared during s033 smoke.** Original total ~38.8h Women's shifts Mon/Tue/Thu/Sat/Sun. Smoker cleared during autofill test (step 9), autofill data discarded on reload but the clear was saved to Sheets. JR/Sarvi to re-enter manually.
 - **EmailModal v2 + email-format pass + post-redeploy smoke.** When picking up email-format work next: (a) verify s033-redeploy live behavior — send a schedule email, confirm branded HTML body lands; try saving a duplicate-email employee, confirm backend `DUPLICATE_EMAIL` rejects; (b) PDF attachment for EmailModal v2 — produce PDF blob server-side via `Utilities.newBlob(html, 'text/html').getAs('application/pdf')`, attach to MailApp send. Frontend POSTs the print-preview HTML doc (already exists) to a new action. No new frontend deps.
 - **Optional: sweep "Sarvi's confirmed 14 hrs/wk" -> "Sarvi's reported"** across chatbot prompt, DECISIONS L102, LESSONS L291/L340, auto-memory project_otr_facts. JR offered + deferred 2026-04-26 s026. Pick up if pitch-copy review reopens.
@@ -45,7 +46,6 @@ Rules:
 ## Blocked
 
 - iPad print preview side-by-side -- since 2026-04-26
-- JR to delete 22 stale PK on Sat May 9 left from prior smoke -- since 2026-04-26
 - 089adaa N meetings + 0d3220e sick-day-event-wipe / title-clear smokes -- still need JR phone-smoke -- since 2026-04-25
 - S62 2-tab settings split + retroactive-default fix -- waiting on JR green-light -- since 2026-04-14
 - CF Worker cache -- waiting on JR green-light + Cloudflare hands-on -- since 2026-04-14
@@ -67,6 +67,8 @@ Rules:
 - Missing validation: no automated test suite; manual Playwright smoke only.
 
 ## Completed
+
+- [2026-04-28] **Unified PK modal shipped (s036)** (`bc958dd` + `0959ce1` color fix). Plan at `~/.claude/plans/cuddly-prancing-cake.md`. Replaces PKEventModal with two modes in AutofillClearModal design language: CREATE (today's date+time+employee flow, unchanged contract) and REMOVE (per-day-expand over visible week with day-level + per-booking checkboxes, native indeterminate). Single mount at App root. handleBulkPK -> handlePKConfirm with new removeBookings tuple shape supporting cross-week multi-slot removal. Dead daysWithPKInWeek removed. Playwright smoke 15/16 PASS, 0 console errors; lone FAIL was CREATE pill green (rotating accent.purple bug) -> fixed in 0959ce1 with local PK_PURPLE = '#932378' constant pinning to OTR brand purple.
 
 - [2026-04-28] **Unified Auto-Fill / Auto-Clear modal shipped (s035)** (`e96da9d` + `da1cf68`). Plan at `~/.claude/plans/jiggly-twirling-sparrow.md`. Single button replaces two desktop dropdowns + mobile two-level Fill/Clear sheet. Modal: FILL/CLEAR toggle at top + All/Admin/FT/PT preset row (additive bucket toggles) + sorted+divided employee checkbox list (Sarvi -> admins -> FT -> PT) + prominent confirm. Initial checkbox state derived from grid (no persistence). FILL reuses autoPopulateWeek (now works for admin + PT, not just FT). CLEAR removes work shifts + PK + meetings; preserves sick events. AutoPopulateConfirmModal deleted (all 6 cases subsumed). Toolbar label "Full-Time (N)" -> "Schedule (N staff)". Mobile sheet collapsed from 3-row two-level to 2-row single-level (Auto-Fill/Auto-Clear + Schedule PK), single Zap icon. Bundle -4.1 kB net. Playwright smoke 12/12 PASS, 0 console errors. Followup PK granular-clear path is now its own TODO (PK modal redesign).
 - [2026-04-28] **Apps Script backend redeployed (s034 manual).** otr.scheduler-account script updated with s032-queued changes: `sendBrandedScheduleEmail` action + duplicate-email backend mirror check on `saveEmployee`. Same `/exec` URL preserved (`AKfycbxk8FBvUhwWa1DPbFiDVEhqa1tPzfTGqYqnYPiSmYTu9UbXvSXddI0xy-5hQl8kkfpSSQ`). Live smoke deferred to next email-format session per JR. Topology note: script is standalone in otr.scheduler@gmail.com Drive, not Sheet-bound; access via `script.google.com` directly, Extensions → Apps Script returns "can't be found" because no binding exists.
