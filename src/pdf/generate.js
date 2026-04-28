@@ -8,7 +8,7 @@ import { hasApprovedTimeOffForDate } from '../utils/requests';
 import { ROLES, ROLES_BY_ID, EVENT_TYPES, PRIMARY_CONTACT_EMAIL } from '../constants';
 import { escapeHtml, stripEmoji } from '../utils/format';
 import { sortBySarviAdminsFTPT, employeeBucket } from '../utils/employeeSort';
-import { hasTitle } from '../utils/employeeRender';
+import { hasTitle, splitNameForSchedule } from '../utils/employeeRender';
 import { filterSchedulableEmployees } from '../utils/employees';
 
 const cleanText = (s) => escapeHtml(stripEmoji(s));
@@ -53,6 +53,17 @@ const ROLE_FAMILY = {
   floorMonitor: 'monitor',
   none: 'none',
 };
+// Short labels for the legend. Cells use glyph only (no spell-out).
+const ROLE_LEGEND_LABEL = {
+  cashier: 'Cashier 1',
+  backupCashier: 'Cashier 2',
+  backupCash: 'Backup Cash',
+  mens: "Men's",
+  womens: "Women's",
+  floorSupervisor: 'Floor Sup',
+  floorMonitor: 'Monitor',
+};
+
 const roleNameStyle = (family) => {
   if (family === 'cash')    return 'font-weight:800;text-transform:uppercase;letter-spacing:0.5px;';
   if (family === 'section') return 'font-weight:600;';
@@ -100,25 +111,24 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       const hol = isStatHoliday(d);
       // Holiday: heavy black top border + "HOL" caption in addition to yellow bg,
       // so the marker survives greyscale printing.
-      return `<th style="height:52px;max-height:52px;padding:4px;border:1px solid ${G.border};${hol ? `border-top:3px solid ${G.ink};` : ''}background:${hol ? G.fillZebra : G.fillZebra};font-size:11px;text-align:center;vertical-align:middle;overflow:hidden;box-sizing:border-box;">
-        ${hol ? `<div style="font-size:7px;font-weight:800;color:${G.ink};letter-spacing:1px;line-height:1;">HOL</div>` : ''}
-        <div style="font-weight:700;color:${G.text};text-transform:uppercase;font-size:9px;line-height:1.1;">${getDayNameShort(d)}</div>
-        <div style="font-size:15px;font-weight:700;color:${G.ink};line-height:1.1;">${d.getDate()}</div>
+      return `<th style="height:10mm;padding:1mm;border:1px solid ${G.border};${hol ? `border-top:3px solid ${G.ink};` : ''}background:${hol ? G.fillZebra : G.fillZebra};font-size:11px;text-align:center;vertical-align:middle;overflow:hidden;box-sizing:border-box;">
+        ${hol ? `<div style="font-size:5pt;font-weight:800;color:${G.ink};letter-spacing:1px;line-height:1;">HOL</div>` : ''}
+        <div style="font-weight:700;color:${G.text};text-transform:uppercase;font-size:7pt;line-height:1.1;">${getDayNameShort(d)}</div>
+        <div style="font-size:11pt;font-weight:700;color:${G.ink};line-height:1.1;">${d.getDate()}</div>
       </th>`;
     }).join('');
 
-    // Events: one wrapped line per item so nothing is ellipsis-clipped; row height
-    // follows the tallest cell in that table row (all day columns stay aligned).
+    // Events: one line per item, truncated with ellipsis for portrait density.
+    // detail note dropped for density (ev.note not rendered in cell body).
     const eventBadgeHtml = (evs) => {
       if (!evs.length) return '';
       const lines = evs.map((ev) => {
         const et = EVENT_TYPES[ev.type];
         if (!et) return '';
-        const detailNote = ev.note && ev.type !== 'meeting' && ev.type !== 'pk' ? ` ${cleanText(ev.note)}` : '';
-        return `<div style="font-size:6px;line-height:1.25;color:${G.textMuted};word-break:break-word;hyphens:auto;margin-top:1px;"><strong style="color:${G.ink};">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}${detailNote}</div>`;
+        return `<div style="font-size:5pt;line-height:1.1;color:${G.textMuted};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:0.5px;"><strong style="color:${G.ink};">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}</div>`;
       }).filter(Boolean);
       if (!lines.length) return '';
-      return `<div style="margin-top:2px;">${lines.join('')}</div>`;
+      return `<div style="margin-top:1px;">${lines.join('')}</div>`;
     };
 
     const dividerColspan = weekDates.length + 1;
@@ -132,27 +142,24 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         // Approved time-off wins over events - an employee on time-off shouldn't
         // show a meeting/PK card even if one was scheduled before the request was approved.
         if (!shift && hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests)) {
-          return `<td style="padding:4px;border:1px dashed ${G.border};background:${G.fill};text-align:center;vertical-align:middle;">
-            <div class="pdf-cell-inner" style="min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
-              <div style="font-size:9px;font-weight:800;color:${G.ink};letter-spacing:1px;line-height:1.1;">OFF</div>
-              <div style="font-size:7px;color:${G.textFaint};line-height:1.1;">approved</div>
+          return `<td style="padding:1mm;border:1px dashed ${G.border};background:${G.fill};text-align:center;vertical-align:middle;">
+            <div class="pdf-cell-inner" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+              <div style="font-size:7pt;font-weight:800;color:${G.ink};letter-spacing:1px;line-height:1.1;">OFF</div>
+              <div style="font-size:5pt;color:${G.textFaint};line-height:1.1;">approved</div>
             </div>
           </td>`;
         }
         if (!shift && dayEvents.length === 0) {
-          return `<td style="padding:4px;border:1px solid ${G.border};background:${G.fill};vertical-align:top;"><div class="pdf-cell-inner" style="min-height:52px;"></div></td>`;
+          return `<td style="padding:1mm;border:1px solid ${G.border};background:${G.fill};vertical-align:top;"><div class="pdf-cell-inner"></div></td>`;
         }
         if (!shift) {
-          return `<td style="padding:4px;border:2px solid ${G.ink};background:${G.fillZebra};text-align:left;vertical-align:top;">
-            <div class="pdf-cell-inner" style="min-height:52px;display:flex;flex-direction:column;justify-content:flex-start;">
+          return `<td style="padding:1mm;border:2px solid ${G.ink};background:${G.fillZebra};text-align:left;vertical-align:top;">
+            <div class="pdf-cell-inner" style="display:flex;flex-direction:column;justify-content:flex-start;">
               ${eventBadgeHtml(dayEvents)}
             </div>
           </td>`;
         }
         const isTitled = hasTitle(emp);
-        const role = ROLES_BY_ID[shift.role];
-        const roleName = role?.name || 'Shift';
-        const family = isTitled ? 'none' : (ROLE_FAMILY[shift.role] || 'none');
         const glyph = isTitled ? '' : (ROLE_GLYPHS[shift.role] || '');
         // Supervisory roles "own" their perimeter: 2px ink border wins over the
         // surrounding 1px grey grid via border-collapse thickness rules.
@@ -160,28 +167,34 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         const cellBorder = (!isTitled && (shift.role === 'floorMonitor' || shift.role === 'floorSupervisor'))
           ? `border:2px solid ${G.ink};`
           : `border:1px solid ${G.border};`;
-        const roleTitleLine = !isTitled
-          ? `<div style="font-size:7px;color:${G.ink};line-height:1.2;margin-bottom:1px;word-break:break-word;${roleNameStyle(family)}">${cleanText(roleName)}</div>`
-          : '';
         const shiftCellFill = isTitled ? G.fillZebra : G.fill;
-        const glyphPad = glyph ? 'padding-left:12px;' : '';
-        return `<td style="padding:4px;${cellBorder}background:${shiftCellFill};text-align:left;vertical-align:top;">
-          <div class="pdf-cell-inner" style="position:relative;min-height:52px;${glyphPad}">
-            ${glyph ? `<span style="position:absolute;top:0;left:0;font-size:8px;font-weight:800;color:${G.ink};line-height:1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
-            ${roleTitleLine}
-            <div style="font-size:8px;color:${G.text};line-height:1.2;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
-            <div style="font-size:7px;color:${G.textMuted};line-height:1.2;">${shift.hours}h${shift.task ? ` <span style="color:${G.ink};font-weight:800;">★</span>` : ''}</div>
+        // Glyph absolute at top-left; time range on first line; events below.
+        // Role spell-out line DROPPED. Hours "Nh" line DROPPED.
+        return `<td style="padding:1mm;${cellBorder}background:${shiftCellFill};text-align:left;vertical-align:top;">
+          <div class="pdf-cell-inner" style="position:relative;${glyph ? 'padding-left:4mm;' : ''}">
+            ${glyph ? `<span style="position:absolute;top:0;left:0;font-size:8pt;font-weight:800;color:${G.ink};line-height:1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
+            ${shift.task ? `<span style="position:absolute;top:0;right:0;font-size:7pt;font-weight:800;color:${G.ink};line-height:1;">★</span>` : ''}
+            <div style="font-size:7pt;color:${G.text};line-height:1.15;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
             ${eventBadgeHtml(dayEvents)}
           </div>
         </td>`;
       }).join('');
 
       const titleStr = hasTitle(emp) && (emp.title || '').trim() ? cleanText(emp.title.trim()) : '';
+      const { first: nameFirst, rest: nameRest } = splitNameForSchedule(emp.name);
+      // Weekly total hours for this week only (no "h" suffix per plan).
+      const weeklyHours = weekDates.reduce((sum, d) => {
+        const s = shifts[`${emp.id}-${toDateKey(d)}`];
+        return sum + (s ? (Number(s.hours) || 0) : 0);
+      }, 0);
+      const weeklyTotal = weeklyHours > 0 ? (Number.isInteger(weeklyHours) ? String(weeklyHours) : weeklyHours.toFixed(1)) : '';
       return `${showDivider ? dividerRow : ''}<tr class="schedule-row" style="page-break-inside:avoid;">
-        <td style="padding:4px;border:1px solid ${G.border};background:${G.fill};width:22%;min-width:120px;vertical-align:top;">
-          <div class="pdf-cell-inner" style="min-height:52px;display:flex;flex-direction:column;justify-content:center;gap:2px;">
-            <div style="font-weight:700;font-size:9px;color:${G.ink};line-height:1.2;word-break:break-word;">${cleanText(emp.name)}</div>
-            ${titleStr ? `<div style="font-size:7px;color:${G.textMuted};line-height:1.2;word-break:break-word;">${titleStr}</div>` : ''}
+        <td style="padding:1mm;border:1px solid ${G.border};background:${G.fill};width:26mm;vertical-align:top;">
+          <div class="pdf-cell-inner" style="display:flex;flex-direction:column;justify-content:center;">
+            <div style="font-weight:700;font-size:10pt;line-height:1.05;color:${G.ink};word-break:break-word;hyphens:auto;">${cleanText(nameFirst)}</div>
+            ${nameRest ? `<div style="font-weight:700;font-size:10pt;line-height:1.05;color:${G.ink};word-break:break-word;hyphens:auto;">${cleanText(nameRest)}</div>` : ''}
+            ${weeklyTotal ? `<div style="font-size:6pt;color:${G.textMuted};line-height:1.1;">${weeklyTotal}</div>` : ''}
+            ${titleStr ? `<div style="font-size:5.5pt;color:${G.textMuted};line-height:1.1;font-style:italic;word-break:break-word;">${titleStr}</div>` : ''}
           </div>
         </td>
         ${cells}
@@ -196,54 +209,54 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         if (evs && evs.some(e => e.type === 'sick')) return n;
         return n + 1;
       }, 0);
-      return `<td style="padding:4px;border:1px solid ${G.border};background:${G.fillZebra};text-align:center;vertical-align:middle;">
-        <div class="pdf-cell-inner" style="min-height:52px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:${G.ink};">${count}</div>
+      return `<td style="padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};text-align:center;vertical-align:middle;">
+        <div class="pdf-cell-inner" style="display:flex;align-items:center;justify-content:center;font-size:11pt;font-weight:700;color:${G.ink};">${count}</div>
       </td>`;
     }).join('');
     const headcountRow = `<tr class="schedule-row" style="page-break-inside:avoid;">
-      <td style="padding:4px;border:1px solid ${G.border};background:${G.fillZebra};width:22%;min-width:120px;vertical-align:middle;">
-        <div class="pdf-cell-inner" style="min-height:52px;display:flex;align-items:center;font-size:9px;font-weight:700;color:${G.text};text-transform:uppercase;letter-spacing:1px;">Scheduled</div>
+      <td style="padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};width:26mm;vertical-align:middle;">
+        <div class="pdf-cell-inner" style="display:flex;align-items:center;font-size:7pt;font-weight:700;color:${G.text};text-transform:uppercase;letter-spacing:1px;">Scheduled</div>
       </td>
       ${headcountCells}
     </tr>`;
 
     return `
-      <div class="wk-block" style="margin-bottom:25px;">
-        <div style="background:${G.ink};padding:10px 15px;border-radius:4px 4px 0 0;">
-          <h3 style="margin:0;color:#ffffff;font-size:14px;font-weight:700;">Week ${weekNum}</h3>
-          <p style="margin:2px 0 0;color:#dddddd;font-size:11px;">${formatDate(weekDates[0])} - ${formatDate(weekDates[6])}</p>
+      <div class="wk-block" style="margin-bottom:10px;">
+        <div style="background:${G.ink};padding:4mm 6mm;border-radius:4px 4px 0 0;">
+          <h3 style="margin:0;color:#ffffff;font-size:11pt;font-weight:700;">Week ${weekNum}</h3>
+          <p style="margin:2px 0 0;color:#dddddd;font-size:8pt;">${formatDate(weekDates[0])} - ${formatDate(weekDates[6])}</p>
         </div>
         <table class="schedule-grid" style="width:100%;table-layout:fixed;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
-          <thead style="display:table-header-group;"><tr><th style="height:52px;max-height:52px;padding:6px;border:1px solid ${G.border};background:${G.fillZebra};width:22%;min-width:120px;font-size:10px;text-align:left;color:${G.text};text-transform:uppercase;vertical-align:middle;overflow:hidden;box-sizing:border-box;">Employee</th>${headers}</tr></thead>
+          <thead style="display:table-header-group;"><tr><th style="height:10mm;padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};width:26mm;font-size:7pt;text-align:left;color:${G.text};text-transform:uppercase;vertical-align:middle;overflow:hidden;box-sizing:border-box;">Employee</th>${headers}</tr></thead>
           <tbody>${rows}${headcountRow}</tbody>
         </table>
       </div>
     `;
   };
 
-  // Legend: monogram glyph + family-typed role name, matching cell treatment.
+  // Legend: glyph + short label only. Role spell-out removed from cells; legend is the canonical reference.
   const legendItems = ROLES.filter(r => r.id !== 'none').map(r => {
     const g = ROLE_GLYPHS[r.id] || '';
-    const family = ROLE_FAMILY[r.id] || 'none';
-    return `<span style="margin-right:15px;font-size:10px;display:inline-flex;align-items:center;gap:5px;">
-      <span style="display:inline-block;min-width:18px;font-weight:800;font-size:11px;color:${G.ink};text-align:center;letter-spacing:-0.5px;">${g}</span>
-      <span style="color:${G.text};${roleNameStyle(family)}">${escapeHtml(r.fullName)}</span>
+    const label = ROLE_LEGEND_LABEL[r.id] || escapeHtml(r.fullName);
+    return `<span style="margin-right:8px;font-size:8pt;display:inline-flex;align-items:center;gap:3px;">
+      <span style="display:inline-block;min-width:14px;font-weight:800;font-size:8pt;color:${G.ink};text-align:center;letter-spacing:-0.5px;">${g}</span>
+      <span style="color:${G.text};">${label}</span>
     </span>`;
   }).join('');
 
   const eventLegendItems = ['meeting', 'pk', 'sick'].map((key) => {
     const et = EVENT_TYPES[key];
     if (!et) return '';
-    return `<span style="margin-right:15px;font-size:10px;display:inline-flex;align-items:center;gap:5px;">
-      <span style="font-weight:800;font-size:10px;color:${G.ink};letter-spacing:0.3px;">${et.shortLabel}</span>
+    return `<span style="margin-right:8px;font-size:8pt;display:inline-flex;align-items:center;gap:3px;">
+      <span style="font-weight:800;font-size:8pt;color:${G.ink};letter-spacing:0.3px;">${et.shortLabel}</span>
       <span style="color:${G.text};">${escapeHtml(et.label)}</span>
     </span>`;
   }).join('');
 
   const adminContactsHtml = adminContacts.length > 0 ? `
-    <div style="margin-top:12px;padding:10px 15px;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
-      <div style="font-weight:700;font-size:9px;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Contact Admin</div>
-      ${adminContacts.map(a => `<span style="margin-right:20px;font-size:11px;color:${G.text};">${cleanText(a.name)}: <span style="color:${G.ink};font-weight:600;">${cleanText(a.email)}</span></span>`).join('')}
+    <div style="margin-top:4px;padding:2mm 3mm;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
+      <div style="font-weight:700;font-size:7pt;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Contact Admin</div>
+      ${adminContacts.map(a => `<span style="margin-right:12px;font-size:7pt;color:${G.text};">${cleanText(a.name)}: <span style="color:${G.ink};font-weight:600;">${cleanText(a.email)}</span></span>`).join('')}
     </div>
   ` : '';
 
@@ -258,8 +271,8 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@400;600&display=swap" rel="stylesheet">
   <style>
     @media print {
-      body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      @page { margin: 0.3in; size: landscape; }
+      body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; padding: 0; }
+      @page { size: A4 portrait; margin: 8mm; }
       .no-print { display: none !important; }
       /* Week 2 always starts a fresh page. Week 1 flows naturally below the
          header instead of being pushed whole to page 2 when the 14-row block
@@ -272,18 +285,27 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       tr { page-break-inside: avoid; break-inside: avoid; }
       thead { display: table-header-group; }
     }
-    body { font-family: 'Inter', Arial, sans-serif; padding: 20px; margin: 0 auto; max-width: 1100px; background: #ffffff; color: ${G.text}; }
+    body { font-family: 'Inter', Arial, sans-serif; padding: 0; margin: 0 auto; max-width: 194mm; background: #ffffff; color: ${G.text}; }
     .print-btn { background: ${G.ink}; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
     .print-btn:hover { background: ${G.text}; }
-    /* Row height follows the tallest cell in that row (table layout); min-height
-       keeps sparse rows from collapsing. No ellipsis — content wraps inside cells. */
+    /* Fixed cell height enforces consistent grid. overflow:hidden clips any
+       implausible edge-case (5+ events) without growing the row. */
     .schedule-grid tbody tr.schedule-row td {
-      min-height: 60px;
+      height: 9.5mm;
       vertical-align: top;
+      overflow: hidden;
       box-sizing: border-box;
     }
     .schedule-grid .pdf-cell-inner {
+      height: 100%;
+      overflow: hidden;
       box-sizing: border-box;
+    }
+    @media print {
+      .schedule-grid tbody tr.schedule-row td {
+        height: 9.5mm;
+        overflow: hidden;
+      }
     }
     .schedule-grid tbody tr.pdf-divider td {
       height: auto !important;
@@ -312,12 +334,12 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   ${makeWeekTable(week1, weekNum1)}
   ${makeWeekTable(week2, weekNum2)}
 
-  <div style="margin-top:20px;padding:12px 15px;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
-    <div style="margin-bottom:6px;font-weight:700;font-size:9px;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;">Legend</div>
-    <div>${legendItems}${eventLegendItems}<span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="color:${G.ink};font-weight:700;">★</span><span style="color:${G.text};">Has Task</span></span><span style="font-size:10px;display:inline-flex;align-items:center;gap:5px;margin-right:15px;"><span style="display:inline-block;padding:1px 6px;border:1px dashed ${G.border};font-weight:800;color:${G.ink};font-size:8px;letter-spacing:1px;">OFF</span><span style="color:${G.text};">Approved Time Off</span></span></div>
+  <div style="margin-top:6px;padding:2mm 3mm;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
+    <div style="margin-bottom:2px;font-weight:700;font-size:7pt;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;">Legend</div>
+    <div style="display:flex;flex-wrap:wrap;gap:2mm;align-items:center;">${legendItems}${eventLegendItems}<span style="font-size:8pt;display:inline-flex;align-items:center;gap:3px;"><span style="color:${G.ink};font-weight:700;">★</span><span style="color:${G.text};">Has Task</span></span><span style="font-size:8pt;display:inline-flex;align-items:center;gap:3px;"><span style="display:inline-block;padding:0 4px;border:1px dashed ${G.border};font-weight:800;color:${G.ink};font-size:7pt;letter-spacing:1px;">OFF</span><span style="color:${G.text};">Approved Time Off</span></span></div>
   </div>
   ${adminContactsHtml}
-  <div style="margin-top:20px;padding-top:12px;border-top:1px solid ${G.border};text-align:center;font-size:9px;color:${G.textFaint};">
+  <div style="margin-top:4px;padding-top:2mm;border-top:1px solid ${G.border};text-align:center;font-size:6pt;color:${G.textFaint};">
     Printed ${printedAt} • This is a snapshot - live schedule at rainbow-scheduling.vercel.app
   </div>
 </body>
