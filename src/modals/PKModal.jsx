@@ -7,6 +7,10 @@ import { THEME } from '../theme';
 import { availabilityCoversWindow } from '../utils/timemath';
 import { getPKDefaultTimes } from '../utils/eventDefaults';
 
+// OTR brand purple — fixed PK identity color. THEME.accent.purple is the daily
+// rotating accent's dark variant, not the brand purple, so it cannot be used here.
+const PK_PURPLE = '#932378';
+
 // Unified PK modal — CREATE and REMOVE modes in AutofillClearModal design language.
 // CREATE: port of PKEventModal (date+time pickers, FT/PT grouped employee list).
 // REMOVE: per-day-expand over visible week with day-level + per-booking checkboxes.
@@ -295,8 +299,8 @@ export const PKModal = ({
             <div
               className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
               style={{
-                backgroundColor: c.checked ? THEME.accent.purple : THEME.bg.elevated,
-                border: `2px solid ${c.checked ? THEME.accent.purple : THEME.border.default}`,
+                backgroundColor: c.checked ? PK_PURPLE : THEME.bg.elevated,
+                border: `2px solid ${c.checked ? PK_PURPLE : THEME.border.default}`,
               }}
             >
               {c.checked && <Check size={10} color="white" />}
@@ -326,8 +330,8 @@ export const PKModal = ({
             onClick={() => setMode('create')}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold transition-colors"
             style={{
-              backgroundColor: isCreate ? THEME.accent.purple + '30' : THEME.bg.elevated,
-              color: isCreate ? THEME.accent.purple : THEME.text.muted,
+              backgroundColor: isCreate ? PK_PURPLE + '30' : THEME.bg.elevated,
+              color: isCreate ? PK_PURPLE : THEME.text.muted,
               borderRight: `1px solid ${THEME.border.default}`,
             }}
             aria-pressed={isCreate}
@@ -378,10 +382,10 @@ export const PKModal = ({
                   onClick={handleSaturdayQuickPick}
                   className="px-2.5 py-1 rounded text-xs font-medium transition-all hover:opacity-90"
                   style={{
-                    backgroundColor: isSaturdayActive ? THEME.accent.purple : THEME.event.pkBg,
+                    backgroundColor: isSaturdayActive ? PK_PURPLE : THEME.event.pkBg,
                     color: isSaturdayActive ? '#FFFFFF' : THEME.event.pkText,
-                    border: `1px solid ${isSaturdayActive ? THEME.accent.purple : THEME.event.pkBorder}`,
-                    boxShadow: isSaturdayActive ? `0 0 0 2px ${THEME.accent.purple}33` : 'none',
+                    border: `1px solid ${isSaturdayActive ? PK_PURPLE : THEME.event.pkBorder}`,
+                    boxShadow: isSaturdayActive ? `0 0 0 2px ${PK_PURPLE}33` : 'none',
                   }}
                   title={isSaturdayActive
                     ? 'Saturday selected — tap to revert to default day'
