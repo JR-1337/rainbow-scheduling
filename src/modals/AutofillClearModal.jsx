@@ -32,11 +32,6 @@ export const AutofillClearModal = ({
   const sorted = useMemo(() => sortBySarviAdminsFTPT(schedulableEmployees), [schedulableEmployees]);
   const dividers = useMemo(() => computeDividerIndices(sorted), [sorted]);
 
-  // Returns empIds for a named bucket.
-  // 'admin'  = buckets 0, 1, 2 (Sarvi + admin1 + admin2 combined per plan decision 4).
-  // 'ft'     = bucket 3 (full-time non-admins).
-  // 'pt'     = bucket 4 (part-time non-admins).
-  // 'all'    = everyone in sorted.
   const bucketIds = (bucketName) => {
     if (bucketName === 'all') return sorted.map(e => e.id);
     if (bucketName === 'admin') return sorted.filter(e => employeeBucket(e) <= 2).map(e => e.id);
@@ -57,11 +52,8 @@ export const AutofillClearModal = ({
     const allOn = ids.every(id => selected.has(id));
     setSelected(prev => {
       const next = new Set(prev);
-      if (allOn) {
-        ids.forEach(id => next.delete(id));
-      } else {
-        ids.forEach(id => next.add(id));
-      }
+      if (allOn) ids.forEach(id => next.delete(id));
+      else ids.forEach(id => next.add(id));
       return next;
     });
   };
@@ -174,13 +166,7 @@ export const AutofillClearModal = ({
             {sorted.map((emp, idx) => (
               <div key={emp.id}>
                 {dividers.has(idx) && (
-                  <div
-                    style={{
-                      height: 1,
-                      margin: '4px 0',
-                      backgroundColor: THEME.border.subtle,
-                    }}
-                  />
+                  <div style={{ height: 1, margin: '4px 0', backgroundColor: THEME.border.subtle }} />
                 )}
                 <label
                   className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:opacity-80"
@@ -195,9 +181,7 @@ export const AutofillClearModal = ({
                   />
                   <span className="text-sm flex-1">{emp.name}</span>
                   {emp.isAdmin && (
-                    <span className="text-[10px]" style={{ color: THEME.text.muted }}>
-                      Admin
-                    </span>
+                    <span className="text-[10px]" style={{ color: THEME.text.muted }}>Admin</span>
                   )}
                 </label>
               </div>

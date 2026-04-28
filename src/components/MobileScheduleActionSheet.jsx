@@ -1,4 +1,4 @@
-import { Zap, Trash2, BookOpen } from 'lucide-react';
+import { Zap, BookOpen } from 'lucide-react';
 import { AdaptiveModal } from './AdaptiveModal';
 import { THEME } from '../theme';
 
@@ -40,12 +40,7 @@ export const MobileScheduleActionSheet = ({
     >
       <div>
         <Row
-          icon={
-            <span className="flex items-center gap-0.5">
-              <Zap size={16} style={{ color: THEME.accent.blue }} />
-              <Trash2 size={14} style={{ color: THEME.status.error }} />
-            </span>
-          }
+          icon={<Zap size={18} style={{ color: THEME.accent.blue }} />}
           label="Auto-Fill / Auto-Clear"
           accent={THEME.accent.blue}
           onClick={() => fire(onOpenAutofillClear)}

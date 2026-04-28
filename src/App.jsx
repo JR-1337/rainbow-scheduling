@@ -2315,11 +2315,11 @@ export default function App() {
               )}
               
               {/* Auto-populate toolbar - only in Edit Mode */}
-              {isCurrentPeriodEditMode && fullTimeEmployees.length > 0 && (
+              {isCurrentPeriodEditMode && schedulableEmployees.length > 0 && (
                 <div className="mb-2 px-3 py-2 rounded-lg flex items-center gap-2 flex-wrap" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, borderLeft: `3px solid ${THEME.accent.blue}`, boxShadow: THEME.shadow.cardSm }}>
                   <div className="flex items-center gap-2">
                     <Clock size={14} style={{ color: THEME.accent.blue }} />
-                    <span className="text-xs font-medium" style={{ color: THEME.accent.blue }}>Full-Time ({fullTimeEmployees.length})</span>
+                    <span className="text-xs font-medium" style={{ color: THEME.accent.blue }}>Schedule ({schedulableEmployees.length} staff)</span>
                   </div>
                   <div className="w-px h-4" style={{ backgroundColor: THEME.border.default }} />
 
