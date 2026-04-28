@@ -31,7 +31,7 @@ export const AnimatedNumber = ({ value, decimals = 0, suffix = '', className, st
   return (
     <span
       className={className}
-      style={{ ...style, ...(isOvertime ? { color: '#FBBF24', textShadow: '0 0 8px rgba(251,191,36,0.4)' } : {}) }}
+      style={{ ...style, ...(isOvertime ? { textShadow: '0 0 8px rgba(248,113,113,0.45)' } : {}) }}
     >{formatted}{suffix}</span>
   );
 };
