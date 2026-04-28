@@ -2272,7 +2272,7 @@ export default function App() {
                       }
                     }}
                     className="px-2 py-1 rounded text-xs outline-none"
-                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${THEME.border.default}` }}
+                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${THEME.border.default}`, width: 150 }}
                     aria-label={`Auto-fill week ${activeWeek}`}
                   >
                     <option value="">⚡ Auto-Fill Week {activeWeek}...</option>
@@ -2309,7 +2309,7 @@ export default function App() {
                       }
                     }}
                     className="px-2 py-1 rounded text-xs outline-none"
-                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted, border: `1px solid ${THEME.border.default}` }}
+                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted, border: `1px solid ${THEME.border.default}`, width: 150 }}
                     aria-label={`Clear week ${activeWeek}`}
                   >
                     <option value="">🗑 Clear Week {activeWeek}...</option>
