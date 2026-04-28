@@ -55,7 +55,7 @@ import { ChangePasswordModal } from './modals/ChangePasswordModal';
 import { EmployeeFormModal } from './modals/EmployeeFormModal';
 import { RequestDaysOffModal } from './modals/RequestDaysOffModal';
 import { EmailModal } from './modals/EmailModal';
-import { AutoPopulateConfirmModal } from './modals/AutoPopulateConfirmModal';
+import { AutofillClearModal } from './modals/AutofillClearModal';
 import { EmployeeView } from './views/EmployeeView';
 export { parseLocalDate, escapeHtml, THEME, TYPE, ROLES, ROLES_BY_ID };
 export { getStoreHoursForDate } from './utils/storeHoursOverrides';
@@ -248,7 +248,7 @@ export default function App() {
   const [adminDaysOffModalOpen, setAdminDaysOffModalOpen] = useState(false);
   const [pkModalOpen, setPkModalOpen] = useState(false);
   const [mobileActionSheetOpen, setMobileActionSheetOpen] = useState(false);
-  const [autoPopulateConfirm, setAutoPopulateConfirm] = useState(null); // { type: 'populate-all' | 'populate-week' | 'clear-week' | 'clear-all', employee?: obj, week?: 1|2 }
+  const [autofillClearOpen, setAutofillClearOpen] = useState(false);
   
   // Mobile admin state
   const [mobileAdminDrawerOpen, setMobileAdminDrawerOpen] = useState(false);
@@ -845,9 +845,13 @@ export default function App() {
           delete newShifts[key];
           removedCount++;
         }
-        if (newEvents[key]) {
-          removedCount += Array.isArray(newEvents[key]) ? newEvents[key].length : 1;
-          delete newEvents[key];
+        const list = newEvents[key] || [];
+        const survivors = list.filter(ev => ev.type === 'sick');
+        const removedFromList = list.length - survivors.length;
+        if (removedFromList > 0) {
+          removedCount += removedFromList;
+          if (survivors.length === 0) delete newEvents[key];
+          else newEvents[key] = survivors;
         }
       });
     });
@@ -884,45 +888,25 @@ export default function App() {
     return removedCount;
   };
 
-  // Handle auto-populate confirmation
-  const handleAutoPopulateConfirm = () => {
-    if (!autoPopulateConfirm) return;
-    
-    const { type, employee, week } = autoPopulateConfirm;
-    const weekDates = week === 1 ? week1 : week2;
-    
-    if (type === 'populate-all') {
-      let total;
-      if (week) {
-        total = autoPopulateWeek(weekDates);
-      } else {
-        total = autoPopulateWeek(week1) + autoPopulateWeek(week2);
-      }
-      const weekLabel = week ? `Week ${week}` : 'this period';
-      if (total > 0) showToast('success', `Added ${total} shifts to ${weekLabel} — click SAVE to persist`);
-      else showToast('warning', `No shifts added to ${weekLabel} — check that full-time employees have availability set`);
-    } else if (type === 'populate-week' && employee) {
-      const count = autoPopulateWeek(weekDates, [employee]);
-      if (count > 0) showToast('success', `Added ${count} shifts for ${employee.name} (Week ${week}) — click SAVE to persist`);
-      else showToast('warning', `No shifts added — ${employee.name} may not have availability set for Week ${week}`);
-    } else if (type === 'clear-week' && employee) {
-      const count = clearWeekShifts(weekDates, [employee]);
-      showToast('success', `Removed ${count} shifts for ${employee.name}`);
-    } else if (type === 'clear-all') {
-      const count = clearWeekShifts(weekDates);
-      showToast('success', `Removed ${count} shifts for full-time employees`);
-    } else if (type === 'clear-all-pt') {
-      const count = clearWeekShifts(weekDates, partTimeEmployees);
-      showToast('success', `Removed ${count} shifts for part-time employees`);
-    } else if (type === 'clear-pk-day' && autoPopulateConfirm.dateStr) {
-      const count = clearPKForDate(autoPopulateConfirm.dateStr);
-      if (count > 0) showToast('success', `Removed ${count} PK booking${count === 1 ? '' : 's'}`);
-      else showToast('warning', 'No PK bookings to remove');
-    }
 
-    setAutoPopulateConfirm(null);
+  // Unified handler for the new AutofillClearModal.
+  const handleAutofillClearConfirm = ({ mode, empIds }) => {
+    const weekDates = activeWeek === 1 ? week1 : week2;
+    const targetEmployees = empIds.map(id => schedulableEmployees.find(e => e.id === id)).filter(Boolean);
+    if (targetEmployees.length === 0) return;
+    if (mode === 'fill') {
+      autoPopulateWeek(weekDates, targetEmployees);
+      // autoPopulateWeek shows its own toast (success or warning w/ violation summary).
+    } else {
+      const count = clearWeekShifts(weekDates, targetEmployees);
+      if (count > 0) {
+        showToast('success', `Removed ${count} shift${count === 1 ? '' : 's'}/event${count === 1 ? '' : 's'} for ${targetEmployees.length} employee${targetEmployees.length === 1 ? '' : 's'}`);
+      } else {
+        showToast('warning', 'Nothing to clear in this week');
+      }
+    }
   };
-  
+
   const saveEmployee = async (e) => {
     if (editingEmp && !e.active && editingEmp.active) {
       const futureShifts = getFutureShiftDates(e.id, shifts);
@@ -1640,11 +1624,14 @@ export default function App() {
     return (<>{sweepOverlay}<EmployeeView employees={employees} shifts={publishedShifts} events={publishedEvents} dates={dates} periodInfo={{ startDate, endDate }} currentUser={currentUser} onLogout={() => { clearAuth(); setCurrentUser(null); }} timeOffRequests={timeOffRequests} onCancelRequest={cancelTimeOffRequest} onSubmitRequest={submitTimeOffRequest} shiftOffers={shiftOffers} onSubmitOffer={submitShiftOffer} onCancelOffer={cancelShiftOffer} onAcceptOffer={acceptShiftOffer} onRejectOffer={rejectShiftOffer} shiftSwaps={shiftSwaps} onSubmitSwap={submitSwapRequest} onCancelSwap={cancelSwapRequest} onAcceptSwap={acceptSwapRequest} onRejectSwap={rejectSwapRequest} periodIndex={periodIndex} onPeriodChange={setPeriodIndex} isEditMode={isCurrentPeriodEditMode} announcement={currentAnnouncement} /></>);
   }
 
-  const confirmModal = (
-    <AutoPopulateConfirmModal
-      state={autoPopulateConfirm}
-      onClose={() => setAutoPopulateConfirm(null)}
-      onConfirm={handleAutoPopulateConfirm}
+  const autofillClearModal = (
+    <AutofillClearModal
+      isOpen={autofillClearOpen}
+      onClose={() => setAutofillClearOpen(false)}
+      schedulableEmployees={schedulableEmployees}
+      weekDates={activeWeek === 1 ? week1 : week2}
+      employeeHasShiftsInWeek={employeeHasShiftsInWeek}
+      onConfirm={handleAutofillClearConfirm}
     />
   );
 
@@ -2134,24 +2121,14 @@ export default function App() {
           />
         )}
 
-        {/* Auto-populate confirm modal (shared with desktop branch via const confirmModal) */}
-        {confirmModal}
+        {autofillClearModal}
 
-        {/* Mobile schedule Actions sheet (two-level: root -> fill/clear/pk -> pick) */}
+        {/* Mobile schedule Actions sheet (single-level: Auto-Fill/Clear + PK) */}
         <MobileScheduleActionSheet
           isOpen={mobileActionSheetOpen}
           onClose={() => setMobileActionSheetOpen(false)}
-          activeWeek={activeWeek}
-          week1={week1}
-          week2={week2}
-          fullTimeEmployees={fullTimeEmployees}
-          partTimeEmployees={partTimeEmployees}
-          employeeHasShiftsInWeek={employeeHasShiftsInWeek}
-          autoPopulateWeek={autoPopulateWeek}
-          setAutoPopulateConfirm={setAutoPopulateConfirm}
-          showToast={showToast}
+          onOpenAutofillClear={() => setAutofillClearOpen(true)}
           onOpenPKModal={() => setPkModalOpen(true)}
-          daysWithPKInWeek={daysWithPKInWeek}
         />
 
         {/* Toast */}
@@ -2346,99 +2323,20 @@ export default function App() {
                   </div>
                   <div className="w-px h-4" style={{ backgroundColor: THEME.border.default }} />
 
-                  {/* S62 — Auto-Fill dropdown (collapsed: top option = All FT, rest = individual employees) */}
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      e.target.value = '';
-                      if (!val) return;
-                      const weekDates = activeWeek === 1 ? week1 : week2;
-                      if (val === '__all__') {
-                        const hasExisting = fullTimeEmployees.some(x => employeeHasShiftsInWeek(x, weekDates));
-                        if (hasExisting) {
-                          setAutoPopulateConfirm({ type: 'populate-all', week: activeWeek });
-                        } else {
-                          const count = autoPopulateWeek(weekDates);
-                          if (count > 0) showToast('success', `Added ${count} shifts for full-time employees`);
-                          else showToast('warning', 'No shifts added — check that full-time employees have availability set');
-                        }
-                      } else {
-                        const emp = fullTimeEmployees.find(x => x.id === val);
-                        if (!emp) return;
-                        if (employeeHasShiftsInWeek(emp, weekDates)) {
-                          setAutoPopulateConfirm({ type: 'populate-week', employee: emp, week: activeWeek });
-                        } else {
-                          const count = autoPopulateWeek(weekDates, [emp]);
-                          if (count > 0) showToast('success', `Added ${count} shifts for ${emp.name}`);
-                          else showToast('warning', `No shifts added — ${emp.name} may not have availability set for this week`);
-                        }
-                      }
+                  {/* Unified Auto-Fill / Auto-Clear button — opens AutofillClearModal */}
+                  <button
+                    type="button"
+                    onClick={() => setAutofillClearOpen(true)}
+                    className="px-3 py-1.5 rounded text-xs font-semibold flex items-center gap-1.5 hover:opacity-80"
+                    style={{
+                      backgroundColor: THEME.bg.elevated,
+                      color: THEME.accent.blue,
+                      border: `1px solid ${THEME.border.default}`,
                     }}
-                    className="px-2 py-1 rounded text-xs outline-none"
-                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${THEME.border.default}`, width: 150 }}
-                    aria-label={`Auto-fill week ${activeWeek}`}
+                    aria-label={`Auto-Fill / Auto-Clear week ${activeWeek}`}
                   >
-                    <option value="">⚡ Auto-Fill Week {activeWeek}...</option>
-                    <option value="__all__" style={{ fontWeight: 700 }}>All Full-Timers</option>
-                    <optgroup label="— or pick one —">
-                      {fullTimeEmployees.map(emp => (
-                        <option key={emp.id} value={emp.id}>{emp.name}</option>
-                      ))}
-                    </optgroup>
-                  </select>
-
-                  <div className="w-px h-4" style={{ backgroundColor: THEME.border.default }} />
-
-                  {/* S62 — Clear dropdown. Both FT and PT clearable; Auto-Fill remains FT-only. */}
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      e.target.value = '';
-                      if (!val) return;
-                      if (val.startsWith('__pk_day__:')) {
-                        const dateStr = val.slice('__pk_day__:'.length);
-                        const currentWeekDates = activeWeek === 1 ? week1 : week2;
-                        const day = currentWeekDates.find(d => toDateKey(d) === dateStr);
-                        const dayCount = day ? (daysWithPKInWeek(currentWeekDates).find(x => x.dateStr === dateStr)?.count || 0) : 0;
-                        if (day) setAutoPopulateConfirm({ type: 'clear-pk-day', dateStr, date: day, count: dayCount, week: activeWeek });
-                      } else if (val === '__all_ft__') {
-                        setAutoPopulateConfirm({ type: 'clear-all', week: activeWeek });
-                      } else if (val === '__all_pt__') {
-                        setAutoPopulateConfirm({ type: 'clear-all-pt', week: activeWeek });
-                      } else {
-                        const emp = schedulableEmployees.find(x => x.id === val);
-                        if (emp) setAutoPopulateConfirm({ type: 'clear-week', employee: emp, week: activeWeek });
-                      }
-                    }}
-                    className="px-2 py-1 rounded text-xs outline-none"
-                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted, border: `1px solid ${THEME.border.default}`, width: 150 }}
-                    aria-label={`Clear week ${activeWeek}`}
-                  >
-                    <option value="">🗑 Clear Week {activeWeek}...</option>
-                    <option value="__all_ft__" style={{ fontWeight: 700, color: THEME.status.error }}>All Full-Timers</option>
-                    <option value="__all_pt__" style={{ fontWeight: 700, color: THEME.status.error }}>All Part-Timers</option>
-                    <optgroup label="— Full-Time —">
-                      {fullTimeEmployees.filter(emp => employeeHasShiftsInWeek(emp, activeWeek === 1 ? week1 : week2)).map(emp => (
-                        <option key={emp.id} value={emp.id}>{emp.name}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="— Part-Time —">
-                      {partTimeEmployees.filter(emp => employeeHasShiftsInWeek(emp, activeWeek === 1 ? week1 : week2)).map(emp => (
-                        <option key={emp.id} value={emp.id}>{emp.name}</option>
-                      ))}
-                    </optgroup>
-                    {daysWithPKInWeek(activeWeek === 1 ? week1 : week2).length > 0 && (
-                      <optgroup label="— PK by day —">
-                        {daysWithPKInWeek(activeWeek === 1 ? week1 : week2).map(({ dateStr, date, count }) => (
-                          <option key={dateStr} value={`__pk_day__:${dateStr}`}>
-                            {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} — {count} PK
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </select>
+                    <Zap size={12} /> Auto-Fill / <Trash2 size={12} /> Auto-Clear
+                  </button>
 
                   <div className="w-px h-4" style={{ backgroundColor: THEME.border.default }} />
 
@@ -2790,9 +2688,8 @@ export default function App() {
         shifts={shifts}
       />
       
-      {/* Auto-populate confirmation modal (shared with mobile branch) */}
-      {confirmModal}
-      
+      {autofillClearModal}
+
       {/* Toast Notification - fixed position at top center, ABOVE modals */}
       {toast && (
         <div 
