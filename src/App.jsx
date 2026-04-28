@@ -4,7 +4,7 @@ import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, Mo
 import { parseLocalDate, escapeHtml } from './utils/format';
 import { toDateKey, getDayName, formatDate, formatMonthWord, getWeekNumber, formatTimeDisplay, formatTimeShort, parseTime } from './utils/date';
 import { isStatHoliday } from './utils/storeHours';
-import { TooltipButton } from './components/primitives';
+import { TooltipButton, Modal } from './components/primitives';
 import { haptic, AnimatedNumber, ScheduleSkeleton, TaskStarTooltip, GradientBackground, Logo, StaffingBar } from './components/uiKit';
 import { PAY_PERIOD_START, CURRENT_PERIOD_INDEX, getPayPeriodDates } from './utils/payPeriod';
 import { hasApprovedTimeOffForDate, matchesOfferId, matchesSwapId, errorMsg } from './utils/requests';
@@ -30,6 +30,7 @@ import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, parti
 import { getFutureShiftDates, formatFutureShiftsBlockMessage, serializeEmployeeForApi, filterSchedulableEmployees } from './utils/employees';
 import { createShiftFromAvailability, applyShiftMutation, collectPeriodShiftsForSave, transferShiftBetweenEmployees, swapShiftsBetweenEmployees } from './utils/scheduleOps';
 import { computeDayUnionHours, computeNetHoursForShift, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
+import { computeViolations } from './utils/violations';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { sortBySarviAdminsFTPT, employeeBucket } from './utils/employeeSort';
 import { hasTitle } from './utils/employeeRender';
@@ -60,7 +61,7 @@ export { parseLocalDate, escapeHtml, THEME, TYPE, ROLES, ROLES_BY_ID };
 export { getStoreHoursForDate } from './utils/storeHoursOverrides';
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
-  User, Users, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, EyeOff, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu, BookOpen
+  User, Users, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, EyeOff, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu, BookOpen, AlertTriangle
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -266,7 +267,8 @@ export default function App() {
   const [mobileAdminTab, setMobileAdminTab] = useState('schedule'); // 'schedule' | 'requests' | 'comms'
   const [mobileAdminChangePasswordOpen, setMobileAdminChangePasswordOpen] = useState(false);
   const [quickViewEmployee, setQuickViewEmployee] = useState(null);
-  
+  const [violationsPanelOpen, setViolationsPanelOpen] = useState(false);
+
   // Admin handler for selecting request type
   const handleAdminSelectRequestType = (type) => {
     setAdminRequestModalOpen(false);
@@ -674,6 +676,25 @@ export default function App() {
     return t;
   }, [currentDateStrs, shifts, events]);
 
+  // Compute weekly hours for an employee from explicit shift + event maps.
+  // Used in autoPopulateWeek + global violations — cannot close over component
+  // state because those callers need hours on a just-set newShifts map.
+  const computeWeekHoursFor = (empId, dates, shiftMap, eventMap) => {
+    let t = 0;
+    for (const d of dates) {
+      const k = `${empId}-${toDateKey(d)}`;
+      const work = shiftMap[k];
+      const evs = eventMap[k];
+      if (evs && evs.some(e => e.type === 'sick')) continue;
+      if (!evs || evs.length === 0) {
+        if (work) t += computeNetHoursForShift(work);
+      } else {
+        t += computeDayUnionHours(work ? [work, ...evs] : evs);
+      }
+    }
+    return t;
+  };
+
   // Pre-compute per-date scheduled headcounts once per relevant state change.
   // O(n_emp * n_dates) cost paid once here instead of per-render per-date.
   const scheduledByDate = useMemo(() => {
@@ -691,6 +712,35 @@ export default function App() {
     }
     return counts;
   }, [currentDateStrs, schedulableEmployees, shifts, events]);
+
+  // Global violations across all schedulable employees × active period dates.
+  // Pure derived state — no Sheets persistence. Hidden when count = 0.
+  const allViolations = useMemo(() => {
+    const out = [];
+    for (const emp of schedulableEmployees) {
+      for (const date of dates) {
+        const dateStr = toDateKey(date);
+        const key = `${emp.id}-${dateStr}`;
+        const hasShift = !!shifts[key] || !!(events[key] || []).length;
+        if (!hasShift) continue;
+        const wkHours = computeWeekHoursFor(emp.id, dates, shifts, events);
+        const prior = new Date(date); prior.setDate(prior.getDate() - 1);
+        const priorStreak = computeConsecutiveWorkDayStreak(
+          (id, k) => !!shifts[`${id}-${k}`],
+          emp.id, toDateKey(prior),
+          (id, k) => (events[`${id}-${k}`] || []).some(e => e.type === 'sick'),
+        );
+        const v = computeViolations({
+          employee: emp, dateStr, weekHours: wkHours,
+          currentStreak: priorStreak + 1,
+          hasApprovedTimeOff: hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests),
+          availability: emp.availability?.[getDayName(date).toLowerCase()],
+        });
+        if (v.length > 0) out.push({ emp, dateStr, violations: v });
+      }
+    }
+    return out;
+  }, [schedulableEmployees, dates, shifts, events, timeOffRequests]);
 
   // Count scheduled employees for a given date. Sick days drop out of the
   // headcount — the employee isn't actually there, even though the work row
@@ -743,8 +793,39 @@ export default function App() {
     if (addedCount > 0) {
       setShifts(newShifts);
       setUnsaved(true);
+      // Compute violations on the just-booked shifts for the summary toast.
+      const violationsList = [];
+      emps.forEach(emp => {
+        weekDates.forEach(date => {
+          const dateStr = toDateKey(date);
+          const key = `${emp.id}-${dateStr}`;
+          if (!newShifts[key]) return;
+          const wkHours = computeWeekHoursFor(emp.id, weekDates, newShifts, events);
+          const prior = new Date(date); prior.setDate(prior.getDate() - 1);
+          const priorStreak = computeConsecutiveWorkDayStreak(
+            (id, k) => !!newShifts[`${id}-${k}`],
+            emp.id, toDateKey(prior),
+            (id, k) => (events[`${id}-${k}`] || []).some(e => e.type === 'sick'),
+          );
+          const v = computeViolations({
+            employee: emp, dateStr, weekHours: wkHours,
+            currentStreak: priorStreak + 1,
+            hasApprovedTimeOff: hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests),
+            availability: emp.availability?.[getDayName(date).toLowerCase()],
+          });
+          if (v.length > 0) violationsList.push({ emp, dateStr, violations: v });
+        });
+      });
+      if (violationsList.length === 0) {
+        showToast('success', `Auto-populated ${addedCount} shifts`);
+      } else {
+        const summary = violationsList.slice(0, 3).map(({ emp, dateStr, violations }) =>
+          `${emp.name} ${dateStr}: ${violations.map(x => x.rule).join(', ')}`).join(' | ');
+        const more = violationsList.length > 3 ? ` (+${violationsList.length - 3} more)` : '';
+        showToast('warning', `Booked ${addedCount}. ${violationsList.length} violations: ${summary}${more}`);
+      }
     }
-    
+
     return addedCount;
   };
   
@@ -1620,6 +1701,17 @@ export default function App() {
           {/* Row 3: Action buttons right-aligned — schedule-context only */}
           {(mobileAdminTab === 'schedule' || mobileAdminTab === 'mine') && (
           <div className="flex items-center justify-end px-3 pb-2 gap-1.5 flex-wrap">
+            {allViolations.length > 0 && (
+              <button
+                onClick={() => setViolationsPanelOpen(true)}
+                className="relative flex items-center gap-1 px-2 py-1 rounded-lg"
+                style={{ backgroundColor: THEME.bg.elevated, color: THEME.status.warning, border: `1px solid ${THEME.status.warning}40` }}
+                title={`${allViolations.length} schedule violation${allViolations.length === 1 ? '' : 's'}`}
+              >
+                <AlertTriangle size={12} />
+                <span className="text-xs font-semibold">{allViolations.length}</span>
+              </button>
+            )}
             <ScheduleStateButton
               isEditMode={isCurrentPeriodEditMode}
               unsaved={unsaved}
@@ -1948,6 +2040,7 @@ export default function App() {
               existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]}
               existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []}
               totalPeriodHours={getEmpHours(editingShift.employee.id)}
+              weekHours={getEmpHours(editingShift.employee.id)}
               availability={editingShift.employee.availability?.[getDayName(editingShift.date)]}
               hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)}
               priorWorkStreak={priorStreak}
@@ -2121,6 +2214,17 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-2">
+            {allViolations.length > 0 && currentUser?.isAdmin && (
+              <button
+                onClick={() => setViolationsPanelOpen(true)}
+                className="relative flex items-center gap-1 px-2 py-1 rounded-lg"
+                style={{ backgroundColor: THEME.bg.elevated, color: THEME.status.warning, border: `1px solid ${THEME.status.warning}40` }}
+                title={`${allViolations.length} schedule violation${allViolations.length === 1 ? '' : 's'}`}
+              >
+                <AlertTriangle size={14} />
+                <span className="text-xs font-semibold">{allViolations.length}</span>
+              </button>
+            )}
             {published && !unsaved && <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: THEME.status.success + '20', color: THEME.status.success }}><Check size={10} />Published</span>}
 
             {/* Primary operations: Export + Publish */}
@@ -2615,8 +2719,33 @@ export default function App() {
           toDateKey(prior),
           (id, k) => (events[`${id}-${k}`] || []).some(e => e.type === 'sick')
         );
-        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
+        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} weekHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
       })()}
+      {violationsPanelOpen && (
+        <Modal isOpen onClose={() => setViolationsPanelOpen(false)} title={`${allViolations.length} schedule violation${allViolations.length === 1 ? '' : 's'}`} size="md">
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {allViolations.map(({ emp, dateStr, violations }) => (
+              <button
+                key={`${emp.id}-${dateStr}`}
+                onClick={() => {
+                  setViolationsPanelOpen(false);
+                  setEditingShift({ employee: emp, date: new Date(dateStr + 'T12:00:00') });
+                }}
+                className="w-full text-left p-2 rounded-lg hover:opacity-80"
+                style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.subtle}` }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>{emp.name}</span>
+                  <span className="text-[10px]" style={{ color: THEME.text.muted }}>{dateStr}</span>
+                </div>
+                <ul className="text-[11px] space-y-0.5" style={{ color: THEME.text.secondary }}>
+                  {violations.map(v => <li key={v.rule}>• {v.detail}</li>)}
+                </ul>
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <EmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onEdit={(emp) => { setInactivePanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
       <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />

@@ -7,7 +7,8 @@ import { getStoreHoursForDate } from '../App';
 import { Modal, TimePicker, GradientButton } from '../components/primitives';
 import { AnimatedNumber } from '../components/uiKit';
 import { toDateKey, formatDateLong, calculateHours } from '../utils/date';
-import { computeBreakMinutes, computeNetHoursForShift } from '../utils/timemath';
+import { computeBreakMinutes, computeNetHoursForShift, OVERTIME_THRESHOLDS } from '../utils/timemath';
+import { computeViolations } from '../utils/violations';
 import { isStatHoliday, DEFAULT_SHIFT } from '../utils/storeHours';
 import { getDayName } from '../utils/date';
 import { hasTitle } from '../utils/employeeRender';
@@ -48,6 +49,7 @@ export const ShiftEditorModal = ({
   existingShift,
   existingEvents = [],
   totalPeriodHours,
+  weekHours,
   availability,
   hasApprovedTimeOff = false,
   priorWorkStreak = 0,
@@ -118,6 +120,10 @@ export const ShiftEditorModal = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingShift, existingEvents, date]);
 
+  // Per-modal-session dismissal — reset when employee/day changes.
+  const [dismissedRules, setDismissedRules] = useState(new Set());
+  useEffect(() => { setDismissedRules(new Set()); }, [employee?.id, date]);
+
   const hasType = (type) => type === 'work'
     ? !!existingShift
     : type === 'meeting'
@@ -137,13 +143,17 @@ export const ShiftEditorModal = ({
       ? totalPeriodHours - existingShiftNet + workNet
       : totalPeriodHours;
 
-  // Availability warning fires for ANY scheduled activity (work / meeting / pk)
-  // on a day the employee is off or has approved time off. The streak warning
-  // is work-specific (consecutive-work-day rule).
-  const hasAnyActivity = ACTIVITY_TYPES.some(hasType);
-  const showAvailabilityWarning = !sickActive && hasAnyActivity && (hasApprovedTimeOff || (availability && availability.available === false));
-  const resultingStreak = !sickActive && hasType('work') ? priorWorkStreak + 1 : 0;
-  const showStreakWarning = !sickActive && hasType('work') && resultingStreak >= 5;
+  // Compute violations on each render — cheap pure function.
+  const currentStreak = !sickActive && hasType('work') ? priorWorkStreak + 1 : 0;
+  const violations = computeViolations({
+    employee,
+    dateStr: toDateKey(date),
+    weekHours: weekHours ?? 0,
+    currentStreak,
+    hasApprovedTimeOff,
+    availability,
+  });
+  const visibleViolations = violations.filter(v => !dismissedRules.has(v.rule));
 
   // Save persists the CURRENT drafts for every booked type. Booking happens on
   // tap (immediate save of defaults); Save captures edits the user made after
@@ -487,36 +497,31 @@ export const ShiftEditorModal = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Shift" size="sm">
-      {(showAvailabilityWarning || showStreakWarning) && (() => {
-        const reasons = [];
-        if (showAvailabilityWarning) {
-          reasons.push(hasApprovedTimeOff
-            ? <>has <strong>approved time off</strong> for this date</>
-            : <>is marked <strong>unavailable</strong> on <strong>{formatDateLong(date).split(',')[0]}s</strong></>);
-        }
-        if (showStreakWarning) {
-          const ord = resultingStreak === 5 ? '5th' : `${resultingStreak}th`;
-          reasons.push(<>would be on their <strong>{ord} consecutive</strong> work day</>);
-        }
-        return (
-          <div className="p-2 rounded-lg mb-2 flex items-start gap-2" style={{ backgroundColor: THEME.status.warning + '20', border: `1px solid ${THEME.status.warning}` }}>
-            <AlertTriangle size={14} style={{ color: THEME.status.warning, marginTop: 1, flexShrink: 0 }} />
-            <div className="text-xs" style={{ color: THEME.text.primary }}>
-              {reasons.length === 1 ? (
-                <p><strong>{employee.name}</strong> {reasons[0]}.<span style={{ color: THEME.text.secondary }}> OK to save; just a heads-up.</span></p>
-              ) : (
-                <>
-                  <p className="mb-0.5"><strong>{employee.name}</strong> — heads-up:</p>
-                  <ul className="list-disc pl-4 space-y-0.5">
-                    {reasons.map((r, i) => <li key={i}>{r}</li>)}
-                  </ul>
-                  <p className="mt-0.5" style={{ color: THEME.text.secondary }}>OK to save; just flagging.</p>
-                </>
-              )}
+      {visibleViolations.length > 0 && (
+        <div className="mb-2 space-y-1.5">
+          {visibleViolations.map(v => (
+            <div key={v.rule} className="p-2 rounded-lg flex items-start gap-2"
+                 style={{
+                   backgroundColor: (v.severity === 'error' ? THEME.status.error : THEME.status.warning) + '20',
+                   border: `1px solid ${v.severity === 'error' ? THEME.status.error : THEME.status.warning}`,
+                 }}>
+              <AlertTriangle size={14} style={{
+                color: v.severity === 'error' ? THEME.status.error : THEME.status.warning,
+                marginTop: 1, flexShrink: 0,
+              }} />
+              <p className="text-xs flex-1" style={{ color: THEME.text.primary }}>{v.detail}</p>
+              <button
+                type="button"
+                onClick={() => setDismissedRules(prev => { const n = new Set(prev); n.add(v.rule); return n; })}
+                className="flex-shrink-0 rounded p-0.5 hover:opacity-70"
+                aria-label={`Dismiss ${v.rule}`}
+              >
+                <X size={12} style={{ color: THEME.text.muted }} />
+              </button>
             </div>
-          </div>
-        );
-      })()}
+          ))}
+        </div>
+      )}
 
       <div className="p-2 rounded-lg mb-2" style={{ backgroundColor: THEME.bg.tertiary }}>
         <div className="flex items-center gap-2">
@@ -621,7 +626,10 @@ export const ShiftEditorModal = ({
         </div>
         <div>
           <span className="text-xs" style={{ color: THEME.text.muted }}>PERIOD</span>
-          <p className="text-lg font-bold" style={{ color: projectedTotal >= 44 ? THEME.status.error : projectedTotal >= 40 ? THEME.status.warning : THEME.accent.cyan }}>
+          <p className="text-lg font-bold" style={{ color: projectedTotal >= OVERTIME_THRESHOLDS.OVER_RED ? THEME.status.error
+               : projectedTotal > OVERTIME_THRESHOLDS.CAP ? THEME.status.warning
+               : projectedTotal === OVERTIME_THRESHOLDS.CAP ? THEME.status.atCap
+               : THEME.accent.cyan }}>
             <AnimatedNumber value={projectedTotal} decimals={1} suffix="h" />
           </p>
         </div>

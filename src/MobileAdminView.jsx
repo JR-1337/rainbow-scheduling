@@ -23,6 +23,7 @@ import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } fro
 import { isStatHoliday } from './utils/storeHours';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
 import { hasApprovedTimeOffForDate } from './utils/requests';
+import { OVERTIME_THRESHOLDS } from './utils/timemath';
 
 import { MobileScheduleGrid } from './MobileEmployeeView';
 import { EVENT_TYPES } from './constants';
@@ -323,7 +324,13 @@ export const MobileAdminScheduleGrid = ({
                       {nameRest ? (
                         <p className="truncate shrink-0" style={{ color: THEME.text.muted, fontSize: '9px', lineHeight: 1.1 }}>{nameRest}</p>
                       ) : null}
-                      <p className="truncate shrink-0" style={{ color: THEME.accent.cyan, fontSize: '9px', lineHeight: 1.1 }}>{weekHours.toFixed(1)}h{emp.isAdmin ? ' ★' : ''}</p>
+                      <p className="truncate shrink-0" style={{
+                        color: weekHours >= OVERTIME_THRESHOLDS.OVER_RED ? THEME.status.error
+                             : weekHours > OVERTIME_THRESHOLDS.CAP ? THEME.status.warning
+                             : weekHours === OVERTIME_THRESHOLDS.CAP ? THEME.status.atCap
+                             : THEME.accent.cyan,
+                        fontSize: '9px', lineHeight: 1.1,
+                      }}>{weekHours.toFixed(1)}h{emp.isAdmin ? ' ★' : ''}</p>
                     </div>
                   </td>
                   

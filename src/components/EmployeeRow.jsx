@@ -6,6 +6,7 @@ import { hasTitle, splitNameForSchedule } from '../utils/employeeRender';
 import { toDateKey, getDayName } from '../utils/date';
 import { getStoreHoursForDate } from '../utils/storeHoursOverrides';
 import { hasApprovedTimeOffForDate } from '../utils/requests';
+import { OVERTIME_THRESHOLDS } from '../utils/timemath';
 import { AnimatedNumber } from './uiKit';
 import { ScheduleCell } from './ScheduleCell';
 
@@ -42,7 +43,11 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
             {nameRest ? (
               <p className="truncate text-[10px] leading-tight" style={{ color: THEME.text.muted }}>{nameRest}</p>
             ) : null}
-            <p className="shrink-0 truncate text-xs font-semibold leading-tight" style={{ color: isDeleted ? THEME.text.muted : hours >= 40 ? THEME.status.error : hours >= 35 ? THEME.status.warning : THEME.accent.cyan }}><AnimatedNumber value={hours} decimals={1} suffix="h" /></p>
+            <p className="shrink-0 truncate text-xs font-semibold leading-tight" style={{ color: isDeleted ? THEME.text.muted
+                : hours >= OVERTIME_THRESHOLDS.OVER_RED ? THEME.status.error
+                : hours > OVERTIME_THRESHOLDS.CAP ? THEME.status.warning
+                : hours === OVERTIME_THRESHOLDS.CAP ? THEME.status.atCap
+                : THEME.accent.cyan }}><AnimatedNumber value={hours} decimals={1} suffix="h" /></p>
           </div>
           {!isDeleted && <button onClick={e => { e.stopPropagation(); onEdit(employee); }} className="flex shrink-0 self-center rounded p-0.5 hover:scale-110" style={{ backgroundColor: THEME.bg.elevated }}><Edit3 size={10} style={{ color: THEME.accent.purple }} /></button>}
         </div>

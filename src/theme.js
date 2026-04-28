@@ -51,7 +51,7 @@ export const THEME = {
     shiftBorder: '#09728C42',
   },
   border: { subtle: `rgba(${_ar}, ${_ag}, ${_ab}, 0.15)`, default: OTR_ACCENT.primary + '80', bright: OTR_ACCENT.primary },
-  status: { success: '#34D399', warning: '#FBBF24', error: '#F87171' },
+  status: { success: '#34D399', warning: '#FBBF24', error: '#F87171', atCap: '#00A84D' },
   action: {
     recoverable: {
       bg: `rgba(${_ar}, ${_ag}, ${_ab}, 0.20)`,

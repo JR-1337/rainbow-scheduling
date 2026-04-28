@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { DESKTOP_SCHEDULE_GRID_TEMPLATE } from '../constants';
 import { THEME } from '../theme';
+import { OVERTIME_THRESHOLDS } from '../utils/timemath';
 
 // P4.5 - Haptic feedback (progressive enhancement - no-op on desktop)
 export const haptic = (ms = 10) => { try { navigator?.vibrate?.(ms); } catch {} };
 
 // P4.3 - Kinetic animated number (counts up/down smoothly, highlights overtime)
-export const AnimatedNumber = ({ value, decimals = 0, suffix = '', className, style, overtimeThreshold = 44 }) => {
+export const AnimatedNumber = ({ value, decimals = 0, suffix = '', className, style, overtimeThreshold = OVERTIME_THRESHOLDS.OVER_RED }) => {
   const [display, setDisplay] = useState(value);
   const prevRef = useRef(value);
   useEffect(() => {
