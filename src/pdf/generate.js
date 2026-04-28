@@ -284,13 +284,11 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     <button class="print-btn" onclick="window.print()">Print Schedule</button>
     <span style="margin-left:15px;color:${G.textFaint};font-size:11px;">Review the preview below, then click Print.</span>
   </div>
-  <div style="text-align:center;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid ${G.ink};">
-    <div style="font-family:'Josefin Sans',sans-serif;margin-bottom:3px;">
-      <span style="color:${G.textMuted};font-size:10px;letter-spacing:3px;">OVER THE</span><br>
-      <span style="color:${G.ink};font-size:24px;letter-spacing:4px;font-weight:700;">RAINBOW</span>
+  <div style="text-align:center;margin-bottom:3mm;padding-bottom:2mm;border-bottom:2px solid ${G.ink};">
+    <div style="font-family:'Josefin Sans',sans-serif;line-height:1;">
+      <span style="color:${G.textMuted};font-size:8px;letter-spacing:3px;">OVER THE</span><br>
+      <span style="color:${G.ink};font-size:18px;letter-spacing:4px;font-weight:700;">RAINBOW</span>
     </div>
-    <p style="margin:4px 0 0;font-size:12px;"><span style="color:${G.ink};font-weight:700;">Staff Schedule</span></p>
-    <p style="margin:5px 0 0;color:${G.textMuted};font-size:11px;">Week ${weekNum1} & ${weekNum2} • ${formatMonthWord(periodInfo.startDate)} ${periodInfo.startDate.getDate()} - ${formatMonthWord(periodInfo.endDate)} ${periodInfo.endDate.getDate()}, ${periodInfo.startDate.getFullYear()}</p>
   </div>
 
   ${announcementHtml}
