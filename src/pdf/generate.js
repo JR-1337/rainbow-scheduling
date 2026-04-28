@@ -72,13 +72,13 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   // When empty, the box still renders so admins can pen-mark notes on the printed
   // schedule (kitchen-door usage). Same label "Announcements" in both states.
   const announcementHtml = (announcement && announcement.message) ? `
-    <div style="margin:8px 0;padding:15px;background:${G.fillZebra};border-radius:4px;border-left:6px solid ${G.ink};border-top:3px double ${G.ink};">
-      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:${G.ink};font-size:13px;font-weight:800;letter-spacing:0.5px;">[!] ${cleanText(announcement.subject)}</h3>` : `<h3 style="margin:0 0 10px;color:${G.ink};font-size:13px;font-weight:800;">[!] Announcements</h3>`}
+    <div style="margin:6px 0;padding:11px;background:${G.fillZebra};border-radius:4px;border-left:6px solid ${G.ink};border-top:3px double ${G.ink};">
+      ${announcement.subject ? `<h3 style="margin:0 0 7px;color:${G.ink};font-size:13px;font-weight:800;letter-spacing:0.5px;">[!] ${cleanText(announcement.subject)}</h3>` : `<h3 style="margin:0 0 7px;color:${G.ink};font-size:13px;font-weight:800;">[!] Announcements</h3>`}
       <div style="color:${G.text};font-size:11px;line-height:1.6;white-space:pre-wrap;font-style:italic;">${cleanText(announcement.message)}</div>
     </div>
   ` : `
-    <div style="margin:8px 0;padding:10px 15px;background:#ffffff;border-radius:4px;border-left:6px solid ${G.borderSoft};border-top:3px double ${G.borderSoft};min-height:40px;">
-      <h3 style="margin:0 0 4px;color:${G.textFaint};font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">Announcements</h3>
+    <div style="margin:6px 0;padding:7px 15px;background:#ffffff;border-radius:4px;border-left:6px solid ${G.borderSoft};border-top:3px double ${G.borderSoft};min-height:30px;">
+      <h3 style="margin:0 0 3px;color:${G.textFaint};font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">Announcements</h3>
     </div>
   `;
 
