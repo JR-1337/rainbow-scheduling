@@ -14,7 +14,6 @@ import { buildEmailContent } from './build';
 import { toDateKey, getWeekNumber, formatMonthWord, formatDateLong, formatTimeDisplay } from '../utils/date';
 import { ROLES_BY_ID } from '../App';
 import { EVENT_TYPES } from '../constants';
-import { computeDayUnionHours } from '../utils/timemath';
 
 // Escape HTML entities so plaintext content injected into HTML is safe.
 const escHtml = (str) => String(str || '')
@@ -105,7 +104,7 @@ export const buildBrandedScheduleHtml = ({
       if (shift && !hasSick) {
         const role = ROLES_BY_ID[shift.role];
         const timeStr = `${formatTimeDisplay(shift.startTime)} - ${formatTimeDisplay(shift.endTime)}`;
-        shiftContent += `<div style="font-size:13px;color:#1a1a2e;">${escHtml(timeStr)} &bull; ${escHtml(shift.hours)}h &bull; ${escHtml(role?.fullName || 'No Role')}</div>`;
+        shiftContent += `<div style="font-size:13px;color:#1a1a2e;">${escHtml(timeStr)} &bull; ${escHtml(role?.fullName || 'No Role')}</div>`;
         if (shift.task) shiftContent += `<div style="font-size:12px;color:#D97706;margin-top:2px;">Task: ${escHtml(shift.task)}</div>`;
       }
       dayEvents.forEach(ev => {

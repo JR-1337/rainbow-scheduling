@@ -11,7 +11,7 @@ import { ScheduleCell } from './ScheduleCell';
 
 const EMPTY_EVENTS = Object.freeze([]);
 
-export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, onCellClick, getEmployeeHours, onEdit, isDeleted = false, onShowTooltip, onHideTooltip, timeOffRequests = [], isLocked = false }) => {
+export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, onCellClick, getEmployeeHours, onEdit, isDeleted = false, onShowTooltip, onHideTooltip, timeOffRequests = [], isLocked = false, isAdmin = false }) => {
   const rowRef = useRef(null);
   const hours = getEmployeeHours(employee.id);
   const { first: nameFirst, rest: nameRest } = splitNameForSchedule(employee.name);
@@ -58,7 +58,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
         const approvedTimeOff = hasApprovedTimeOffForDate(employee.email, dateStr, timeOffRequests);
         return (
           <div key={dateStr} className={rowStrip} style={{ backgroundColor: THEME.bg.secondary }}>
-            <ScheduleCell shift={shift} events={cellEvents} date={date} availability={av} storeHours={storeHrs} onCellClick={onCellClick} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} employee={employee} />
+            <ScheduleCell shift={shift} events={cellEvents} date={date} availability={av} storeHours={storeHrs} onCellClick={onCellClick} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} employee={employee} isAdmin={isAdmin} />
           </div>
         );
       })}

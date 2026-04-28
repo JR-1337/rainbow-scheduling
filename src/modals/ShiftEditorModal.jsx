@@ -7,6 +7,7 @@ import { getStoreHoursForDate } from '../App';
 import { Modal, TimePicker, GradientButton } from '../components/primitives';
 import { AnimatedNumber } from '../components/uiKit';
 import { toDateKey, formatDateLong, calculateHours } from '../utils/date';
+import { computeBreakMinutes, computeNetHoursForShift } from '../utils/timemath';
 import { isStatHoliday, DEFAULT_SHIFT } from '../utils/storeHours';
 import { getDayName } from '../utils/date';
 import { hasTitle } from '../utils/employeeRender';
@@ -125,12 +126,15 @@ export const ShiftEditorModal = ({
         ? pkBooked
         : !!existingEvents.find(e => e.type === type);
 
-  const workHours = calculateHours(workDraft.startTime, workDraft.endTime);
+  const workGross = calculateHours(workDraft.startTime, workDraft.endTime);
+  const workBreakMin = computeBreakMinutes(workGross);
+  const workNet = Math.max(0, workGross - workBreakMin / 60);
   // Period projection: when sick, day contributes 0; otherwise reflect the
-  // current work draft's delta.
+  // current work draft's net delta (existing shift net replaced by new draft net).
+  const existingShiftNet = existingShift ? computeNetHoursForShift(existingShift) : 0;
   const projectedTotal = sickActive ? totalPeriodHours
     : hasType('work')
-      ? totalPeriodHours - (existingShift?.hours || 0) + workHours
+      ? totalPeriodHours - existingShiftNet + workNet
       : totalPeriodHours;
 
   // Availability warning fires for ANY scheduled activity (work / meeting / pk)
@@ -603,9 +607,17 @@ export const ShiftEditorModal = ({
       <div className="p-2 rounded-lg mb-3 grid grid-cols-2 gap-2 text-center" style={{ backgroundColor: THEME.bg.tertiary }}>
         <div>
           <span className="text-xs" style={{ color: THEME.text.muted }}>TODAY</span>
-          <p className="text-lg font-bold" style={{ color: THEME.accent.cyan }}>
-            <AnimatedNumber value={sickActive ? 0 : (hasType('work') ? workHours : 0)} decimals={1} suffix="h" />
-          </p>
+          {sickActive || !hasType('work') ? (
+            <p className="text-lg font-bold" style={{ color: THEME.accent.cyan }}>
+              <AnimatedNumber value={0} decimals={1} suffix="h" />
+            </p>
+          ) : (
+            <p className="text-base font-bold leading-snug" style={{ color: THEME.accent.cyan }}>
+              <span style={{ color: THEME.text.muted }}>{workGross.toFixed(1)}h</span>
+              <span style={{ color: THEME.text.muted }}> - {workBreakMin}m = </span>
+              <AnimatedNumber value={workNet} decimals={1} suffix="h" />
+            </p>
+          )}
         </div>
         <div>
           <span className="text-xs" style={{ color: THEME.text.muted }}>PERIOD</span>

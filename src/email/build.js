@@ -2,7 +2,6 @@
 import { ROLES_BY_ID } from '../App';
 import { toDateKey, getWeekNumber, formatMonthWord, formatDateLong, formatTimeDisplay } from '../utils/date';
 import { EVENT_TYPES } from '../constants';
-import { computeDayUnionHours } from '../utils/timemath';
 
 // S64 Stage 7 — emails list meeting/PK entries as separate bullets; weekly total
 // uses union hours so a 9-5 work + 3-5 PK day totals 8h, not 10h.
@@ -19,7 +18,6 @@ export const buildEmailContent = (emp, shifts, dates, periodInfo, adminContacts 
   const subject = `New Schedule Published 🌈 Wk ${weekNum1}, ${weekNum2} | ${startMonth} ${startDayNum} - ${endMonth} ${endDayNum}`;
 
   const scheduleLines = [];
-  let totalHours = 0;
 
   dates.forEach(date => {
     const k = `${emp.id}-${toDateKey(date)}`;
@@ -34,7 +32,7 @@ export const buildEmailContent = (emp, shifts, dates, periodInfo, adminContacts 
     if (shift && !hasSick) {
       const role = ROLES_BY_ID[shift.role];
       const timeStr = `${formatTimeDisplay(shift.startTime)} - ${formatTimeDisplay(shift.endTime)}`;
-      line += `\n  ${timeStr} • ${shift.hours}h • ${role?.fullName || 'No Role'}`;
+      line += `\n  ${timeStr} • ${role?.fullName || 'No Role'}`;
       if (shift.task) line += `\n  ⭐ Task: ${shift.task}`;
     }
     dayEvents.forEach(ev => {
@@ -44,7 +42,6 @@ export const buildEmailContent = (emp, shifts, dates, periodInfo, adminContacts 
     });
 
     scheduleLines.push(line);
-    totalHours += computeDayUnionHours([shift, ...dayEvents].filter(Boolean));
   });
 
   if (scheduleLines.length === 0) return { subject, body: '', hasShifts: false };
@@ -73,8 +70,6 @@ YOUR SHIFTS
 
 ${scheduleLines.join('\n\n')}
 
-───────────────────────────────────
-Total Hours: ${totalHours.toFixed(1)}h
 ───────────────────────────────────
 
 Full schedule rendered above. Contact admin with any questions.

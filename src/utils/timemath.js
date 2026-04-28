@@ -1,6 +1,48 @@
 // S61 — Time interval math for Meetings + PK overlap-aware hours.
 // Pure functions, no React/state deps. Times are "HH:MM" 24h strings.
 
+// Unpaid break rule keyed on gross shift length (all thresholds JR-confirmed):
+//   0:00 – 4:00 → 0 min
+//   4:01 – 5:00 → 20 min
+//   5:01 – 6:00 → 30 min
+//   6:01+       → 45 min
+const BREAK_RULES = [
+  { maxHours: 4.0,       breakMinutes: 0 },
+  { maxHours: 5.0,       breakMinutes: 20 },
+  { maxHours: 6.0,       breakMinutes: 30 },
+  { maxHours: Infinity,  breakMinutes: 45 },
+];
+
+export function computeBreakMinutes(grossHours) {
+  for (const rule of BREAK_RULES) {
+    if (grossHours <= rule.maxHours) return rule.breakMinutes;
+  }
+  return 45;
+}
+
+// Returns net decimal hours for a single shift entry. Work shifts (type 'work'
+// or undefined) have the unpaid break subtracted. Meetings, PK, sick, and other
+// types return gross unchanged (short events, not "shifts" in the labour sense).
+export function computeNetHoursForShift(shift) {
+  if (!shift) return 0;
+  const type = shift.type;
+  // Only work shifts get break deducted; meetings, pk, sick, etc. pass through.
+  if (type && type !== 'work') return shift.hours || 0;
+  // Compute gross from times if available; fall back to stored .hours.
+  let gross = 0;
+  const start = parseHM(shift.startTime);
+  const end = parseHM(shift.endTime);
+  if (end > start) {
+    gross = (end - start) / 60;
+  } else if (typeof shift.hours === 'number' && shift.hours > 0) {
+    gross = shift.hours;
+  } else {
+    return 0;
+  }
+  const breakMin = computeBreakMinutes(gross);
+  return Math.max(0, gross - breakMin / 60);
+}
+
 export function parseHM(t) {
   if (!t || typeof t !== 'string') return 0;
   const [h, m] = t.split(':').map(Number);
@@ -41,10 +83,27 @@ export function computeDayUnionHours(entries) {
   entries.forEach(e => {
     const start = parseHM(e.startTime);
     const end = parseHM(e.endTime);
+    const isWorkEntry = !e.type || e.type === 'work';
     if (end > start) {
-      good.push({ start, end });
+      // For work entries: shrink the window from the end by break minutes before
+      // the union merge. This keeps the interval semantics intact for overlapping
+      // meetings while deducting break from the work time.
+      if (isWorkEntry) {
+        const grossHours = (end - start) / 60;
+        const breakMin = computeBreakMinutes(grossHours);
+        const netEnd = Math.max(start, end - breakMin);
+        good.push({ start, end: netEnd });
+      } else {
+        good.push({ start, end });
+      }
     } else if (typeof e.hours === 'number' && e.hours > 0) {
-      fallbackHours += e.hours;
+      // Fallback path: no parseable times — subtract break for work entries.
+      if (isWorkEntry) {
+        const breakMin = computeBreakMinutes(e.hours);
+        fallbackHours += Math.max(0, e.hours - breakMin / 60);
+      } else {
+        fallbackHours += e.hours;
+      }
     }
   });
   const merged = mergeIntervals(good);

@@ -20,7 +20,6 @@ import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } fro
 import { isStatHoliday } from './utils/storeHours';
 import { useFocusTrap } from './hooks/useFocusTrap';
 import { EVENT_TYPES } from './constants';
-import { computeDayUnionHours } from './utils/timemath';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
 import { hasApprovedTimeOffForDate } from './utils/requests';
 import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
@@ -373,31 +372,24 @@ export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, time
   const weekNum1 = getWeekNumber(week1[0]), weekNum2 = getWeekNumber(week2[0]);
   const todayStr = useMemo(() => toDateKey(new Date()), []);
 
-  // S64 Stage 8.1 — union-count work+events so a 9-5 work + 3-5 PK = 8h, not 10h.
-  // Shift count stays work-only (matches S60 semantics).
+  // S64 Stage 8.1 — build shift list per week (hours computation removed in s033;
+  // employees no longer see totals).
   const getWeekShifts = (weekDates) => {
-    let totalHours = 0;
     const shiftList = [];
     weekDates.forEach(date => {
       const dateStr = toDateKey(date);
       const k = `${currentUser.id}-${dateStr}`;
       const shift = shifts[k];
-      const dayEvents = events[k] || [];
-      const combined = [shift, ...dayEvents].filter(Boolean);
-      if (combined.length > 0) {
-        totalHours += computeDayUnionHours(combined);
-      }
       if (shift) {
         const role = ROLES_BY_ID[shift.role];
         shiftList.push({ date, dateStr, shift, role });
       }
     });
-    return { shiftList, totalHours };
+    return { shiftList };
   };
-  
+
   const w1 = getWeekShifts(week1);
   const w2 = getWeekShifts(week2);
-  const periodTotal = w1.totalHours + w2.totalHours;
   
   // Approved time-off dates for this period
   const myTimeOffDates = useMemo(() => {

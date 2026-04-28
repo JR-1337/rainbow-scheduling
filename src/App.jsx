@@ -29,7 +29,7 @@ import { apiCall } from './utils/api';
 import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents, filterToLivePeriods } from './utils/apiTransforms';
 import { getFutureShiftDates, formatFutureShiftsBlockMessage, serializeEmployeeForApi, filterSchedulableEmployees } from './utils/employees';
 import { createShiftFromAvailability, applyShiftMutation, collectPeriodShiftsForSave, transferShiftBetweenEmployees, swapShiftsBetweenEmployees } from './utils/scheduleOps';
-import { computeDayUnionHours, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
+import { computeDayUnionHours, computeNetHoursForShift, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { sortBySarviAdminsFTPT, employeeBucket } from './utils/employeeSort';
 import { hasTitle } from './utils/employeeRender';
@@ -665,7 +665,7 @@ export default function App() {
       const hasSick = evs && evs.some(e => e.type === 'sick');
       if (hasSick) continue;
       if (!evs || evs.length === 0) {
-        if (work) t += work.hours || 0;
+        if (work) t += computeNetHoursForShift(work);
       } else {
         const all = work ? [work, ...evs] : evs;
         t += computeDayUnionHours(all);
@@ -2407,7 +2407,7 @@ export default function App() {
                   return (
                     <React.Fragment key={e.id}>
                       {showDivider && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
-                      <EmployeeRow employee={e} dates={currentDates} shifts={shifts} events={events} onCellClick={handleCellClick} getEmployeeHours={getEmpHours} onEdit={handleEditEmployee} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={!isCurrentPeriodEditMode} />
+                      <EmployeeRow employee={e} dates={currentDates} shifts={shifts} events={events} onCellClick={handleCellClick} getEmployeeHours={getEmpHours} onEdit={handleEditEmployee} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={!isCurrentPeriodEditMode} isAdmin={!!currentUser?.isAdmin} />
                     </React.Fragment>
                   );
                 })}</div>

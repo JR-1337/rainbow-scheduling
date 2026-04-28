@@ -280,38 +280,10 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
   const week2DateStrs = useMemo(() => week2.map(toDateKey), [week2]);
   const todayStr = useMemo(() => toDateKey(new Date()), []);
 
-  const getEmpHours = useCallback((id) => {
-    let t = 0;
-    for (let i = 0; i < currentDateStrs.length; i++) {
-      const s = shifts[`${id}-${currentDateStrs[i]}`];
-      if (s) t += s.hours || 0;
-    }
-    return t;
-  }, [currentDateStrs, shifts]);
+  // Employees never see hours — stub returns 0 for the MobileScheduleGrid name column.
+  const getEmpHours = useCallback(() => 0, []);
+  const getEmpHoursWeek2 = useCallback(() => 0, []);
 
-  // Stable callback for week2 name-column hours. Mirrors getEmpHours but loops
-  // over week2DateStrs. Previously an inline arrow that allocated a new function
-  // on every render, defeating MobileScheduleGrid's React.memo.
-  const getEmpHoursWeek2 = useCallback((id) => {
-    let t = 0;
-    for (let i = 0; i < week2DateStrs.length; i++) {
-      const s = shifts[`${id}-${week2DateStrs[i]}`];
-      if (s) t += s.hours || 0;
-    }
-    return t;
-  }, [week2DateStrs, shifts]);
-
-  // Period total for summary stats
-  const getPeriodHours = useCallback((id) => {
-    let t = 0;
-    for (let i = 0; i < allDateStrs.length; i++) {
-      const s = shifts[`${id}-${allDateStrs[i]}`];
-      if (s) t += s.hours || 0;
-    }
-    return t;
-  }, [allDateStrs, shifts]);
-  
-  const myTotalHours = getPeriodHours(currentUser.id);
   const myShiftsCount = allDateStrs.reduce((n, ds) => shifts[`${currentUser.id}-${ds}`] ? n + 1 : n, 0);
   
   const handleSelectRequestType = (type) => {
@@ -739,7 +711,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
             </button>
             <div className="text-right">
               <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>{currentUser.name}</p>
-              <p className="text-xs" style={{ color: THEME.accent.cyan }}>{myShiftsCount} shifts • {myTotalHours.toFixed(1)}h</p>
+              <p className="text-xs" style={{ color: THEME.accent.cyan }}>{myShiftsCount} shifts</p>
             </div>
             <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: '#fff' }}>
               {currentUser.name.split(' ').map(n => n[0]).join('')}
