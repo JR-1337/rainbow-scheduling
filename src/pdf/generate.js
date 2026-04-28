@@ -96,12 +96,17 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 
     // Events: one line per item, truncated with ellipsis for portrait density.
     // detail note dropped for density (ev.note not rendered in cell body).
+    // Meeting + PK don't show times (just the glyph) since their times are
+    // typically the same store-wide and aren't actionable info per-cell. Sick
+    // keeps its time so partial-day sick is readable.
     const eventBadgeHtml = (evs) => {
       if (!evs.length) return '';
       const lines = evs.map((ev) => {
         const et = EVENT_TYPES[ev.type];
         if (!et) return '';
-        return `<div style="font-size:5pt;line-height:1.1;color:${G.textMuted};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:0.5px;"><strong style="color:${G.ink};">${et.shortLabel}</strong> ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}</div>`;
+        const hideTime = ev.type === 'meeting' || ev.type === 'pk';
+        const timeStr = hideTime ? '' : ` ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}`;
+        return `<div style="font-size:5pt;line-height:1.1;color:${G.textMuted};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:0.5px;"><strong style="color:${G.ink};">${et.shortLabel}</strong>${timeStr}</div>`;
       }).filter(Boolean);
       if (!lines.length) return '';
       return `<div style="margin-top:1px;">${lines.join('')}</div>`;
@@ -147,7 +152,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
           <div class="pdf-cell-inner" style="position:relative;${glyph ? 'padding-left:4mm;' : ''}">
             ${glyph ? `<span style="position:absolute;top:0;left:0;font-size:8pt;font-weight:800;color:${G.ink};line-height:1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
             ${shift.task ? `<span style="position:absolute;top:0;right:0;font-size:7pt;font-weight:800;color:${G.ink};line-height:1;">★</span>` : ''}
-            <div style="font-size:7pt;color:${G.text};line-height:1.15;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
+            <div style="font-size:8.5pt;font-weight:600;color:${G.ink};line-height:1.15;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
             ${eventBadgeHtml(dayEvents)}
           </div>
         </td>`;
