@@ -33,25 +33,8 @@ const ROLE_GLYPHS = {
   mens: 'M',
   womens: 'W',
   floorSupervisor: 'FS',
-  floorMonitor: 'F',
+  floorMonitor: 'FM',
   none: '',
-};
-// Monogram + typography system. Cell perimeter stays uniform 1px grey (the
-// grid). Role signal lives entirely in the content: a large letter glyph
-// stamped at top-left, plus a family-scoped type treatment on the role name.
-// cash (C / 2 / B):      BOLD UPPERCASE
-// section (M / W):       Medium Title Case
-// monitor (F):           Italic
-// none:                  plain
-const ROLE_FAMILY = {
-  cashier: 'cash',
-  backupCashier: 'cash',
-  backupCash: 'cash',
-  mens: 'section',
-  womens: 'section',
-  floorSupervisor: 'monitor',
-  floorMonitor: 'monitor',
-  none: 'none',
 };
 // Short labels for the legend. Cells use glyph only (no spell-out).
 const ROLE_LEGEND_LABEL = {
@@ -61,14 +44,7 @@ const ROLE_LEGEND_LABEL = {
   mens: "Men's",
   womens: "Women's",
   floorSupervisor: 'Floor Sup',
-  floorMonitor: 'Monitor',
-};
-
-const roleNameStyle = (family) => {
-  if (family === 'cash')    return 'font-weight:800;text-transform:uppercase;letter-spacing:0.5px;';
-  if (family === 'section') return 'font-weight:600;';
-  if (family === 'monitor') return 'font-weight:500;font-style:italic;';
-  return 'font-weight:500;';
+  floorMonitor: 'Floor Monitor',
 };
 
 // S64 Stage 7 - events carry meeting/PK entries per `${empId}-${date}` key.
@@ -92,17 +68,17 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     ? [primaryContact]
     : employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
 
-  // Announcement: italic body + "[!]" prefix + heavy left bar + double top border.
-  // When empty, still renders a "Notes" box so Sarvi has space to handwrite on the
-  // printed copy (kitchen-door schedule).
+  // Announcements: italic body + "[!]" prefix + heavy left bar + double top border.
+  // When empty, the box still renders so admins can pen-mark notes on the printed
+  // schedule (kitchen-door usage). Same label "Announcements" in both states.
   const announcementHtml = (announcement && announcement.message) ? `
     <div style="margin:8px 0;padding:15px;background:${G.fillZebra};border-radius:4px;border-left:6px solid ${G.ink};border-top:3px double ${G.ink};">
-      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:${G.ink};font-size:13px;font-weight:800;letter-spacing:0.5px;">[!] ${cleanText(announcement.subject)}</h3>` : `<h3 style="margin:0 0 10px;color:${G.ink};font-size:13px;font-weight:800;">[!] Announcement</h3>`}
+      ${announcement.subject ? `<h3 style="margin:0 0 10px;color:${G.ink};font-size:13px;font-weight:800;letter-spacing:0.5px;">[!] ${cleanText(announcement.subject)}</h3>` : `<h3 style="margin:0 0 10px;color:${G.ink};font-size:13px;font-weight:800;">[!] Announcements</h3>`}
       <div style="color:${G.text};font-size:11px;line-height:1.6;white-space:pre-wrap;font-style:italic;">${cleanText(announcement.message)}</div>
     </div>
   ` : `
     <div style="margin:8px 0;padding:10px 15px;background:#ffffff;border-radius:4px;border-left:6px solid ${G.borderSoft};border-top:3px double ${G.borderSoft};min-height:40px;">
-      <h3 style="margin:0 0 4px;color:${G.textFaint};font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">Notes</h3>
+      <h3 style="margin:0 0 4px;color:${G.textFaint};font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">Announcements</h3>
     </div>
   `;
 
@@ -153,7 +129,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
           return `<td style="padding:1mm;border:1px solid ${G.border};background:${G.fill};vertical-align:top;"><div class="pdf-cell-inner"></div></td>`;
         }
         if (!shift) {
-          return `<td style="padding:1mm;border:2px solid ${G.ink};background:${G.fillZebra};text-align:left;vertical-align:top;">
+          return `<td style="padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};text-align:left;vertical-align:top;">
             <div class="pdf-cell-inner" style="display:flex;flex-direction:column;justify-content:flex-start;">
               ${eventBadgeHtml(dayEvents)}
             </div>
@@ -161,12 +137,9 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         }
         const isTitled = hasTitle(emp);
         const glyph = isTitled ? '' : (ROLE_GLYPHS[shift.role] || '');
-        // Supervisory roles "own" their perimeter: 2px ink border wins over the
-        // surrounding 1px grey grid via border-collapse thickness rules.
-        // Titled admins always use the standard 1px grey border (no role-based override).
-        const cellBorder = (!isTitled && (shift.role === 'floorMonitor' || shift.role === 'floorSupervisor'))
-          ? `border:2px solid ${G.ink};`
-          : `border:1px solid ${G.border};`;
+        // Uniform 1px grey border for all shift cells. Role signal lives in the
+        // glyph (FS / FM / etc.), not in border weight.
+        const cellBorder = `border:1px solid ${G.border};`;
         const shiftCellFill = isTitled ? G.fillZebra : G.fill;
         // Glyph absolute at top-left; time range on first line; events below.
         // Role spell-out line DROPPED. Hours "Nh" line DROPPED.
@@ -182,18 +155,11 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 
       const titleStr = hasTitle(emp) && (emp.title || '').trim() ? cleanText(emp.title.trim()) : '';
       const { first: nameFirst, rest: nameRest } = splitNameForSchedule(emp.name);
-      // Weekly total hours for this week only (no "h" suffix per plan).
-      const weeklyHours = weekDates.reduce((sum, d) => {
-        const s = shifts[`${emp.id}-${toDateKey(d)}`];
-        return sum + (s ? (Number(s.hours) || 0) : 0);
-      }, 0);
-      const weeklyTotal = weeklyHours > 0 ? (Number.isInteger(weeklyHours) ? String(weeklyHours) : weeklyHours.toFixed(1)) : '';
       return `${showDivider ? dividerRow : ''}<tr class="schedule-row" style="page-break-inside:avoid;">
         <td style="padding:1mm;border:1px solid ${G.border};background:${G.fill};width:26mm;vertical-align:top;">
           <div class="pdf-cell-inner" style="display:flex;flex-direction:column;justify-content:center;">
             <div style="font-weight:700;font-size:10pt;line-height:1.05;color:${G.ink};word-break:break-word;hyphens:auto;">${cleanText(nameFirst)}</div>
             ${nameRest ? `<div style="font-weight:700;font-size:10pt;line-height:1.05;color:${G.ink};word-break:break-word;hyphens:auto;">${cleanText(nameRest)}</div>` : ''}
-            ${weeklyTotal ? `<div style="font-size:6pt;color:${G.textMuted};line-height:1.1;">${weeklyTotal}</div>` : ''}
             ${titleStr ? `<div style="font-size:5.5pt;color:${G.textMuted};line-height:1.1;font-style:italic;word-break:break-word;">${titleStr}</div>` : ''}
           </div>
         </td>
@@ -253,12 +219,9 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     </span>`;
   }).join('');
 
-  const adminContactsHtml = adminContacts.length > 0 ? `
-    <div style="margin-top:4px;padding:2mm 3mm;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
-      <div style="font-weight:700;font-size:7pt;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Contact Admin</div>
-      ${adminContacts.map(a => `<span style="margin-right:12px;font-size:7pt;color:${G.text};">${cleanText(a.name)}: <span style="color:${G.ink};font-weight:600;">${cleanText(a.email)}</span></span>`).join('')}
-    </div>
-  ` : '';
+  const adminContactsHtml = adminContacts.length > 0
+    ? `<div style="margin-top:3mm;font-size:7pt;color:${G.text};">Contact: ${adminContacts.map(a => `${cleanText(a.name)} <span style="color:${G.ink};font-weight:600;">${cleanText(a.email)}</span>`).join(' &nbsp;·&nbsp; ')}</div>`
+    : '';
 
   const printedAt = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
@@ -272,7 +235,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   <style>
     @media print {
       body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; padding: 0; }
-      @page { size: A4 portrait; margin: 8mm; }
+      @page { size: A4 portrait; margin: 6mm; }
       .no-print { display: none !important; }
       /* Week 2 always starts a fresh page. Week 1 flows naturally below the
          header instead of being pushed whole to page 2 when the 14-row block
@@ -285,13 +248,13 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       tr { page-break-inside: avoid; break-inside: avoid; }
       thead { display: table-header-group; }
     }
-    body { font-family: 'Inter', Arial, sans-serif; padding: 0; margin: 0 auto; max-width: 194mm; background: #ffffff; color: ${G.text}; }
+    body { font-family: 'Inter', Arial, sans-serif; padding: 0; margin: 0 auto; max-width: 198mm; background: #ffffff; color: ${G.text}; }
     .print-btn { background: ${G.ink}; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
     .print-btn:hover { background: ${G.text}; }
     /* Fixed cell height enforces consistent grid. overflow:hidden clips any
        implausible edge-case (5+ events) without growing the row. */
     .schedule-grid tbody tr.schedule-row td {
-      height: 9.5mm;
+      height: 8.5mm;
       vertical-align: top;
       overflow: hidden;
       box-sizing: border-box;
@@ -303,7 +266,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     }
     @media print {
       .schedule-grid tbody tr.schedule-row td {
-        height: 9.5mm;
+        height: 8.5mm;
         overflow: hidden;
       }
     }
