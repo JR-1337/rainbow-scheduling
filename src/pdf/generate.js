@@ -188,9 +188,9 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 
     return `
       <div class="wk-block" style="margin-bottom:10px;">
-        <div style="background:${G.ink};padding:4mm 6mm;border-radius:4px 4px 0 0;">
-          <h3 style="margin:0;color:#ffffff;font-size:11pt;font-weight:700;">Week ${weekNum}</h3>
-          <p style="margin:2px 0 0;color:#dddddd;font-size:8pt;">${formatDate(weekDates[0])} - ${formatDate(weekDates[6])}</p>
+        <div style="background:${G.ink};padding:2mm 4mm;border-radius:4px 4px 0 0;display:flex;align-items:baseline;gap:4mm;">
+          <h3 style="margin:0;color:#ffffff;font-size:11pt;font-weight:700;line-height:1;">Week ${weekNum}</h3>
+          <span style="color:#dddddd;font-size:8pt;line-height:1;">${formatDate(weekDates[0])} - ${formatDate(weekDates[6])}</span>
         </div>
         <table class="schedule-grid" style="width:100%;table-layout:fixed;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
           <thead style="display:table-header-group;"><tr><th style="height:10mm;padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};width:26mm;font-size:7pt;text-align:left;color:${G.text};text-transform:uppercase;vertical-align:middle;overflow:hidden;box-sizing:border-box;">Employee</th>${headers}</tr></thead>
