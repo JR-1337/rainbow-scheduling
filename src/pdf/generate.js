@@ -57,8 +57,11 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   const weekNum2 = getWeekNumber(week2[0]);
 
   // Filter schedulable employees (exclude owner, exclude admins unless showOnSchedule).
+  // Split: staff pages (1+2) get Sarvi + non-admins; page 3 gets all other admins.
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
-  const schedulable = sortBySarviAdminsFTPT(filterSchedulableEmployees(employees));
+  const schedulableAll = sortBySarviAdminsFTPT(filterSchedulableEmployees(employees));
+  const schedulableMain = schedulableAll.filter(e => !e.isAdmin || e.email === PRIMARY_CONTACT_EMAIL);
+  const schedulableAdmins = schedulableAll.filter(e => e.isAdmin && e.email !== PRIMARY_CONTACT_EMAIL);
 
   // PDF contact row shows the primary store contact only (Sarvi). If her record
   // isn't found, fall back to any active non-owner admin so the PDF still lists
@@ -69,20 +72,22 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     : employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
 
   // Announcements: italic body + "[!]" prefix + heavy left bar + double top border.
-  // When empty, the box still renders so admins can pen-mark notes on the printed
-  // schedule (kitchen-door usage). Same label "Announcements" in both states.
+  // Lives on page 3 (info page). When empty, box still renders so admins can pen-
+  // mark notes on the printed schedule. ~3x the prior page-1 footprint per JR
+  // direction, since page 3 has room.
   const announcementHtml = (announcement && announcement.message) ? `
-    <div style="margin:6px 0;padding:11px;background:${G.fillZebra};border-radius:4px;border-left:6px solid ${G.ink};border-top:3px double ${G.ink};">
-      ${announcement.subject ? `<h3 style="margin:0 0 7px;color:${G.ink};font-size:13px;font-weight:800;letter-spacing:0.5px;">[!] ${cleanText(announcement.subject)}</h3>` : `<h3 style="margin:0 0 7px;color:${G.ink};font-size:13px;font-weight:800;">[!] Announcements</h3>`}
-      <div style="color:${G.text};font-size:11px;line-height:1.6;white-space:pre-wrap;font-style:italic;">${cleanText(announcement.message)}</div>
+    <div style="margin:6mm 0;padding:8mm;background:${G.fillZebra};border-radius:4px;border-left:6px solid ${G.ink};border-top:3px double ${G.ink};">
+      ${announcement.subject ? `<h3 style="margin:0 0 5mm;color:${G.ink};font-size:16pt;font-weight:800;letter-spacing:0.5px;">[!] ${cleanText(announcement.subject)}</h3>` : `<h3 style="margin:0 0 5mm;color:${G.ink};font-size:16pt;font-weight:800;">[!] Announcements</h3>`}
+      <div style="color:${G.text};font-size:12pt;line-height:1.6;white-space:pre-wrap;font-style:italic;">${cleanText(announcement.message)}</div>
     </div>
   ` : `
-    <div style="margin:6px 0;padding:7px 15px;background:#ffffff;border-radius:4px;border-left:6px solid ${G.borderSoft};border-top:3px double ${G.borderSoft};min-height:30px;">
-      <h3 style="margin:0 0 3px;color:${G.textFaint};font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">Announcements</h3>
+    <div style="margin:6mm 0;padding:6mm 8mm;background:#ffffff;border-radius:4px;border-left:6px solid ${G.borderSoft};border-top:3px double ${G.borderSoft};min-height:25mm;">
+      <h3 style="margin:0 0 3mm;color:${G.textFaint};font-size:13pt;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">Announcements</h3>
     </div>
   `;
 
-  const makeWeekTable = (weekDates, weekNum) => {
+  const makeWeekTable = (weekDates, weekNum, rowEmployees = schedulableMain, blockClass = 'wk-block staff') => {
+    const schedulable = rowEmployees;
     const headers = weekDates.map(d => {
       const hol = isStatHoliday(d);
       // Holiday: heavy black top border + "HOL" caption in addition to yellow bg,
@@ -149,7 +154,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         // Glyph absolute at top-left; time range on first line; events below.
         // Role spell-out line DROPPED. Hours "Nh" line DROPPED.
         return `<td style="padding:1mm;${cellBorder}background:${shiftCellFill};text-align:left;vertical-align:top;">
-          <div class="pdf-cell-inner" style="position:relative;${glyph ? 'padding-left:4mm;' : ''}">
+          <div class="pdf-cell-inner" style="position:relative;${glyph ? 'padding-left:5mm;' : ''}">
             ${glyph ? `<span style="position:absolute;top:0;left:0;font-size:8pt;font-weight:800;color:${G.ink};line-height:1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
             ${shift.task ? `<span style="position:absolute;top:0;right:0;font-size:7pt;font-weight:800;color:${G.ink};line-height:1;">★</span>` : ''}
             <div style="font-size:8.5pt;font-weight:600;color:${G.ink};line-height:1.15;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
@@ -192,7 +197,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     </tr>`;
 
     return `
-      <div class="wk-block" style="margin-bottom:10px;">
+      <div class="${blockClass}" style="margin-bottom:10px;">
         <div style="background:${G.ink};padding:2mm 4mm;border-radius:4px 4px 0 0;display:flex;align-items:baseline;gap:4mm;">
           <h3 style="margin:0;color:#ffffff;font-size:11pt;font-weight:700;line-height:1;">Week ${weekNum}</h3>
           <span style="color:#dddddd;font-size:8pt;line-height:1;">${formatDate(weekDates[0])} - ${formatDate(weekDates[6])}</span>
@@ -246,7 +251,12 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
          header instead of being pushed whole to page 2 when the 14-row block
          can't fit alongside the header (caused the big page-1 gap). Row-level
          break protection (tr rule below) still keeps individual rows intact. */
-      .wk-block + .wk-block {
+      .wk-block.staff + .wk-block.staff {
+        break-before: page;
+        page-break-before: always;
+        padding-top: 5mm;
+      }
+      .page-3 {
         break-before: page;
         page-break-before: always;
         padding-top: 5mm;
@@ -297,17 +307,25 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     </div>
   </div>
 
-  ${announcementHtml}
   ${makeWeekTable(week1, weekNum1)}
   ${makeWeekTable(week2, weekNum2)}
 
-  <div style="margin-top:6px;padding:2mm 3mm;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
-    <div style="margin-bottom:2px;font-weight:700;font-size:7pt;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;">Legend</div>
-    <div style="display:flex;flex-wrap:wrap;gap:2mm;align-items:center;">${legendItems}${eventLegendItems}<span style="font-size:8pt;display:inline-flex;align-items:center;gap:3px;"><span style="color:${G.ink};font-weight:700;">★</span><span style="color:${G.text};">Has Task</span></span><span style="font-size:8pt;display:inline-flex;align-items:center;gap:3px;"><span style="display:inline-block;padding:0 4px;border:1px dashed ${G.border};font-weight:800;color:${G.ink};font-size:7pt;letter-spacing:1px;">OFF</span><span style="color:${G.text};">Approved Time Off</span></span></div>
-  </div>
-  ${adminContactsHtml}
-  <div style="margin-top:4px;padding-top:2mm;border-top:1px solid ${G.border};text-align:center;font-size:6pt;color:${G.textFaint};">
-    Printed ${printedAt} • This is a snapshot - live schedule at rainbow-scheduling.vercel.app
+  <div class="page-3">
+    ${schedulableAdmins.length > 0 ? `
+      ${makeWeekTable(week1, weekNum1, schedulableAdmins, 'wk-block admin')}
+      ${makeWeekTable(week2, weekNum2, schedulableAdmins, 'wk-block admin')}
+    ` : ''}
+
+    ${announcementHtml}
+
+    <div style="margin-top:6mm;padding:2mm 3mm;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
+      <div style="margin-bottom:2px;font-weight:700;font-size:7pt;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;">Legend</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2mm;align-items:center;">${legendItems}${eventLegendItems}<span style="font-size:8pt;display:inline-flex;align-items:center;gap:3px;"><span style="color:${G.ink};font-weight:700;">★</span><span style="color:${G.text};">Has Task</span></span><span style="font-size:8pt;display:inline-flex;align-items:center;gap:3px;"><span style="display:inline-block;padding:0 4px;border:1px dashed ${G.border};font-weight:800;color:${G.ink};font-size:7pt;letter-spacing:1px;">OFF</span><span style="color:${G.text};">Approved Time Off</span></span></div>
+    </div>
+    ${adminContactsHtml}
+    <div style="margin-top:4mm;padding-top:2mm;border-top:1px solid ${G.border};text-align:center;font-size:6pt;color:${G.textFaint};">
+      Printed ${printedAt} • This is a snapshot - live schedule at rainbow-scheduling.vercel.app
+    </div>
   </div>
 </body>
 </html>`;
