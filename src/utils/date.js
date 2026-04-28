@@ -27,5 +27,5 @@ export const getWeekNumber = (date) => {
 export const parseTime = (t) => { if (!t) return 0; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
 export const formatTimeDisplay = (t) => { if (!t) return '--:--'; const [h, m] = t.split(':').map(Number); return `${h > 12 ? h - 12 : h || 12}:${m.toString().padStart(2, '0')}${h >= 12 ? 'PM' : 'AM'}`; };
-export const formatTimeShort = (t) => { if (!t) return '--'; const [h, m] = t.split(':').map(Number); const hr = h > 12 ? h - 12 : h || 12; const mins = m ? `:${m.toString().padStart(2, '0')}` : ''; return `${hr}${mins}${h >= 12 ? 'p' : 'a'}`; };
+export const formatTimeShort = (t) => { if (!t) return '--'; const [h, m] = t.split(':').map(Number); const hr = h > 12 ? h - 12 : h || 12; const mins = m ? `:${m.toString().padStart(2, '0')}` : ''; return `${hr}${mins}`; };
 export const calculateHours = (s, e) => (parseTime(e) - parseTime(s)) / 60;
