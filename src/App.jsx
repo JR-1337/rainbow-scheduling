@@ -2025,6 +2025,7 @@ export default function App() {
           currentUser={currentUser}
           showToast={showToast}
           suggestedPassword={editingEmp ? undefined : `emp-${String(employees.length + 1).padStart(3, '0')}`}
+          employees={employees}
         />
 
         {/* Column Header Editor (mobile admin: tap day header in Edit Mode) */}

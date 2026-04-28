@@ -5,7 +5,7 @@ import { ROLES } from '../constants';
 import { apiCall } from '../utils/api';
 import { Modal, GradientButton, Input } from '../components/primitives';
 import { hasTitle } from '../utils/employeeRender';
-export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null, currentUser = null, showToast, suggestedPassword = '' }) => {
+export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null, currentUser = null, showToast, suggestedPassword = '', employees = [] }) => {
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   // Availability is the outer eligibility window, not the booking window.
   // Default to the widest reasonable bound (06-22) so Sarvi only narrows
@@ -41,6 +41,16 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
         setErrors({ title: 'Title must be one word with no spaces (e.g. Manager, not Asst Manager).' });
         return;
       }
+    }
+    const normalizedEmail = formData.email.trim().toLowerCase();
+    const collision = employees.find(e =>
+      !e.deleted &&
+      e.id !== formData.id &&
+      (e.email || '').trim().toLowerCase() === normalizedEmail
+    );
+    if (collision) {
+      setErrors({ email: `This email is already used by ${collision.name}. Use a different email.` });
+      return;
     }
     setIsSaving(true);
     const saveData = { ...formData, id: formData.id || `emp-${Date.now()}` };

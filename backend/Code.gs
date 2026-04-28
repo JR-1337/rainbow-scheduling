@@ -1673,6 +1673,19 @@ function saveEmployee(payload) {
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
+
+  const normalizedEmail = String(employee.email || '').trim().toLowerCase();
+  if (normalizedEmail) {
+    const existing = employees.find(e =>
+      !e.deleted &&
+      e.id !== employee.id &&
+      String(e.email || '').trim().toLowerCase() === normalizedEmail
+    );
+    if (existing) {
+      return { success: false, error: { code: 'DUPLICATE_EMAIL', message: `Email already used by ${existing.name}` } };
+    }
+  }
+
   const existingEmployee = employees.find(e => e.id === employee.id);
 
   if (existingEmployee) {
