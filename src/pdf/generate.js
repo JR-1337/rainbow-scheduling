@@ -156,7 +156,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       const titleStr = hasTitle(emp) && (emp.title || '').trim() ? cleanText(emp.title.trim()) : '';
       const { first: nameFirst, rest: nameRest } = splitNameForSchedule(emp.name);
       return `${showDivider ? dividerRow : ''}<tr class="schedule-row" style="page-break-inside:avoid;">
-        <td style="padding:1mm;border:1px solid ${G.border};background:${G.fill};width:26mm;vertical-align:top;">
+        <td style="padding:1mm;border:1px solid ${G.border};background:${G.fill};width:22mm;vertical-align:top;">
           <div class="pdf-cell-inner" style="display:flex;flex-direction:column;justify-content:center;">
             <div style="font-weight:700;font-size:10pt;line-height:1.05;color:${G.ink};word-break:break-word;hyphens:auto;">${cleanText(nameFirst)}</div>
             ${nameRest ? `<div style="font-weight:700;font-size:10pt;line-height:1.05;color:${G.ink};word-break:break-word;hyphens:auto;">${cleanText(nameRest)}</div>` : ''}
@@ -180,7 +180,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       </td>`;
     }).join('');
     const headcountRow = `<tr class="schedule-row" style="page-break-inside:avoid;">
-      <td style="padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};width:26mm;vertical-align:middle;">
+      <td style="padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};width:22mm;vertical-align:middle;">
         <div class="pdf-cell-inner" style="display:flex;align-items:center;font-size:7pt;font-weight:700;color:${G.text};text-transform:uppercase;letter-spacing:1px;">Scheduled</div>
       </td>
       ${headcountCells}
@@ -193,7 +193,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
           <span style="color:#dddddd;font-size:8pt;line-height:1;">${formatDate(weekDates[0])} - ${formatDate(weekDates[6])}</span>
         </div>
         <table class="schedule-grid" style="width:100%;table-layout:fixed;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
-          <thead style="display:table-header-group;"><tr><th style="height:10mm;padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};width:26mm;font-size:7pt;text-align:left;color:${G.text};text-transform:uppercase;vertical-align:middle;overflow:hidden;box-sizing:border-box;">Employee</th>${headers}</tr></thead>
+          <thead style="display:table-header-group;"><tr><th style="height:10mm;padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};width:22mm;font-size:7pt;text-align:left;color:${G.text};text-transform:uppercase;vertical-align:middle;overflow:hidden;box-sizing:border-box;">Employee</th>${headers}</tr></thead>
           <tbody>${rows}${headcountRow}</tbody>
         </table>
       </div>
@@ -235,7 +235,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   <style>
     @media print {
       body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; padding: 0; }
-      @page { size: A4 portrait; margin: 6mm; }
+      @page { size: A4 portrait; margin: 5mm; }
       .no-print { display: none !important; }
       /* Week 2 always starts a fresh page. Week 1 flows naturally below the
          header instead of being pushed whole to page 2 when the 14-row block
@@ -248,7 +248,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
       tr { page-break-inside: avoid; break-inside: avoid; }
       thead { display: table-header-group; }
     }
-    body { font-family: 'Inter', Arial, sans-serif; padding: 0; margin: 0 auto; max-width: 198mm; background: #ffffff; color: ${G.text}; }
+    body { font-family: 'Inter', Arial, sans-serif; padding: 0; margin: 0 auto; max-width: 200mm; background: #ffffff; color: ${G.text}; }
     .print-btn { background: ${G.ink}; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
     .print-btn:hover { background: ${G.text}; }
     /* Fixed cell height enforces consistent grid. overflow:hidden clips any
