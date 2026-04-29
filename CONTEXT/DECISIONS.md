@@ -1,5 +1,5 @@
 <!-- SCHEMA: DECISIONS.md
-Version: 1
+Version: 5
 Purpose: durable product, architecture, and workflow decisions with rationale.
 Write mode: append new entries at the top. Reverse chronological.
 
@@ -20,17 +20,19 @@ Rules:
   Unratified proposals live in LOOP/<mode>/observations.md Candidates, not here.
 - Optional Evidence field: <mode>/<tag> (<metric>: <value>). Reference only.
   Links a decision to the run that produced the signal.
-- Invalidated entries get marked `Superseded` (optionally with `Superseded by: <link>`); do not erase. See Archive behavior below for move semantics.
+- Invalidated entries get marked `Superseded` but stay in the file. Do not erase.
 - Rejected alternatives may be noted under the decision when they are likely to
   resurface or when the rejection rationale saves future re-litigation.
 - If you catch yourself writing temporary plans, open questions, or task
   checklists, move them to TODO.md.
-- Bullets under 12 words, sentences under 20 words, no paragraphs.
+- Concision via shape, not word count -- match the example structure.
 - ASCII operators only.
 
 Archive behavior:
-- Active file ceiling: 150 lines. Above ceiling, move oldest entries
-  to CONTEXT/archive/decisions-archive.md until under ceiling.
+- Active file ceiling: 200 lines. Above ceiling, move oldest entries
+  to CONTEXT/archive/decisions-archive.md until line count is at or
+  below 60 percent of ceiling (120 lines for the 200-line ceiling). Cut
+  deep on each pass so the next trigger is not immediate.
 - Move triggers: (1) entry gains `Superseded by: <link>` field;
   (2) ceiling crossed (forced); (3) session-end opportunistic when
   entries are clearly stale.
@@ -39,7 +41,7 @@ Archive behavior:
   date heading. Never move the top 5 newest entries.
 - Both files newest-at-top. Moved entries keep all fields intact.
 - On first move, create CONTEXT/archive/decisions-archive.md from
-  its schema (see TEMPLATES.md `decisions-archive.md` header) if absent.
+  its schema (see decisions-archive.md header below) if absent.
 - Optional theme condensation: when 4 or more archived entries share
   a theme and oldest > 3 months, propose a synthesized entry in the
   active file with backlinks to the merged entries. Confidence on
