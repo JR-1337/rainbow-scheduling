@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Loader, Check } from 'lucide-react';
 import { THEME } from '../theme';
 import { toDateKey } from '../utils/date';
 import { useIsMobile, MobileBottomSheet } from '../MobileEmployeeView';
 import { GradientButton } from './primitives';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrides, staffingTargetOverrides, onSave, onClose }) => {
   const isMobile = useIsMobile();
+  const popoverRef = useRef(null);
+  useFocusTrap(popoverRef, !isMobile);
   const dateStr = toDateKey(date);
   const today = toDateKey(new Date());
   const isPast = dateStr < today;
@@ -43,7 +46,7 @@ export const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrid
         {!isMobile && (
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold" style={{ color: THEME.text.primary }}>{dayLabel}</h3>
-            <button aria-label="Close" onClick={onClose} className="p-0.5 rounded hover:opacity-70"><X size={14} style={{ color: THEME.text.muted }} /></button>
+            <button data-close aria-label="Close" onClick={onClose} className="p-0.5 rounded hover:opacity-70"><X size={14} style={{ color: THEME.text.muted }} /></button>
           </div>
         )}
 
@@ -116,6 +119,7 @@ export const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrid
   return (
     <div className="fixed inset-0 flex items-start justify-center pt-24" style={{ zIndex: 100000 }} onClick={onClose}>
       <div
+        ref={popoverRef}
         className="rounded-xl shadow-2xl p-3 w-64"
         style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.bright}` }}
         onClick={e => e.stopPropagation()}

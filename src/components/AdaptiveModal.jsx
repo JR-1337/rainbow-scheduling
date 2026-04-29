@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useRef } from 'react';
 import { X } from 'lucide-react';
 import { THEME, TYPE } from '../theme';
 import { MobileBottomSheet, useIsMobile } from '../MobileEmployeeView';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 // Mobile: renders as MobileBottomSheet (z-150, pill tap-to-close, 70vh scroll).
 // Desktop: centered overlay card with gradient header, scrollable body, sticky footer.
@@ -32,13 +33,8 @@ export const AdaptiveModal = ({
   children,
 }) => {
   const isMobile = useIsMobile();
-
-  useEffect(() => {
-    if (!isOpen || isMobile) return;
-    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [isOpen, onClose, isMobile]);
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef, isOpen && !isMobile);
 
   if (!isOpen) return null;
 
@@ -68,6 +64,7 @@ export const AdaptiveModal = ({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         className={`${maxWidth} w-full rounded-xl overflow-hidden shadow-2xl max-h-[85vh] flex flex-col modal-content active`}
         style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}
         onClick={e => e.stopPropagation()}
@@ -82,6 +79,7 @@ export const AdaptiveModal = ({
           </h2>
           <button
             onClick={onClose}
+            data-close
             aria-label="Close dialog"
             className="p-2 rounded-lg hover:bg-black/5 min-w-[44px] min-h-[44px] flex items-center justify-center"
             style={{ color: THEME.text.secondary }}
