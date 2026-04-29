@@ -42,9 +42,23 @@ export const Input = ({ label, type = 'text', value, onChange, placeholder, requ
 
 export const Checkbox = ({ checked, onChange, label }) => (
   <label className="flex items-center gap-2 cursor-pointer select-none text-xs">
-    <div className="w-4 h-4 rounded flex items-center justify-center" style={{ backgroundColor: checked ? THEME.accent.purple : THEME.bg.elevated, border: `2px solid ${checked ? THEME.accent.purple : THEME.border.default}` }} onClick={() => onChange(!checked)}>
-      {checked && <Check size={10} color="white" />}
-    </div>
+    <span className="relative inline-flex">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+        className="sr-only peer"
+      />
+      <span
+        className="w-4 h-4 rounded flex items-center justify-center peer-focus-visible:ring-2 peer-focus-visible:ring-offset-1"
+        style={{
+          backgroundColor: checked ? THEME.accent.purple : THEME.bg.elevated,
+          border: `2px solid ${checked ? THEME.accent.purple : THEME.border.default}`
+        }}
+      >
+        {checked && <Check size={10} color="white" />}
+      </span>
+    </span>
     <span style={{ color: THEME.text.primary }}>{label}</span>
   </label>
 );

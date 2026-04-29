@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Star, Plus } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES_BY_ID, EVENT_TYPES } from '../constants';
@@ -45,14 +45,19 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
 
   const isClickable = !isDeleted && !isLocked;
 
+  const handleClick = useCallback(() => {
+    if (!isClickable) return;
+    onCellClick(employee, date, shift);
+  }, [isClickable, onCellClick, employee, date, shift]);
+
   return (
     <>
       <div
-        onClick={isClickable ? () => onCellClick(employee, date, shift) : undefined}
+        onClick={isClickable ? handleClick : undefined}
         {...(isClickable ? {
           role: 'button',
           tabIndex: 0,
-          onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCellClick(employee, date, shift); } },
+          onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); } },
           'aria-label': `${employee?.name} ${formatDate(date)}${shift ? ' edit shift' : ' add shift'}`,
         } : {})}
         className={`h-[4.5rem] rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}

@@ -6,6 +6,15 @@ import { useIsMobile, MobileBottomSheet } from '../MobileEmployeeView';
 import { GradientButton } from './primitives';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
+const TimeInput = ({ ariaLabel, value, onChange }) => (
+  <input
+    aria-label={ariaLabel}
+    type="time" value={value} onChange={e => onChange(e.target.value)}
+    className="flex-1 px-1.5 py-1 rounded-lg outline-none text-sm"
+    style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
+  />
+);
+
 export const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrides, staffingTargetOverrides, onSave, onClose }) => {
   const isMobile = useIsMobile();
   const popoverRef = useRef(null);
@@ -60,19 +69,9 @@ export const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrid
                 {hasHoursOverride && <span className="ml-1 px-1 rounded" style={{ backgroundColor: THEME.accent.cyan + '20', color: THEME.accent.cyan, fontSize: '9px' }}>OVERRIDE</span>}
               </label>
               <div className="flex items-center gap-1.5">
-                <input
-                  aria-label="Store open time"
-                  type="time" value={openTime} onChange={e => setOpenTime(e.target.value)}
-                  className="flex-1 px-1.5 py-1 rounded-lg outline-none text-sm"
-                  style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
-                />
+                <TimeInput ariaLabel="Store open time" value={openTime} onChange={setOpenTime} />
                 <span className="text-xs" style={{ color: THEME.text.muted }}>to</span>
-                <input
-                  aria-label="Store close time"
-                  type="time" value={closeTime} onChange={e => setCloseTime(e.target.value)}
-                  className="flex-1 px-1.5 py-1 rounded-lg outline-none text-sm"
-                  style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
-                />
+                <TimeInput ariaLabel="Store close time" value={closeTime} onChange={setCloseTime} />
               </div>
             </div>
 
