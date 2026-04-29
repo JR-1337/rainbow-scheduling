@@ -306,7 +306,6 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
   // Perf: memoize date-key arrays so inner loops are O(N) strings, not O(N) ISO allocations
   const currentDateStrs = useMemo(() => currentDates.map(toDateKey), [currentDates]);
   const allDateStrs = useMemo(() => dates.map(toDateKey), [dates]);
-  const week2DateStrs = useMemo(() => week2.map(toDateKey), [week2]);
   const todayStr = useMemo(() => toDateKey(new Date()), []);
 
   // Perf: O(1) approved-time-off lookup keyed by `${email}-${dateStr}`. Replaces
