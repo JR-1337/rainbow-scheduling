@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { ArrowRightLeft } from 'lucide-react';
 import { THEME } from '../theme';
-import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
 import { AdminRequestModal } from '../modals/AdminRequestModal';
 import { CollapsibleSection } from '../components/CollapsibleSection';
 import { getDayNameShort, formatDate, formatTimeDisplay } from '../utils/date';
+import { getRoleNameShort, getRoleColor } from '../utils/roleFormat';
 
 export const IncomingSwapsPanel = ({ swaps, currentUserEmail, onAccept, onReject }) => {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -13,16 +13,6 @@ export const IncomingSwapsPanel = ({ swaps, currentUserEmail, onAccept, onReject
   const [rejectNote, setRejectNote] = useState('');
 
   const incomingSwaps = swaps.filter(s => s.partnerEmail === currentUserEmail && s.status === 'awaiting_partner');
-
-  const getRoleName = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.name : '—';
-  };
-
-  const getRoleColor = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.color : THEME.text.muted;
-  };
 
   const handleRejectClick = (swap) => {
     setSelectedSwap(swap);
@@ -68,14 +58,14 @@ export const IncomingSwapsPanel = ({ swaps, currentUserEmail, onAccept, onReject
                       <span style={{ color: THEME.text.muted }}>They give: </span>
                       <span style={{ color: THEME.text.primary }}>{getDayNameShort(theirShiftDate)}, {formatDate(theirShiftDate)} • {formatTimeDisplay(swap.initiatorShiftStart)} – {formatTimeDisplay(swap.initiatorShiftEnd)}</span>
                       <span className="ml-1 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: getRoleColor(swap.initiatorShiftRole) + '30', color: getRoleColor(swap.initiatorShiftRole) }}>
-                        {getRoleName(swap.initiatorShiftRole)}
+                        {getRoleNameShort(swap.initiatorShiftRole)}
                       </span>
                     </div>
                     <div className="text-xs p-1.5 rounded" style={{ backgroundColor: THEME.accent.cyan + '10' }}>
                       <span style={{ color: THEME.text.muted }}>You give: </span>
                       <span style={{ color: THEME.text.primary }}>{getDayNameShort(myShiftDate)}, {formatDate(myShiftDate)} • {formatTimeDisplay(swap.partnerShiftStart)} – {formatTimeDisplay(swap.partnerShiftEnd)}</span>
                       <span className="ml-1 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: getRoleColor(swap.partnerShiftRole) + '30', color: getRoleColor(swap.partnerShiftRole) }}>
-                        {getRoleName(swap.partnerShiftRole)}
+                        {getRoleNameShort(swap.partnerShiftRole)}
                       </span>
                     </div>
                   </div>

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { ArrowRight, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { THEME } from '../theme';
-import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
 import { CollapsibleSection } from '../components/CollapsibleSection';
 import { OFFER_STATUS_COLORS, OFFER_STATUS_LABELS } from '../constants';
 import { getDayNameShort, formatDate, formatTimeDisplay } from '../utils/date';
+import { getRoleName } from '../utils/roleFormat';
 
 export const ReceivedOffersHistoryPanel = ({ offers, currentUserEmail, notificationCount, onOpen }) => {
   const [sortDir, setSortDir] = useState('desc');
@@ -14,11 +14,6 @@ export const ReceivedOffersHistoryPanel = ({ offers, currentUserEmail, notificat
     o.recipientEmail === currentUserEmail &&
     o.status !== 'awaiting_recipient'
   );
-
-  const getRoleName = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.fullName : 'No Role';
-  };
 
   const sortedOffers = [...historyOffers].sort((a, b) => {
     if (a.status === 'awaiting_admin' && b.status !== 'awaiting_admin') return -1;

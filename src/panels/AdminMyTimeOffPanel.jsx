@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Calendar, Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { THEME } from '../theme';
 import { REQUEST_STATUS_COLORS } from '../constants';
-import { parseLocalDate } from '../utils/format';
 import { CollapsibleSection } from '../components/CollapsibleSection';
+import { formatRequestDates, formatTimestamp, getStatusLabel } from '../utils/requestFormat';
 
 export const AdminMyTimeOffPanel = ({ requests, currentUserEmail, onCancel }) => {
   const [sortDir, setSortDir] = useState('desc');
@@ -15,47 +15,6 @@ export const AdminMyTimeOffPanel = ({ requests, currentUserEmail, onCancel }) =>
     const da = new Date(a.createdTimestamp), db = new Date(b.createdTimestamp);
     return sortDir === 'desc' ? db - da : da - db;
   });
-
-  const formatRequestDates = (datesStr) => {
-    const dates = datesStr.split(',').sort();
-    if (dates.length === 1) {
-      const d = parseLocalDate(dates[0]);
-      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    }
-    const groups = [];
-    let start = dates[0], end = dates[0];
-    for (let i = 1; i < dates.length; i++) {
-      const prev = parseLocalDate(end);
-      const curr = parseLocalDate(dates[i]);
-      if ((curr - prev) / 86400000 === 1) { end = dates[i]; }
-      else { groups.push({ start, end }); start = dates[i]; end = dates[i]; }
-    }
-    groups.push({ start, end });
-    const fmt = (g) => {
-      const s = parseLocalDate(g.start), e = parseLocalDate(g.end);
-      if (g.start === g.end) return s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      if (s.getMonth() === e.getMonth()) return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${e.getDate()}`;
-      return `${s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-    };
-    return `${groups.map(fmt).join(', ')} (${dates.length} days)`;
-  };
-
-  const formatTimestamp = (ts) => {
-    if (!ts) return '';
-    const d = new Date(ts);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  };
-
-  const getStatusLabel = (status) => {
-    const labels = {
-      pending: 'Pending',
-      approved: 'Approved',
-      denied: 'Denied',
-      cancelled: 'Cancelled',
-      revoked: 'Revoked'
-    };
-    return labels[status] || status;
-  };
 
   const pendingCount = myRequests.filter(r => r.status === 'pending').length;
 

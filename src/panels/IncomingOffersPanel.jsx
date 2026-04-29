@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { THEME } from '../theme';
-import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
 import { AdminRequestModal } from '../modals/AdminRequestModal';
 import { CollapsibleSection } from '../components/CollapsibleSection';
 import { getDayNameShort, formatDate, formatTimeDisplay } from '../utils/date';
+import { getRoleName } from '../utils/roleFormat';
 
 export const IncomingOffersPanel = ({ offers, currentUserEmail, onAccept, onReject }) => {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -13,11 +13,6 @@ export const IncomingOffersPanel = ({ offers, currentUserEmail, onAccept, onReje
   const [rejectNote, setRejectNote] = useState('');
 
   const incomingOffers = offers.filter(o => o.recipientEmail === currentUserEmail && o.status === 'awaiting_recipient');
-
-  const getRoleName = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.fullName : 'No Role';
-  };
 
   const handleRejectClick = (offer) => {
     setSelectedOffer(offer);

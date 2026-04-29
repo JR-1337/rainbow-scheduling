@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Clock, ChevronDown, ChevronUp, X, Calendar, ArrowRight, ArrowRightLeft, ClipboardList } from 'lucide-react';
 import { THEME } from '../theme';
-import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
 import { CollapsibleSection } from '../components/CollapsibleSection';
 import { OFFER_STATUS_COLORS, OFFER_STATUS_LABELS, SWAP_STATUS_COLORS, SWAP_STATUS_LABELS } from '../constants';
 import { formatTimeDisplay } from '../utils/date';
+import { getRoleNameShort, getRoleColor } from '../utils/roleFormat';
 
 export const UnifiedRequestHistory = ({
   timeOffRequests, shiftOffers, shiftSwaps, currentUserEmail,
@@ -14,16 +14,6 @@ export const UnifiedRequestHistory = ({
 }) => {
   const [sortDir, setSortDir] = useState('desc');
   const [typeFilter, setTypeFilter] = useState('all');
-
-  const getRoleName = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.name : '—';
-  };
-
-  const getRoleColor = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.color : THEME.text.muted;
-  };
 
   const formatShortDate = (dateStr) => {
     const d = parseLocalDate(dateStr);
@@ -268,14 +258,14 @@ export const UnifiedRequestHistory = ({
                       <span style={{ color: THEME.text.muted }}>{item.direction === 'sent' ? 'You: ' : 'Their: '}</span>
                       {formatShortDate(item.data.initiatorShiftDate)}
                       <span className="ml-1 px-1 py-0.5 rounded" style={{ backgroundColor: getRoleColor(item.data.initiatorShiftRole) + '20', color: getRoleColor(item.data.initiatorShiftRole), fontSize: '9px' }}>
-                        {getRoleName(item.data.initiatorShiftRole)}
+                        {getRoleNameShort(item.data.initiatorShiftRole)}
                       </span>
                     </div>
                     <div style={{ color: THEME.text.secondary }}>
                       <span style={{ color: THEME.text.muted }}>{item.direction === 'sent' ? 'Them: ' : 'Your: '}</span>
                       {formatShortDate(item.data.partnerShiftDate)}
                       <span className="ml-1 px-1 py-0.5 rounded" style={{ backgroundColor: getRoleColor(item.data.partnerShiftRole) + '20', color: getRoleColor(item.data.partnerShiftRole), fontSize: '9px' }}>
-                        {getRoleName(item.data.partnerShiftRole)}
+                        {getRoleNameShort(item.data.partnerShiftRole)}
                       </span>
                     </div>
                   </div>

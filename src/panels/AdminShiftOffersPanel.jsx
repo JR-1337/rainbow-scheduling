@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Clock, ChevronDown, ChevronUp, X, Check, ArrowRight } from 'lucide-react';
 import { THEME } from '../theme';
-import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
 import { AdminRequestModal } from '../modals/AdminRequestModal';
 import { OFFER_STATUS_COLORS, OFFER_STATUS_LABELS } from '../constants';
 import { getDayNameShort, formatDate, formatTimeDisplay } from '../utils/date';
+import { getRoleName } from '../utils/roleFormat';
 
 export const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, currentAdminEmail }) => {
   const [filter, setFilter] = useState('awaiting_admin');
@@ -51,11 +51,6 @@ export const AdminShiftOffersPanel = ({ offers, onApprove, onReject, onRevoke, c
 
   const pendingAdminCount = offers.filter(o => o.status === 'awaiting_admin').length;
   const pendingRecipientCount = offers.filter(o => o.status === 'awaiting_recipient').length;
-
-  const getRoleName = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.fullName : 'No Role';
-  };
 
   return (
     <div className="space-y-3">

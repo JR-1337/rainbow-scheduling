@@ -1,19 +1,14 @@
 import { useState } from 'react';
 import { Clock, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { THEME } from '../theme';
-import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
 import { OFFER_STATUS_COLORS, OFFER_STATUS_LABELS } from '../constants';
 import { getDayNameShort, formatDate, formatTimeDisplay } from '../utils/date';
+import { getRoleName } from '../utils/roleFormat';
 
 export const MyShiftOffersPanel = ({ offers, currentUserEmail, onCancel }) => {
   const [sortDir, setSortDir] = useState('desc');
   const myOffers = offers.filter(o => o.offererEmail === currentUserEmail);
-
-  const getRoleName = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.fullName : 'No Role';
-  };
 
   const sortedOffers = [...myOffers].sort((a, b) => {
     const aActive = ['awaiting_recipient', 'awaiting_admin'].includes(a.status);
