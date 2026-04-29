@@ -49,7 +49,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
                 : hours === OVERTIME_THRESHOLDS.CAP ? THEME.status.atCap
                 : THEME.accent.cyan }}><AnimatedNumber value={hours} decimals={1} suffix="h" /></p>
           </div>
-          {!isDeleted && <button onClick={e => { e.stopPropagation(); onEdit(employee); }} className="flex shrink-0 self-center rounded p-0.5 hover:scale-110" style={{ backgroundColor: THEME.bg.elevated }}><Edit3 size={10} style={{ color: THEME.accent.purple }} /></button>}
+          {!isDeleted && <button aria-label={`Edit ${employee.name || 'employee'}`} onClick={e => { e.stopPropagation(); onEdit(employee); }} className="flex shrink-0 self-center rounded p-0.5 hover:scale-110" style={{ backgroundColor: THEME.bg.elevated }}><Edit3 size={10} style={{ color: THEME.accent.purple }} /></button>}
         </div>
       </div>
 

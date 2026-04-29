@@ -18,6 +18,7 @@ export const CollapsibleSection = ({ title, icon: Icon, iconColor, badge, badgeC
     <div className="rounded-xl overflow-hidden" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
       <button
         onClick={handleToggle}
+        aria-expanded={isOpen}
         className="w-full px-4 py-3 flex items-center justify-between hover:opacity-90 transition-opacity"
         style={{ backgroundColor: THEME.bg.tertiary }}
       >

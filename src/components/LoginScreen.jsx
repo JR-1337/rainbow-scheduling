@@ -62,7 +62,7 @@ export const LoginScreen = ({ onLogin, onLoadingComplete }) => {
         </div>
 
         <div className="mb-4">
-          <label className="login-label block text-xs font-medium mb-1">Email</label>
+          <label htmlFor="login-email" className="login-label block text-xs font-medium mb-1">Email</label>
           <input
             id="login-email"
             type="email"
@@ -77,7 +77,7 @@ export const LoginScreen = ({ onLogin, onLoadingComplete }) => {
         </div>
 
         <div className="mb-4">
-          <label className="login-label block text-xs font-medium mb-1">Password</label>
+          <label htmlFor="login-password" className="login-label block text-xs font-medium mb-1">Password</label>
           <input
             id="login-password"
             type="password"

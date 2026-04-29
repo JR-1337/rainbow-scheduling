@@ -43,7 +43,7 @@ export const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrid
         {!isMobile && (
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold" style={{ color: THEME.text.primary }}>{dayLabel}</h3>
-            <button onClick={onClose} className="p-0.5 rounded hover:opacity-70"><X size={14} style={{ color: THEME.text.muted }} /></button>
+            <button aria-label="Close" onClick={onClose} className="p-0.5 rounded hover:opacity-70"><X size={14} style={{ color: THEME.text.muted }} /></button>
           </div>
         )}
 
@@ -58,12 +58,14 @@ export const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrid
               </label>
               <div className="flex items-center gap-1.5">
                 <input
+                  aria-label="Store open time"
                   type="time" value={openTime} onChange={e => setOpenTime(e.target.value)}
                   className="flex-1 px-1.5 py-1 rounded-lg outline-none text-sm"
                   style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
                 />
                 <span className="text-xs" style={{ color: THEME.text.muted }}>to</span>
                 <input
+                  aria-label="Store close time"
                   type="time" value={closeTime} onChange={e => setCloseTime(e.target.value)}
                   className="flex-1 px-1.5 py-1 rounded-lg outline-none text-sm"
                   style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
@@ -77,6 +79,7 @@ export const ColumnHeaderEditor = ({ date, storeHours, target, storeHoursOverrid
                 {hasTargetOverride && <span className="ml-1 px-1 rounded" style={{ backgroundColor: THEME.accent.cyan + '20', color: THEME.accent.cyan, fontSize: '9px' }}>OVERRIDE</span>}
               </label>
               <input
+                aria-label="Staffing target"
                 type="number" min="0" max="99" value={editTarget} onChange={e => setEditTarget(parseInt(e.target.value, 10) || 0)}
                 className="w-20 px-1.5 py-1 rounded-lg outline-none text-sm text-center"
                 style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}

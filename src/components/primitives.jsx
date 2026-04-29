@@ -34,10 +34,10 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 };
 
 export const Input = ({ label, type = 'text', value, onChange, placeholder, required }) => (
-  <div className="mb-2">
-    <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>{label} {required && <span style={{ color: THEME.status.error }}>*</span>}</label>
+  <label className="mb-2 block">
+    <span className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>{label} {required && <span style={{ color: THEME.status.error }}>*</span>}</span>
     <input type={type} value={value} onChange={onChange} placeholder={placeholder} className="w-full px-2 py-1.5 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
-  </div>
+  </label>
 );
 
 export const Checkbox = ({ checked, onChange, label }) => (
@@ -56,10 +56,10 @@ export const TimePicker = ({ value, onChange, label }) => {
     <div className="mb-2">
       {label && <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>{label}</label>}
       <div className="flex gap-1">
-        <select value={h} onChange={e => onChange(`${e.target.value}:${m}`)} className="flex-1 px-1.5 py-1 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}>
+        <select aria-label={label ? `${label} hour` : 'Hour'} value={h} onChange={e => onChange(`${e.target.value}:${m}`)} className="flex-1 px-1.5 py-1 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}>
           {hours.map(hr => <option key={hr} value={hr}>{parseInt(hr) > 12 ? parseInt(hr) - 12 : hr} {parseInt(hr) >= 12 ? 'PM' : 'AM'}</option>)}
         </select>
-        <select value={m} onChange={e => onChange(`${h}:${e.target.value}`)} className="w-14 px-1.5 py-1 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}>
+        <select aria-label={label ? `${label} minute` : 'Minute'} value={m} onChange={e => onChange(`${h}:${e.target.value}`)} className="w-14 px-1.5 py-1 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}>
           {['00', '15', '30', '45'].map(min => <option key={min} value={min}>:{min}</option>)}
         </select>
       </div>
