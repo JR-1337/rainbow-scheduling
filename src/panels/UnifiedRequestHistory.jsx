@@ -117,7 +117,12 @@ export const UnifiedRequestHistory = ({
       });
 
     return unified;
-  }, [timeOffRequests, shiftOffers, shiftSwaps, currentUserEmail, onCancelTimeOff, onCancelOffer, onCancelSwap]);
+    // Cancel callbacks are deliberately excluded from deps: they're closed over at memo-build
+    // time and only invoked imperatively on click. The closures don't capture changing state,
+    // so a "stale" callback identity is functionally equivalent. Including them busts the memo
+    // on every parent render because App.jsx defines them as plain consts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeOffRequests, shiftOffers, shiftSwaps, currentUserEmail]);
 
   const sorted = useMemo(() => {
     const filtered = typeFilter === 'all' ? items : items.filter(i => i.type === typeFilter);
@@ -129,14 +134,15 @@ export const UnifiedRequestHistory = ({
     });
   }, [items, typeFilter, sortDir]);
 
-  const typeCounts = {
-    all: items.length,
-    timeOff: items.filter(i => i.type === 'timeOff').length,
-    offer: items.filter(i => i.type === 'offer').length,
-    swap: items.filter(i => i.type === 'swap').length,
-  };
-
-  const activeCount = items.filter(i => i.canCancel).length;
+  const { typeCounts, activeCount } = useMemo(() => {
+    const counts = { all: items.length, timeOff: 0, offer: 0, swap: 0 };
+    let active = 0;
+    for (const i of items) {
+      if (i.type in counts) counts[i.type]++;
+      if (i.canCancel) active++;
+    }
+    return { typeCounts: counts, activeCount: active };
+  }, [items]);
 
   const TYPE_CONFIG = {
     timeOff: { label: 'Time Off', shortLabel: 'Off', color: THEME.accent.cyan, icon: <Calendar size={9} /> },
@@ -184,6 +190,7 @@ export const UnifiedRequestHistory = ({
           className="ml-auto px-1.5 py-0.5 rounded text-xs flex items-center gap-0.5"
           style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted, border: `1px solid ${THEME.border.subtle}` }}
           title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
+          aria-label={sortDir === 'desc' ? 'Sort: newest first' : 'Sort: oldest first'}
         >
           <Clock size={9} />
           {sortDir === 'desc' ? <ChevronDown size={9} /> : <ChevronUp size={9} />}
@@ -221,6 +228,7 @@ export const UnifiedRequestHistory = ({
                   {item.canCancel && (
                     <button
                       onClick={item.onCancel}
+                      aria-label={`Cancel ${item.type === 'timeOff' ? 'time-off' : item.type} request`}
                       className="text-xs px-1 py-0.5 rounded flex items-center gap-0.5"
                       style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted, fontSize: '9px' }}
                     >
@@ -233,7 +241,7 @@ export const UnifiedRequestHistory = ({
               {item.type === 'timeOff' && (
                 <div>
                   <p className="text-xs" style={{ color: THEME.text.primary }}>
-                    {item.data.datesRequested?.split(',').map(d => formatShortDate(d)).join(', ')}
+                    {(item.data.datesRequested ?? '').split(',').filter(Boolean).map(d => formatShortDate(d)).join(', ')}
                   </p>
                   {item.data.reason && <p className="text-xs mt-0.5" style={{ color: THEME.text.muted }}>"{item.data.reason}"</p>}
                 </div>
