@@ -3,6 +3,7 @@ import { Users, Key, Save, Loader, Check } from 'lucide-react';
 import { THEME } from '../theme';
 import { apiCall } from '../utils/api';
 import { Modal, GradientButton } from '../components/primitives';
+import { PasswordFormFields } from '../components/PasswordFormFields';
 
 export const AdminSettingsModal = ({ isOpen, onClose, currentUser, staffingTargets, onStaffingTargetsChange, showToast }) => {
   const [activeTab, setActiveTab] = useState('targets');
@@ -145,41 +146,15 @@ export const AdminSettingsModal = ({ isOpen, onClose, currentUser, staffingTarge
             </div>
           ) : (
             <>
-              <div className="space-y-2">
-                <div>
-                  <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Current Password</label>
-                  <input
-                    type="password"
-                    value={currentPassword}
-                    onChange={e => { setCurrentPassword(e.target.value); setError(''); }}
-                    placeholder="Enter current password"
-                    className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
-                    style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>New Password</label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={e => { setNewPassword(e.target.value); setError(''); }}
-                    placeholder="Enter new password"
-                    className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
-                    style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Confirm Password</label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={e => { setConfirmPassword(e.target.value); setError(''); }}
-                    placeholder="Confirm new password"
-                    className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
-                    style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }}
-                  />
-                </div>
-              </div>
+              <PasswordFormFields
+                showCurrent={true}
+                currentPassword={currentPassword}
+                newPassword={newPassword}
+                confirmPassword={confirmPassword}
+                onChangeCurrent={e => { setCurrentPassword(e.target.value); setError(''); }}
+                onChangeNew={e => { setNewPassword(e.target.value); setError(''); }}
+                onChangeConfirm={e => { setConfirmPassword(e.target.value); setError(''); }}
+              />
 
               {error && <p className="text-xs mt-2" style={{ color: THEME.status.error }}>{error}</p>}
 
