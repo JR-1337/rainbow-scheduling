@@ -1,0 +1,55 @@
+---
+description: UI/UX work must follow app branding (THEME/OTR), reuse existing patterns, and apply solid UX principles—especially mobile density
+globs:
+  - "**/*.jsx"
+  - "**/*.tsx"
+  - "**/*.css"
+  - "**/theme.js"
+alwaysApply: false
+---
+
+# UI/UX design and branding
+
+When editing **user-facing layout, styling, copy density, or interaction affordances**, treat this as product design work—not only implementation.
+
+## Default mindset (you bring this; the user does not supply a UX checklist)
+
+Apply **design thinking without being asked**: who is using this, in what context (e.g. mobile vs desk, glance vs deep task), what must be understood in one second vs on demand, what states exist (empty, loading, error, locked, dense data). Optimize for **clarity and predictability** under those constraints.
+
+Universal baseline (always): **understandable** (labels, hierarchy), **consistent** with the rest of the app, **forgiving** (errors recoverable, destructive actions guarded), **efficient** for repeat use, **accessible** in the practical sense (contrast, not color-only meaning, sensible targets on touch). When a pattern is non-standard or high-risk, do **brief targeted research** before shipping.
+
+## Brand and conventions (source of truth)
+
+- **`src/theme.js`** — `THEME`, `OTR`, role colors, status colors, borders, modal accents, `titledEmployee`, events. Prefer `THEME.*` and existing tokens over new one-off hex values.
+- **Rotating OTR accent** — UI that must stay stable across accent rotation already uses fixed tokens (e.g. cyan for titled shifts, fixed modal accents); follow those patterns instead of tying critical meaning only to `OTR_ACCENT`.
+- **Reuse** — Match patterns in nearby code and shared pieces (`uiKit.jsx`, existing modals, schedule cells, pills). New components should look like they belong in the same app.
+
+## UX principles (non-negotiable habits)
+
+- **Visual hierarchy** — Lead with what matters (time, state, primary label). Use size, weight, spacing, and grouping before adding more text.
+- **Color with purpose** — Semantic color (success / warning / error / roles / events) should reinforce meaning, not decorate. Do not rely on color alone: pair with label, icon, shape, or position where state must be understood at a glance.
+- **Contrast and readability** — Favor readable text on real backgrounds (including tinted cells and dark mode–adjacent navy surfaces). When pairing custom colors, sanity-check contrast.
+- **Affordance** — Interactive elements should read as tappable/clickable (size, hover/focus, familiar patterns). Avoid mystery meat navigation.
+- **Consistency** — Same concept → same visual treatment across **desktop admin, mobile admin, employee views, and PDF** when applicable (see blast-radius rule for parallel surfaces).
+
+## Mobile and tight space
+
+Space is scarce on small screens. Prefer:
+
+- **Compact signaling** — Icons, dots, badges, short labels, and **tiered detail** (summary in-row, detail in sheet/modal) over paragraphs in cells.
+- **Density without clutter** — Align to a clear grid; use consistent vertical rhythm; avoid arbitrary font sizes—prefer the app’s existing steps.
+- **Touch-friendly targets** — Primary actions need adequate hit area; if the layout is dense, expand the touch target (padding) without necessarily growing the visual label.
+- **Progressive disclosure** — Show the minimum needed in the schedule; put secondary context behind tap, tooltip, or modal where it already fits the app.
+
+## When you are not sure
+
+Do **short targeted research** (docs, WCAG summaries, platform HIG, or web search) before inventing a new pattern—for example: touch target size, form error placement, or dense table legibility. Then implement **one** coherent solution that fits this codebase, not a generic template dump.
+
+## Quality bar
+
+- Prefer **clever, simple** solutions (maximum clarity per pixel) over decorative or noisy UI.
+- If a request would break branding or duplicate a token already in `theme.js`, **fix forward** by extending the theme or reusing tokens—not by scattering new colors.
+
+## Coordination
+
+- Follow **blast-radius** for UI: a visual change in one schedule surface often needs the same *meaning* (not necessarily pixel-identical layout) in other surfaces.

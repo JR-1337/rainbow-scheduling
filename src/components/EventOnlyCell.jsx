@@ -27,7 +27,7 @@ const EventOnlyCell = ({ events, firstEventType, firstEvent, size = 'md' }) => {
           {events.map((ev, i) => {
             const et = EVENT_TYPES[ev.type] || firstEventType;
             return (
-              <div key={i} className="flex items-center gap-0.5">
+              <div key={ev.id || `${ev.type}-${ev.startTime}-${i}`} className="flex items-center gap-0.5">
                 <span className="rounded font-semibold leading-tight" style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}`, fontSize: labelSize, padding: '0 2px' }}>{et.shortLabel}</span>
                 <span style={{ color: et.text, opacity: 0.8, fontSize: timeSize }}>{formatTimeShort(ev.startTime)}</span>
               </div>

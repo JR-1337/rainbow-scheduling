@@ -1,0 +1,30 @@
+---
+description: Consider blast radius before and during coding edits — scope, consumers, and regressions
+alwaysApply: true
+---
+
+# Blast radius (all coding edits)
+
+Before changing code, **map who and what is affected**. After edits, **sanity-check those surfaces**.
+
+## Whose job is this
+
+**Yours, not the user’s.** Nobody can pre-list every way a change might regress. Universal discipline: trace real consumers, respect shared layers and parallel UIs, keep diffs small, verify. Do not offload that onto the user with “tell me what else to check” unless you are blocked on a **product or policy** decision.
+
+## What to scan
+
+- **Call sites** — grep / jump-to-reference for the symbol, hook, util, or component you touch; include tests and build artifacts if any.
+- **Shared layers** — `theme.js`, `constants.js`, `App.jsx` exports, `utils/*` used in many files: small changes can fan out (admin + employee + mobile + PDF + email).
+- **Parallel UIs** — this app often has **desktop admin**, **mobile admin**, **employee desktop**, **employee mobile**, and **PDF** for the same concept; fixing one path without checking others is a common miss.
+- **Data contracts** — Sheets / Apps Script field names, API shapes, `apiTransforms`: frontend-only edits can still break round-trips.
+
+## How to behave
+
+- **Prefer the smallest diff** that meets the request; avoid drive-by refactors in the same PR unless asked.
+- **Name the blast radius** in your reasoning when it is non-obvious (e.g. “ScheduleCell + MobileAdminView + PDF generate”).
+- **Run `npm run build`** (or the project’s equivalent) when TypeScript/bundling could catch breakage; extend to smoke paths when the change is user-visible and cross-surface.
+- **Investigate before asking** — if impact might be broad, search the repo and read call sites; split or sequence work yourself. **Ask the user** only when requirements are ambiguous, or when a real tradeoff needs their call (not when you should grep or read related files).
+
+## Anti-pattern
+
+- Editing a “single” file while the behavior is duplicated elsewhere (copy-pasted grid, modal, or PDF row) without checking those copies.

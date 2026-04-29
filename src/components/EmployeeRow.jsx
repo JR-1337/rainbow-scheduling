@@ -55,7 +55,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
 
       {dates.map((date, i) => {
         const dayName = getDayName(date);
-        const av = employee.availability[dayName];
+        const av = employee.availability?.[dayName];
         const storeHrs = getStoreHoursForDate(date);
         const shift = shifts[`${employee.id}-${toDateKey(date)}`];
         const dateStr = toDateKey(date);

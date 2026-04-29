@@ -18,6 +18,6 @@ export const hasApprovedTimeOffForDate = (employeeEmail, dateStr, timeOffRequest
   return timeOffRequests.some(req =>
     req.email === employeeEmail &&
     req.status === 'approved' &&
-    req.datesRequested.split(',').includes(dateStr)
+    req.datesRequested?.split(',').includes(dateStr)
   );
 };

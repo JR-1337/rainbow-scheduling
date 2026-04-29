@@ -106,7 +106,9 @@ export function applyShiftMutation(shiftsObj, eventsObj, s) {
       : -1;
     if (s.deleted) {
       if (matchIdx >= 0) arr.splice(matchIdx, 1);
-      else if (s.id == null && s.startTime && s.endTime) {
+      // matchIdx < 0 only when s.id == null (the ternary returns -1 in that case),
+      // so the inner s.id == null check is provably true here — drop the redundant guard.
+      else if (s.startTime && s.endTime) {
         const legacyIdx = arr.findIndex(e =>
           (e.type || 'work') === 'meeting' &&
           e.startTime === s.startTime && e.endTime === s.endTime);

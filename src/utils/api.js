@@ -37,6 +37,12 @@ export const apiCall = async (action, payload = {}, onProgress) => {
       if (!result && action === 'batchSaveShifts' && authedPayload.shifts?.length > 10) {
         result = await chunkedBatchSave(authedPayload, onProgress);
       }
+
+      // If POST + chunked both failed, do NOT fall through to GET on the
+      // already-too-long URL — that would 414 and surface as PARSE_ERROR.
+      if (!result) {
+        result = { success: false, error: { code: 'URL_TOO_LONG', message: 'Request payload exceeded URL length limit and POST fallback failed.' } };
+      }
     }
 
     if (!result) {
@@ -102,7 +108,7 @@ const chunkedBatchSave = async (payload, onProgress) => {
       const result = JSON.parse(text);
 
       if (result.success) {
-        totalSaved += result.data?.savedCount || chunk.length;
+        totalSaved += result.data?.savedCount ?? chunk.length;
       } else {
         lastError = result.error;
         failedChunks += 1;

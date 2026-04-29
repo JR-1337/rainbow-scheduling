@@ -31,7 +31,7 @@ export function computeCellStyles({
     : !useOverlayForTimeOff && isUnavailable && !hasShift && !hasEvents ? THEME.bg.tertiary
     : hasShift && isTitled ? THEME.titledEmployee.shiftFill
     : hasShift ? role?.color + '25'
-    : eventOnly ? firstEventType.bg
+    : eventOnly && firstEventType ? firstEventType.bg
     : THEME.bg.tertiary;
 
   const borderColor = hasSick ? EVENT_TYPES.sick.border
@@ -39,7 +39,7 @@ export function computeCellStyles({
     : !useOverlayForTimeOff && isUnavailable && !hasShift && !hasEvents ? THEME.border.subtle
     : hasShift && isTitled ? THEME.titledEmployee.shiftBorder
     : hasShift ? role?.color + '50'
-    : eventOnly ? firstEventType.border
+    : eventOnly && firstEventType ? firstEventType.border
     : THEME.border.default;
 
   const opacity = useOverlayForTimeOff ? 1
