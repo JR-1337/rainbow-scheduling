@@ -1,5 +1,5 @@
 <!-- SCHEMA: LESSONS.md
-Version: 5
+Version: 5.1
 Purpose: durable user preferences, repeated pitfalls, and workflow corrections; structured for machine-detectable findings extraction.
 Write mode: append new entries. Update Affirmations counter on recurrence.
 
@@ -57,9 +57,9 @@ Rules:
 - ASCII operators only.
 
 Archive behavior:
-- Active file ceiling: 200 lines. Above ceiling, move oldest entries
-  to CONTEXT/archive/lessons-archive.md until line count is at or below
-  60 percent of ceiling (120 lines for the 200-line ceiling). Cut deep
+- Active file ceiling: 25,000 chars. Above ceiling, move oldest entries
+  to CONTEXT/archive/lessons-archive.md until char count is at or below
+  60 percent of ceiling (15,000 chars for the 25,000-char ceiling). Cut deep
   on each pass so the next trigger is not immediate.
 - Move triggers: (1) entry gains a `Graduated: YYYY-MM-DD to <target>` field;
   (2) ceiling crossed (forced); (3) session-end opportunistic when

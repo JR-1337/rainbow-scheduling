@@ -1,5 +1,5 @@
 <!-- SCHEMA: ARCHITECTURE.md
-Version: 5
+Version: 5.1
 Purpose: current structure, boundaries, flows, and integrations.
 Write mode: overwrite the snapshot. Do not append history.
 
