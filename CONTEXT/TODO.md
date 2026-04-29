@@ -21,8 +21,9 @@ Rules:
 
 ## Active
 
-Anchor: soliton kintsugi
+Anchor: vermilion instanton
 
+- **Sarvi to verify admin-tier persistence after s037 fix.** Resave Jess, Genia, the office (Admin1) and admin2 staff via Edit -> tier button -> Save. Log out + back in. Confirm they hold their tier in the schedule grid.
 - **JR manual cleanup -- Natalie Sirkin Week 18 (Apr 27 - May 3) shifts cleared during s033 smoke.** Original total ~38.8h Women's shifts Mon/Tue/Thu/Sat/Sun. Smoker cleared during autofill test (step 9), autofill data discarded on reload but the clear was saved to Sheets. JR/Sarvi to re-enter manually.
 - **EmailModal v2 + email-format pass + post-redeploy smoke.** When picking up email-format work next: (a) verify s033-redeploy live behavior — send a schedule email, confirm branded HTML body lands; try saving a duplicate-email employee, confirm backend `DUPLICATE_EMAIL` rejects; (b) PDF attachment for EmailModal v2 — produce PDF blob server-side via `Utilities.newBlob(html, 'text/html').getAs('application/pdf')`, attach to MailApp send. Frontend POSTs the print-preview HTML doc (already exists) to a new action. No new frontend deps.
 - **Optional: sweep "Sarvi's confirmed 14 hrs/wk" -> "Sarvi's reported"** across chatbot prompt, DECISIONS L102, LESSONS L291/L340, auto-memory project_otr_facts. JR offered + deferred 2026-04-26 s026. Pick up if pitch-copy review reopens.
@@ -67,6 +68,8 @@ Anchor: soliton kintsugi
 - Missing validation: no automated test suite; manual Playwright smoke only.
 
 ## Completed
+
+- [2026-04-28] **Sarvi admin-tier silent-drop bug fixed (s037)** (Sheet edit + commit `12c6c3f` + manual Apps Script redeploy `s037 - log dropped fields in updateRow/appendRow`). Root cause: Employees sheet was missing `adminTier` (col W) and `title` (col X) headers; backend `updateRow` is header-driven and silently dropped any field whose column header didn't exist. Frontend `isAdmin` (col I, present) saved fine but admin2 toggles were a no-op. JR added the W/X headers manually. Defensive code change adds `Logger.log` in `updateRow` + `appendRow` so future silent drops appear in Apps Script Executions logs. Verification: Sarvi to resave affected employees + log out/in.
 
 - [2026-04-28] **Unified PK modal shipped (s036)** (`bc958dd` + `0959ce1` color fix). Plan at `~/.claude/plans/cuddly-prancing-cake.md`. Replaces PKEventModal with two modes in AutofillClearModal design language: CREATE (today's date+time+employee flow, unchanged contract) and REMOVE (per-day-expand over visible week with day-level + per-booking checkboxes, native indeterminate). Single mount at App root. handleBulkPK -> handlePKConfirm with new removeBookings tuple shape supporting cross-week multi-slot removal. Dead daysWithPKInWeek removed. Playwright smoke 15/16 PASS, 0 console errors; lone FAIL was CREATE pill green (rotating accent.purple bug) -> fixed in 0959ce1 with local PK_PURPLE = '#932378' constant pinning to OTR brand purple.
 
