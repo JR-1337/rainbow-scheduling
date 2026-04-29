@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { User, AlertCircle, Check, Shield, Loader, Send } from 'lucide-react';
 import { THEME } from '../theme';
-import { ROLES_BY_ID } from '../constants';
 import { parseLocalDate } from '../utils/format';
-import { toDateKey, formatDate, formatDateLong, formatTimeDisplay, getDayNameShort } from '../utils/date';
+import { toDateKey, formatDateLong } from '../utils/date';
 import { AdaptiveModal } from '../components/AdaptiveModal';
+import { ShiftCard } from '../components/ShiftCard';
 
 export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employees, shifts, shiftOffers, timeOffRequests = [], shiftSwaps = [] }) => {
   const [selectedShift, setSelectedShift] = useState(null);
@@ -135,16 +135,6 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
     onClose();
   };
 
-  const getRoleName = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.fullName : 'No Role';
-  };
-
-  const getRoleColor = (roleId) => {
-    const role = ROLES_BY_ID[roleId];
-    return role ? role.color : THEME.roles.none;
-  };
-
   const footer = (
     <div className="flex justify-end gap-2">
       <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.secondary }}>
@@ -197,45 +187,17 @@ export const OfferShiftModal = ({ isOpen, onClose, onSubmit, currentUser, employ
                 {myFutureShifts.map(shift => {
                   const isOffered = isShiftAlreadyOffered(shift.dateStr);
                   const isSelected = selectedShift?.key === shift.key;
-                  const shiftDate = parseLocalDate(shift.dateStr);
 
                   return (
-                    <button
+                    <ShiftCard
                       key={shift.key}
-                      onClick={() => !isOffered && setSelectedShift(shift)}
-                      disabled={isOffered}
-                      className="w-full p-2 rounded-lg text-left transition-all flex items-center justify-between"
-                      style={{
-                        backgroundColor: isSelected ? THEME.modal.offer.accent + '20' : THEME.bg.tertiary,
-                        border: `1px solid ${isSelected ? THEME.modal.offer.accent : THEME.border.subtle}`,
-                        opacity: isOffered ? 0.5 : 1,
-                        cursor: isOffered ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="text-center w-10">
-                          <div className="text-xs font-bold" style={{ color: THEME.text.primary }}>{getDayNameShort(shiftDate)}</div>
-                          <div className="text-xs" style={{ color: THEME.text.muted }}>{formatDate(shiftDate)}</div>
-                        </div>
-                        <div className="h-8 w-px" style={{ backgroundColor: THEME.border.default }} />
-                        <div>
-                          <div className="text-xs font-medium" style={{ color: THEME.text.primary }}>
-                            {formatTimeDisplay(shift.startTime)} – {formatTimeDisplay(shift.endTime)}
-                          </div>
-                          <div className="text-xs flex items-center gap-1" style={{ color: getRoleColor(shift.role) }}>
-                            {getRoleName(shift.role)}
-                          </div>
-                        </div>
-                      </div>
-                      {isOffered && (
-                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: THEME.status.warning + '20', color: THEME.status.warning }}>
-                          Pending
-                        </span>
-                      )}
-                      {isSelected && !isOffered && (
-                        <Check size={14} style={{ color: THEME.modal.offer.accent }} />
-                      )}
-                    </button>
+                      shift={shift}
+                      isSelected={isSelected}
+                      isDisabled={isOffered}
+                      disabledLabel="Pending"
+                      accent={THEME.modal.offer.accent}
+                      onClick={() => setSelectedShift(shift)}
+                    />
                   );
                 })}
               </div>
