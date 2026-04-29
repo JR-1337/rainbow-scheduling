@@ -399,17 +399,29 @@ function updateCell(tabName, rowIndex, columnName, value) {
 function updateRow(tabName, rowIndex, updates) {
   const sheet = getSheet(tabName);
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const dropped = [];
   Object.entries(updates).forEach(([columnName, value]) => {
     const colIndex = headers.indexOf(columnName) + 1;
     if (colIndex > 0) {
       sheet.getRange(rowIndex, colIndex).setValue(value);
+    } else {
+      dropped.push(columnName);
     }
   });
+  if (dropped.length > 0) {
+    Logger.log('updateRow DROPPED fields on tab=' + tabName + ' row=' + rowIndex + ': ' + JSON.stringify(dropped) + ' (sheet missing matching headers)');
+  }
+  return dropped;
 }
 
 function appendRow(tabName, rowData) {
   const sheet = getSheet(tabName);
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const headerSet = new Set(headers);
+  const dropped = Object.keys(rowData).filter(k => !headerSet.has(k));
+  if (dropped.length > 0) {
+    Logger.log('appendRow DROPPED fields on tab=' + tabName + ': ' + JSON.stringify(dropped) + ' (sheet missing matching headers)');
+  }
   const rowArray = headers.map(header => {
     const value = rowData[header];
     return value !== undefined && value !== null ? value : '';
