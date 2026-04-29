@@ -57,7 +57,7 @@ import { RequestDaysOffModal } from './modals/RequestDaysOffModal';
 import { EmailModal } from './modals/EmailModal';
 import { AutofillClearModal } from './modals/AutofillClearModal';
 import { EmployeeView } from './views/EmployeeView';
-export { parseLocalDate, escapeHtml, THEME, TYPE, ROLES, ROLES_BY_ID };
+export { THEME, TYPE, ROLES, ROLES_BY_ID };
 export { getStoreHoursForDate } from './utils/storeHoursOverrides';
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
@@ -1698,6 +1698,7 @@ export default function App() {
                 className="relative flex items-center gap-1 px-2 py-1 rounded-lg"
                 style={{ backgroundColor: THEME.bg.elevated, color: THEME.status.warning, border: `1px solid ${THEME.status.warning}40` }}
                 title={`${allViolations.length} schedule violation${allViolations.length === 1 ? '' : 's'}`}
+                aria-label={`${allViolations.length} schedule violation${allViolations.length === 1 ? '' : 's'}`}
               >
                 <AlertTriangle size={12} />
                 <span className="text-xs font-semibold">{allViolations.length}</span>
@@ -2192,6 +2193,7 @@ export default function App() {
                 className="relative flex items-center gap-1 px-2 py-1 rounded-lg"
                 style={{ backgroundColor: THEME.bg.elevated, color: THEME.status.warning, border: `1px solid ${THEME.status.warning}40` }}
                 title={`${allViolations.length} schedule violation${allViolations.length === 1 ? '' : 's'}`}
+                aria-label={`${allViolations.length} schedule violation${allViolations.length === 1 ? '' : 's'}`}
               >
                 <AlertTriangle size={14} />
                 <span className="text-xs font-semibold">{allViolations.length}</span>
@@ -2728,7 +2730,6 @@ export default function App() {
           </div>
           <a
             href={`mailto:${tooltipData.employee.email}`}
-            target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 hover:underline"
             style={{
