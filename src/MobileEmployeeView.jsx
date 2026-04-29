@@ -283,6 +283,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                     const avail = emp.availability?.[dayName];
                     const isUnavailable = avail && !avail.available;
                     const role = shift ? ROLES_BY_ID[shift.role] : null;
+                    const isTitled = hasTitle(emp);
                     const isOwnShift = emp.id === loggedInUser.id;
                     const hasSick = cellEvents.some(ev => ev.type === 'sick');
 
@@ -298,7 +299,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                           onClick={(shift || hasEvents) && onShiftClick ? () => onShiftClick({ employee: emp, date, dateStr, shift, role, events: cellEvents }) : undefined}
                           style={{
                             cursor: (shift || hasEvents) && onShiftClick ? 'pointer' : 'default',
-                            ...computeCellStyles({ hasSick, isTimeOff, isUnavailable, isTitled: false, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: false }),
+                            ...computeCellStyles({ hasSick, isTimeOff, isUnavailable, isTitled, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: false }),
                             height: CELL_HEIGHT - 4
                           }}
                         >
@@ -324,7 +325,11 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                             <div className="p-1 h-full flex flex-col justify-between min-w-0">
                               {/* Row 1: role + events pill */}
                               <div className="flex items-start justify-between gap-1 min-w-0">
-                                <span className="font-semibold truncate min-w-0" style={{ color: hasSick ? THEME.text.muted : role?.color, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '10px' }}>{role?.name}</span>
+                                {isTitled ? (
+                                  <span className="min-w-0 flex-1" />
+                                ) : (
+                                  <span className="font-semibold truncate min-w-0" style={{ color: hasSick ? THEME.text.muted : role?.color, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '10px' }}>{role?.name}</span>
+                                )}
                                 {hasEvents && !hasSick && <EventGlyphPill events={cellEvents} size="sm" />}
                               </div>
                               {hasSick && cellEvents.find(ev => ev.type === 'sick')?.note ? (

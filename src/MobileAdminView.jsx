@@ -370,6 +370,17 @@ export const MobileAdminScheduleGrid = ({
                     return (
                       <td key={i}
                         onClick={() => isEditMode && onCellClick && onCellClick(emp, date, shift || null)}
+                        {...(isEditMode && onCellClick ? {
+                          role: 'button',
+                          tabIndex: 0,
+                          onKeyDown: (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onCellClick(emp, date, shift || null);
+                            }
+                          },
+                          'aria-label': `${emp.name} ${toDateKey(date)}${shift ? ' edit shift' : ' add shift'}`,
+                        } : {})}
                         style={{
                           width: CELL_WIDTH, minWidth: CELL_WIDTH,
                           height: CELL_HEIGHT,
