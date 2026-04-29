@@ -227,6 +227,11 @@ export const MobileAdminScheduleGrid = ({
                   <th key={i}
                     onClick={canEditHeader ? () => onHeaderClick(date) : undefined}
                     aria-label={canEditHeader ? `Edit ${dateStr} hours and target` : undefined}
+                    {...(canEditHeader ? {
+                      role: 'button',
+                      tabIndex: 0,
+                      onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onHeaderClick(date); } },
+                    } : {})}
                     style={{
                       position: 'sticky', top: 0, zIndex: 20,
                       width: CELL_WIDTH, minWidth: CELL_WIDTH, height: HEADER_HEIGHT,
@@ -291,9 +296,15 @@ export const MobileAdminScheduleGrid = ({
                   )}
                   <tr style={isLoggedIn ? { outline: `2px solid ${THEME.accent.purple}40`, outlineOffset: -1, borderRadius: 4 } : {}}>
                   {/* Frozen name column */}
-                  <td 
+                  <td
                     onClick={() => onNameClick && onNameClick(emp)}
-                    style={{ 
+                    {...(onNameClick ? {
+                      role: 'button',
+                      tabIndex: 0,
+                      onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNameClick(emp); } },
+                      'aria-label': `Open ${emp.name} details`,
+                    } : {})}
+                    style={{
                     position: 'sticky', left: 0, zIndex: 10,
                     width: NAME_COL_WIDTH, minWidth: NAME_COL_WIDTH, maxWidth: NAME_COL_WIDTH,
                     height: CELL_HEIGHT,

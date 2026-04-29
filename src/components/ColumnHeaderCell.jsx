@@ -34,6 +34,12 @@ const ColumnHeaderCell = React.memo(function ColumnHeaderCell({
             : 'none',
       }}
       onClick={canEdit ? () => onClick(date) : undefined}
+      {...(canEdit ? {
+        role: 'button',
+        tabIndex: 0,
+        onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(date); } },
+        'aria-label': `Edit ${getDayName(date)} ${date.getDate()} hours and target`,
+      } : {})}
       title={
         canEdit
           ? 'Click to edit hours & target'

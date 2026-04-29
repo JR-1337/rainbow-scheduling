@@ -3,7 +3,7 @@ import { Star, Plus } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES_BY_ID, EVENT_TYPES } from '../constants';
 import { isStatHoliday } from '../utils/storeHours';
-import { parseTime, formatTimeShort } from '../utils/date';
+import { parseTime, formatTimeShort, formatDate } from '../utils/date';
 import { TaskStarTooltip } from './uiKit';
 import { hasTitle } from '../utils/employeeRender';
 import { EventGlyphPill } from './EventGlyphPill';
@@ -47,7 +47,15 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
 
   return (
     <>
-      <div onClick={isClickable ? () => onCellClick(employee, date, shift) : undefined} className={`h-[4.5rem] rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
+      <div
+        onClick={isClickable ? () => onCellClick(employee, date, shift) : undefined}
+        {...(isClickable ? {
+          role: 'button',
+          tabIndex: 0,
+          onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCellClick(employee, date, shift); } },
+          'aria-label': `${employee?.name} ${formatDate(date)}${shift ? ' edit shift' : ' add shift'}`,
+        } : {})}
+        className={`h-[4.5rem] rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
         style={{
           ...computeCellStyles({ hasSick, isTimeOff: hasApprovedTimeOff, isUnavailable: isFullyUnavailable, isTitled: isTitledShift, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: true }),
         }}>
