@@ -30,7 +30,6 @@ import { hasTitle, splitNameForSchedule } from '../utils/employeeRender';
 import { EventGlyphPill } from '../components/EventGlyphPill';
 import { PKDetailsPanel } from '../components/PKDetailsPanel';
 import SickStripeOverlay from '../components/SickStripeOverlay';
-import { hasApprovedTimeOffForDate } from '../utils/requests';
 import { computeCellStyles } from '../utils/scheduleCellStyles';
 import EventOnlyCell from '../components/EventOnlyCell';
 
@@ -114,7 +113,7 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
   );
 });
 
-const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, loggedInEmpId, timeOffRequests = [] }) => {
+const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, loggedInEmpId, approvedTimeOffSet }) => {
   const isMe = employee.id === loggedInEmpId;
   const { first: nameFirst, rest: nameRest } = splitNameForSchedule(employee.name);
   const titledRow = hasTitle(employee);
@@ -147,7 +146,7 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
         const dateStr = toDateKey(date);
         const shift = shifts[`${employee.id}-${dateStr}`];
         const cellEvents = events[`${employee.id}-${dateStr}`] || [];
-        const isTimeOff = hasApprovedTimeOffForDate(employee.email, dateStr, timeOffRequests);
+        const isTimeOff = approvedTimeOffSet?.has(`${employee.email}-${dateStr}`) || false;
         const dayName = getDayName(date);
         const avail = employee.availability?.[dayName];
         const isUnavailable = avail && !avail.available;
@@ -234,34 +233,64 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
   
   // Calculate unseen resolved requests for notifications
   // Only items resolved AFTER page load will show as unseen (notifications)
-  const myTimeOffRequests = timeOffRequests.filter(r => r.email === currentUser.email);
-  const unseenTimeOffIds = myTimeOffRequests
-    .filter(r => ['approved', 'denied', 'revoked'].includes(r.status) && !seenRequestIds.has(r.requestId))
-    .map(r => r.requestId);
-  
+  const myTimeOffRequests = useMemo(
+    () => timeOffRequests.filter(r => r.email === currentUser.email),
+    [timeOffRequests, currentUser.email]
+  );
+  const unseenTimeOffIds = useMemo(
+    () => myTimeOffRequests
+      .filter(r => ['approved', 'denied', 'revoked'].includes(r.status) && !seenRequestIds.has(r.requestId))
+      .map(r => r.requestId),
+    [myTimeOffRequests, seenRequestIds]
+  );
+
   // Shift Offers (as offerer): approved/rejected by admin
-  const myOffers = shiftOffers.filter(o => o.offererEmail === currentUser.email);
-  const unseenOfferIds = myOffers
-    .filter(o => ['approved', 'rejected'].includes(o.status) && !seenRequestIds.has(o.offerId))
-    .map(o => o.offerId);
-  
+  const myOffers = useMemo(
+    () => shiftOffers.filter(o => o.offererEmail === currentUser.email),
+    [shiftOffers, currentUser.email]
+  );
+  const unseenOfferIds = useMemo(
+    () => myOffers
+      .filter(o => ['approved', 'rejected'].includes(o.status) && !seenRequestIds.has(o.offerId))
+      .map(o => o.offerId),
+    [myOffers, seenRequestIds]
+  );
+
   // Shift Offers (as recipient): approved/rejected by admin on offers I accepted
-  const offersIAccepted = shiftOffers.filter(o => o.recipientEmail === currentUser.email && ['approved', 'rejected'].includes(o.status));
-  const unseenReceivedOfferIds = offersIAccepted
-    .filter(o => !seenRequestIds.has(`recv-${o.offerId}`))
-    .map(o => `recv-${o.offerId}`);
-  
-  // Shift Swaps (as initiator): approved/rejected by admin  
-  const mySwaps = shiftSwaps.filter(s => s.initiatorEmail === currentUser.email);
-  const unseenSwapIds = mySwaps
-    .filter(s => ['approved', 'rejected'].includes(s.status) && !seenRequestIds.has(s.swapId))
-    .map(s => s.swapId);
-  
+  const offersIAccepted = useMemo(
+    () => shiftOffers.filter(o => o.recipientEmail === currentUser.email && ['approved', 'rejected'].includes(o.status)),
+    [shiftOffers, currentUser.email]
+  );
+  const unseenReceivedOfferIds = useMemo(
+    () => offersIAccepted
+      .filter(o => !seenRequestIds.has(`recv-${o.offerId}`))
+      .map(o => `recv-${o.offerId}`),
+    [offersIAccepted, seenRequestIds]
+  );
+
+  // Shift Swaps (as initiator): approved/rejected by admin
+  const mySwaps = useMemo(
+    () => shiftSwaps.filter(s => s.initiatorEmail === currentUser.email),
+    [shiftSwaps, currentUser.email]
+  );
+  const unseenSwapIds = useMemo(
+    () => mySwaps
+      .filter(s => ['approved', 'rejected'].includes(s.status) && !seenRequestIds.has(s.swapId))
+      .map(s => s.swapId),
+    [mySwaps, seenRequestIds]
+  );
+
   // Shift Swaps (as partner): approved/rejected by admin on swaps I accepted
-  const swapsIAccepted = shiftSwaps.filter(s => s.partnerEmail === currentUser.email && ['approved', 'rejected'].includes(s.status));
-  const unseenReceivedSwapIds = swapsIAccepted
-    .filter(s => !seenRequestIds.has(`recv-${s.swapId}`))
-    .map(s => `recv-${s.swapId}`);
+  const swapsIAccepted = useMemo(
+    () => shiftSwaps.filter(s => s.partnerEmail === currentUser.email && ['approved', 'rejected'].includes(s.status)),
+    [shiftSwaps, currentUser.email]
+  );
+  const unseenReceivedSwapIds = useMemo(
+    () => swapsIAccepted
+      .filter(s => !seenRequestIds.has(`recv-${s.swapId}`))
+      .map(s => `recv-${s.swapId}`),
+    [swapsIAccepted, seenRequestIds]
+  );
   
   const week1 = dates.slice(0, 7), week2 = dates.slice(7, 14);
   const weekNum1 = getWeekNumber(week1[0]), weekNum2 = getWeekNumber(week2[0]);
@@ -279,6 +308,17 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
   const allDateStrs = useMemo(() => dates.map(toDateKey), [dates]);
   const week2DateStrs = useMemo(() => week2.map(toDateKey), [week2]);
   const todayStr = useMemo(() => toDateKey(new Date()), []);
+
+  // Perf: O(1) approved-time-off lookup keyed by `${email}-${dateStr}`. Replaces
+  // a per-cell .some() scan over timeOffRequests inside EmployeeViewRow.
+  const approvedTimeOffSet = useMemo(() => {
+    const set = new Set();
+    for (const req of timeOffRequests) {
+      if (req.status !== 'approved' || !req.email || !req.datesRequested) continue;
+      for (const d of req.datesRequested.split(',')) set.add(`${req.email}-${d}`);
+    }
+    return set;
+  }, [timeOffRequests]);
 
   // Employees never see hours — stub returns 0 for the MobileScheduleGrid name column.
   const getEmpHours = useCallback(() => 0, []);
@@ -766,7 +806,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
               return (
                 <React.Fragment key={e.id}>
                   {showDivider && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
-                  <EmployeeViewRow employee={e} dates={currentDates} shifts={shifts} events={events} loggedInEmpId={currentUser.id} timeOffRequests={timeOffRequests} />
+                  <EmployeeViewRow employee={e} dates={currentDates} shifts={shifts} events={events} loggedInEmpId={currentUser.id} approvedTimeOffSet={approvedTimeOffSet} />
                 </React.Fragment>
               );
             })}</div>

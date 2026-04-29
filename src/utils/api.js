@@ -61,7 +61,7 @@ export const apiCall = async (action, payload = {}, onProgress) => {
 
 // Chunk large batchSaveShifts into multiple smaller GET requests.
 const chunkedBatchSave = async (payload, onProgress) => {
-  const { shifts, periodDates, callerEmail, token } = payload;
+  const { shifts, periodDates, token } = payload;
   const CHUNK_SIZE = 15;
   let totalSaved = 0;
   let lastError = null;
@@ -89,7 +89,6 @@ const chunkedBatchSave = async (payload, onProgress) => {
 
     const chunkPayload = {
       ...(token ? { token } : {}),
-      ...(callerEmail ? { callerEmail } : {}),
       shifts: chunk,
       periodDates: isLastChunk ? periodDates : [],
       ...(isLastChunk ? { allShiftKeys } : {})
