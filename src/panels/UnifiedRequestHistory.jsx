@@ -119,14 +119,15 @@ export const UnifiedRequestHistory = ({
     return unified;
   }, [timeOffRequests, shiftOffers, shiftSwaps, currentUserEmail, onCancelTimeOff, onCancelOffer, onCancelSwap]);
 
-  const filtered = typeFilter === 'all' ? items : items.filter(i => i.type === typeFilter);
-
-  const sorted = [...filtered].sort((a, b) => {
-    if (a.canCancel && !b.canCancel) return -1;
-    if (!a.canCancel && b.canCancel) return 1;
-    const da = new Date(a.timestamp), db = new Date(b.timestamp);
-    return sortDir === 'desc' ? db - da : da - db;
-  });
+  const sorted = useMemo(() => {
+    const filtered = typeFilter === 'all' ? items : items.filter(i => i.type === typeFilter);
+    return [...filtered].sort((a, b) => {
+      if (a.canCancel && !b.canCancel) return -1;
+      if (!a.canCancel && b.canCancel) return 1;
+      const da = new Date(a.timestamp), db = new Date(b.timestamp);
+      return sortDir === 'desc' ? db - da : da - db;
+    });
+  }, [items, typeFilter, sortDir]);
 
   const typeCounts = {
     all: items.length,
@@ -257,16 +258,16 @@ export const UnifiedRequestHistory = ({
                   <div className="text-xs space-y-0.5 mt-0.5">
                     <div style={{ color: THEME.text.secondary }}>
                       <span style={{ color: THEME.text.muted }}>{item.direction === 'sent' ? 'You: ' : 'Their: '}</span>
-                      {formatShortDate(item.direction === 'sent' ? item.data.initiatorShiftDate : item.data.initiatorShiftDate)}
-                      <span className="ml-1 px-1 py-0.5 rounded" style={{ backgroundColor: getRoleColor(item.direction === 'sent' ? item.data.initiatorShiftRole : item.data.initiatorShiftRole) + '20', color: getRoleColor(item.direction === 'sent' ? item.data.initiatorShiftRole : item.data.initiatorShiftRole), fontSize: '9px' }}>
-                        {getRoleName(item.direction === 'sent' ? item.data.initiatorShiftRole : item.data.initiatorShiftRole)}
+                      {formatShortDate(item.data.initiatorShiftDate)}
+                      <span className="ml-1 px-1 py-0.5 rounded" style={{ backgroundColor: getRoleColor(item.data.initiatorShiftRole) + '20', color: getRoleColor(item.data.initiatorShiftRole), fontSize: '9px' }}>
+                        {getRoleName(item.data.initiatorShiftRole)}
                       </span>
                     </div>
                     <div style={{ color: THEME.text.secondary }}>
                       <span style={{ color: THEME.text.muted }}>{item.direction === 'sent' ? 'Them: ' : 'Your: '}</span>
-                      {formatShortDate(item.direction === 'sent' ? item.data.partnerShiftDate : item.data.partnerShiftDate)}
-                      <span className="ml-1 px-1 py-0.5 rounded" style={{ backgroundColor: getRoleColor(item.direction === 'sent' ? item.data.partnerShiftRole : item.data.partnerShiftRole) + '20', color: getRoleColor(item.direction === 'sent' ? item.data.partnerShiftRole : item.data.partnerShiftRole), fontSize: '9px' }}>
-                        {getRoleName(item.direction === 'sent' ? item.data.partnerShiftRole : item.data.partnerShiftRole)}
+                      {formatShortDate(item.data.partnerShiftDate)}
+                      <span className="ml-1 px-1 py-0.5 rounded" style={{ backgroundColor: getRoleColor(item.data.partnerShiftRole) + '20', color: getRoleColor(item.data.partnerShiftRole), fontSize: '9px' }}>
+                        {getRoleName(item.data.partnerShiftRole)}
                       </span>
                     </div>
                   </div>
