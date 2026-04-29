@@ -1,5 +1,5 @@
 <!-- SCHEMA: DECISIONS.md
-Version: 5.1
+Version: 5.2
 Purpose: durable product, architecture, and workflow decisions with rationale.
 Write mode: append new entries at the top. Reverse chronological.
 
@@ -49,6 +49,20 @@ Archive behavior:
   note `Synthesized from N entries, lowest input confidence M`.
   User must approve before write.
 -->
+
+## 2026-04-29 -- DATA plane scaffolded with gold-sources inventory
+
+Decision: RAINBOW adopts the kit's DATA/ scaffold per `DATA_CAPTURE_BOOTSTRAP.md` v5.2. Catalog at `DATA/catalog.md`; validator at `scripts/validate-data-catalog.sh`. Single first entry: `rubrics/gold-sources-inventory.md` -- forward-looking map covering Apps Script API surface, Sheets schema, frontend constants/theme, brand palette, PDF generator + layout registry, statutory citation discipline. PII boundary called out explicitly (live Sheets data is cloud-only, never in repo).
+Rationale: Live employee/shift/request data is PII in the production Google Sheet; duplication into `DATA/fixtures/` is forbidden. In-tree gold (Apps Script source, constants, theme, schema doc, PDF code, ontario.ca citations) is canonical -- mirroring would create sync drift. Future capture targets (Apps Script response samples, PDF render exemplars, Playwright screenshots) require a synthesizing pipeline before promotion.
+First-loop candidates: Apps Script API regression OR PDF render regression (both have concrete failure modes documented in LESSONS).
+Confidence: M
+
+## 2026-04-29 -- Kit BOOTSTRAP v5.1 -> v5.2 + LESSONS reshape
+
+Decision: Schemas marched 5.1 -> 5.2 across TODO/DECISIONS/ARCHITECTURE/LESSONS via header+template refresh; bodies byte-identical for TODO/DECISIONS/ARCHITECTURE. LESSONS reshape (Step 10e): 90 v3 entries -> 94 v5.2 entries (2 compound splits: PDF UTF-8 -> 3 children, Apps Script ownership -> 3 children). 1 pre-existing v5.2 entry (OTR brand colors) preserved. 10 organizational section headings (## Apps Script and Sheets platform, ## CSS theme and rendering, etc.) preserved verbatim as project-specific extensions.
+Rationale: 5.1 -> 5.2 is a minor patch with no schema-field changes; cap raised 25 -> 35 mid-session for batch 1 of consumer sweep, then RAINBOW used 3 parallel subagent batches of 30 to clear all 90 deferred LESSONS in one session per JR direction.
+Provenance residue: most reshaped entries carry `<unknown commit>` Provenance because subagent git-log windows were 50-100 commits, shallower than RAINBOW's deeper history. A targeted provenance-recovery pass could backfill many; deferred to a follow-up if needed.
+Confidence: H -- driven from kit chat per `feedback_bootstrap_runs_from_kit_chat.md`.
 
 ## 2026-04-29 (s042) -- Migration shape: DB-canonical, Sheet = read-only mirror; admin UI is the edit surface
 
