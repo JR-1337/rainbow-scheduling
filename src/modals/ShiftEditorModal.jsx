@@ -118,7 +118,7 @@ export const ShiftEditorModal = ({
     setSickActive(!!existingSick);
     setSickNote(existingSick?.note || '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [existingShift, existingEvents, date]);
+  }, [existingShift, existingEvents, date, employee?.id]);
 
   // Per-modal-session dismissal — reset when employee/day changes.
   const [dismissedRules, setDismissedRules] = useState(new Set());

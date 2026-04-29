@@ -90,10 +90,12 @@ export const PKModal = ({
 
   const isEditMode = existingPKBookedIds.ids.size > 0;
 
-  // Prefill note in edit mode (one-shot per slot change)
+  // Prefill note in edit mode (one-shot per slot change). `note` intentionally
+  // excluded from deps via the !note guard — including it would re-fire on every keystroke.
   useEffect(() => {
     if (isEditMode && existingPKBookedIds.note && !note) setNote(existingPKBookedIds.note);
-  }, [isEditMode, existingPKBookedIds.note]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, existingPKBookedIds.note]);
 
   // ── CREATE: candidates list ───────────────────────────────────────────────
   const candidates = useMemo(() => {
@@ -476,8 +478,13 @@ export const PKModal = ({
                     <div key={dateKey} style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
                       {/* Date row */}
                       <div
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={expanded}
+                        aria-label={`${dateLabel}, ${bookings.length} booking${bookings.length === 1 ? '' : 's'}`}
                         className="flex items-center gap-2 px-3 py-2 cursor-pointer select-none hover:opacity-80"
                         onClick={() => toggleExpand(dateKey)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleExpand(dateKey); } }}
                         style={{ backgroundColor: THEME.bg.elevated }}
                       >
                         <ChevronRight

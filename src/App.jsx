@@ -64,91 +64,16 @@ import {
   User, Users, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, EyeOff, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu, BookOpen, AlertTriangle
 } from 'lucide-react';
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// UX UTILITIES - Phase 3 (focus trap, haptic, kinetic numbers, staffing bar, skeleton)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// Fix 8b - Focus trap hook for modals
-// useFocusTrap moved to src/hooks/useFocusTrap.js
-
-// haptic, AnimatedNumber, StaffingBar, ScheduleSkeleton moved to src/components/uiKit.jsx
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// API CONFIGURATION
-// ═══════════════════════════════════════════════════════════════════════════════
-// API_URL, apiCall, chunkedBatchSave moved to src/utils/api.js
-
-// apiCall + chunkedBatchSave moved to src/utils/api.js
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════════════════════════════════════════════
-// STORE_HOURS, STAT_HOLIDAY_HOURS, STAT_HOLIDAYS_2026 moved to src/utils/storeHours.js
-
 // Daily staffing targets - defaults (overridden by Settings tab if configured)
 const DEFAULT_STAFFING_TARGETS = {
   sunday: 15, monday: 8, tuesday: 8, wednesday: 8,
   thursday: 10, friday: 10, saturday: 20
 };
 
-// toDateKey moved to src/utils/date.js
-
-// PAY_PERIOD_START, CURRENT_PERIOD_INDEX, getPayPeriodDates moved to src/utils/payPeriod.js
-
-// REQUEST_STATUS, OFFER_STATUS, SWAP_STATUS enums removed (zero references).
-// Color/label maps live in src/constants.js.
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════════════════════════════════════════
-// Pure date/time helpers moved to src/utils/date.js
-// isStatHoliday moved to src/utils/storeHours.js
-
-// getStoreHoursForDate + override refs moved to src/utils/storeHoursOverrides.js
-// Re-exported below for backward compat with importers that still target ./App.
-// getPayPeriodDates moved to src/utils/payPeriod.js
-// parseTime, formatTimeDisplay, formatTimeShort, calculateHours moved to src/utils/date.js
-
-// getAvailabilityShading moved to src/components/ScheduleCell.jsx (private helper)
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// UI COMPONENTS - Smaller/Compact
-// ═══════════════════════════════════════════════════════════════════════════════
-// GradientButton, Modal, Input, Checkbox, TimePicker moved to src/components/primitives.jsx
-
-// TaskStarTooltip moved to src/components/uiKit.jsx
-
-// TooltipButton moved to src/components/primitives.jsx
-
-
-
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SCHEDULE CELL
-// ═══════════════════════════════════════════════════════════════════════════════
-// Check if employee has approved time off for a specific date
-
-// ScheduleCell + getAvailabilityShading moved to src/components/ScheduleCell.jsx
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// EMPLOYEE ROW
-// EmployeeRow moved to src/components/EmployeeRow.jsx
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// GradientBackground, Logo moved to src/components/uiKit.jsx
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════════
-// LOGIN SCREEN - Staff: email only, Admin: email + password
-// ═══════════════════════════════════════════════════════════════════════════════
-// LoginScreen moved to src/components/LoginScreen.jsx
-
-
-
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -709,12 +634,12 @@ export default function App() {
   const allViolations = useMemo(() => {
     const out = [];
     for (const emp of schedulableEmployees) {
+      const wkHours = computeWeekHoursFor(emp.id, dates, shifts, events);
       for (const date of dates) {
         const dateStr = toDateKey(date);
         const key = `${emp.id}-${dateStr}`;
         const hasShift = !!shifts[key] || !!(events[key] || []).length;
         if (!hasShift) continue;
-        const wkHours = computeWeekHoursFor(emp.id, dates, shifts, events);
         const prior = new Date(date); prior.setDate(prior.getDate() - 1);
         const priorStreak = computeConsecutiveWorkDayStreak(
           (id, k) => !!shifts[`${id}-${k}`],
