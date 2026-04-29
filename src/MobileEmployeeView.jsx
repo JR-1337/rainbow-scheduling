@@ -21,7 +21,6 @@ import { isStatHoliday } from './utils/storeHours';
 import { useFocusTrap } from './hooks/useFocusTrap';
 import { EVENT_TYPES } from './constants';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
-import { hasApprovedTimeOffForDate } from './utils/requests';
 import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
 import { EventGlyphPill } from './components/EventGlyphPill';
 import { PKDetailsPanel } from './components/PKDetailsPanel';
@@ -162,7 +161,7 @@ export const MobileAnnouncementPopup = ({ isOpen, onClose, announcement }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // FROZEN SPREADSHEET GRID
 // ═══════════════════════════════════════════════════════════════════════════════
-export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, loggedInUser, getEmployeeHours, timeOffRequests = [], onShiftClick }) => {
+export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, loggedInUser, getEmployeeHours, approvedTimeOffSet, onShiftClick }) => {
   const scrollContainerRef = useRef(null);
   const NAME_COL_WIDTH = 60;
   const CELL_WIDTH = 80;
@@ -279,7 +278,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                     const firstEvent = hasEvents ? cellEvents[0] : null;
                     const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
                     const eventOnly = !shift && hasEvents;
-                    const isTimeOff = hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests);
+                    const isTimeOff = approvedTimeOffSet?.has(`${emp.email}-${dateStr}`) || false;
                     const dayName = getDayName(date);
                     const avail = emp.availability?.[dayName];
                     const isUnavailable = avail && !avail.available;

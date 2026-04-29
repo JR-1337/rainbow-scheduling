@@ -462,7 +462,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
               dates={mobileActiveTab === 'week1' ? mobileWeek1 : mobileWeek2}
               loggedInUser={currentUser}
               getEmployeeHours={mobileActiveTab === 'week1' ? getEmpHours : getEmpHoursWeek2}
-              timeOffRequests={timeOffRequests}
+              approvedTimeOffSet={approvedTimeOffSet}
               onShiftClick={(info) => { haptic(); setMobileShiftDetail(info); }}
             />
           )}

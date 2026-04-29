@@ -22,7 +22,6 @@ import { GradientBackground, haptic } from './components/uiKit';
 import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } from './utils/date';
 import { isStatHoliday } from './utils/storeHours';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
-import { hasApprovedTimeOffForDate } from './utils/requests';
 import { OVERTIME_THRESHOLDS } from './utils/timemath';
 
 import { MobileScheduleGrid } from './MobileEmployeeView';
@@ -171,7 +170,7 @@ export const MobileAdminDrawer = ({
 // ═══════════════════════════════════════════════════════════════════════════════
 export const MobileAdminScheduleGrid = ({
   employees, shifts, events = {}, dates, loggedInUser, getEmployeeHours,
-  timeOffRequests = [], getScheduledCount, getStaffingTarget,
+  approvedTimeOffSet, getScheduledCount, getStaffingTarget,
   staffingTargetOverrides = {}, storeHoursOverrides = {},
   isEditMode = false, onCellClick, onNameClick, onHeaderClick
 }) => {
@@ -347,7 +346,7 @@ export const MobileAdminScheduleGrid = ({
                     const eventOnly = !shift && hasEvents;
                     const hasSick = cellEvents.some(ev => ev.type === 'sick');
 
-                    const approvedTimeOff = hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests);
+                    const approvedTimeOff = approvedTimeOffSet?.has(`${emp.email}-${dateStr}`) || false;
 
                     const dayName = getDayName(date);
                     const avail = emp.availability?.[dayName];

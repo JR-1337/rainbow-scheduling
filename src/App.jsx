@@ -7,7 +7,7 @@ import { isStatHoliday } from './utils/storeHours';
 import { TooltipButton, Modal } from './components/primitives';
 import { haptic, AnimatedNumber, ScheduleSkeleton, TaskStarTooltip, GradientBackground, Logo, StaffingBar } from './components/uiKit';
 import { PAY_PERIOD_START, CURRENT_PERIOD_INDEX, getPayPeriodDates } from './utils/payPeriod';
-import { hasApprovedTimeOffForDate, matchesOfferId, matchesSwapId, errorMsg } from './utils/requests';
+import { matchesOfferId, matchesSwapId, errorMsg } from './utils/requests';
 import { CollapsibleSection } from './components/CollapsibleSection';
 import { LoginScreen } from './components/LoginScreen';
 import { LoadingScreen, ErrorScreen } from './components/LoadingScreen';
@@ -129,7 +129,6 @@ const DEFAULT_STAFFING_TARGETS = {
 // SCHEDULE CELL
 // ═══════════════════════════════════════════════════════════════════════════════
 // Check if employee has approved time off for a specific date
-// hasApprovedTimeOffForDate moved to src/utils/requests.js
 
 // ScheduleCell + getAvailabilityShading moved to src/components/ScheduleCell.jsx
 
@@ -238,6 +237,17 @@ export default function App() {
   const { tooltipData, handleShowTooltip, handleHideTooltip, handleTooltipEnter, handleTooltipLeave } = useTooltip();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [timeOffRequests, setTimeOffRequests] = useState([]);
+  // O(1) approved-time-off lookup keyed by `${email}-${dateStr}`. Hoisted from
+  // per-cell .some() scans across every schedule render path (admin grid,
+  // mobile admin grid, mobile employee grid, autopopulate scoring).
+  const approvedTimeOffSet = useMemo(() => {
+    const set = new Set();
+    for (const req of timeOffRequests) {
+      if (req.status !== 'approved' || !req.email || !req.datesRequested) continue;
+      for (const d of req.datesRequested.split(',')) set.add(`${req.email}-${d}`);
+    }
+    return set;
+  }, [timeOffRequests]);
   const [shiftOffers, setShiftOffers] = useState([]);
   const [shiftSwaps, setShiftSwaps] = useState([]);
   const [adminRequestModalOpen, setAdminRequestModalOpen] = useState(false);
@@ -714,14 +724,14 @@ export default function App() {
         const v = computeViolations({
           employee: emp, dateStr, weekHours: wkHours,
           currentStreak: priorStreak + 1,
-          hasApprovedTimeOff: hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests),
+          hasApprovedTimeOff: approvedTimeOffSet.has(`${emp.email}-${dateStr}`),
           availability: emp.availability?.[getDayName(date).toLowerCase()],
         });
         if (v.length > 0) out.push({ emp, dateStr, violations: v });
       }
     }
     return out;
-  }, [schedulableEmployees, dates, shifts, events, timeOffRequests]);
+  }, [schedulableEmployees, dates, shifts, events, approvedTimeOffSet]);
 
   // Count scheduled employees for a given date. Sick days drop out of the
   // headcount — the employee isn't actually there, even though the work row
@@ -791,7 +801,7 @@ export default function App() {
           const v = computeViolations({
             employee: emp, dateStr, weekHours: wkHours,
             currentStreak: priorStreak + 1,
-            hasApprovedTimeOff: hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests),
+            hasApprovedTimeOff: approvedTimeOffSet.has(`${emp.email}-${dateStr}`),
             availability: emp.availability?.[getDayName(date).toLowerCase()],
           });
           if (v.length > 0) violationsList.push({ emp, dateStr, violations: v });
@@ -1803,7 +1813,7 @@ export default function App() {
                 dates={mobileCurrentDates}
                 loggedInUser={currentUser}
                 getEmployeeHours={getEmpHours}
-                timeOffRequests={timeOffRequests}
+                approvedTimeOffSet={approvedTimeOffSet}
                 getScheduledCount={getScheduledCount}
                 getStaffingTarget={getStaffingTarget}
                 staffingTargetOverrides={staffingTargetOverrides}
@@ -2023,7 +2033,7 @@ export default function App() {
               totalPeriodHours={getEmpHours(editingShift.employee.id)}
               weekHours={getEmpHours(editingShift.employee.id)}
               availability={editingShift.employee.availability?.[getDayName(editingShift.date)]}
-              hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)}
+              hasApprovedTimeOff={approvedTimeOffSet.has(`${editingShift.employee.email}-${toDateKey(editingShift.date)}`)}
               priorWorkStreak={priorStreak}
               currentUser={currentUser}
             />
@@ -2394,7 +2404,7 @@ export default function App() {
                   return (
                     <React.Fragment key={e.id}>
                       {showDivider && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
-                      <EmployeeRow employee={e} dates={currentDates} shifts={shifts} events={events} onCellClick={handleCellClick} getEmployeeHours={getEmpHours} onEdit={handleEditEmployee} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} timeOffRequests={timeOffRequests} isLocked={!isCurrentPeriodEditMode} isAdmin={!!currentUser?.isAdmin} />
+                      <EmployeeRow employee={e} dates={currentDates} shifts={shifts} events={events} onCellClick={handleCellClick} getEmployeeHours={getEmpHours} onEdit={handleEditEmployee} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} approvedTimeOffSet={approvedTimeOffSet} isLocked={!isCurrentPeriodEditMode} isAdmin={!!currentUser?.isAdmin} />
                     </React.Fragment>
                   );
                 })}</div>
@@ -2602,7 +2612,7 @@ export default function App() {
           toDateKey(prior),
           (id, k) => (events[`${id}-${k}`] || []).some(e => e.type === 'sick')
         );
-        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} weekHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={hasApprovedTimeOffForDate(editingShift.employee.email, toDateKey(editingShift.date), timeOffRequests)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
+        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} weekHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={approvedTimeOffSet.has(`${editingShift.employee.email}-${toDateKey(editingShift.date)}`)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
       })()}
       {violationsPanelOpen && (
         <Modal isOpen onClose={() => setViolationsPanelOpen(false)} title={`${allViolations.length} schedule violation${allViolations.length === 1 ? '' : 's'}`} size="md">

@@ -5,14 +5,13 @@ import { THEME } from '../theme';
 import { hasTitle, splitNameForSchedule } from '../utils/employeeRender';
 import { toDateKey, getDayName } from '../utils/date';
 import { getStoreHoursForDate } from '../utils/storeHoursOverrides';
-import { hasApprovedTimeOffForDate } from '../utils/requests';
 import { OVERTIME_THRESHOLDS } from '../utils/timemath';
 import { AnimatedNumber } from './uiKit';
 import { ScheduleCell } from './ScheduleCell';
 
 const EMPTY_EVENTS = Object.freeze([]);
 
-export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, onCellClick, getEmployeeHours, onEdit, isDeleted = false, onShowTooltip, onHideTooltip, timeOffRequests = [], isLocked = false, isAdmin = false }) => {
+export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, onCellClick, getEmployeeHours, onEdit, isDeleted = false, onShowTooltip, onHideTooltip, approvedTimeOffSet, isLocked = false, isAdmin = false }) => {
   const rowRef = useRef(null);
   const hours = getEmployeeHours(employee.id);
   const { first: nameFirst, rest: nameRest } = splitNameForSchedule(employee.name);
@@ -60,7 +59,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
         const shift = shifts[`${employee.id}-${toDateKey(date)}`];
         const dateStr = toDateKey(date);
         const cellEvents = events[`${employee.id}-${dateStr}`] || EMPTY_EVENTS;
-        const approvedTimeOff = hasApprovedTimeOffForDate(employee.email, dateStr, timeOffRequests);
+        const approvedTimeOff = approvedTimeOffSet?.has(`${employee.email}-${dateStr}`) || false;
         return (
           <div key={dateStr} className={rowStrip} style={{ backgroundColor: THEME.bg.secondary }}>
             <ScheduleCell shift={shift} events={cellEvents} date={date} availability={av} storeHours={storeHrs} onCellClick={onCellClick} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} employee={employee} isAdmin={isAdmin} />
