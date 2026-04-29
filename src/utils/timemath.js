@@ -46,14 +46,14 @@ export function computeNetHoursForShift(shift) {
   return Math.max(0, gross - breakMin / 60);
 }
 
-export function parseHM(t) {
+function parseHM(t) {
   if (!t || typeof t !== 'string') return 0;
   const [h, m] = t.split(':').map(Number);
   return (h || 0) * 60 + (m || 0);
 }
 
 // Merge an array of [{start, end}] (minute integers) into non-overlapping intervals.
-export function mergeIntervals(intervals) {
+function mergeIntervals(intervals) {
   if (!intervals || intervals.length === 0) return [];
   const sorted = intervals
     .filter(iv => iv && iv.end > iv.start)

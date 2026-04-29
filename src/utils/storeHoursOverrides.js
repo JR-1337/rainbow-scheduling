@@ -9,7 +9,6 @@ let _staffingTargetOverrides = {};
 
 export const setStoreHoursOverrides = (next) => { _storeHoursOverrides = next || {}; };
 export const setStaffingTargetOverrides = (next) => { _staffingTargetOverrides = next || {}; };
-export const getStaffingTargetOverrides = () => _staffingTargetOverrides;
 
 export const getStoreHoursForDate = (date) => {
   const dateStr = toDateKey(date);

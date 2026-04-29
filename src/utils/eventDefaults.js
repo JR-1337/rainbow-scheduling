@@ -18,12 +18,3 @@ export const getPKDefaultTimes = (dateInput) => {
   return { start: '18:00', end: '20:00' };
 };
 
-// Sick defaults mirror the employee's work shift on the same date (99% case:
-// admin marks sick on a day the employee was already scheduled). Returns null
-// when no existing shift — the caller falls back to its own weekday default.
-export const getSickDefaultTimes = (_dateInput, existingShift = null) => {
-  if (existingShift?.startTime && existingShift?.endTime) {
-    return { start: existingShift.startTime, end: existingShift.endTime };
-  }
-  return null;
-};

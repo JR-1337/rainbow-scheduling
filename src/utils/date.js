@@ -1,9 +1,4 @@
 // Pure date and time helpers. No external state, no closures over module refs.
-// Extracted from src/App.jsx as part of Phase E (audit plan item 28).
-//
-// Note: getStoreHoursForDate, isStatHoliday, and the related store-hours
-// constants intentionally stay in App.jsx for now — they depend on module-level
-// override refs that are part of a separate, parked refactor.
 
 export const toDateKey = (date) => {
   const y = date.getFullYear();
