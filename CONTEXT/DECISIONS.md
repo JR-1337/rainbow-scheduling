@@ -50,6 +50,17 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-04-30 (s046) -- Pre-migration getAllData perf bridge = Apps Script CacheService (not CF Worker / Vercel Edge)
+
+Decision: For the pre-migration window, `getAllData` uses Apps Script's built-in `CacheService.getScriptCache()` to absorb concurrent reads. 600s TTL, ~90KB chunked keys per tab, automatic invalidation via writer wrappers in `updateRow`/`updateCell`/`appendRow` plus 2 inline busts at the direct-delete sites. Cache miss = unchanged 7-8s; cache hit ~2-3s (skips 5 sheet reads, still pays Apps Script cold start + JSON serialize). External edge layers (Cloudflare Worker + KV; Vercel Edge Function + Vercel KV) were considered + rejected for this window. Migration retires the layer at cutover; Supabase RLS reads land sub-200ms regardless.
+Rationale: JR direction 2026-04-30 -- "this won't matter anyway after the supabase migration so im thinking we do the inside appscript version of the fix." Bridge code economics: 1-2 hours of Apps Script wrapping > 4-6 hours of edge worker + KV setup + deploy + monitoring, when the entire layer dies in weeks. Vercel Edge would have been preferred over CF Worker if an edge layer were chosen (already on Vercel; one fewer vendor); recorded so the next time someone reaches for "let's add CF Worker" the simpler in-codebase option lands first.
+Confidence: H -- direct user direction 2026-04-30 + shipped commit `49b1053` build PASS, Apps Script live deployment redeployed by JR same session.
+Rejected alternatives:
+- Cloudflare Worker + KV in front of `/exec` -- rejected: another vendor account, edge cache wins (~150ms) overkill for 1-2 concurrent admins at OTR scale; Vercel Edge is the cleaner equivalent if external caching is later needed.
+- Vercel Edge Function + Vercel KV -- noted as the right external choice if cache miss times prove insufficient post-deploy; not built this session because Apps Script CacheService is enough at OTR's 1-2 concurrent admin profile.
+- Trim `getAllData` payload to 6 pay periods + on-demand range fetch -- rejected: 4-6 hours frontend work (in-memory period cache, direction-aware prefetch, debounce, cancel-prior-fetch) for a marginal incremental win on top of CacheService; deferred to migration which obviates the question.
+- Service Worker cache in the browser -- rejected: only helps repeat visits by the same user; CacheService helps every admin sharing the deployment.
+
 ## 2026-04-30 (s044) -- Migration vendor + pricing framing locked
 
 Decision: Three Phase 0/4 cutover decisions resolved post-Wave-3. (1) **Custom SMTP for password-reset blast = AWS SES** (ca-central residency aligns with PIPEDA framing; ~$0.10 per 1k emails, free at OTR scale; SPF/DKIM verified during Phase 1). Resend + Mailgun both rejected -- AWS SES wins on residency. (2) **PITR add-on ($100/mo) dropped from Phase 0**; daily 7-day backups (included in Pro $25/mo) are the recovery floor. Revisit only if a customer compliance ask demands it. (3) **Migration is not itemized to OTR** -- treated as table stakes for PIPEDA / Ontario data-residency compliance, not a feature line. Bundled into the existing $497/mo + $125/hr post-trial arrangement. Customer #2 inherits a migrated platform from day one, so the ~$11-19k of dev hours OTR underwrites amortizes across future deals.
