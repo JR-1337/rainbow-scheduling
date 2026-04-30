@@ -21,7 +21,7 @@ Rules:
 
 ## Active
 
-Anchor: scumble holography
+Anchor: kintsugi instanton
 
 - **Pre-cutover gate (decision): custom SMTP for Phase 4 password-reset blast = AWS SES** (ca-residency aligns with PIPEDA; ~$0.10 per 1k emails, free at OTR scale). Confirmed s043 2026-04-30. Verify domain SPF/DKIM in Phase 1 build; deliverability smoke before Phase 4.
 - **Pre-cutover gate: confirm/fix `sendBrandedScheduleEmail` auth-gate bug** (flagged s042 by docs 03+06 cross-flag; pairs with long-deferred s034 backend smoke). Auth check shape mismatch (`authResult.success` vs `{authorized}`) may make the function a silent no-op in prod. Load-bearing for cutover Phase 4 password-reset blast (per `09 §1` pre-conditions). Smoke: send a real schedule email from prod, confirm delivery; if broken, fix in Apps Script `Code.gs` before any Supabase ramp.

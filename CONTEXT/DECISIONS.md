@@ -50,6 +50,16 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-04-30 (s044) -- Migration vendor + pricing framing locked
+
+Decision: Three Phase 0/4 cutover decisions resolved post-Wave-3. (1) **Custom SMTP for password-reset blast = AWS SES** (ca-central residency aligns with PIPEDA framing; ~$0.10 per 1k emails, free at OTR scale; SPF/DKIM verified during Phase 1). Resend + Mailgun both rejected -- AWS SES wins on residency. (2) **PITR add-on ($100/mo) dropped from Phase 0**; daily 7-day backups (included in Pro $25/mo) are the recovery floor. Revisit only if a customer compliance ask demands it. (3) **Migration is not itemized to OTR** -- treated as table stakes for PIPEDA / Ontario data-residency compliance, not a feature line. Bundled into the existing $497/mo + $125/hr post-trial arrangement. Customer #2 inherits a migrated platform from day one, so the ~$11-19k of dev hours OTR underwrites amortizes across future deals.
+Rationale: JR direction 2026-04-30 -- "don't want to spend $100/month" (PITR), "AWS SES sounds good" (SMTP), "shouldn't charge for it because it's a requirement for Ontario security compliance and so if I don't do it they can't use the app at all which defeats the whole purpose" (pricing). The pricing framing is durable: any future customer in Ontario or under similar privacy regimes inherits the same logic, so this is a pricing-philosophy fact, not a one-customer concession.
+Confidence: H -- direct user direction 2026-04-30.
+Rejected alternatives:
+- Resend / Mailgun for SMTP -- rejected: ca-residency story weaker; AWS SES is the only ca-central option among the 3.
+- PITR included from Phase 0 -- rejected: $100/mo equals the baseline Pro plan; defer until a customer compliance ask demands it.
+- Itemize migration as a separate $11-19k line -- rejected: defeats the offer's coherence (compliant scheduling app is what's being sold; migration is the cost of selling it).
+
 ## 2026-04-30 (s043) -- Supabase migration schema design locked (Wave 3 synthesis complete)
 
 Decision: All 10 migration research docs landed. The Postgres schema in `docs/migration/02-schema-proposed.md` becomes the binding design for eventual cutover. Eight design questions resolved by JR: (1) sick days = `type='sick'` row in `shifts`; (2) no forward-compat KV table -- typed `store_config` only; (3) ShiftChanges splits into 4 tables (parent + time_off + offers + swaps); (4) `recipient_id`/`partner_id` are NOT NULL FK populated at insert via email lookup; (5) `legacy_id` columns kept forever for audit; (6) default-password UX uses Supabase `password_reset_required` flag (hard gate at login, replaces today's soft banner); (7) `employmentType` stays soft TEXT with CHECK constraint, not native ENUM; (8) Realtime publishes `shifts` + `shift_change_requests` (parent only) + `announcements`; `profiles` and `store_config` are not published. Cutover plan in `09-cutover-and-rollback.md` -- 7 phases, password-reset blast for 35 staff is the load-bearing irreversible step at Phase 4 T+1:10.
