@@ -17,7 +17,7 @@ export const CommunicationsPanel = ({ employees, shifts, dates, periodInfo, admi
   const scheduledCount = useMemo(() => {
     return employees
       .filter(e => e.active && !e.deleted && !e.isOwner)
-      .filter(e => !e.isAdmin || e.showOnSchedule)
+      .filter(e => (!e.isAdmin && e.adminTier !== 'admin2') || e.showOnSchedule)
       .filter(emp => dates.some(d => shifts[`${emp.id}-${toDateKey(d)}`]))
       .length;
   }, [employees, shifts, dates]);

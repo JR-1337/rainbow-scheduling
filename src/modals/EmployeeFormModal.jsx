@@ -249,7 +249,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                 </div>
               )}
 
-              {formData.isAdmin && !formData.isOwner && (
+              {(formData.isAdmin || formData.adminTier === 'admin2') && !formData.isOwner && (
                 <div className="mt-2 p-1.5 rounded-lg flex items-center justify-between" style={{ backgroundColor: THEME.bg.tertiary }}>
                   <span className="text-xs" style={{ color: THEME.text.secondary }}>Show on schedule grid?</span>
                   <button

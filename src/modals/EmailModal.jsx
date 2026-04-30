@@ -11,7 +11,7 @@ import { PRIMARY_CONTACT_EMAIL } from '../constants';
 export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, dates, periodInfo, announcement, onComplete }) => {
   const emailableEmps = employees
     .filter(e => e.active && !e.deleted && !e.isOwner)
-    .filter(e => !e.isAdmin || e.showOnSchedule);
+    .filter(e => (!e.isAdmin && e.adminTier !== 'admin2') || e.showOnSchedule);
 
   const adminContacts = employees.filter(e => e.email === PRIMARY_CONTACT_EMAIL && e.active && !e.deleted);
 

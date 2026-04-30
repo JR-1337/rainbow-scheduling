@@ -562,7 +562,7 @@ export default function App() {
   const hiddenStaff = useMemo(() => {
     return employees
       .filter(e => !e.isOwner && !e.deleted) // Not owner, not deleted
-      .filter(e => !e.active || (e.isAdmin && !e.showOnSchedule)) // Inactive OR admin hidden from schedule
+      .filter(e => !e.active || ((e.isAdmin || e.adminTier === 'admin2') && !e.showOnSchedule)) // Inactive OR admin/admin2 hidden from schedule
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [employees]);
 

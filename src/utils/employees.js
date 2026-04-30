@@ -47,7 +47,7 @@ export function formatFutureShiftsBlockMessage(verb, name, futureDates) {
 export function filterSchedulableEmployees(employees) {
   return employees
     .filter(e => e.active && !e.deleted && !e.isOwner)
-    .filter(e => !e.isAdmin || e.showOnSchedule);
+    .filter(e => (!e.isAdmin && e.adminTier !== 'admin2') || e.showOnSchedule);
 }
 
 export function serializeEmployeeForApi(emp, overrides = {}) {

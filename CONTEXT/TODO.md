@@ -35,7 +35,6 @@ Anchor: cinnabar twistor
 - Test Sarvi-batch end-to-end -- next: JR + Sarvi smoke 10 items per plan verification (frontend + Apps Script v2.22 LIVE).
 - Phase A+B+C save-failure smoke -- next: JR Wi-Fi-off test on phone (post-7a13cab).
 - Adversarial audit Phase E -- pause or pick concrete motivation. App.jsx 3044 -> 2526 (-518, -17%). Sub-area 6 (Context provider) parked.
-- Bug 4 (PK default 10am-10am for some people) -- next: JR repro steps. Sheet 2026-04-24 found zero PK rows with 10-10.
 - CF Worker SWR cache -- next: design KV cache key from `getAllData` payload; flip API_URL.
 - Payroll aggregator path 1 -- blocked by demo go-ahead.
 - Employees archive sheet w/ 5-year retention (Ontario ESA) -- raised s032. New EmployeesArchive tab + deletedAt + 5-yr auto-purge + owner-only Erase action. Schedule history snapshots emp name+id at delete time so render needs no archive lookup.
