@@ -6,13 +6,14 @@ import { buildBrandedScheduleHtml } from '../email/buildBrandedHtml';
 import { apiCall } from '../utils/api';
 import { Modal, GradientButton, Checkbox } from '../components/primitives';
 import { toDateKey, getWeekNumber, formatMonthWord } from '../utils/date';
+import { PRIMARY_CONTACT_EMAIL } from '../constants';
 
 export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, dates, periodInfo, announcement, onComplete }) => {
   const emailableEmps = employees
     .filter(e => e.active && !e.deleted && !e.isOwner)
     .filter(e => !e.isAdmin || e.showOnSchedule);
 
-  const adminContacts = employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
+  const adminContacts = employees.filter(e => e.email === PRIMARY_CONTACT_EMAIL && e.active && !e.deleted);
 
   const [selected, setSelected] = useState(emailableEmps.reduce((a, e) => ({ ...a, [e.id]: true }), {}));
   const [sending, setSending] = useState(false);

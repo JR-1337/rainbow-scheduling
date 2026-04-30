@@ -2045,12 +2045,8 @@ function sendEmail(to, subject, body, options) {
 // Accepts { to, subject, htmlBody, plaintextBody } from the frontend EmailModal.
 // Auth gate: any logged-in admin (same pattern as saveAnnouncement).
 function sendBrandedScheduleEmail(payload) {
-  var authResult = verifyAuth(payload);
-  if (!authResult.success) return authResult;
-  var caller = authResult.data;
-  if (!caller || !caller.isAdmin) {
-    return { success: false, error: { code: 'FORBIDDEN', message: 'Admin access required.' } };
-  }
+  var auth = verifyAuth(payload, true);
+  if (!auth.authorized) return { success: false, error: auth.error };
   var to = payload.to;
   var subject = payload.subject;
   var htmlBody = payload.htmlBody;

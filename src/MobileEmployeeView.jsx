@@ -371,7 +371,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
 // ═══════════════════════════════════════════════════════════════════════════════
 // MY SCHEDULE SUMMARY TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, timeOffRequests = [] }) => {
+export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, timeOffRequests = [], employees = [] }) => {
   const week1 = dates.slice(0, 7), week2 = dates.slice(7, 14);
   const weekNum1 = getWeekNumber(week1[0]), weekNum2 = getWeekNumber(week2[0]);
   const todayStr = useMemo(() => toDateKey(new Date()), []);
@@ -689,7 +689,7 @@ export const MobileAlertsSheet = ({ isOpen, onClose, currentUser, announcement, 
       )}
 
       <div className="mb-3">
-        <PKDetailsPanel events={events} dates={dates} />
+        <PKDetailsPanel events={events} dates={dates} employees={employees} />
       </div>
 
       <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: THEME.text.muted }}>

@@ -27,7 +27,7 @@ import { PKDetailsPanel } from './components/PKDetailsPanel';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
 import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents, filterToLivePeriods } from './utils/apiTransforms';
-import { getFutureShiftDates, formatFutureShiftsBlockMessage, serializeEmployeeForApi, filterSchedulableEmployees } from './utils/employees';
+import { getFutureShiftDates, formatFutureShiftsBlockMessage, getFutureEventDates, formatFutureEventsBlockMessage, serializeEmployeeForApi, filterSchedulableEmployees } from './utils/employees';
 import { createShiftFromAvailability, applyShiftMutation, collectPeriodShiftsForSave, transferShiftBetweenEmployees, swapShiftsBetweenEmployees } from './utils/scheduleOps';
 import { computeDayUnionHours, computeNetHoursForShift, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { computeViolations } from './utils/violations';
@@ -830,6 +830,11 @@ export default function App() {
         showToast('error', formatFutureShiftsBlockMessage('deactivate', e.name, futureShifts), 8000);
         return false;
       }
+      const futureEvents = getFutureEventDates(e.id, events);
+      if (futureEvents.length > 0) {
+        showToast('error', formatFutureEventsBlockMessage('deactivate', e.name, futureEvents), 8000);
+        return false;
+      }
     }
 
     // Do NOT clear editingEmp: if save fails modal stays open and labelled "Edit".
@@ -868,6 +873,11 @@ export default function App() {
     const futureShifts = getFutureShiftDates(id, shifts);
     if (futureShifts.length > 0) {
       showToast('error', formatFutureShiftsBlockMessage('remove', emp.name, futureShifts), 8000);
+      return false;
+    }
+    const futureEvents = getFutureEventDates(id, events);
+    if (futureEvents.length > 0) {
+      showToast('error', formatFutureEventsBlockMessage('remove', emp.name, futureEvents), 8000);
       return false;
     }
 
@@ -1879,6 +1889,7 @@ export default function App() {
               events={events}
               dates={dates}
               timeOffRequests={timeOffRequests}
+              employees={employees}
             />
           ) : mobileAdminTab === 'comms' ? (
             /* Announcements */
@@ -1892,7 +1903,7 @@ export default function App() {
                 isSaving={savingAnnouncement}
               />
               <div className="mt-3 px-4">
-                <PKDetailsPanel events={events} dates={dates} />
+                <PKDetailsPanel events={events} dates={dates} employees={employees} />
               </div>
             </>
           ) : null}
@@ -2297,7 +2308,7 @@ export default function App() {
 
               {/* PK details for this period — sibling of announcement */}
               <div className="mb-2">
-                <PKDetailsPanel events={events} dates={dates} />
+                <PKDetailsPanel events={events} dates={dates} employees={employees} />
               </div>
 
               {/* Schedule grid */}

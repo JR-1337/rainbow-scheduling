@@ -9,6 +9,32 @@ export function getFutureShiftDates(employeeId, shiftsObj) {
     .sort();
 }
 
+// Future events keyed `${empId}-${date}` carry the empId in the key. Iterate
+// the events store directly rather than each event row so an event without an
+// `employeeId` field on the row (older shape) still gets caught.
+export function getFutureEventDates(employeeId, eventsObj) {
+  const today = toDateKey(new Date());
+  const dates = new Set();
+  const prefix = `${employeeId}-`;
+  for (const key of Object.keys(eventsObj || {})) {
+    if (!key.startsWith(prefix)) continue;
+    const list = eventsObj[key];
+    if (!list || list.length === 0) continue;
+    const date = key.slice(prefix.length);
+    if (date > today) dates.add(date);
+  }
+  return Array.from(dates).sort();
+}
+
+export function formatFutureEventsBlockMessage(verb, name, futureDates) {
+  const formatted = futureDates.slice(0, 5).map(d => {
+    const date = parseLocalDate(d);
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }).join(', ');
+  const moreText = futureDates.length > 5 ? ` and ${futureDates.length - 5} more` : '';
+  return `Cannot ${verb}: ${name} has ${futureDates.length} future event(s) (PK / meeting / sick / etc.): ${formatted}${moreText}. Clear those events first.`;
+}
+
 export function formatFutureShiftsBlockMessage(verb, name, futureDates) {
   const formatted = futureDates.slice(0, 5).map(d => {
     const date = parseLocalDate(d);

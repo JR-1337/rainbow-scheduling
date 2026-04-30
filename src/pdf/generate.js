@@ -150,7 +150,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
         // Uniform 1px grey border for all shift cells. Role signal lives in the
         // glyph (FS / FM / etc.), not in border weight.
         const cellBorder = `border:1px solid ${G.border};`;
-        const shiftCellFill = isTitled ? G.fillZebra : G.fill;
+        const shiftCellFill = G.fillZebra;
         // Glyph absolute at top-left; time range on first line; events below.
         // Role spell-out line DROPPED. Hours "Nh" line DROPPED.
         return `<td style="padding:1mm;${cellBorder}background:${shiftCellFill};text-align:left;vertical-align:top;">

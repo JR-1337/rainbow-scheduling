@@ -474,6 +474,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
               events={events}
               dates={dates}
               timeOffRequests={timeOffRequests}
+              employees={employees}
             />
           )}
           
@@ -850,7 +851,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
           
           {/* PK details for this period — sibling of announcement */}
           <div className="mt-3">
-            <PKDetailsPanel events={events} dates={dates} />
+            <PKDetailsPanel events={events} dates={dates} employees={employees} />
           </div>
 
           {/* My Schedule Summary */}

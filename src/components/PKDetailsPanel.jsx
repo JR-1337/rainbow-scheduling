@@ -5,25 +5,31 @@ import { toDateKey, formatTimeShort } from '../utils/date';
 import { parseLocalDate } from '../utils/format';
 
 // Aggregate PK events into unique {date, startTime, endTime} slots within the
-// given period. Returns [] when no PK booked in the period — caller can render
-// nothing when empty (the panel itself returns null).
-const buildPKSlots = (events, dates) => {
-  if (!events || !dates?.length) return [];
-  const dateStrs = new Set(dates.map(d => toDateKey(d)));
+// given period. Iterates active employees × period dates and reads events keyed
+// to their IDs — mirrors PKModal REMOVE so the panel can't surface PK rows
+// keyed under deleted employees (which was producing ghost "booked" entries).
+// Names come from the live employee record, not the stored employeeName string,
+// so renames take effect immediately.
+const buildPKSlots = (events, dates, employees) => {
+  if (!events || !dates?.length || !employees?.length) return [];
   const slotMap = new Map();
-  Object.values(events).forEach(arr => {
-    (arr || []).forEach(ev => {
-      if (ev.type !== 'pk') return;
-      if (!dateStrs.has(ev.date)) return;
-      const key = `${ev.date}|${ev.startTime}|${ev.endTime}`;
-      if (!slotMap.has(key)) {
-        slotMap.set(key, { date: ev.date, startTime: ev.startTime, endTime: ev.endTime, names: [], note: ev.note || '' });
+  for (const emp of employees) {
+    if (!emp.active || emp.deleted || emp.isOwner) continue;
+    for (const d of dates) {
+      const dateKey = toDateKey(d);
+      const list = events[`${emp.id}-${dateKey}`] || [];
+      for (const ev of list) {
+        if (ev.type !== 'pk') continue;
+        const key = `${dateKey}|${ev.startTime}|${ev.endTime}`;
+        if (!slotMap.has(key)) {
+          slotMap.set(key, { date: dateKey, startTime: ev.startTime, endTime: ev.endTime, names: [], note: ev.note || '' });
+        }
+        const slot = slotMap.get(key);
+        slot.names.push(emp.name);
+        if (!slot.note && ev.note) slot.note = ev.note;
       }
-      const slot = slotMap.get(key);
-      if (ev.employeeName) slot.names.push(ev.employeeName);
-      if (!slot.note && ev.note) slot.note = ev.note;
-    });
-  });
+    }
+  }
   return Array.from(slotMap.values())
     .map(s => ({ ...s, names: Array.from(new Set(s.names)).sort() }))
     .sort((a, b) => {
@@ -35,8 +41,8 @@ const buildPKSlots = (events, dates) => {
 // Compact panel listing PK slots booked in the current period. Renders next to
 // (below) the announcement panel on every view that surfaces announcements.
 // Returns null when no PK is booked in the period (non-invasive default).
-export const PKDetailsPanel = ({ events = {}, dates = [], className = '' }) => {
-  const slots = useMemo(() => buildPKSlots(events, dates), [events, dates]);
+export const PKDetailsPanel = ({ events = {}, dates = [], employees = [], className = '' }) => {
+  const slots = useMemo(() => buildPKSlots(events, dates, employees), [events, dates, employees]);
   if (slots.length === 0) return null;
 
   return (
