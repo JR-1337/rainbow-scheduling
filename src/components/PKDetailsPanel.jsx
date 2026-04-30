@@ -61,9 +61,6 @@ export const PKDetailsPanel = ({ events = {}, dates = [], employees = [], classN
         {slots.map(slot => {
           const dateObj = parseLocalDate(slot.date);
           const dayLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          const namesPreview = slot.names.length <= 3
-            ? slot.names.join(', ')
-            : `${slot.names.slice(0, 3).join(', ')} +${slot.names.length - 3} more`;
           return (
             <li key={`${slot.date}|${slot.startTime}|${slot.endTime}`} className="text-xs leading-snug" style={{ color: THEME.text.primary }}>
               <span className="font-semibold">{dayLabel}</span>
@@ -71,9 +68,6 @@ export const PKDetailsPanel = ({ events = {}, dates = [], employees = [], classN
               <span>{formatTimeShort(slot.startTime)}-{formatTimeShort(slot.endTime)}</span>
               <span style={{ color: THEME.text.muted }}> · </span>
               <span style={{ color: THEME.text.secondary }}>{slot.names.length} booked</span>
-              {slot.names.length > 0 && (
-                <span style={{ color: THEME.text.muted }}>: {namesPreview}</span>
-              )}
               {slot.note && (
                 <span className="block mt-0.5 italic" style={{ color: THEME.text.muted }}>
                   {slot.note}
