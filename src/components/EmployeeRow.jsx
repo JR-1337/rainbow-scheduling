@@ -40,7 +40,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
             ) : null}
             <p className="truncate text-xs font-semibold leading-tight" style={{ color: isDeleted ? THEME.text.muted : THEME.text.primary }}>{nameFirst}</p>
             {nameRest ? (
-              <p className="truncate text-[10px] leading-tight" style={{ color: THEME.text.muted }}>{nameRest}</p>
+              <p className="truncate text-[11px] leading-tight" style={{ color: THEME.text.muted }}>{nameRest}</p>
             ) : null}
             <p className="shrink-0 truncate text-xs font-semibold leading-tight" style={{ color: isDeleted ? THEME.text.muted
                 : hours >= OVERTIME_THRESHOLDS.OVER_RED ? THEME.status.error

@@ -100,5 +100,5 @@ export const SWAP_STATUS_LABELS = {
 // Desktop: header grid + one grid per body row -- first column track must be identical (fixed px
 // width; no max-content on col 1 or day columns drift). Name column matches mobile: first name line +
 // rest on second line (splitNameForSchedule) + truncate; full name on hover via title=.
-const DESKTOP_SCHEDULE_NAME_COL_PX = 160;
+const DESKTOP_SCHEDULE_NAME_COL_PX = 80;
 export const DESKTOP_SCHEDULE_GRID_TEMPLATE = `${DESKTOP_SCHEDULE_NAME_COL_PX}px repeat(7, 1fr)`;
