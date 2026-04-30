@@ -7,7 +7,6 @@
 //   5:01 – 6:00 → 30 min
 //   6:01+       → 45 min
 export const OVERTIME_THRESHOLDS = { CAP: 40, OVER_RED: 44 };
-export const PART_TIME_WEEKLY_CAP = 24;
 
 const BREAK_RULES = [
   { maxHours: 4.0,       breakMinutes: 0 },

@@ -1,4 +1,4 @@
-import { OVERTIME_THRESHOLDS, PART_TIME_WEEKLY_CAP } from './timemath';
+import { OVERTIME_THRESHOLDS } from './timemath';
 
 // Pure violation evaluator for a single (employee, date) pair.
 // Caller passes pre-computed weekHours + currentStreak so this stays pure.
@@ -23,13 +23,6 @@ export function computeViolations({ employee, dateStr, weekHours, currentStreak,
       rule: 'weeklyOver',
       severity: 'warn',
       detail: `Weekly net ${weekHours.toFixed(1)}h over 40h cap`,
-    });
-  }
-  if (employee.employmentType === 'part-time' && weekHours > PART_TIME_WEEKLY_CAP) {
-    out.push({
-      rule: 'partTimeCap',
-      severity: 'warn',
-      detail: `Part-time weekly ${weekHours.toFixed(1)}h over ${PART_TIME_WEEKLY_CAP}h cap`,
     });
   }
   if (hasApprovedTimeOff) {
