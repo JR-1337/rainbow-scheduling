@@ -50,6 +50,12 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-04-30 (s043) -- Supabase migration schema design locked (Wave 3 synthesis complete)
+
+Decision: All 10 migration research docs landed. The Postgres schema in `docs/migration/02-schema-proposed.md` becomes the binding design for eventual cutover. Eight design questions resolved by JR: (1) sick days = `type='sick'` row in `shifts`; (2) no forward-compat KV table -- typed `store_config` only; (3) ShiftChanges splits into 4 tables (parent + time_off + offers + swaps); (4) `recipient_id`/`partner_id` are NOT NULL FK populated at insert via email lookup; (5) `legacy_id` columns kept forever for audit; (6) default-password UX uses Supabase `password_reset_required` flag (hard gate at login, replaces today's soft banner); (7) `employmentType` stays soft TEXT with CHECK constraint, not native ENUM; (8) Realtime publishes `shifts` + `shift_change_requests` (parent only) + `announcements`; `profiles` and `store_config` are not published. Cutover plan in `09-cutover-and-rollback.md` -- 7 phases, password-reset blast for 35 staff is the load-bearing irreversible step at Phase 4 T+1:10.
+Rationale: Wave 3 synthesis produced a coherent, internally-consistent schema; all 8 open questions had a clear winner once tradeoffs were spelled out (e.g. solo dev + 35-staff scale tilts every "strict vs flexible" call toward simpler/stricter, not toward optionality). The plan sits ready; ship decision is separate from research completeness.
+Confidence: H -- direct user direction 2026-04-30 across all 8 Qs; verified by re-reading 02-schema-proposed.md §11 against the 8 letter-answers.
+
 ## 2026-04-29 -- DATA plane scaffolded with gold-sources inventory
 
 Decision: RAINBOW adopts the kit's DATA/ scaffold per `DATA_CAPTURE_BOOTSTRAP.md` v5.2. Catalog at `DATA/catalog.md`; validator at `scripts/validate-data-catalog.sh`. Single first entry: `rubrics/gold-sources-inventory.md` -- forward-looking map covering Apps Script API surface, Sheets schema, frontend constants/theme, brand palette, PDF generator + layout registry, statutory citation discipline. PII boundary called out explicitly (live Sheets data is cloud-only, never in repo).

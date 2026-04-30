@@ -54,6 +54,6 @@ The shape was decided 2026-04-29 (see `CONTEXT/DECISIONS.md` -- "Migration shape
 | 2 | 06-email-migration.md | landed | 2026-04-29 |
 | 2 | 07-pdf-migration.md | landed | 2026-04-29 |
 | 2 | 10-supabase-due-diligence.md | landed | 2026-04-29 |
-| 3 | 02-schema-proposed.md | blocked by #1 | -- |
-| 3 | 08-sheet-mirror-design.md | blocked by #2 | -- |
-| 3 | 09-cutover-and-rollback.md | blocked by #1-8 | -- |
+| 3 | 02-schema-proposed.md | landed | 2026-04-29 |
+| 3 | 08-sheet-mirror-design.md | landed | 2026-04-29 |
+| 3 | 09-cutover-and-rollback.md | landed | 2026-04-29 |
