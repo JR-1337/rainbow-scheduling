@@ -389,6 +389,7 @@ function updateCell(tabName, rowIndex, columnName, value) {
   const colIndex = headers.indexOf(columnName) + 1;
   if (colIndex > 0) {
     sheet.getRange(rowIndex, colIndex).setValue(value);
+    bustSheetCache_(tabName);
   }
 }
 
@@ -407,6 +408,7 @@ function updateRow(tabName, rowIndex, updates) {
   if (dropped.length > 0) {
     Logger.log('updateRow DROPPED fields on tab=' + tabName + ' row=' + rowIndex + ': ' + JSON.stringify(dropped) + ' (sheet missing matching headers)');
   }
+  bustSheetCache_(tabName);
   return dropped;
 }
 
@@ -423,7 +425,101 @@ function appendRow(tabName, rowData) {
     return value !== undefined && value !== null ? value : '';
   });
   sheet.appendRow(rowArray);
+  bustSheetCache_(tabName);
   return sheet.getLastRow();
+}
+
+// ═══ CACHE LAYER ═══
+
+const CACHE_VERSION_ = 'v1';
+const CACHE_TTL_SEC_ = 600;
+const CACHE_CHUNK_BYTES_ = 90 * 1024;
+
+function cacheKey_(tabName) { return 'sheet_' + CACHE_VERSION_ + '_' + tabName; }
+function cacheMetaKey_(tabName) { return cacheKey_(tabName) + '_meta'; }
+
+function cacheGet_(tabName) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const meta = cache.get(cacheMetaKey_(tabName));
+    if (!meta) return null;
+    const { chunks } = JSON.parse(meta);
+    if (!chunks || chunks < 1) return null;
+    if (chunks === 1) {
+      const raw = cache.get(cacheKey_(tabName));
+      if (!raw) return null;
+      return JSON.parse(raw);
+    }
+    const keys = [];
+    for (let i = 0; i < chunks; i++) keys.push(cacheKey_(tabName) + '_' + i);
+    const got = cache.getAll(keys);
+    let combined = '';
+    for (let i = 0; i < chunks; i++) {
+      const part = got[cacheKey_(tabName) + '_' + i];
+      if (!part) return null;
+      combined += part;
+    }
+    return JSON.parse(combined);
+  } catch (e) {
+    Logger.log('cacheGet_ error tab=' + tabName + ': ' + e);
+    return null;
+  }
+}
+
+function cachePut_(tabName, data) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const json = JSON.stringify(data);
+    const bytes = json.length;
+    if (bytes <= CACHE_CHUNK_BYTES_) {
+      cache.put(cacheKey_(tabName), json, CACHE_TTL_SEC_);
+      cache.put(cacheMetaKey_(tabName), JSON.stringify({ chunks: 1 }), CACHE_TTL_SEC_);
+      Logger.log('cachePut_ tab=' + tabName + ' bytes=' + bytes + ' chunks=1');
+      return;
+    }
+    const chunks = Math.ceil(bytes / CACHE_CHUNK_BYTES_);
+    const map = {};
+    for (let i = 0; i < chunks; i++) {
+      map[cacheKey_(tabName) + '_' + i] = json.substr(i * CACHE_CHUNK_BYTES_, CACHE_CHUNK_BYTES_);
+    }
+    cache.putAll(map, CACHE_TTL_SEC_);
+    cache.put(cacheMetaKey_(tabName), JSON.stringify({ chunks }), CACHE_TTL_SEC_);
+    Logger.log('cachePut_ tab=' + tabName + ' bytes=' + bytes + ' chunks=' + chunks);
+  } catch (e) {
+    Logger.log('cachePut_ error tab=' + tabName + ': ' + e);
+  }
+}
+
+function bustSheetCache_(tabName) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const meta = cache.get(cacheMetaKey_(tabName));
+    const keys = [cacheKey_(tabName), cacheMetaKey_(tabName)];
+    if (meta) {
+      try {
+        const { chunks } = JSON.parse(meta);
+        if (chunks > 1) {
+          for (let i = 0; i < chunks; i++) keys.push(cacheKey_(tabName) + '_' + i);
+        }
+      } catch (e) {}
+    }
+    cache.removeAll(keys);
+    Logger.log('bustSheetCache_ tab=' + tabName);
+  } catch (e) {
+    Logger.log('bustSheetCache_ error tab=' + tabName + ': ' + e);
+  }
+}
+
+function getCachedSheetData_(tabName) {
+  const cached = cacheGet_(tabName);
+  if (cached !== null) {
+    Logger.log('cache HIT tab=' + tabName);
+    return cached;
+  }
+  Logger.log('cache MISS tab=' + tabName);
+  const fresh = getSheetData(tabName);
+  cachePut_(tabName, fresh);
+  return fresh;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1565,11 +1661,11 @@ function getAllData(payload) {
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
 
-  const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
-  const shifts = getSheetData(CONFIG.TABS.SHIFTS);
-  const settings = getSheetData(CONFIG.TABS.SETTINGS);
-  const announcements = getSheetData(CONFIG.TABS.ANNOUNCEMENTS);
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+  const employees = getCachedSheetData_(CONFIG.TABS.EMPLOYEES);
+  const shifts = getCachedSheetData_(CONFIG.TABS.SHIFTS);
+  const settings = getCachedSheetData_(CONFIG.TABS.SETTINGS);
+  const announcements = getCachedSheetData_(CONFIG.TABS.ANNOUNCEMENTS);
+  const requests = getCachedSheetData_(CONFIG.TABS.SHIFT_CHANGES);
 
   const livePeriodsRow = settings.find(s => s.key === 'livePeriods');
   const livePeriods = livePeriodsRow && livePeriodsRow.value
@@ -1652,6 +1748,7 @@ function saveShift(payload) {
   if (shift.deleted) {
     if (existingShift) {
       getSheet(CONFIG.TABS.SHIFTS).deleteRow(existingShift._rowIndex);
+      bustSheetCache_(CONFIG.TABS.SHIFTS);
       return { success: true, data: { deleted: true } };
     }
     return { success: true, data: { deleted: false, message: 'No matching shift found' } };
@@ -1948,6 +2045,7 @@ function deleteAnnouncement(payload) {
   }
 
   getSheet(CONFIG.TABS.ANNOUNCEMENTS).deleteRow(existing._rowIndex);
+  bustSheetCache_(CONFIG.TABS.ANNOUNCEMENTS);
 
   return { success: true };
 }
