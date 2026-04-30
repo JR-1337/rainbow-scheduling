@@ -72,9 +72,6 @@
  * - submitShiftOffer + submitSwapRequest reject with error code INVALID_SHIFT_TYPE
  *   when the selected shift is not type='work'. Meetings and PK events are not
  *   transferable.
- * - New admin-only handler `bulkCreatePKEvent({date, startTime, endTime, note, employeeIds})`
- *   appends a type='pk' row for each employeeId in a single Sheets.Spreadsheets.Values.update
- *   call (mirrors the v2.19 batchSaveShifts pattern — one round-trip, not N).
  * - Manual step (one-time, Sarvi's live Sheet): add headers `type` (column J) and
  *   `note` (column K) to the Shifts tab. Existing rows left blank are fine.
  *
@@ -299,7 +296,6 @@ function handleRequest(action, payload) {
       'saveStaffingTargets': () => saveStaffingTargets(payload),
       'saveSetting': () => saveSetting(payload),
       'batchSaveShifts': () => batchSaveShifts(payload),
-      'bulkCreatePKEvent': () => bulkCreatePKEvent(payload),
 
       // Announcements
       'saveAnnouncement': () => saveAnnouncement(payload),
@@ -1825,8 +1821,7 @@ function batchSaveShifts(payload) {
 
     // v2.26.0: meetings allow N per (empId, date) — keyed by row id so multiple
     // meetings on the same day each get their own row. Singular types (work, sick,
-    // pk) keep the 3-tuple key so the singular invariant holds (PK bulk-create at
-    // bulkCreatePKEvent already enforces dupe-skip on its write path). Back-compat:
+    // pk) keep the 3-tuple key so the singular invariant holds. Back-compat:
     // missing type falls back to 'work'. Missing id on a meeting (e.g. legacy row
     // pre-N-meetings) is given a synthetic id derived from 3-tuple — preserves the
     // legacy row's identity so it isn't accidentally appended-as-new.
@@ -1898,98 +1893,6 @@ function batchSaveShifts(payload) {
       `Bulk schedule save: ${savedCount} shift(s) written, ${deletedCountSafe} removed.`);
 
     return { success: true, data: { savedCount, deletedCount: deletedCountSafe } };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-// v2.21.0: Bulk-create a PK (Product Knowledge) event for many employees in a
-// single Sheets API round-trip. Sarvi triggers this from the admin toolbar.
-// Existing work shifts on the same date are untouched — a PK row is orthogonal.
-// Dupes (same employee already has a pk entry for this date) are skipped silently.
-function bulkCreatePKEvent(payload) {
-  const { date, startTime, endTime, note, employeeIds } = payload;
-
-  const auth = verifyAuth(payload, true);
-  if (!auth.authorized) return { success: false, error: auth.error };
-
-  if (!date || !startTime || !endTime) {
-    return { success: false, error: { code: 'VALIDATION_ERROR', message: 'date, startTime, and endTime are required' } };
-  }
-  if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
-    return { success: false, error: { code: 'VALIDATION_ERROR', message: 'employeeIds must be a non-empty array' } };
-  }
-
-  const normalizedDate = String(date).split('T')[0];
-  const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
-  const byId = new Map();
-  employees.forEach(e => { if (e.active) byId.set(String(e.id), e); });
-
-  const lock = LockService.getDocumentLock();
-  if (!lock.tryLock(10000)) {
-    return { success: false, error: { code: 'CONCURRENT_EDIT', message: 'Another admin is saving the schedule. Please wait a moment and try again.' } };
-  }
-  try {
-    const sheet = getSheet(CONFIG.TABS.SHIFTS);
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    // S61 — refuse to write if the one-time manual header migration hasn't happened.
-    // Otherwise the append silently drops the `type`/`note` fields and the PK rows are
-    // indistinguishable from work rows on the next getAllData.
-    if (headers.indexOf('type') === -1 || headers.indexOf('note') === -1) {
-      return { success: false, error: { code: 'SHEET_NOT_MIGRATED', message: 'Shifts tab is missing `type` and/or `note` columns. Add them to row 1 before scheduling PK/meeting events.' } };
-    }
-    const existing = parseSheetValues_(sheet.getDataRange().getValues());
-
-    const existingPKKeys = new Set();
-    existing.forEach(row => {
-      const d = String(row.date || '').split('T')[0];
-      if ((row.type || 'work') === 'pk' && d === normalizedDate) {
-        existingPKKeys.add(String(row.employeeId));
-      }
-    });
-
-    const newRows = [];
-    const created = [];
-    const skipped = [];
-
-    employeeIds.forEach(rawId => {
-      const idKey = String(rawId);
-      const emp = byId.get(idKey);
-      if (!emp) { skipped.push({ id: rawId, reason: 'not_active' }); return; }
-      if (existingPKKeys.has(idKey)) { skipped.push({ id: rawId, reason: 'already_has_pk' }); return; }
-
-      const shiftId = 'PK-' + Utilities.getUuid().substring(0, 8);
-      const rowObj = {
-        id: shiftId,
-        employeeId: emp.id,
-        employeeName: emp.name,
-        employeeEmail: emp.email,
-        date: normalizedDate,
-        startTime,
-        endTime,
-        role: 'none',
-        task: '',
-        type: 'pk',
-        note: note || ''
-      };
-      newRows.push(headers.map(h => rowObj[h] !== undefined && rowObj[h] !== null ? rowObj[h] : ''));
-      created.push(emp.id);
-    });
-
-    if (newRows.length > 0) {
-      const startRow = sheet.getLastRow() + 1;
-      const endRow = startRow + newRows.length - 1;
-      const lastCol = columnLetter_(headers.length);
-      const range = `${CONFIG.TABS.SHIFTS}!A${startRow}:${lastCol}${endRow}`;
-      Sheets.Spreadsheets.Values.update(
-        { values: newRows },
-        getSpreadsheet().getId(),
-        range,
-        { valueInputOption: 'USER_ENTERED' }
-      );
-    }
-
-    return { success: true, data: { created, skipped, date: normalizedDate } };
   } finally {
     lock.releaseLock();
   }
