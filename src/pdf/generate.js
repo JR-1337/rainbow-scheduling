@@ -245,7 +245,7 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
   <style>
     @media print {
       body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; padding: 0; }
-      @page { size: A4 portrait; margin: 5mm; }
+      @page { size: letter portrait; margin: 5mm; }
       .no-print { display: none !important; }
       /* Week 2 always starts a fresh page. Week 1 flows naturally below the
          header instead of being pushed whole to page 2 when the 14-row block
