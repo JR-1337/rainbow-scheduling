@@ -5,11 +5,11 @@ import { OVERTIME_THRESHOLDS, PART_TIME_WEEKLY_CAP } from './timemath';
 // Returns array of { rule, severity, detail } — empty when clean.
 export function computeViolations({ employee, dateStr, weekHours, currentStreak, hasApprovedTimeOff, availability }) {
   const out = [];
-  if (currentStreak >= 5) {
+  if (currentStreak >= 6) {
     out.push({
       rule: 'consecutive',
       severity: 'warn',
-      detail: `${employee.name} on ${currentStreak === 5 ? '5th' : currentStreak + 'th'} consecutive work day`,
+      detail: `${employee.name} on ${currentStreak === 6 ? '6th' : currentStreak + 'th'} consecutive work day`,
     });
   }
   if (weekHours >= OVERTIME_THRESHOLDS.OVER_RED) {
