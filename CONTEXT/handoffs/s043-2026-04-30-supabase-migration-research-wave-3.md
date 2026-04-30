@@ -16,7 +16,15 @@ Pass-forward: scumble holography -- All 10 Supabase migration research docs land
 
 ## This Session
 
-**No code changes. Research-only synthesis session.**
+**Research synthesis + one small backend cleanup.**
+
+**Post-handoff additions (commit `a8ccaa8` shipped after the s043 handoff commit `ffcaac7`):**
+
+- `backend/Code.gs`: killed `bulkCreatePKEvent` orphan handler (~91 lines: dispatch entry + function + lock guard + 2 comment refs). Zero frontend callers per `04-apicall-callsite-map.md`; pre-cutover cleanup so it does not get ported to an Edge Function. Build PASS; frontend bundle unchanged (backend-only). **NOT YET DEPLOYED to live Apps Script** -- repo source diverges from live `Code.gs`. JR to paste into `script.google.com/home` editor next time he opens it, OR leave until cutover decommissions the whole thing.
+- `CONTEXT/TODO.md`: AWS SES pinned as the Phase 4 password-reset SMTP (ca-residency, ~$0.10/1k emails, free at OTR scale). Verify SPF/DKIM during Phase 1 build.
+- PITR add-on ($100/mo) confirmed dropped from Phase 0.
+
+**Pricing framing recorded (s043 conversational decision, not a memory write):** the migration is treated as table stakes for PIPEDA / Ontario compliance, not an itemized line. Bundled into existing $497/mo + $125/hr OTR arrangement. Amortizes across future customers (customer #2 inherits a migrated platform). May want to revisit `project_pricing_locked` once a second customer is in motion.
 
 **Wave 3 docs landed (3 of 10, completing the set):**
 
