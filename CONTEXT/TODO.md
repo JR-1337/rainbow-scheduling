@@ -21,7 +21,7 @@ Rules:
 
 ## Active
 
-Anchor: gamboge instanton
+Anchor: kintsugi predictive coding
 
 - **Pre-cutover gate (decision): custom SMTP for Phase 4 password-reset blast = AWS SES** (ca-residency aligns with PIPEDA; ~$0.10 per 1k emails, free at OTR scale). Confirmed s043 2026-04-30. Verify domain SPF/DKIM in Phase 1 build; deliverability smoke before Phase 4.
 - **Apps Script + Sheets -> Supabase migration: research/scoping COMPLETE; no execution date set.** Shape A locked 2026-04-29 (DB-canonical, Sheet = read-only mirror, admin UI is edit surface). Planning folder at `docs/migration/`; index in `docs/migration/README.md`. All 10 research docs landed across s042 (Wave 1+2) and s043 (Wave 3 synthesis 2026-04-30): 01-schema-current, 02-schema-proposed (8 open Qs all resolved by JR), 03-appscript-inventory, 04-apicall-callsite-map, 05-auth-migration, 06-email-migration, 07-pdf-migration, 08-sheet-mirror-design, 09-cutover-and-rollback, 10-supabase-due-diligence. Next: JR sets ship decision when ready -- Phase 0 (Supabase project + DDL + RLS) is the entry point per 09 §3. No code changes triggered by this work.
@@ -70,6 +70,8 @@ Anchor: gamboge instanton
 - Missing validation: no automated test suite; manual Playwright smoke only.
 
 ## Completed
+
+- [2026-04-30] **24h part-time weekly cap rule retired (commit `e887881`)** — JR: "Sarvi schedules part-timers above 24h regularly and isn't going to respect the warning anyway." Dropped `partTimeCap` branch from `src/utils/violations.js` `computeViolations` and removed unused `PART_TIME_WEEKLY_CAP` constant from `src/utils/timemath.js`. Build PASS. Other violation rules (consecutive 6+ days, weekly 40h/44h ESA, approvedTimeOff, unavailable) unchanged. No backend or schema impact.
 
 - [2026-04-30] **Apps Script CacheService for getAllData reads (commit `49b1053`)** — Wraps the 5 sheet reads in `getAllData` (Employees, Shifts, Settings, Announcements, ShiftChanges) with `CacheService.getScriptCache()`. 600s TTL, ~90KB chunk threshold (auto-splits oversized payloads), automatic invalidation via writer wrappers in `updateRow`/`updateCell`/`appendRow` plus 2 inline busts at the direct-delete sites in `saveShift` + `deleteAnnouncement`. Failure path falls through to live reads. Plan at `~/.claude/plans/jazzy-baking-sutherland.md`. Build PASS. JR pasted + redeployed live Apps Script s046. **VERIFIED s047 2026-04-30:** prod DevTools network timing confirms cache HIT — first warm load 3.9s, second consecutive load 2.8s vs ~7s baseline. Recent doGet executions running 2-5s. Executions log lines not surfaced (likely Stackdriver disabled), network evidence sufficient. Migration retires this layer at cutover.
 

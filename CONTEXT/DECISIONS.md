@@ -50,6 +50,13 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-04-30 (s047) -- Retire 24h part-time weekly cap violation rule
+
+Decision: `partTimeCap` violation (warn when employmentType=part-time and weekHours > 24) removed from `computeViolations`; constant `PART_TIME_WEEKLY_CAP` deleted.
+Rationale: JR confirmed Sarvi schedules part-timers above 24h regularly; the warning fires constantly without changing scheduler behavior, polluting the violations panel with noise that hides actionable rules (consecutive-days, ESA 44h overage). Kept the 40h CAP / 44h ESA OVER_RED, consecutive 6+ days, approved-time-off, and unavailable rules unchanged.
+Confidence: H -- JR-stated, verified 2026-04-30
+Evidence: commit `e887881`; `src/utils/violations.js`, `src/utils/timemath.js`.
+
 ## 2026-04-30 (s046) -- Pre-migration getAllData perf bridge = Apps Script CacheService (not CF Worker / Vercel Edge)
 
 Decision: For the pre-migration window, `getAllData` uses Apps Script's built-in `CacheService.getScriptCache()` to absorb concurrent reads. 600s TTL, ~90KB chunked keys per tab, automatic invalidation via writer wrappers in `updateRow`/`updateCell`/`appendRow` plus 2 inline busts at the direct-delete sites. Cache miss = unchanged 7-8s; cache hit ~2-3s (skips 5 sheet reads, still pays Apps Script cold start + JSON serialize). External edge layers (Cloudflare Worker + KV; Vercel Edge Function + Vercel KV) were considered + rejected for this window. Migration retires the layer at cutover; Supabase RLS reads land sub-200ms regardless.
