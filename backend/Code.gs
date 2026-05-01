@@ -1004,7 +1004,13 @@ function approveTimeOffRequest(payload) {
   const request = requests.find(r => r.requestId === requestId);
 
   if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Request not found' } };
-  if (request.status !== 'pending') return { success: false, error: { code: 'INVALID_STATUS', message: 'Request is not pending' } };
+  if (request.status !== 'pending') {
+    const staleMsg = request.status === 'cancelled' ? 'This request has been cancelled by the employee.' :
+                     request.status === 'approved' ? 'This request has already been approved.' :
+                     request.status === 'denied' ? 'This request has already been denied.' :
+                     'This request is no longer pending (status: ' + request.status + ').';
+    return { success: false, error: { code: 'INVALID_STATUS', message: staleMsg } };
+  }
 
   const now = new Date().toISOString();
   updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
@@ -1029,7 +1035,13 @@ function denyTimeOffRequest(payload) {
   const request = requests.find(r => r.requestId === requestId);
 
   if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Request not found' } };
-  if (request.status !== 'pending') return { success: false, error: { code: 'INVALID_STATUS', message: 'Request is not pending' } };
+  if (request.status !== 'pending') {
+    const staleMsg = request.status === 'cancelled' ? 'This request has been cancelled by the employee.' :
+                     request.status === 'approved' ? 'This request has already been approved.' :
+                     request.status === 'denied' ? 'This request has already been denied.' :
+                     'This request is no longer pending (status: ' + request.status + ').';
+    return { success: false, error: { code: 'INVALID_STATUS', message: staleMsg } };
+  }
 
   const now = new Date().toISOString();
   updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
