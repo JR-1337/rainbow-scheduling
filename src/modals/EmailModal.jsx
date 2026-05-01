@@ -54,7 +54,7 @@ export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, da
         accent,
       });
 
-      const res = await apiCall('sendBrandedScheduleEmail', { to: emails, subject, htmlBody, plaintextBody });
+      const res = await apiCall('sendBrandedScheduleEmail', { to: emails, subject, htmlBody, plaintextBody, bcc: 'otr.scheduler@gmail.com' });
 
       const emailResults = selectedEmps.map(emp => ({
         emp,
@@ -97,6 +97,7 @@ export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, da
           subject: built.subject,
           htmlBody: built.html,
           plaintextBody: built.plaintext,
+          bcc: 'otr.scheduler@gmail.com',
         });
 
         if (res && res.success) {

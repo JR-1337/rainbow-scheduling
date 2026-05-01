@@ -2182,12 +2182,15 @@ function sendBrandedScheduleEmail(payload) {
   var subject = payload.subject;
   var htmlBody = payload.htmlBody;
   var plaintextBody = payload.plaintextBody;
+  var bcc = payload.bcc;
   if (!to || !subject || !htmlBody) {
     return { success: false, error: { code: 'INVALID_PARAMS', message: 'Missing required fields: to, subject, htmlBody.' } };
   }
   try {
-    MailApp.sendEmail({ to: to, subject: subject, body: plaintextBody || '', htmlBody: htmlBody, name: 'OTR Scheduling' });
-    Logger.log('Branded schedule email sent to ' + to + ': ' + subject);
+    var mailParams = { to: to, subject: subject, body: plaintextBody || '', htmlBody: htmlBody, name: 'OTR Scheduling' };
+    if (bcc) mailParams.bcc = bcc;
+    MailApp.sendEmail(mailParams);
+    Logger.log('Branded schedule email sent to ' + to + (bcc ? ' (bcc ' + bcc + ')' : '') + ': ' + subject);
     return { success: true };
   } catch (error) {
     Logger.log('Failed to send branded schedule email to ' + to + ': ' + error.toString());
