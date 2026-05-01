@@ -131,11 +131,12 @@ export const buildBrandedScheduleHtml = ({
         <td style="padding:0;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
             <tr style="background-color:${navy};">
-              <td colspan="2" style="padding:8px 12px;">
-                <span style="font-size:12px;font-weight:700;color:#FFFFFF;text-transform:uppercase;letter-spacing:1px;">Your Shifts</span>
-              </td>
+              <td colspan="2" style="padding:8px 12px;font-size:12px;line-height:1.5;">&nbsp;</td>
             </tr>
             ${scheduleLines.join('')}
+            <tr style="background-color:${navy};">
+              <td colspan="2" style="padding:8px 12px;font-size:12px;line-height:1.5;">&nbsp;</td>
+            </tr>
           </table>
         </td>
       </tr>`;
@@ -186,9 +187,12 @@ export const buildBrandedScheduleHtml = ({
 
           <!-- Header -->
           <tr>
-            <td style="background-color:${navy};padding:20px 24px;">
-              <div style="font-size:22px;font-weight:900;color:${white};letter-spacing:2px;text-transform:uppercase;">RAINBOW</div>
-              <div style="font-size:12px;color:${accent};margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">${escHtml(periodLabel)}</div>
+            <td style="background-color:${navy};padding:32px 24px 28px 24px;text-align:center;">
+              <div style="line-height:1;color:${white};">
+                <div style="font-size:12px;font-weight:300;letter-spacing:3px;text-transform:uppercase;">OVER THE</div>
+                <div style="font-size:18px;font-weight:600;letter-spacing:2.7px;text-transform:uppercase;margin-top:2px;">RAINBOW</div>
+              </div>
+              <div style="font-size:12px;color:${accent};margin-top:18px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">${escHtml(periodLabel)}</div>
             </td>
           </tr>
 
