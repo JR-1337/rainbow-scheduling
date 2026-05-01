@@ -14,6 +14,7 @@ import { buildEmailContent } from './build';
 import { toDateKey, getWeekNumber, formatMonthWord, formatDateLong, formatTimeDisplay } from '../utils/date';
 import { ROLES_BY_ID } from '../App';
 import { EVENT_TYPES } from '../constants';
+import { POLICY_DISCLAIMER_HTML, POLICY_DISCLAIMER_TEXT } from './policyDisclaimer';
 
 // Escape HTML entities so plaintext content injected into HTML is safe.
 const escHtml = (str) => String(str || '')
@@ -83,7 +84,7 @@ export const buildBrandedScheduleHtml = ({
     const announceLine = (announcement && announcement.message)
       ? `\n${announcement.subject || 'ANNOUNCEMENT'}\n${announcement.message}\n`
       : '';
-    plaintext = `Hi Team!\n\nOVER THE RAINBOW - Staff Schedule\n${periodLabel}\n${announceLine}\nSchedule rendered in the email body. Please check your shifts and contact admin with questions.\n\n${adminLine}\n\nOver the Rainbow\nwww.rainbowjeans.com`;
+    plaintext = `Hi Team!\n\nOVER THE RAINBOW - Staff Schedule\n${periodLabel}\n${announceLine}\nSchedule rendered in the email body. Please check your shifts and contact admin with questions.\n\n${adminLine}\n\n---\n${POLICY_DISCLAIMER_TEXT}\n---\n\nOver the Rainbow\nwww.rainbowjeans.com`;
     hasShifts = true;
   }
 
@@ -203,6 +204,8 @@ export const buildBrandedScheduleHtml = ({
           ${scheduleTableRows}
 
           ${adminRow}
+
+          ${POLICY_DISCLAIMER_HTML}
 
           <!-- Footer -->
           <tr>

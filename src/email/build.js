@@ -2,6 +2,7 @@
 import { ROLES_BY_ID } from '../App';
 import { toDateKey, getWeekNumber, formatMonthWord, formatDateLong, formatTimeDisplay } from '../utils/date';
 import { EVENT_TYPES } from '../constants';
+import { POLICY_DISCLAIMER_TEXT } from './policyDisclaimer';
 
 // S64 Stage 7 — emails list meeting/PK entries as separate bullets; weekly total
 // uses union hours so a 9-5 work + 3-5 PK day totals 8h, not 10h.
@@ -75,6 +76,10 @@ ${scheduleLines.join('\n\n')}
 Full schedule rendered above. Contact admin with any questions.
 
 ${adminLine}
+
+---
+${POLICY_DISCLAIMER_TEXT}
+---
 
 Over the Rainbow 🌈
 www.rainbowjeans.com`;
