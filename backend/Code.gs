@@ -2209,7 +2209,7 @@ function sendScheduleChangeNotification_(caller, summary) {
   const callerName = caller.name || caller.email || 'Unknown admin';
   sendEmail(CONFIG.ADMIN_EMAIL,
     `📝 Schedule edited by ${callerName}`,
-    `${callerName} just saved changes to the schedule.\n\n${summary}`,
+    `${callerName} edited the schedule.\n\n${summary}`,
     { html: true, askType: 'Schedule change', ctaText: 'Open in App', ctaUrl: APP_URL_ }
   );
 }
@@ -2219,7 +2219,7 @@ function sendScheduleChangeNotification_(caller, summary) {
 function sendTimeOffSubmittedEmail(employeeName, dates, reason) {
   sendEmail(CONFIG.ADMIN_EMAIL,
     `🌴 Time-off request: ${employeeName}, ${formatDateRange(dates)}`,
-    `${employeeName} has submitted a time off request.\n\nDates: ${formatDateRange(dates)}\nReason: ${reason || 'Not provided'}`,
+    `From: ${employeeName}\nDates: ${formatDateRange(dates)}\nReason: ${reason || 'Not provided'}`,
     { html: true, askType: 'Time-off request', ctaText: 'Open in App', ctaUrl: APP_URL_ }
   );
 }
@@ -2243,7 +2243,7 @@ function sendTimeOffDeniedEmail(employeeEmail, employeeName, dates, reason) {
 function sendTimeOffCancelledEmail(employeeName, dates) {
   sendEmail(CONFIG.ADMIN_EMAIL,
     `❌ Time-off cancelled: ${employeeName}`,
-    `${employeeName} has cancelled their pending time off request.\n\nOriginally requested: ${formatDateRange(dates)}\n\nNo action needed.`,
+    `${employeeName} withdrew their pending request for ${formatDateRange(dates)}.\n\nNo action needed.`,
     { html: true, askType: 'Time-off cancelled', ctaText: 'Open in App', ctaUrl: APP_URL_ }
   );
 }
@@ -2269,7 +2269,7 @@ function sendOfferSubmittedEmail(recipientEmail, recipientName, offererName, shi
 function sendOfferAcceptedEmail(offererName, recipientName, shiftDate, shiftStart, shiftEnd, shiftRole) {
   sendEmail(CONFIG.ADMIN_EMAIL,
     `🤝 Approve shift transfer: ${offererName} → ${recipientName}`,
-    `A shift offer has been accepted and needs your approval.\n\nFrom: ${offererName}\nTo: ${recipientName}\nDate: ${formatDateDisplay(shiftDate)}\nTime: ${formatTimeDisplay(shiftStart)} - ${formatTimeDisplay(shiftEnd)}\nRole: ${shiftRole}`,
+    `From: ${offererName}\nTo: ${recipientName}\nDate: ${formatDateDisplay(shiftDate)}\nTime: ${formatTimeDisplay(shiftStart)} - ${formatTimeDisplay(shiftEnd)}\nRole: ${shiftRole}`,
     { html: true, askType: 'Shift transfer — needs approval', ctaText: 'Open in App', ctaUrl: APP_URL_ }
   );
 }
@@ -2324,7 +2324,7 @@ function sendSwapSubmittedEmail(partnerEmail, partnerName, initiatorName, initia
 function sendSwapAcceptedEmail(initiatorName, partnerName, request) {
   sendEmail(CONFIG.ADMIN_EMAIL,
     `🔁 Approve swap: ${initiatorName} ⇄ ${partnerName}`,
-    `A shift swap has been accepted and needs your approval.\n\n${initiatorName}'s shift: ${formatDateDisplay(request.initiatorShiftDate)}, ${formatTimeDisplay(request.initiatorShiftStart)} - ${formatTimeDisplay(request.initiatorShiftEnd)} (${request.initiatorShiftRole})\n${partnerName}'s shift: ${formatDateDisplay(request.partnerShiftDate)}, ${formatTimeDisplay(request.partnerShiftStart)} - ${formatTimeDisplay(request.partnerShiftEnd)} (${request.partnerShiftRole})\n\nBoth employees have agreed.`,
+    `${initiatorName}'s shift: ${formatDateDisplay(request.initiatorShiftDate)}, ${formatTimeDisplay(request.initiatorShiftStart)} - ${formatTimeDisplay(request.initiatorShiftEnd)} (${request.initiatorShiftRole})\n${partnerName}'s shift: ${formatDateDisplay(request.partnerShiftDate)}, ${formatTimeDisplay(request.partnerShiftStart)} - ${formatTimeDisplay(request.partnerShiftEnd)} (${request.partnerShiftRole})`,
     { html: true, askType: 'Shift swap — needs approval', ctaText: 'Open in App', ctaUrl: APP_URL_ }
   );
 }
