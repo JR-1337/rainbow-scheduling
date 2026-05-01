@@ -2104,17 +2104,29 @@ function checkExpiredRequests() {
 var OTR_NAVY_ = '#0D0E22';
 var OTR_WHITE_ = '#FDFEFC';
 var OTR_ACCENT_DEFAULT_ = '#0453A3';
+var APP_URL_ = 'https://rainbow-scheduling.vercel.app';
 
-function BRANDED_EMAIL_WRAPPER_HTML_(content, accentHex) {
+function BRANDED_EMAIL_WRAPPER_HTML_(content, accentHex, opts) {
   var accent = accentHex || OTR_ACCENT_DEFAULT_;
-  var accentTint = accent + '15';
+  opts = opts || {};
+  var askType = opts.askType || '';
+  var ctaText = opts.ctaText || '';
+  var ctaUrl = opts.ctaUrl || '';
   // Escape HTML entities in content string before injecting.
   // content is already a formatted plaintext body; convert newlines to <br>.
-  var safeContent = String(content || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\n/g, '<br>');
+  var escapeHtml_ = function (s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  };
+  var safeContent = escapeHtml_(content).replace(/\n/g, '<br>');
+  var askTypeHtml = askType
+    ? '<div style="font-size:11px;font-weight:700;color:' + accent + ';letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">' + escapeHtml_(askType) + '</div>'
+    : '';
+  var ctaHtml = (ctaText && ctaUrl)
+    ? '<table cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;"><tr>' +
+      '<td style="background-color:' + accent + ';border-radius:6px;padding:10px 22px;">' +
+      '<a href="' + ctaUrl + '" style="color:#FFFFFF;text-decoration:none;font-weight:600;font-size:13px;display:inline-block;">' + escapeHtml_(ctaText) + '</a>' +
+      '</td></tr></table>'
+    : '';
   return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"></head>' +
     '<body style="margin:0;padding:0;background-color:' + OTR_WHITE_ + ';font-family:Arial,Helvetica,sans-serif;">' +
     '<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="' + OTR_WHITE_ + '" style="background-color:' + OTR_WHITE_ + ';">' +
@@ -2128,7 +2140,9 @@ function BRANDED_EMAIL_WRAPPER_HTML_(content, accentHex) {
     '<div style="font-size:12px;color:' + accent + ';margin-top:18px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">OTR Scheduling</div>' +
     '</td></tr>' +
     '<tr><td style="padding:20px 24px;background-color:#FFFFFF;">' +
+    askTypeHtml +
     '<div style="font-size:14px;color:' + OTR_NAVY_ + ';line-height:1.6;">' + safeContent + '</div>' +
+    ctaHtml +
     '</td></tr>' +
     '<tr><td style="padding:16px 24px;background-color:#F5F3F0;border-top:1px solid #E5E7EB;">' +
     '<div style="font-size:12px;color:#8B8580;text-align:center;">Over the Rainbow &bull; <a href="https://www.rainbowjeans.com" style="color:#8B8580;">www.rainbowjeans.com</a></div>' +
@@ -2143,7 +2157,11 @@ function sendEmail(to, subject, body, options) {
     var opts = options || {};
     var mailParams = { to: to, subject: subject, body: body, name: 'OTR Scheduling' };
     if (opts.html === true) {
-      mailParams.htmlBody = BRANDED_EMAIL_WRAPPER_HTML_(body);
+      mailParams.htmlBody = BRANDED_EMAIL_WRAPPER_HTML_(body, opts.accentHex, {
+        askType: opts.askType,
+        ctaText: opts.ctaText,
+        ctaUrl: opts.ctaUrl,
+      });
     }
     MailApp.sendEmail(mailParams);
     Logger.log('Email sent to ' + to + ': ' + subject);
@@ -2187,9 +2205,9 @@ function sendScheduleChangeNotification_(caller, summary) {
   if (caller.isOwner === true) return;
   const callerName = caller.name || caller.email || 'Unknown admin';
   sendEmail(CONFIG.ADMIN_EMAIL,
-    `Schedule edited by ${callerName}`,
-    `${callerName} just saved changes to the schedule.\n\n${summary}\n\nReview in the scheduling app.`,
-    { html: true }
+    `📝 Schedule edited by ${callerName}`,
+    `${callerName} just saved changes to the schedule.\n\n${summary}`,
+    { html: true, askType: 'Schedule change', ctaText: 'Open in App', ctaUrl: APP_URL_ }
   );
 }
 
@@ -2197,9 +2215,9 @@ function sendScheduleChangeNotification_(caller, summary) {
 
 function sendTimeOffSubmittedEmail(employeeName, dates, reason) {
   sendEmail(CONFIG.ADMIN_EMAIL,
-    `${employeeName} requested time off: ${formatDateRange(dates)}`,
-    `${employeeName} has submitted a time off request.\n\nDates: ${formatDateRange(dates)}\nReason: ${reason || 'Not provided'}\n\nPlease review in the scheduling app.`,
-    { html: true }
+    `🌴 Time-off request: ${employeeName}, ${formatDateRange(dates)}`,
+    `${employeeName} has submitted a time off request.\n\nDates: ${formatDateRange(dates)}\nReason: ${reason || 'Not provided'}`,
+    { html: true, askType: 'Time-off request', ctaText: 'Open in App', ctaUrl: APP_URL_ }
   );
 }
 
@@ -2221,9 +2239,9 @@ function sendTimeOffDeniedEmail(employeeEmail, employeeName, dates, reason) {
 
 function sendTimeOffCancelledEmail(employeeName, dates) {
   sendEmail(CONFIG.ADMIN_EMAIL,
-    `${employeeName} cancelled their time off request`,
+    `❌ Time-off cancelled: ${employeeName}`,
     `${employeeName} has cancelled their pending time off request.\n\nOriginally requested: ${formatDateRange(dates)}\n\nNo action needed.`,
-    { html: true }
+    { html: true, askType: 'Time-off cancelled', ctaText: 'Open in App', ctaUrl: APP_URL_ }
   );
 }
 
@@ -2247,9 +2265,9 @@ function sendOfferSubmittedEmail(recipientEmail, recipientName, offererName, shi
 
 function sendOfferAcceptedEmail(offererName, recipientName, shiftDate, shiftStart, shiftEnd, shiftRole) {
   sendEmail(CONFIG.ADMIN_EMAIL,
-    `${recipientName} accepted shift from ${offererName} - needs your approval`,
-    `A shift offer has been accepted and needs your approval.\n\nFrom: ${offererName}\nTo: ${recipientName}\nDate: ${formatDateDisplay(shiftDate)}\nTime: ${formatTimeDisplay(shiftStart)} - ${formatTimeDisplay(shiftEnd)}\nRole: ${shiftRole}\n\nPlease review in the scheduling app.`,
-    { html: true }
+    `🤝 Approve shift transfer: ${offererName} → ${recipientName}`,
+    `A shift offer has been accepted and needs your approval.\n\nFrom: ${offererName}\nTo: ${recipientName}\nDate: ${formatDateDisplay(shiftDate)}\nTime: ${formatTimeDisplay(shiftStart)} - ${formatTimeDisplay(shiftEnd)}\nRole: ${shiftRole}`,
+    { html: true, askType: 'Shift transfer — needs approval', ctaText: 'Open in App', ctaUrl: APP_URL_ }
   );
 }
 
@@ -2302,9 +2320,9 @@ function sendSwapSubmittedEmail(partnerEmail, partnerName, initiatorName, initia
 
 function sendSwapAcceptedEmail(initiatorName, partnerName, request) {
   sendEmail(CONFIG.ADMIN_EMAIL,
-    `${partnerName} accepted swap from ${initiatorName} - needs your approval`,
-    `A shift swap has been accepted and needs your approval.\n\n${initiatorName}'s shift: ${formatDateDisplay(request.initiatorShiftDate)}, ${formatTimeDisplay(request.initiatorShiftStart)} - ${formatTimeDisplay(request.initiatorShiftEnd)} (${request.initiatorShiftRole})\n${partnerName}'s shift: ${formatDateDisplay(request.partnerShiftDate)}, ${formatTimeDisplay(request.partnerShiftStart)} - ${formatTimeDisplay(request.partnerShiftEnd)} (${request.partnerShiftRole})\n\nBoth employees have agreed. Please review in the scheduling app.`,
-    { html: true }
+    `🔁 Approve swap: ${initiatorName} ⇄ ${partnerName}`,
+    `A shift swap has been accepted and needs your approval.\n\n${initiatorName}'s shift: ${formatDateDisplay(request.initiatorShiftDate)}, ${formatTimeDisplay(request.initiatorShiftStart)} - ${formatTimeDisplay(request.initiatorShiftEnd)} (${request.initiatorShiftRole})\n${partnerName}'s shift: ${formatDateDisplay(request.partnerShiftDate)}, ${formatTimeDisplay(request.partnerShiftStart)} - ${formatTimeDisplay(request.partnerShiftEnd)} (${request.partnerShiftRole})\n\nBoth employees have agreed.`,
+    { html: true, askType: 'Shift swap — needs approval', ctaText: 'Open in App', ctaUrl: APP_URL_ }
   );
 }
 
