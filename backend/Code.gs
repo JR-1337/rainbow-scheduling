@@ -2108,9 +2108,12 @@ function BRANDED_EMAIL_WRAPPER_HTML_(content, accentHex) {
     '<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="' + OTR_WHITE_ + '" style="background-color:' + OTR_WHITE_ + ';">' +
     '<tr><td align="center" style="padding:24px 12px;">' +
     '<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;border-collapse:collapse;border:1px solid #E5E7EB;border-top:2px solid ' + accent + ';">' +
-    '<tr><td style="background-color:' + OTR_NAVY_ + ';padding:20px 24px;">' +
-    '<div style="font-size:22px;font-weight:900;color:' + OTR_WHITE_ + ';letter-spacing:2px;text-transform:uppercase;">RAINBOW</div>' +
-    '<div style="font-size:12px;color:' + accent + ';margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">OTR Scheduling</div>' +
+    '<tr><td style="background-color:' + OTR_NAVY_ + ';padding:32px 24px 28px 24px;text-align:center;">' +
+    '<div style="line-height:1;color:' + OTR_WHITE_ + ';">' +
+    '<div style="font-size:12px;font-weight:300;letter-spacing:3px;text-transform:uppercase;">OVER THE</div>' +
+    '<div style="font-size:18px;font-weight:600;letter-spacing:2.7px;text-transform:uppercase;margin-top:2px;">RAINBOW</div>' +
+    '</div>' +
+    '<div style="font-size:12px;color:' + accent + ';margin-top:18px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">OTR Scheduling</div>' +
     '</td></tr>' +
     '<tr><td style="padding:20px 24px;background-color:#FFFFFF;">' +
     '<div style="font-size:14px;color:' + OTR_NAVY_ + ';line-height:1.6;">' + safeContent + '</div>' +
