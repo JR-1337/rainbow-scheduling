@@ -80,3 +80,43 @@ Locked decisions:
 - No `--full`, no `--hybrid`. Single Sonnet generalist + Sonnet triage, end of story.
 
 The v1/v2/v3 columns above are kept as a record of why the skill is shaped this way. Future-you reading this: don't add the specialists back without measurement evidence that the missed bugs cost more than the 5× token spend.
+
+---
+
+## v5 — caps raised + augmented marker_index + read discipline (s048 2026-05-01)
+
+### Trigger
+
+`/audit` full sweep at 86 files (codebase had grown ~75 -> 86 since v4) breached at 127k vs the v4 cap of 75k. Output got truncated; agent had no place to write inventory; partial findings only. Same root cause as v4 breach (file enumeration via Read), worse magnitude.
+
+Evidence: agent stats from the failed run -- 27 file Reads at ~2-3k tokens each = ~60-80k just on Reads, before output composition. Operating rule "Read only files material to your finding" was being ignored: the agent treated marker-routed file lists as a Read list rather than a routing hint.
+
+### Three coordinated changes
+
+1. **Caps raised.** Inventory 50k/75k -> 100k/150k. Triage 30k/50k -> 40k/60k. The codebase grew; the cap had to.
+
+2. **Augmented `marker_index`** (`build-map.sh`). Each marker hit now carries `{ path, line, context }` where context is ~3 lines around the hit, capped 200 chars. Cap of 5 hits per marker per file. Map size 161 KB -> 523 KB. The agent composes `old: <quote>` evidence directly from the map for ~70% of cases without a Read.
+
+3. **Read Discipline rules** (binding, in Stage 2 Operating rules):
+   - No full-file Reads -- offset+limit anchored to a marker line, limit 5-15 typical, never >30
+   - 30 Reads max per inventory pass; 1 Read per file maximum
+   - Demote to J observation when evidence requires Read budget unavailable
+   - Self-throttle: report `[budget: Nk used, M reads]` after each major category; finalize at 80% of soft cap
+   - Parent extracts marker_index slices via `jq` before invoking the agent (agent never reads the full ~500 KB map)
+
+### Expected impact
+
+Each Read drops from ~2-3k tokens to ~200-500 tokens (offset+limit on marker line vs full file). At 30-Read cap, total Read cost ~6-15k vs today's ~60-80k. Should land typical inventory at 50-80k (well under the 100k soft cap), with headroom for follow-up Reads when cross-file flow matters.
+
+Recall trade -- expected slight improvement, NOT regression. Argument: focused looking + map-data-first evidence gives the agent stronger signal per investigation step, where today's run wandered through unrelated files. The "demote to J when uncertain" rule provides honest fallback rather than fishing across files.
+
+### Verdict — pending re-test
+
+Next `/audit` run measures whether v5 stays under cap. If breach repeats:
+- Reduce hits-per-file cap from 5 to 3
+- Reduce context per hit from 200 chars to 120 chars (single line)
+- Or: split inventory into 2 passes by category cluster (security+correctness vs perf+a11y+structural)
+
+### Why no specialists
+
+The v4 verdict (single Sonnet generalist, no `--full` / `--hybrid`) stands. v5 keeps the same architecture; only the cost model changed.
