@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Send, Check, X } from 'lucide-react';
 import { THEME } from '../theme';
 import { OTR_ACCENT } from '../theme';
@@ -9,11 +9,11 @@ import { toDateKey, getWeekNumber, formatMonthWord } from '../utils/date';
 import { PRIMARY_CONTACT_EMAIL } from '../constants';
 
 export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, dates, periodInfo, announcement, onComplete }) => {
-  const emailableEmps = employees
+  const emailableEmps = useMemo(() => employees
     .filter(e => e.active && !e.deleted && !e.isOwner)
-    .filter(e => (!e.isAdmin && e.adminTier !== 'admin2') || e.showOnSchedule);
+    .filter(e => (!e.isAdmin && e.adminTier !== 'admin2') || e.showOnSchedule), [employees]);
 
-  const adminContacts = employees.filter(e => e.email === PRIMARY_CONTACT_EMAIL && e.active && !e.deleted);
+  const adminContacts = useMemo(() => employees.filter(e => e.email === PRIMARY_CONTACT_EMAIL && e.active && !e.deleted), [employees]);
 
   const [selected, setSelected] = useState(emailableEmps.reduce((a, e) => ({ ...a, [e.id]: true }), {}));
   const [sending, setSending] = useState(false);
