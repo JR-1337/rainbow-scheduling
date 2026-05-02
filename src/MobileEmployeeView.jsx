@@ -663,7 +663,7 @@ const relativeTime = (t) => {
   return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-export const MobileAlertsSheet = ({ isOpen, onClose, currentUser, announcement, events = {}, dates = [], timeOffRequests = [], shiftOffers = [], shiftSwaps = [], onOpened }) => {
+export const MobileAlertsSheet = ({ isOpen, onClose, currentUser, announcement, events = {}, dates = [], timeOffRequests = [], shiftOffers = [], shiftSwaps = [], employees = [], onOpened }) => {
   const items = useMemo(
     () => computeAlertItems(currentUser, timeOffRequests, shiftOffers, shiftSwaps),
     [currentUser, timeOffRequests, shiftOffers, shiftSwaps]

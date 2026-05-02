@@ -610,6 +610,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
           timeOffRequests={timeOffRequests}
           shiftOffers={shiftOffers}
           shiftSwaps={shiftSwaps}
+          employees={schedulableEmployees}
           onOpened={markAlertsSeen}
         />
 
