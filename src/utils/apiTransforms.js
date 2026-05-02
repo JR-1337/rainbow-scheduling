@@ -24,20 +24,33 @@ function safeJsonParse(val) {
   try { return JSON.parse(val); } catch { return null; }
 }
 
+// Sheet boolean cells return native true/false when typed as a checkbox,
+// but plain-text "TRUE"/"FALSE" cells leak through as strings. JS treats any
+// non-empty string as truthy, so an isOwner cell typed as "FALSE" would read
+// as truthy and bypass owner-exclusion filters. Normalize at the boundary.
+const BOOL_FIELDS = ['active', 'isAdmin', 'isOwner', 'showOnSchedule', 'deleted', 'passwordChanged'];
+const toBool = (v) => {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') return v.toLowerCase() === 'true';
+  return !!v;
+};
+
 export function parseEmployeesFromApi(empData) {
-  return (empData || []).map(emp => ({
-    ...emp,
-    availability: ensureFullWeek(
-      typeof emp.availability === 'string' ? safeJsonParse(emp.availability) : emp.availability
-    ),
-    defaultShift: typeof emp.defaultShift === 'string' && emp.defaultShift
-      ? safeJsonParse(emp.defaultShift)
-      : (emp.defaultShift && typeof emp.defaultShift === 'object' ? emp.defaultShift : null),
-    // v2.26.0 — admin tier + title. Normalize blanks so downstream conditionals
-    // ("if emp.adminTier === 'admin2'") and React-controlled inputs never see undefined.
-    adminTier: typeof emp.adminTier === 'string' ? emp.adminTier : '',
-    title: typeof emp.title === 'string' ? emp.title : ''
-  }));
+  return (empData || []).map(emp => {
+    const normalized = { ...emp };
+    BOOL_FIELDS.forEach(f => { normalized[f] = toBool(emp[f]); });
+    return {
+      ...normalized,
+      availability: ensureFullWeek(
+        typeof emp.availability === 'string' ? safeJsonParse(emp.availability) : emp.availability
+      ),
+      defaultShift: typeof emp.defaultShift === 'string' && emp.defaultShift
+        ? safeJsonParse(emp.defaultShift)
+        : (emp.defaultShift && typeof emp.defaultShift === 'object' ? emp.defaultShift : null),
+      adminTier: typeof emp.adminTier === 'string' ? emp.adminTier : '',
+      title: typeof emp.title === 'string' ? emp.title : ''
+    };
+  });
 }
 
 function stripIsoDate(str) {

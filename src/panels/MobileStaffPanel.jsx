@@ -9,7 +9,7 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   const { active, inactive, deleted } = useMemo(() => ({
-    active: employees.filter(e => e.active && !e.deleted),
+    active: employees.filter(e => e.active && !e.deleted && !e.isOwner),
     inactive: employees.filter(e => !e.active && !e.deleted && !e.isOwner),
     deleted: employees.filter(e => e.deleted && !e.isOwner),
   }), [employees]);
