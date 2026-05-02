@@ -170,7 +170,12 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                     {formData.active ? <UserCheck size={12} /> : <UserX size={12} />}
                     {formData.active ? 'Active' : 'Inactive'}
                   </span>
-                  <button onClick={() => setFormData({ ...formData, active: !formData.active })} className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary }}>
+                  <button
+                    onClick={() => setFormData({ ...formData, active: !formData.active })}
+                    disabled={formData.active && (isEditingSelf || isEditingOwner)}
+                    title={formData.active && isEditingSelf ? 'You cannot deactivate your own account' : formData.active && isEditingOwner ? 'The owner account cannot be deactivated' : ''}
+                    className="text-xs px-2 py-0.5 rounded disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary }}>
                     {formData.active ? 'Set Inactive' : 'Set Active'}
                   </button>
                 </div>

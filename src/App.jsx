@@ -824,6 +824,14 @@ export default function App() {
 
   const saveEmployee = async (e) => {
     if (editingEmp && !e.active && editingEmp.active) {
+      if (currentUser && e.email === currentUser.email) {
+        showToast('error', 'You cannot deactivate your own account.', 6000);
+        return false;
+      }
+      if (editingEmp.isOwner) {
+        showToast('error', 'The owner account cannot be deactivated.', 6000);
+        return false;
+      }
       const futureShifts = getFutureShiftDates(e.id, shifts);
       if (futureShifts.length > 0) {
         showToast('error', formatFutureShiftsBlockMessage('deactivate', e.name, futureShifts), 8000);
@@ -868,6 +876,15 @@ export default function App() {
   const deleteEmployee = async (id) => {
     const emp = employees.find(e => e.id === id);
     if (!emp) return false;
+
+    if (currentUser && emp.email === currentUser.email) {
+      showToast('error', 'You cannot remove your own account.', 6000);
+      return false;
+    }
+    if (emp.isOwner) {
+      showToast('error', 'The owner account cannot be removed.', 6000);
+      return false;
+    }
 
     const futureShifts = getFutureShiftDates(id, shifts);
     if (futureShifts.length > 0) {
