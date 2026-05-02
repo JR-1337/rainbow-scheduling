@@ -1,11 +1,13 @@
 import { X } from 'lucide-react';
 import { useIsMobile, MobileBottomSheet } from '../MobileEmployeeView';
 import { THEME, TYPE } from '../theme';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 // Bottom sheet on mobile, centered modal on desktop. Used by every admin
 // reject/deny/revoke flow so styling + a11y + 44px touch targets stay uniform.
 export const AdminRequestModal = ({ isOpen, onClose, title, children }) => {
   const isMobile = useIsMobile();
+  useEscapeKey(onClose, isOpen && !isMobile);
   if (!isOpen) return null;
   if (isMobile) {
     return <MobileBottomSheet isOpen={isOpen} onClose={onClose} title={title}>{children}</MobileBottomSheet>;

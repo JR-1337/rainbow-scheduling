@@ -23,6 +23,7 @@ import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } fro
 import { isStatHoliday } from './utils/storeHours';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
 import { OVERTIME_THRESHOLDS } from './utils/timemath';
+import { useEscapeKey } from './hooks/useEscapeKey';
 
 import { MobileScheduleGrid } from './MobileEmployeeView';
 import { EVENT_TYPES } from './constants';
@@ -558,6 +559,7 @@ export const MobileAnnouncementPanel = ({
 // MOBILE EMPLOYEE QUICK VIEW - Tap employee name to see contact info
 // ═══════════════════════════════════════════════════════════════════════════════
 export const MobileEmployeeQuickView = ({ isOpen, onClose, employee }) => {
+  useEscapeKey(onClose, isOpen && !!employee);
   if (!isOpen || !employee) return null;
   
   return (

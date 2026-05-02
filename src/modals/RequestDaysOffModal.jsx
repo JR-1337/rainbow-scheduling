@@ -3,6 +3,7 @@ import { Calendar, X, AlertCircle, ChevronLeft, ChevronRight, Loader, Check } fr
 import { THEME, TYPE } from '../theme';
 import { parseLocalDate } from '../utils/format';
 import { toDateKey } from '../utils/date';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 export const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, timeOffRequests = [], shiftOffers = [], shiftSwaps = [], shifts = {} }) => {
   const [selectedDates, setSelectedDates] = useState([]);
@@ -18,6 +19,8 @@ export const RequestDaysOffModal = ({ isOpen, onClose, onSubmit, currentUser, ti
       setReason('');
     }
   }, [isOpen]);
+
+  useEscapeKey(onClose, isOpen);
 
   if (!isOpen) return null;
 

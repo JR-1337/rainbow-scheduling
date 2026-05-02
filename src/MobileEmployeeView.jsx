@@ -19,6 +19,7 @@ import { GradientBackground, haptic } from './components/uiKit';
 import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } from './utils/date';
 import { isStatHoliday } from './utils/storeHours';
 import { useFocusTrap } from './hooks/useFocusTrap';
+import { useEscapeKey } from './hooks/useEscapeKey';
 import { EVENT_TYPES } from './constants';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
 import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
@@ -132,6 +133,7 @@ export const MobileMenuDrawer = ({ isOpen, onClose, currentUser, onLogout, onOpe
 // ANNOUNCEMENT POPUP
 // ═══════════════════════════════════════════════════════════════════════════════
 export const MobileAnnouncementPopup = ({ isOpen, onClose, announcement }) => {
+  useEscapeKey(onClose, isOpen && !!announcement?.message);
   if (!isOpen || !announcement?.message) return null;
   
   return (
