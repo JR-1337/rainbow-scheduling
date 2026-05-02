@@ -2137,7 +2137,7 @@ function BRANDED_EMAIL_WRAPPER_HTML_(content, accentHex, opts) {
     '<div style="font-size:12px;font-weight:300;letter-spacing:3px;text-transform:uppercase;">OVER THE</div>' +
     '<div style="font-size:18px;font-weight:600;letter-spacing:2.7px;text-transform:uppercase;margin-top:2px;">RAINBOW</div>' +
     '</div>' +
-    '<div style="font-size:12px;color:' + accent + ';margin-top:18px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">OTR Scheduling</div>' +
+    '<div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:18px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">OTR Scheduling</div>' +
     '</td></tr>' +
     '<tr><td style="padding:20px 24px;background-color:#FFFFFF;">' +
     askTypeHtml +
