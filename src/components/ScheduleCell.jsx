@@ -37,7 +37,8 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
   const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
   // Sick overrides the day: cell reads as "not here", work row is struck through
   // but still visible for audit.
-  const hasSick = visibleEvents.some(ev => ev.type === 'sick');
+  const sickEvent = visibleEvents.find(ev => ev.type === 'sick');
+  const hasSick = !!sickEvent;
   const isHoliday = isStatHoliday(date);
   const shading = getAvailabilityShading(availability, storeHours);
   const isFullyUnavailable = !availability.available;
@@ -110,9 +111,9 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
                 </div>
               )}
             </div>
-            {hasSick && visibleEvents.find(ev => ev.type === 'sick')?.note ? (
-              <span className="text-xs italic truncate block" style={{ color: THEME.text.muted }} title={visibleEvents.find(ev => ev.type === 'sick').note}>
-                {visibleEvents.find(ev => ev.type === 'sick').note}
+            {hasSick && sickEvent?.note ? (
+              <span className="text-xs italic truncate block" style={{ color: THEME.text.muted }} title={sickEvent?.note}>
+                {sickEvent?.note}
               </span>
             ) : (
               <div className={`flex w-full min-w-0 items-center justify-between ${!(labelText || hasEvents) ? 'mt-auto' : ''}`}>

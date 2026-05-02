@@ -355,7 +355,8 @@ export const MobileAdminScheduleGrid = ({
                     const firstEvent = hasEvents ? cellEvents[0] : null;
                     const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
                     const eventOnly = !shift && hasEvents;
-                    const hasSick = cellEvents.some(ev => ev.type === 'sick');
+                    const sickEvent = cellEvents.find(ev => ev.type === 'sick');
+                    const hasSick = !!sickEvent;
 
                     const approvedTimeOff = approvedTimeOffSet?.has(`${emp.email}-${dateStr}`) || false;
 
@@ -415,9 +416,9 @@ export const MobileAdminScheduleGrid = ({
                                   {hasEvents && !hasSick && <EventGlyphPill events={cellEvents} size="sm" />}
                                 </div>
                               ) : null}
-                              {hasSick && cellEvents.find(ev => ev.type === 'sick')?.note ? (
-                                <span className="italic truncate block" style={{ color: THEME.text.muted, fontSize: '9px' }} title={cellEvents.find(ev => ev.type === 'sick').note}>
-                                  {cellEvents.find(ev => ev.type === 'sick').note}
+                              {hasSick && sickEvent?.note ? (
+                                <span className="italic truncate block" style={{ color: THEME.text.muted, fontSize: '9px' }} title={sickEvent?.note}>
+                                  {sickEvent?.note}
                                 </span>
                               ) : (
                                 <>

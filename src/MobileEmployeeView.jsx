@@ -285,7 +285,8 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                     const role = shift ? ROLES_BY_ID[shift.role] : null;
                     const isTitled = hasTitle(emp);
                     const isOwnShift = emp.id === loggedInUser.id;
-                    const hasSick = cellEvents.some(ev => ev.type === 'sick');
+                    const sickEvent = cellEvents.find(ev => ev.type === 'sick');
+                    const hasSick = !!sickEvent;
 
                     return (
                       <td key={i} style={{
@@ -307,9 +308,9 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                           {hasSick && !shift ? (
                             <div className="flex flex-col items-center justify-center h-full">
                               <span style={{ color: THEME.text.muted, fontSize: '9px', fontWeight: 600 }}>Sick</span>
-                              {cellEvents.find(ev => ev.type === 'sick')?.note && (
-                                <span className="italic truncate block" style={{ color: THEME.text.muted, fontSize: '8px', maxWidth: '100%', padding: '0 2px' }} title={cellEvents.find(ev => ev.type === 'sick').note}>
-                                  {cellEvents.find(ev => ev.type === 'sick').note}
+                              {sickEvent?.note && (
+                                <span className="italic truncate block" style={{ color: THEME.text.muted, fontSize: '8px', maxWidth: '100%', padding: '0 2px' }} title={sickEvent?.note}>
+                                  {sickEvent?.note}
                                 </span>
                               )}
                             </div>
@@ -332,9 +333,9 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                                 )}
                                 {hasEvents && !hasSick && <EventGlyphPill events={cellEvents} size="sm" />}
                               </div>
-                              {hasSick && cellEvents.find(ev => ev.type === 'sick')?.note ? (
-                                <span className="italic truncate block" style={{ color: THEME.text.muted, fontSize: '9px' }} title={cellEvents.find(ev => ev.type === 'sick').note}>
-                                  {cellEvents.find(ev => ev.type === 'sick').note}
+                              {hasSick && sickEvent?.note ? (
+                                <span className="italic truncate block" style={{ color: THEME.text.muted, fontSize: '9px' }} title={sickEvent?.note}>
+                                  {sickEvent?.note}
                                 </span>
                               ) : (
                                 /* Row 2: time + task star (own shift only) */
