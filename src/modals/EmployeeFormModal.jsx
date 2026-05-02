@@ -172,8 +172,8 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
                   </span>
                   <button
                     onClick={() => setFormData({ ...formData, active: !formData.active })}
-                    disabled={formData.active && (isEditingSelf || isEditingOwner)}
-                    title={formData.active && isEditingSelf ? 'You cannot deactivate your own account' : formData.active && isEditingOwner ? 'The owner account cannot be deactivated' : ''}
+                    disabled={formData.active && (isEditingSelf || isEditingOwner || formData.isAdmin)}
+                    title={formData.active && isEditingSelf ? 'You cannot deactivate your own account' : formData.active && isEditingOwner ? 'The owner account cannot be deactivated' : formData.active && formData.isAdmin ? 'Admin accounts cannot be deactivated. Demote to Staff first.' : ''}
                     className="text-xs px-2 py-0.5 rounded disabled:opacity-40 disabled:cursor-not-allowed"
                     style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.primary }}>
                     {formData.active ? 'Set Inactive' : 'Set Active'}

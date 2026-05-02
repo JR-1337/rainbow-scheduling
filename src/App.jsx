@@ -832,6 +832,10 @@ export default function App() {
         showToast('error', 'The owner account cannot be deactivated.', 6000);
         return false;
       }
+      if (editingEmp.isAdmin) {
+        showToast('error', 'Admin accounts cannot be deactivated. Demote to Staff first.', 6000);
+        return false;
+      }
       const futureShifts = getFutureShiftDates(e.id, shifts);
       if (futureShifts.length > 0) {
         showToast('error', formatFutureShiftsBlockMessage('deactivate', e.name, futureShifts), 8000);
@@ -883,6 +887,10 @@ export default function App() {
     }
     if (emp.isOwner) {
       showToast('error', 'The owner account cannot be removed.', 6000);
+      return false;
+    }
+    if (emp.isAdmin) {
+      showToast('error', 'Admin accounts cannot be removed. Demote to Staff first.', 6000);
       return false;
     }
 
