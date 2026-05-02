@@ -110,12 +110,28 @@ Each Read drops from ~2-3k tokens to ~200-500 tokens (offset+limit on marker lin
 
 Recall trade -- expected slight improvement, NOT regression. Argument: focused looking + map-data-first evidence gives the agent stronger signal per investigation step, where today's run wandered through unrelated files. The "demote to J when uncertain" rule provides honest fallback rather than fishing across files.
 
-### Verdict — pending re-test
+### Verdict — verified 2026-05-01 (s048)
 
-Next `/audit` run measures whether v5 stays under cap. If breach repeats:
+Re-test on the same 86-file scope landed at **70,163 tokens, 52 tool uses, ~25 findings**. Comparison to the v4-attempt that triggered v5:
+
+| Metric | v4 attempt (failed) | v5 (verified) | Delta |
+|---|---|---|---|
+| Tokens (Stage 2) | 127k (breach at 75k cap) | 70k (under 100k soft, 150k hard) | -45% |
+| Reads | 27 | ~10 (self-throttled at "8 reads" after C category checkpoint) | -63% |
+| Findings | ~10 visible (truncated output) | ~25 across D/E/F/H/I/J/L | +150% |
+| Output written to disk | No (returned text only, truncated) | Yes (`inventory.md` 14.4 KB) | strict win |
+
+The agent self-throttled correctly per Read Discipline rule 5 -- it reported `[budget: ~35k used, 8 reads]` after C category and stayed disciplined through to L. No file Read more than once. Map-data-first evidence composed `old: <quote>` directly from `marker_index` context for the bulk of findings.
+
+Strict improvement on three axes simultaneously: cost (-45%), recall (+150%), persistence (now writes to disk). Locked.
+
+Next-tier optimization (if a future codebase-growth pass breaches the new 150k cap):
+
 - Reduce hits-per-file cap from 5 to 3
 - Reduce context per hit from 200 chars to 120 chars (single line)
-- Or: split inventory into 2 passes by category cluster (security+correctness vs perf+a11y+structural)
+- Split inventory into 2 passes by category cluster (security+correctness vs perf+a11y+structural)
+
+Don't preemptively apply these; v5 has headroom.
 
 ### Why no specialists
 
