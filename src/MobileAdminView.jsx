@@ -510,6 +510,7 @@ export const MobileAnnouncementPanel = ({
       <div className="space-y-2">
         <input
           type="text"
+          aria-label="Announcement subject"
           value={localAnn.subject}
           onChange={e => setLocalAnn({ ...localAnn, subject: e.target.value })}
           placeholder="Subject (optional)"

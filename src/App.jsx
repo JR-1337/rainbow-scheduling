@@ -221,7 +221,6 @@ export default function App() {
   // If the token is stale, loadDataFromBackend will surface AUTH_EXPIRED and the
   // callback above will bounce us to the login screen.
   const didBootstrapRef = useRef(false);
-  // guardedMutation moved to hooks/useGuardedMutation.js
   const guardedMutation = useGuardedMutation(showToast);
 
   // PK editor: unified handler for PKModal (CREATE + REMOVE modes).
@@ -1609,7 +1608,7 @@ export default function App() {
           {/* Row 2: Period nav centered */}
           <div className="flex items-center justify-center px-3 pb-2">
             <div className="flex items-center gap-1.5">
-              <button onClick={() => setPeriodIndex(periodIndex - 1)} className="p-1 rounded" style={{ color: THEME.text.secondary }}>
+              <button aria-label="Previous pay period" onClick={() => setPeriodIndex(periodIndex - 1)} className="p-1 rounded" style={{ color: THEME.text.secondary }}>
                 <ChevronLeft size={16} />
               </button>
               <div className="text-center">
@@ -1618,7 +1617,7 @@ export default function App() {
                 {periodIndex > CURRENT_PERIOD_INDEX && <p className="font-medium" style={{ color: THEME.accent.purple, fontSize: '10px', marginTop: 1 }}>Future</p>}
                 {periodIndex < CURRENT_PERIOD_INDEX && <p className="font-medium" style={{ color: THEME.text.muted, fontSize: '10px', marginTop: 1 }}>Past</p>}
               </div>
-              <button onClick={() => setPeriodIndex(periodIndex + 1)} className="p-1 rounded" style={{ color: THEME.text.secondary }}>
+              <button aria-label="Next pay period" onClick={() => setPeriodIndex(periodIndex + 1)} className="p-1 rounded" style={{ color: THEME.text.secondary }}>
                 <ChevronRight size={16} />
               </button>
             </div>
