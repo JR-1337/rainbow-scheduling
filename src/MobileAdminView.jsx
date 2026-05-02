@@ -530,7 +530,8 @@ export const MobileAnnouncementPanel = ({
       
       <div className="flex justify-between mt-2 pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
         {localAnn.message ? (
-          <button 
+          <button
+            type="button"
             onClick={() => { setLocalAnn({ subject: '', message: '' }); onClear(); }}
             className="text-xs px-2 py-1 rounded"
             style={{ color: THEME.status.error }}
@@ -540,6 +541,7 @@ export const MobileAnnouncementPanel = ({
           </button>
         ) : <div />}
         <button
+          type="button"
           onClick={() => { onAnnouncementChange(localAnn); onSave(localAnn); }}
           disabled={!hasChanges || isSaving}
           className="text-xs px-3 py-1 rounded-lg font-medium flex items-center gap-1 disabled:opacity-50"
@@ -579,7 +581,7 @@ export const MobileEmployeeQuickView = ({ isOpen, onClose, employee }) => {
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: THEME.text.muted }}><X size={16} /></button>
+          <button type="button" aria-label="Close" onClick={onClose} className="p-2 rounded-lg" style={{ color: THEME.text.muted }}><X size={16} /></button>
         </div>
         
         <div className="p-4 space-y-1.5">

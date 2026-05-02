@@ -146,7 +146,7 @@ export const MobileAnnouncementPopup = ({ isOpen, onClose, announcement }) => {
           <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: THEME.accent.blue }}>
             📢 {announcement.subject || 'Announcement'}
           </h3>
-          <button onClick={onClose} className="p-2 rounded-lg" style={{ color: THEME.text.muted }}><X size={16} /></button>
+          <button type="button" aria-label="Close" onClick={onClose} className="p-2 rounded-lg" style={{ color: THEME.text.muted }}><X size={16} /></button>
         </div>
         <div className="p-4 max-h-[60vh] overflow-y-auto">
           <div className="text-sm whitespace-pre-wrap" style={{ color: THEME.text.primary, lineHeight: 1.6 }}>

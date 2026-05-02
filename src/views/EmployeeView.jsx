@@ -49,7 +49,8 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
   const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
   // Sick overrides the day: cell reads as "not here", work row is struck through
   // but still visible. Parity with ScheduleCell + MobileAdminScheduleGrid.
-  const hasSick = visibleEvents.some(ev => ev.type === 'sick');
+  const sickEvent = visibleEvents.find(ev => ev.type === 'sick');
+  const hasSick = !!sickEvent;
 
   return (
     <>
@@ -63,9 +64,9 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
         {hasSick && !shift ? (
           <div className="p-1.5 h-full flex flex-col items-center justify-center">
             <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>Sick</span>
-            {visibleEvents.find(ev => ev.type === 'sick')?.note && (
-              <span className="italic truncate block mt-0.5" style={{ color: THEME.text.muted, fontSize: '9px' }} title={visibleEvents.find(ev => ev.type === 'sick').note}>
-                {visibleEvents.find(ev => ev.type === 'sick').note}
+            {sickEvent?.note && (
+              <span className="italic truncate block mt-0.5" style={{ color: THEME.text.muted, fontSize: '9px' }} title={sickEvent?.note}>
+                {sickEvent?.note}
               </span>
             )}
           </div>
@@ -86,9 +87,9 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
               ) : <span className="min-w-0 flex-1" />}
               {hasEvents && !hasSick && <EventGlyphPill events={visibleEvents} size="md" />}
             </div>
-            {hasSick && visibleEvents.find(ev => ev.type === 'sick')?.note ? (
-              <span className="text-xs italic truncate block" style={{ color: THEME.text.muted }} title={visibleEvents.find(ev => ev.type === 'sick').note}>
-                {visibleEvents.find(ev => ev.type === 'sick').note}
+            {hasSick && sickEvent?.note ? (
+              <span className="text-xs italic truncate block" style={{ color: THEME.text.muted }} title={sickEvent?.note}>
+                {sickEvent?.note}
               </span>
             ) : (
               /* Row 2: time + (task star if own shift) */
@@ -375,6 +376,8 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
           <div className="flex items-center justify-center px-3 pb-2">
             <div className="flex items-center gap-1.5">
               <button
+                type="button"
+                aria-label="Previous period"
                 onClick={() => onPeriodChange && onPeriodChange(periodIndex - 1)}
                 className="p-1 rounded"
                 style={{ color: THEME.text.secondary }}
@@ -390,6 +393,8 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
                 {periodIndex < CURRENT_PERIOD_INDEX && <p className="font-medium" style={{ color: THEME.text.muted, fontSize: '10px', marginTop: 1 }}>Past</p>}
               </div>
               <button
+                type="button"
+                aria-label="Next period"
                 onClick={() => onPeriodChange && onPeriodChange(periodIndex + 1)}
                 className="p-1 rounded"
                 style={{ color: THEME.text.secondary }}
