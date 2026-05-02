@@ -692,7 +692,9 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
 
             {/* Period Navigation */}
             <div className="flex items-center gap-2">
-              <button 
+              <button
+                type="button"
+                aria-label="Previous period"
                 onClick={() => onPeriodChange && onPeriodChange(periodIndex - 1)}
                 className="p-1 rounded hover:bg-black/5"
                 style={{ color: THEME.text.secondary }}
@@ -705,7 +707,9 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
                 {periodIndex > CURRENT_PERIOD_INDEX && <p className="text-xs" style={{ color: THEME.accent.purple }}>Future Period</p>}
                 {periodIndex < CURRENT_PERIOD_INDEX && <p className="text-xs" style={{ color: THEME.text.muted }}>Past Period</p>}
               </div>
-              <button 
+              <button
+                type="button"
+                aria-label="Next period"
                 onClick={() => onPeriodChange && onPeriodChange(periodIndex + 1)}
                 className="p-1 rounded hover:bg-black/5"
                 style={{ color: THEME.text.secondary }}
