@@ -50,6 +50,13 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-05-02 (s055) -- Default password switches from emp-XXX to FirstnameL, case-insensitive at first login
+
+Decision: New employees + admin password resets generate `FirstnameL` (first name + last initial) instead of the row-indexed `emp-XXX`. Single-word names use the whole word; hyphenated last names take the first segment's initial; collisions append a digit (`JohnR`, `JohnR2`). Empty/garbage names fall back to `emp-XXX`. Login is case-insensitive when `passwordChanged=false` (lowercases input before hash); user-chosen passwords stay strict. Existing rows are not migrated -- they keep their current `emp-XXX` until next admin reset. Helper duplicated frontend (preview) + backend (authoritative).
+Rationale: `emp-XXX` is opaque, tied to row index (drifts if rows reshuffle), and hard to communicate verbally. `FirstnameL` is memorable, easy to read off a phone, and survives row moves. Case-insensitive defaults survive iOS/Chromebook autocorrect on day-one logins -- a real user-blocker for 35 incoming employees who would otherwise call Sarvi about a capitalization mismatch. Keeping user-chosen passwords case-sensitive preserves the security posture for any password the employee picks themselves.
+Confidence: H -- JR-stated, build PASS 2026-05-02. Live verification pending JR's Apps Script paste-deploy.
+Evidence: backend `computeDefaultPassword_` + login lowercase branch in `backend/Code.gs` (v2.27.0); frontend `computeDefaultPassword` in `src/utils/employees.js`; live preview wired in `src/modals/EmployeeFormModal.jsx`. Reference memory `reference_default_passwords.md` updated.
+
 ## 2026-05-01 (s049) -- /audit skill v5: caps raised + augmented marker_index + Read Discipline
 
 Decision: Stage 2 inventory caps raised 50k/75k -> 100k/150k and triage caps 30k/50k -> 40k/60k. `build-map.sh` augments `marker_index` to carry `{ path, line, context }` per hit (3-line context, 200 chars cap, 5 hits per marker per file -- map size 161 KB -> 523 KB). Stage 2 Operating rules add Read Discipline as binding: no full-file Reads (Reads must use offset+limit anchored to a marker line); 30 Reads max per pass; 1 Read per file max; demote-to-J when evidence requires Read budget unavailable; self-throttle (`[budget: Nk used, M reads]` per category checkpoint, finalize at 80% of soft cap); parent slices `marker_index` per-category via `jq` before invoking the agent (agent never reads the full ~500 KB map).

@@ -2,7 +2,19 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.26.0 (admin tier 2 + title columns on Employees tab)
+ * Version: 2.27.0 (FirstnameL default-password pattern + case-insensitive default login)
+ *
+ * Changes in v2.27.0:
+ * - resetPassword + saveEmployee: default password switches from emp-XXX (row-based)
+ *   to FirstnameL (first name + last initial), e.g. "John Richmond" -> JohnR.
+ *   Single-word names use the whole word; hyphenated last names take the first
+ *   segment's initial; collisions append a digit (JohnR -> JohnR2 -> JohnR3).
+ *   Garbage/empty names fall back to emp-XXX.
+ * - login: when passwordChanged === false, the typed password is lowercased
+ *   before hashing so phone autocorrect (which capitalizes first letters)
+ *   doesn't lock employees out on day one. User-chosen passwords stay strict.
+ * - usingDefaultPassword regex extended to also detect FirstnameL-style strings
+ *   when the passwordChanged flag is missing (back-compat for legacy rows).
  *
  * Changes in v2.26.0:
  * - Employees tab gains two columns: `adminTier` (col W, '' | 'admin1' | 'admin2') and
@@ -725,10 +737,20 @@ function login(payload) {
     return { success: false, error: { code: 'AUTH_FAILED', message: 'Invalid email or password' } };
   }
 
-  const authOk = constantTimeEq_(
-    hashPassword_(String(employee.passwordSalt), pwStr),
-    String(employee.passwordHash)
+  // v2.27: when the row is still on its default password, hash the lowercased
+  // input so phone autocorrect (auto-capitalized first letter) still matches.
+  // User-chosen passwords stay strict.
+  const isOnDefault = (
+    employee.passwordChanged === false ||
+    String(employee.passwordChanged).toUpperCase() === 'FALSE' ||
+    employee.passwordChanged === undefined ||
+    employee.passwordChanged === ''
   );
+  const candidates = isOnDefault ? [pwStr.toLowerCase(), pwStr] : [pwStr];
+  const authOk = candidates.some(cand => constantTimeEq_(
+    hashPassword_(String(employee.passwordSalt), cand),
+    String(employee.passwordHash)
+  ));
 
   if (!authOk) {
     return { success: false, error: { code: 'AUTH_FAILED', message: 'Invalid email or password' } };
@@ -740,13 +762,15 @@ function login(payload) {
 
   // S41.3: passwordChanged flag is authoritative when present. Otherwise fall
   // back to the pattern-based check so sheets without the column still work.
+  // v2.27: pattern check now also matches FirstnameL-style strings (letters,
+  // optional trailing collision digit) in addition to legacy emp-XXX.
   let usingDefaultPassword;
   if (employee.passwordChanged === true || String(employee.passwordChanged).toUpperCase() === 'TRUE') {
     usingDefaultPassword = false;
   } else if (employee.passwordChanged === false || String(employee.passwordChanged).toUpperCase() === 'FALSE') {
     usingDefaultPassword = true;
   } else {
-    usingDefaultPassword = String(employee.id) === pwStr || /^emp-\d{3}$/.test(pwStr);
+    usingDefaultPassword = String(employee.id) === pwStr || /^emp-\d{3}$/.test(pwStr) || /^[A-Za-z]+\d*$/.test(pwStr);
   }
 
   return {
@@ -820,10 +844,35 @@ function changePassword(payload) {
   return { success: true, data: { message: 'Password changed successfully' } };
 }
 
-/**
- * ★ RS-24: Reset password to emp-XXX format (row-based) — Admin only
- * Row 2 = emp-001, Row 3 = emp-002, etc.
- */
+// Compute a FirstnameL default password from an employee's name, with
+// collision handling against the existing roster. Excludes the row at
+// excludeRowIndex (used by resetPassword so the target's current password
+// doesn't count as a collision against itself).
+function computeDefaultPassword_(name, employees, excludeRowIndex) {
+  const cleaned = String(name || '').trim();
+  if (!cleaned) {
+    const seq = (employees ? employees.length + 1 : 1);
+    return `emp-${String(seq).padStart(3, '0')}`;
+  }
+  const words = cleaned.split(/\s+/);
+  let base;
+  if (words.length === 1) {
+    base = words[0];
+  } else {
+    const first = words[0];
+    const last = words[words.length - 1];
+    const lastInitial = last.split('-')[0].charAt(0);
+    base = first + lastInitial;
+  }
+  const taken = (employees || [])
+    .filter(e => !e.deleted && e._rowIndex !== excludeRowIndex)
+    .map(e => String(e.password || '').toLowerCase());
+  if (!taken.includes(base.toLowerCase())) return base;
+  let i = 2;
+  while (taken.includes(`${base}${i}`.toLowerCase())) i++;
+  return `${base}${i}`;
+}
+
 function resetPassword(payload) {
   const { targetEmail } = payload;
 
@@ -837,15 +886,12 @@ function resetPassword(payload) {
     return { success: false, error: { code: 'NOT_FOUND', message: 'Employee not found' } };
   }
 
-  // _rowIndex is 1-based (row 1 = header), so row 2 = emp-001, row 3 = emp-002, etc.
-  const sequenceNum = employee._rowIndex - 1;
-  const newPassword = `emp-${String(sequenceNum).padStart(3, '0')}`;
+  const newPassword = computeDefaultPassword_(employee.name, employees, employee._rowIndex);
 
-  // S67: write hash + salt directly. Plaintext column kept so admin UI can
-  // display the default password until the user changes it.
-  // S41.3: clear passwordChanged so the user gets the default-password prompt again.
+  // Default-password hashes are computed from the lowercased value so login
+  // accepts any casing (case-insensitive default-password match).
   const salt = generateSalt_();
-  const hash = hashPassword_(salt, newPassword);
+  const hash = hashPassword_(salt, newPassword.toLowerCase());
   updateRow(CONFIG.TABS.EMPLOYEES, employee._rowIndex, {
     password: newPassword,
     passwordHash: hash,
@@ -1810,18 +1856,18 @@ function saveEmployee(payload) {
     const { password, _rowIndex, ...updateFields } = employee;
     updateRow(CONFIG.TABS.EMPLOYEES, existingEmployee._rowIndex, updateFields);
   } else {
-    // New employee — use provided password or fall back to employee ID.
-    // S67: hash + salt written immediately so the user can log in via the
-    // hash-only auth path. Plaintext column kept for admin "default password"
-    // display until the user changes it.
-    const plaintextPw = employee.password || employee.id;
+    // New employee. If admin didn't supply an explicit password, compute the
+    // FirstnameL default from the name. Default-password hashes are computed
+    // from the lowercased value so login accepts any casing.
+    const plaintextPw = employee.password || computeDefaultPassword_(employee.name, employees);
     const salt = generateSalt_();
-    const hash = hashPassword_(salt, String(plaintextPw));
+    const hash = hashPassword_(salt, String(plaintextPw).toLowerCase());
     const employeeToSave = {
       ...employee,
       password: plaintextPw,
       passwordHash: hash,
-      passwordSalt: salt
+      passwordSalt: salt,
+      passwordChanged: false
     };
     appendRow(CONFIG.TABS.EMPLOYEES, employeeToSave);
   }

@@ -44,6 +44,34 @@ export function formatFutureShiftsBlockMessage(verb, name, futureDates) {
   return `Cannot ${verb}: ${name} has ${futureDates.length} future shift(s): ${formatted}${moreText}. Remove or reassign shifts first.`;
 }
 
+// Mirrors backend computeDefaultPassword_ in backend/Code.gs. Pure preview;
+// backend is authoritative on save. Pattern: FirstnameL with collision digits.
+// Single-word: whole word. Hyphenated last: first segment's initial. Empty: emp-XXX.
+export function computeDefaultPassword(name, employees, excludeId) {
+  const cleaned = String(name || '').trim();
+  if (!cleaned) {
+    const seq = (employees ? employees.length + 1 : 1);
+    return `emp-${String(seq).padStart(3, '0')}`;
+  }
+  const words = cleaned.split(/\s+/);
+  let base;
+  if (words.length === 1) {
+    base = words[0];
+  } else {
+    const first = words[0];
+    const last = words[words.length - 1];
+    const lastInitial = last.split('-')[0].charAt(0);
+    base = first + lastInitial;
+  }
+  const taken = (employees || [])
+    .filter(e => !e.deleted && e.id !== excludeId)
+    .map(e => String(e.password || '').toLowerCase());
+  if (!taken.includes(base.toLowerCase())) return base;
+  let i = 2;
+  while (taken.includes(`${base}${i}`.toLowerCase())) i++;
+  return `${base}${i}`;
+}
+
 export function filterSchedulableEmployees(employees) {
   return employees
     .filter(e => e.active && !e.deleted && !e.isOwner)

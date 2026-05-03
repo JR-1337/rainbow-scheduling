@@ -5,6 +5,7 @@ import { ROLES } from '../constants';
 import { apiCall } from '../utils/api';
 import { Modal, GradientButton, Input } from '../components/primitives';
 import { hasTitle } from '../utils/employeeRender';
+import { computeDefaultPassword } from '../utils/employees';
 export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null, currentUser = null, showToast, suggestedPassword = '', employees = [] }) => {
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   // Availability is the outer eligibility window, not the booking window.
@@ -18,10 +19,18 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
   const [formData, setFormData] = useState(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', adminTier: '', title: '', availability: defaultAvail });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [password, setPassword] = useState(suggestedPassword);
+  const [pwTouched, setPwTouched] = useState(false);
   const [errors, setErrors] = useState({});
   const [displayedPassword, setDisplayedPassword] = useState(employee?.password || '');
 
-  useEffect(() => { setFormData(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', adminTier: '', title: '', availability: defaultAvail }); setShowDeleteConfirm(false); setPassword(suggestedPassword); setErrors({}); setDisplayedPassword(employee?.password || ''); }, [employee, isOpen]);
+  useEffect(() => { setFormData(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', adminTier: '', title: '', availability: defaultAvail }); setShowDeleteConfirm(false); setPassword(suggestedPassword); setPwTouched(false); setErrors({}); setDisplayedPassword(employee?.password || ''); }, [employee, isOpen]);
+
+  // Live-preview the default password from the typed name (create mode only,
+  // until admin manually edits the password field).
+  useEffect(() => {
+    if (employee || pwTouched) return;
+    setPassword(computeDefaultPassword(formData.name, employees));
+  }, [formData.name, employee, pwTouched, employees]);
 
   const isEditingSelf = employee && currentUser && employee.email === currentUser.email;
   const isEditingOwner = employee?.isOwner === true;
@@ -123,8 +132,8 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
           <Input label="Address" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
           {!employee && (
             <div>
-              <Input label="Initial Password" value={password} onChange={e => setPassword(e.target.value)} />
-              <p className="text-xs mt-0.5" style={{ color: THEME.text.muted }}>Suggested format. Employee can change this after first login.</p>
+              <Input label="Initial Password" value={password} onChange={e => { setPassword(e.target.value); setPwTouched(true); }} />
+              <p className="text-xs mt-0.5" style={{ color: THEME.text.muted }}>Auto-fills from name (FirstnameL). Case-insensitive at first login. Employee changes it after.</p>
             </div>
           )}
 

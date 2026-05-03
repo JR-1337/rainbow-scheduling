@@ -2060,7 +2060,6 @@ export default function App() {
           employee={editingEmp}
           currentUser={currentUser}
           showToast={showToast}
-          suggestedPassword={editingEmp ? undefined : `emp-${String(employees.length + 1).padStart(3, '0')}`}
           employees={employees}
         />
 
@@ -2565,7 +2564,7 @@ export default function App() {
         </div>
       </main>
       
-      <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} suggestedPassword={editingEmp ? undefined : `emp-${String(employees.length + 1).padStart(3, '0')}`} employees={employees} />
+      <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} employees={employees} />
       {editingShift && (() => {
         const prior = new Date(editingShift.date); prior.setDate(prior.getDate() - 1);
         const priorStreak = computeConsecutiveWorkDayStreak(
