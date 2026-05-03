@@ -2,6 +2,14 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.29.1 (Hotfix: changePassword case-fold for default-password users)
+ *
+ * Changes in v2.29.1 (hotfix between Batch 2 and Batch 3):
+ * - changePassword (self-path): mirror login's [lowercased, original] candidate
+ *   array when employee.passwordChanged is false. Closes the Set-Your-Password
+ *   modal blocker -- resetPassword stores hash(salt, default.toLowerCase()) so
+ *   the cased typed value never matched and every first-login was stuck.
+ *
  * Version: 2.29.0 (Batch 2: data correctness + email case-insensitivity)
  *
  * Changes in v2.29.0 (Batch 2 of audit-fixes-2026-05-02):
@@ -873,10 +881,22 @@ function changePassword(payload) {
     if (!employee.passwordHash || !employee.passwordSalt) {
       return { success: false, error: { code: 'AUTH_FAILED', message: 'Current password is incorrect' } };
     }
-    const currentOk = constantTimeEq_(
-      hashPassword_(String(employee.passwordSalt), String(currentPassword)),
-      String(employee.passwordHash)
+    // v2.29.1: mirror login's case-insensitive default-password match. resetPassword
+    // stores hash(salt, default.toLowerCase()), so a passwordChanged=false employee
+    // cannot complete the Set-Your-Password modal unless we accept the lowercased
+    // currentPassword as well. Strict once they've changed it.
+    const currentStr = String(currentPassword);
+    const isOnDefault = (
+      employee.passwordChanged === false ||
+      String(employee.passwordChanged).toUpperCase() === 'FALSE' ||
+      employee.passwordChanged === undefined ||
+      employee.passwordChanged === ''
     );
+    const currentCandidates = isOnDefault ? [currentStr.toLowerCase(), currentStr] : [currentStr];
+    const currentOk = currentCandidates.some(cand => constantTimeEq_(
+      hashPassword_(String(employee.passwordSalt), cand),
+      String(employee.passwordHash)
+    ));
     if (!currentOk) {
       return { success: false, error: { code: 'AUTH_FAILED', message: 'Current password is incorrect' } };
     }
