@@ -2,11 +2,19 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.30.1 (Hotfix: align withDocumentLock_ timeout with batchSaveShifts)
+ *
+ * Changes in v2.30.1:
+ * - withDocumentLock_ tryLock 5000ms -> 10000ms. Both this helper and
+ *   batchSaveShifts grab LockService.getDocumentLock() (same instance), so
+ *   asymmetric timeouts meant a 5-10s bulk save would always starve a
+ *   concurrent approve. Symmetric 10s removes that edge case.
+ *
  * Version: 2.30.0 (Batch 3: TOCTOU concurrency hardening)
  *
  * Changes in v2.30.0 (Batch 3 of audit-fixes-2026-05-02):
  * - withDocumentLock_(fn, errorContext) helper wraps fn() in a document
- *   lock with 5s tryLock. Returns CONCURRENT_EDIT cleanly on contention.
+ *   lock with 10s tryLock. Returns CONCURRENT_EDIT cleanly on contention.
  * - 16 state-mutating request handlers (time-off / shift-offer / shift-swap
  *   approve / deny / revoke / cancel / accept / decline / reject) now wrap
  *   their read+check+write blocks in withDocumentLock_. Re-fetch happens
@@ -598,15 +606,19 @@ function bustSheetCache_(tabName) {
 }
 
 // v2.30: TOCTOU guard for state-mutating handlers. Wraps fn() in a document
-// lock with a 5s tryLock; clean CONCURRENT_EDIT response on contention.
+// lock with a 10s tryLock; clean CONCURRENT_EDIT response on contention.
 // fn() is expected to return either {success: true, ...} or {success: false, ...}.
 // verifyAuth() must be called OUTSIDE this wrapper (it's a read-only check and
 // putting it inside increases lock hold time unnecessarily).
 // LockService.getDocumentLock() is non-reentrant -- never call withDocumentLock_
 // from inside a fn that is already inside withDocumentLock_.
+// v2.30.1: 5000ms -> 10000ms so the helper waits as long as batchSaveShifts'
+// own tryLock. Both grab the same LockService.getDocumentLock() instance, so
+// matching the budget removes the asymmetric-timeout edge case where a long
+// bulk save would always starve a concurrent approve.
 function withDocumentLock_(fn, errorContext) {
   const lock = LockService.getDocumentLock();
-  if (!lock.tryLock(5000)) {
+  if (!lock.tryLock(10000)) {
     return {
       success: false,
       error: {
