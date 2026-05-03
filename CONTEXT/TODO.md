@@ -54,6 +54,7 @@ vermilion. soliton.
 
 ## Blocked
 
+- **H3 chunkedBatchSave concurrent-saves clobber risk (audit deferred-to-migration)** -- when two admins both run a >15-shift save concurrently, each chunk acquires its own document lock, so the final chunk's `allShiftKeys` purge can delete the other admin's already-landed shifts. At OTR with one admin1, hit-rate is low. Real fix requires a server-side session ID coordinating across chunks; too invasive for Apps Script. Defer to migration. -- since 2026-05-03
 - iPad print preview side-by-side -- since 2026-04-26
 - 089adaa N meetings + 0d3220e sick-day-event-wipe / title-clear smokes -- still need JR phone-smoke -- since 2026-04-25
 - S62 2-tab settings split + retroactive-default fix -- waiting on JR green-light -- since 2026-04-14
