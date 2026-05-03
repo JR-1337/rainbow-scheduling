@@ -2,6 +2,21 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.29.0 (Batch 2: data correctness + email case-insensitivity)
+ *
+ * Changes in v2.29.0 (Batch 2 of audit-fixes-2026-05-02):
+ * - approveShiftOffer / revokeShiftOffer / approveSwapRequest / revokeSwapRequest:
+ *   shift-row lookup now filters by type='work' to prevent meetings/PK rows
+ *   getting reassigned during a transfer/swap.
+ * - batchSaveShifts: bustSheetCache_(SHIFTS) called after the bulk update;
+ *   stale-cache window between save and other-admin re-read closed.
+ * - approveShiftOffer: validates recipient before writing approved status;
+ *   avoids state where SHIFT_CHANGES says approved but no shift transfer occurred.
+ * - login + getEmployeeByEmail + changePassword + resetPassword: email
+ *   compares lowercased on both sides; rows with mixed-case email values
+ *   become loggable. Storage is never normalized -- Sarvi@... and sarvi@...
+ *   are equivalent at every read boundary, transparently.
+ *
  * Version: 2.28.0 (Batch 1: data exposure + privilege escalation hardening)
  *
  * Changes in v2.28.0 (Batch 1 of audit-fixes-2026-05-02):
@@ -579,8 +594,11 @@ function getCachedSheetData_(tabName) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function getEmployeeByEmail(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
   const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
-  return employees.find(e => e.email === email && e.active);
+  return employees.find(e =>
+    String(e.email || '').trim().toLowerCase() === normalizedEmail && e.active
+  );
 }
 
 function isAdminUser(email) {
@@ -757,8 +775,9 @@ function login(payload) {
     return { success: false, error: { code: 'AUTH_REQUIRED', message: 'Email and password are required' } };
   }
 
+  const normalizedEmail = String(email || '').trim().toLowerCase();
   const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
-  const employee = employees.find(e => e.email === email);
+  const employee = employees.find(e => String(e.email || '').trim().toLowerCase() === normalizedEmail);
 
   if (!employee) {
     return { success: false, error: { code: 'AUTH_FAILED', message: 'Invalid email or password' } };
@@ -842,7 +861,8 @@ function changePassword(payload) {
 
   const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
   const emailToChange = targetEmail || callerEmail;
-  const employee = employees.find(e => e.email === emailToChange);
+  const normalizedTarget = String(emailToChange || '').trim().toLowerCase();
+  const employee = employees.find(e => String(e.email || '').trim().toLowerCase() === normalizedTarget);
 
   if (!employee) {
     return { success: false, error: { code: 'NOT_FOUND', message: 'Employee not found' } };
@@ -861,7 +881,8 @@ function changePassword(payload) {
       return { success: false, error: { code: 'AUTH_FAILED', message: 'Current password is incorrect' } };
     }
   } else {
-    const caller = employees.find(e => e.email === callerEmail);
+    const normalizedCaller = String(callerEmail || '').trim().toLowerCase();
+    const caller = employees.find(e => String(e.email || '').trim().toLowerCase() === normalizedCaller);
     if (!caller || (!caller.isAdmin && !caller.isOwner)) {
       return { success: false, error: { code: 'AUTH_FORBIDDEN', message: "Only administrators can change other users' passwords" } };
     }
@@ -920,7 +941,8 @@ function resetPassword(payload) {
   if (!auth.authorized) return { success: false, error: auth.error };
 
   const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
-  const employee = employees.find(e => e.email === targetEmail);
+  const normalizedTarget = String(targetEmail || '').trim().toLowerCase();
+  const employee = employees.find(e => String(e.email || '').trim().toLowerCase() === normalizedTarget);
 
   if (!employee) {
     return { success: false, error: { code: 'NOT_FOUND', message: 'Employee not found' } };
@@ -1346,6 +1368,23 @@ function approveShiftOffer(payload) {
   if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
   if (request.status !== 'awaiting_admin') return { success: false, error: { code: 'INVALID_STATUS', message: 'Offer is not awaiting admin approval' } };
 
+  // v2.29: validate recipient + shift BEFORE writing status. Avoids state where
+  // SHIFT_CHANGES says "approved" but no shift transfer happened.
+  const recipient = getEmployeeByEmail(request.recipientEmail);
+  if (!recipient) {
+    return { success: false, error: { code: 'NOT_FOUND', message: 'Recipient employee not found or no longer active' } };
+  }
+
+  const shifts = getSheetData(CONFIG.TABS.SHIFTS);
+  const shiftRow = shifts.find(s =>
+    s.employeeEmail === request.employeeEmail &&
+    s.date === request.shiftDate &&
+    (s.type || 'work') === 'work'
+  );
+  // Note: shiftRow may legitimately be missing if the shift was already deleted;
+  // approval still proceeds (the request stays in the log) but no shift transfer
+  // occurs. This matches existing behavior in the "if (shiftRow)" branch below.
+
   const now = new Date().toISOString();
   updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
     status: 'approved',
@@ -1354,12 +1393,7 @@ function approveShiftOffer(payload) {
     adminNote: note || ''
   });
 
-  const shifts = getSheetData(CONFIG.TABS.SHIFTS);
-  const shiftRow = shifts.find(s => s.employeeEmail === request.employeeEmail && s.date === request.shiftDate);
-
   if (shiftRow) {
-    const recipient = getEmployeeByEmail(request.recipientEmail);
-    if (!recipient) return { success: false, error: { code: 'NOT_FOUND', message: 'Recipient employee not found' } };
     updateRow(CONFIG.TABS.SHIFTS, shiftRow._rowIndex, {
       employeeId: recipient.id,
       employeeName: recipient.name,
@@ -1424,7 +1458,11 @@ function revokeShiftOffer(payload) {
   });
 
   const shifts = getSheetData(CONFIG.TABS.SHIFTS);
-  const shiftRow = shifts.find(s => s.employeeEmail === request.recipientEmail && s.date === request.shiftDate);
+  const shiftRow = shifts.find(s =>
+    s.employeeEmail === request.recipientEmail &&
+    s.date === request.shiftDate &&
+    (s.type || 'work') === 'work'
+  );
 
   if (shiftRow) {
     const offerer = getEmployeeByEmail(request.employeeEmail);
@@ -1611,8 +1649,16 @@ function approveSwapRequest(payload) {
   });
 
   const shifts = getSheetData(CONFIG.TABS.SHIFTS);
-  const initiatorShiftRow = shifts.find(s => s.employeeEmail === request.employeeEmail && s.date === request.initiatorShiftDate);
-  const partnerShiftRow = shifts.find(s => s.employeeEmail === request.partnerEmail && s.date === request.partnerShiftDate);
+  const initiatorShiftRow = shifts.find(s =>
+    s.employeeEmail === request.employeeEmail &&
+    s.date === request.initiatorShiftDate &&
+    (s.type || 'work') === 'work'
+  );
+  const partnerShiftRow = shifts.find(s =>
+    s.employeeEmail === request.partnerEmail &&
+    s.date === request.partnerShiftDate &&
+    (s.type || 'work') === 'work'
+  );
   const initiator = getEmployeeByEmail(request.employeeEmail);
   const partner = getEmployeeByEmail(request.partnerEmail);
 
@@ -1682,8 +1728,16 @@ function revokeSwapRequest(payload) {
   });
 
   const shifts = getSheetData(CONFIG.TABS.SHIFTS);
-  const initiatorNowOnPartnerDate = shifts.find(s => s.employeeEmail === request.employeeEmail && s.date === request.partnerShiftDate);
-  const partnerNowOnInitiatorDate = shifts.find(s => s.employeeEmail === request.partnerEmail && s.date === request.initiatorShiftDate);
+  const initiatorNowOnPartnerDate = shifts.find(s =>
+    s.employeeEmail === request.employeeEmail &&
+    s.date === request.partnerShiftDate &&
+    (s.type || 'work') === 'work'
+  );
+  const partnerNowOnInitiatorDate = shifts.find(s =>
+    s.employeeEmail === request.partnerEmail &&
+    s.date === request.initiatorShiftDate &&
+    (s.type || 'work') === 'work'
+  );
   const initiator = getEmployeeByEmail(request.employeeEmail);
   const partner = getEmployeeByEmail(request.partnerEmail);
 
@@ -2108,6 +2162,7 @@ function batchSaveShifts(payload) {
         range,
         { valueInputOption: 'USER_ENTERED' }
       );
+      bustSheetCache_(CONFIG.TABS.SHIFTS);
     }
 
     const savedCount = shifts.length;
