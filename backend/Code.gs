@@ -2,6 +2,20 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.28.0 (Batch 1: data exposure + privilege escalation hardening)
+ *
+ * Changes in v2.28.0 (Batch 1 of audit-fixes-2026-05-02):
+ * - getAllData + getEmployees: per-caller-role employee shape via
+ *   safeEmployeeForCaller_. Non-admins no longer see passwordHash, passwordSalt,
+ *   plaintext password column, or PII (phone, address, dob, rateOfPay,
+ *   adpNumber, counterPointId). Admins still get the full safe shape.
+ * - saveEmployee: explicit field allowlist (SAVE_EMPLOYEE_FIELDS_). Owner-only
+ *   fields (isAdmin, isOwner, adminTier) require caller.isOwner === true.
+ *   passwordHash / passwordSalt / password / passwordChanged silently dropped
+ *   from incoming payload -- those have dedicated handlers.
+ * - resetPassword: only the owner can reset the owner or any admin1 user.
+ *   Other admin callers can still reset admin2 and non-admin targets.
+ *
  * Version: 2.27.0 (FirstnameL default-password pattern + case-insensitive default login)
  *
  * Changes in v2.27.0:
@@ -206,6 +220,16 @@ const CONFIG = {
   ADMIN_EMAIL: 'sarvi@rainbowjeans.com' // Primary admin for notifications
 };
 
+// v2.28: explicit field allowlist for saveEmployee writes.
+// Adding a new Employees column does NOT auto-make it admin-writable;
+// extend SAVE_EMPLOYEE_FIELDS_ explicitly.
+const SAVE_EMPLOYEE_FIELDS_ = [
+  'id', 'name', 'email', 'phone', 'address', 'dob', 'active',
+  'showOnSchedule', 'availability', 'defaultShift', 'counterPointId',
+  'adpNumber', 'rateOfPay', 'employmentType', 'defaultSection', 'title'
+];
+const SAVE_EMPLOYEE_OWNER_ONLY_FIELDS_ = ['isAdmin', 'isOwner', 'adminTier'];
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // WEB APP ENTRY POINTS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -387,6 +411,22 @@ function parseSheetValues_(values) {
     rows.push(row);
   }
   return rows;
+}
+
+// v2.28: per-caller-role employee shape.
+// Always strips: _rowIndex, password, passwordHash, passwordSalt.
+// Admins (isAdmin OR isOwner) get the full safe shape including PII.
+// Non-admins get the schedule-only shape (no phone/address/dob/wage/payroll IDs).
+function safeEmployeeForCaller_(employee, callerIsAdmin) {
+  const { _rowIndex, password, passwordHash, passwordSalt, ...rest } = employee;
+  if (callerIsAdmin) return rest;
+  // Non-admin shape: only the fields needed by schedule grid / Mine view / staff list.
+  const {
+    phone, address, dob, rateOfPay, adpNumber, counterPointId,
+    passwordChanged, // backend-tracked; non-admins shouldn't see anyone's flag state
+    ...nonAdminSafe
+  } = rest;
+  return nonAdminSafe;
 }
 
 function getSheetData(tabName) {
@@ -884,6 +924,15 @@ function resetPassword(payload) {
 
   if (!employee) {
     return { success: false, error: { code: 'NOT_FOUND', message: 'Employee not found' } };
+  }
+
+  // v2.28: only the owner can reset the owner or any admin1.
+  const callerIsOwner = !!auth.employee.isOwner;
+  if (employee.isOwner === true && !callerIsOwner) {
+    return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Only the owner can reset the owner password' } };
+  }
+  if (employee.adminTier === 'admin1' && !callerIsOwner) {
+    return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Only the owner can reset an admin1 password' } };
   }
 
   const newPassword = computeDefaultPassword_(employee.name, employees, employee._rowIndex);
@@ -1748,10 +1797,11 @@ function getAllData(payload) {
     try { staffingTargetOverrides = JSON.parse(targetOverridesRow.value); } catch (e) {}
   }
 
+  const callerIsAdmin = !!(auth.employee.isAdmin || auth.employee.isOwner);
   return {
     success: true,
     data: {
-      employees: employees.map(e => { const { _rowIndex, ...rest } = e; return rest; }),
+      employees: employees.map(e => safeEmployeeForCaller_(e, callerIsAdmin)),
       shifts: shifts.map(s => { const { _rowIndex, ...rest } = s; return { ...rest, type: rest.type || 'work', note: rest.note || '' }; }),
       settings,
       announcements,
@@ -1771,7 +1821,9 @@ function getAllData(payload) {
 function getEmployees(payload) {
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
-  return { success: true, data: { employees: getSheetData(CONFIG.TABS.EMPLOYEES) } };
+  const callerIsAdmin = !!(auth.employee.isAdmin || auth.employee.isOwner);
+  const employees = getSheetData(CONFIG.TABS.EMPLOYEES).map(e => safeEmployeeForCaller_(e, callerIsAdmin));
+  return { success: true, data: { employees } };
 }
 
 function getShifts(payload) {
@@ -1849,21 +1901,37 @@ function saveEmployee(payload) {
     }
   }
 
+  // v2.28: filter incoming employee to allowlist. Owner-only fields require
+  // caller to be owner; protected credential fields are silently dropped.
+  const callerIsOwner = !!auth.employee.isOwner;
+  const filtered = {};
+  for (const key of SAVE_EMPLOYEE_FIELDS_) {
+    if (employee[key] !== undefined) filtered[key] = employee[key];
+  }
+  for (const key of SAVE_EMPLOYEE_OWNER_ONLY_FIELDS_) {
+    if (employee[key] !== undefined) {
+      if (!callerIsOwner) {
+        return { success: false, error: { code: 'AUTH_FORBIDDEN', message: `Only the owner can change ${key}` } };
+      }
+      filtered[key] = employee[key];
+    }
+  }
+
   const existingEmployee = employees.find(e => e.id === employee.id);
 
   if (existingEmployee) {
-    // Update existing — strip password so we never overwrite it here
-    const { password, _rowIndex, ...updateFields } = employee;
-    updateRow(CONFIG.TABS.EMPLOYEES, existingEmployee._rowIndex, updateFields);
+    updateRow(CONFIG.TABS.EMPLOYEES, existingEmployee._rowIndex, filtered);
   } else {
     // New employee. If admin didn't supply an explicit password, compute the
     // FirstnameL default from the name. Default-password hashes are computed
     // from the lowercased value so login accepts any casing.
-    const plaintextPw = employee.password || computeDefaultPassword_(employee.name, employees);
+    // employee.password may be admin-supplied (initial password override).
+    // Prefer it but fall through to computeDefaultPassword_ if missing.
+    const plaintextPw = employee.password || computeDefaultPassword_(filtered.name, employees);
     const salt = generateSalt_();
     const hash = hashPassword_(salt, String(plaintextPw).toLowerCase());
     const employeeToSave = {
-      ...employee,
+      ...filtered,
       password: plaintextPw,
       passwordHash: hash,
       passwordSalt: salt,

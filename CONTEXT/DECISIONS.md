@@ -50,6 +50,13 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-05-02 (s055) -- Audit-fix scope: internal-trust waiver covers deactivation, NOT auth/data-exposure
+
+Decision: The "internal threat model" waiver that allowed frontend-only deactivation guards (self/owner/admin1, shipped as commits f1efc38 / 3093c60 / 9376c7b) does NOT extend to auth-bypass, data-exposure, or privilege-escalation gaps. Backend hardening from the 2026-05-02 adversarial audit ships in Batches 1-4 of plan `audit-fixes-2026-05-02.md`. M9 (sendBrandedScheduleEmail allowlist) is dropped because pre-launch staff-email restraint is a Claude-discipline rule (memory feedback_no_staff_emails_pre_launch), not a backend gap.
+Rationale: A stolen admin token must not equal full takeover. Sarvi is trusted, but a compromised laptop / phishing / replay scenario is a different threat than insider abuse. Three classes of fix carried distinct rationale: (1) data-exposure (hash + salt + PII leak via getAllData) is a credential-theft accelerator at any scale; (2) privilege-escalation (saveEmployee no allowlist) lets any admin grant themselves owner; (3) reset-the-owner gap means admin1 can lock out the owner trivially. None are mitigated by "we trust Sarvi."
+Confidence: H -- JR-stated 2026-05-02 after triage; verification by Playwright smokes after each batch ships.
+Evidence: plan file `~/.claude/plans/audit-fixes-2026-05-02.md`; audit task abc43136c61d5e215; commits to follow.
+
 ## 2026-05-02 (s055) -- Default password switches from emp-XXX to FirstnameL, case-insensitive at first login
 
 Decision: New employees + admin password resets generate `FirstnameL` (first name + last initial) instead of the row-indexed `emp-XXX`. Single-word names use the whole word; hyphenated last names take the first segment's initial; collisions append a digit (`JohnR`, `JohnR2`). Empty/garbage names fall back to `emp-XXX`. Login is case-insensitive when `passwordChanged=false` (lowercases input before hash); user-chosen passwords stay strict. Existing rows are not migrated -- they keep their current `emp-XXX` until next admin reset. Helper duplicated frontend (preview) + backend (authoritative).
