@@ -1,18 +1,37 @@
+import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { THEME } from '../theme';
 
-/**
- * PasswordFormFields — 3-input password form used in AdminSettingsModal and ChangePasswordModal.
- *
- * Props:
- *   showCurrent        boolean — show the "Current Password" input (false on first-login flows)
- *   currentPassword    string — controlled value
- *   newPassword        string — controlled value
- *   confirmPassword    string — controlled value
- *   onChangeCurrent    function(e) — onChange for currentPassword input
- *   onChangeNew        function(e) — onChange for newPassword input
- *   onChangeConfirm    function(e) — onChange for confirmPassword input
- *   onSubmitEnter      function | undefined — Enter-key handler on confirm input only
- */
+const inputStyle = {
+  backgroundColor: THEME.bg.elevated,
+  border: `1px solid ${THEME.border.default}`,
+  color: THEME.text.primary,
+};
+
+const PasswordField = ({ visible, onToggle, value, onChange, placeholder, onKeyDown }) => (
+  <div className="relative">
+    <input
+      type={visible ? 'text' : 'password'}
+      value={value}
+      onChange={onChange}
+      onKeyDown={onKeyDown}
+      placeholder={placeholder}
+      className="w-full pl-2 pr-9 py-1.5 rounded-lg outline-none text-sm"
+      style={inputStyle}
+    />
+    <button
+      type="button"
+      onClick={onToggle}
+      tabIndex={-1}
+      aria-label={visible ? 'Hide password' : 'Show password'}
+      className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded"
+      style={{ color: THEME.text.muted, background: 'transparent' }}
+    >
+      {visible ? <EyeOff size={14} /> : <Eye size={14} />}
+    </button>
+  </div>
+);
+
 export const PasswordFormFields = ({
   showCurrent,
   currentPassword,
@@ -23,48 +42,43 @@ export const PasswordFormFields = ({
   onChangeConfirm,
   onSubmitEnter,
 }) => {
-  const inputStyle = {
-    backgroundColor: THEME.bg.elevated,
-    border: `1px solid ${THEME.border.default}`,
-    color: THEME.text.primary,
-  };
+  const [showA, setShowA] = useState(false);
+  const [showB, setShowB] = useState(false);
+  const [showC, setShowC] = useState(false);
 
   return (
     <div className="space-y-2">
       {showCurrent && (
         <div>
           <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Current Password</label>
-          <input
-            type="password"
+          <PasswordField
+            visible={showA}
+            onToggle={() => setShowA(v => !v)}
             value={currentPassword}
             onChange={onChangeCurrent}
             placeholder="Enter current password"
-            className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
-            style={inputStyle}
           />
         </div>
       )}
       <div>
         <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>New Password</label>
-        <input
-          type="password"
+        <PasswordField
+          visible={showB}
+          onToggle={() => setShowB(v => !v)}
           value={newPassword}
           onChange={onChangeNew}
           placeholder="Enter new password"
-          className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
-          style={inputStyle}
         />
       </div>
       <div>
         <label className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>Confirm Password</label>
-        <input
-          type="password"
+        <PasswordField
+          visible={showC}
+          onToggle={() => setShowC(v => !v)}
           value={confirmPassword}
           onChange={onChangeConfirm}
           placeholder="Confirm new password"
           onKeyDown={onSubmitEnter ? (e => e.key === 'Enter' && onSubmitEnter()) : undefined}
-          className="w-full px-2 py-1.5 rounded-lg outline-none text-sm"
-          style={inputStyle}
         />
       </div>
     </div>
