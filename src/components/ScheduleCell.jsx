@@ -30,7 +30,10 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
   const isTitledShift = !!shift && hasTitle(employee);
   const labelText = isTitledShift ? '' : (role?.name || '');
   const labelColor = role?.color;
-  const visibleEvents = (events || []).filter(ev => EVENT_TYPES[ev.type]);
+  // `unavailable` is a status marker, not a displayable event. It's filtered out
+  // of visibleEvents so it doesn't render as an event glyph; the cell falls
+  // through to the existing isFullyUnavailable render branch instead.
+  const visibleEvents = (events || []).filter(ev => EVENT_TYPES[ev.type] && ev.type !== 'unavailable');
   const hasEvents = visibleEvents.length > 0;
   const eventOnly = !shift && hasEvents;
   const firstEvent = hasEvents ? visibleEvents[0] : null;
@@ -39,10 +42,15 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
   // but still visible for audit.
   const sickEvent = visibleEvents.find(ev => ev.type === 'sick');
   const hasSick = !!sickEvent;
+  // Admin-set per-day unavailable override: behaves identically to default
+  // unavailability (grey pill, blocks edits) but stored as an event so the
+  // employee's recurring availability is untouched. Read from the unfiltered
+  // events list since `unavailable` is excluded from visibleEvents.
+  const hasAdminUnavailable = (events || []).some(ev => ev.type === 'unavailable');
   const isHoliday = isStatHoliday(date);
   const shading = getAvailabilityShading(availability, storeHours);
-  const isFullyUnavailable = !availability.available;
-  const hasPartial = availability.available && (shading.top > 5 || shading.bottom > 5);
+  const isFullyUnavailable = !availability.available || hasAdminUnavailable;
+  const hasPartial = availability.available && !hasAdminUnavailable && (shading.top > 5 || shading.bottom > 5);
 
   const isClickable = !isDeleted && !isLocked;
 

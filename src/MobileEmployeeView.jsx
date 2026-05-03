@@ -278,7 +278,10 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                     const dateStr = toDateKey(date);
                     const shift = shifts[`${emp.id}-${dateStr}`];
                     // Defensive: unknown event types are silently hidden.
-                    const cellEvents = (events[`${emp.id}-${dateStr}`] || []).filter(ev => EVENT_TYPES[ev.type]);
+                    const rawCellEvents = events[`${emp.id}-${dateStr}`] || [];
+                    // `unavailable` is filtered out of cellEvents (it's a status, not a displayable event)
+                    // but still counted via hasAdminUnavailable below for the cell render branch.
+                    const cellEvents = rawCellEvents.filter(ev => EVENT_TYPES[ev.type] && ev.type !== 'unavailable');
                     const hasEvents = cellEvents.length > 0;
                     const firstEvent = hasEvents ? cellEvents[0] : null;
                     const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
@@ -292,6 +295,8 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                     const isOwnShift = emp.id === loggedInUser.id;
                     const sickEvent = cellEvents.find(ev => ev.type === 'sick');
                     const hasSick = !!sickEvent;
+                    const hasAdminUnavailable = rawCellEvents.some(ev => ev.type === 'unavailable');
+                    const effectivelyUnavailable = isUnavailable || hasAdminUnavailable;
 
                     return (
                       <td key={i} style={{
@@ -307,7 +312,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                           onClick={(shift || hasEvents) && onShiftClick ? () => onShiftClick({ employee: emp, date, dateStr, shift, role, events: cellEvents }) : undefined}
                           style={{
                             cursor: (shift || hasEvents) && onShiftClick ? 'pointer' : 'default',
-                            ...computeCellStyles({ hasSick, isTimeOff, isUnavailable, isTitled, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: false }),
+                            ...computeCellStyles({ hasSick, isTimeOff, isUnavailable: effectivelyUnavailable, isTitled, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: false }),
                             height: CELL_HEIGHT - 4
                           }}
                         >
@@ -325,7 +330,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                             <div className="flex items-center justify-center h-full">
                               <span style={{ color: THEME.text.muted, fontSize: '9px' }}>Time Off</span>
                             </div>
-                          ) : isUnavailable && !shift && !hasEvents ? (
+                          ) : effectivelyUnavailable && !shift && !hasEvents ? (
                             <div className="flex items-center justify-center h-full">
                               <span style={{ color: THEME.text.muted, fontSize: '8px' }}>Unavailable</span>
                             </div>

@@ -580,13 +580,15 @@ export default function App() {
       const key = `${id}-${currentDateStrs[i]}`;
       const work = shifts[key];
       const evs = events[key];
-      const hasSick = evs && evs.some(e => e.type === 'sick');
-      if (hasSick) continue;
+      const hasOffDay = evs && evs.some(e => e.type === 'sick' || e.type === 'unavailable');
+      if (hasOffDay) continue;
       if (!evs || evs.length === 0) {
         if (work) t += computeNetHoursForShift(work);
       } else {
-        const all = work ? [work, ...evs] : evs;
-        t += computeDayUnionHours(all);
+        const visible = evs.filter(e => e.type !== 'unavailable');
+        const all = work ? [work, ...visible] : visible;
+        if (all.length > 0) t += computeDayUnionHours(all);
+        else if (work) t += computeNetHoursForShift(work);
       }
     }
     return t;
@@ -601,7 +603,7 @@ export default function App() {
       const k = `${empId}-${toDateKey(d)}`;
       const work = shiftMap[k];
       const evs = eventMap[k];
-      if (evs && evs.some(e => e.type === 'sick')) continue;
+      if (evs && evs.some(e => e.type === 'sick' || e.type === 'unavailable')) continue;
       if (!evs || evs.length === 0) {
         if (work) t += computeNetHoursForShift(work);
       } else {
@@ -697,6 +699,10 @@ export default function App() {
         const key = `${emp.id}-${dateStr}`;
 
         if (!newShifts[key]) {
+          // Skip days the admin has marked as one-off unavailable. Stored as
+          // an event so the employee's recurring availability is untouched.
+          const dayEvents = events[key] || [];
+          if (dayEvents.some(e => e.type === 'unavailable')) return;
           const shift = createShiftFromAvailability(emp, date);
           if (shift) {
             newShifts[key] = shift;
@@ -960,6 +966,17 @@ export default function App() {
   const saveShift = (s, meta = {}) => {
     const quiet = meta.quiet === true;
     const type = s.type || 'work';
+    // Block work-shift saves on days the admin has marked unavailable.
+    // Defense-in-depth — the cell click is already disabled by cell renderers,
+    // so this catches programmatic / race-condition saves only.
+    if (type === 'work' && !s.deleted) {
+      const dayEvents = events[`${s.employeeId}-${s.date}`] || [];
+      if (dayEvents.some(e => e.type === 'unavailable')) {
+        const empName = employees.find(e => e.id === s.employeeId)?.name || 'this employee';
+        showToast('error', `${empName} is marked unavailable on ${s.date}. Remove the unavailable mark first.`);
+        return;
+      }
+    }
     if (type === 'work') {
       setShifts((prevShifts) => applyShiftMutation(prevShifts, events, s).nextShifts);
     } else {
@@ -969,6 +986,7 @@ export default function App() {
       const label = type === 'meeting' ? 'Meeting'
         : type === 'pk' ? 'PK event'
         : type === 'sick' ? 'Sick day'
+        : type === 'unavailable' ? 'Unavailable mark'
         : 'Shift';
       showToast('success', `${label} ${s.deleted ? 'removed' : 'updated'} — click SAVE to keep changes`);
     }

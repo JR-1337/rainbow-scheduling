@@ -42,7 +42,8 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
   const showTaskStar = shift?.task && isOwnShift;
   const isTitledShift = !!shift && employee && hasTitle(employee);
   // Defensive: drop events with unknown type so malformed Sheet rows don't crash.
-  const visibleEvents = (events || []).filter(ev => EVENT_TYPES[ev.type]);
+  // Also exclude `unavailable` -- it's a status marker, not a displayable event.
+  const visibleEvents = (events || []).filter(ev => EVENT_TYPES[ev.type] && ev.type !== 'unavailable');
   const hasEvents = visibleEvents.length > 0;
   const eventOnly = !shift && hasEvents;
   const firstEvent = hasEvents ? visibleEvents[0] : null;
@@ -51,11 +52,16 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
   // but still visible. Parity with ScheduleCell + MobileAdminScheduleGrid.
   const sickEvent = visibleEvents.find(ev => ev.type === 'sick');
   const hasSick = !!sickEvent;
+  // Admin-set per-day unavailable: collapses the cell into the existing
+  // unavailable render path without touching default availability data.
+  // Read from unfiltered events since `unavailable` is excluded from visibleEvents.
+  const hasAdminUnavailable = (events || []).some(ev => ev.type === 'unavailable');
+  const effectivelyUnavailable = isUnavailable || hasAdminUnavailable;
 
   return (
     <>
       <div className="h-[4.5rem] rounded-lg relative overflow-hidden"
-        style={computeCellStyles({ hasSick, isTimeOff, isUnavailable, isTitled: isTitledShift, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: false })}>
+        style={computeCellStyles({ hasSick, isTimeOff, isUnavailable: effectivelyUnavailable, isTitled: isTitledShift, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: false })}>
 
         {isHoliday && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ backgroundColor: THEME.status.warning }} />}
 
@@ -74,7 +80,7 @@ const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmp
           <div className="p-1.5 h-full flex flex-col items-center justify-center">
             <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>Time Off</span>
           </div>
-        ) : isUnavailable && !shift && !hasEvents ? (
+        ) : effectivelyUnavailable && !shift && !hasEvents ? (
           <div className="p-1.5 h-full flex flex-col items-center justify-center">
             <span className="text-xs" style={{ color: THEME.text.muted, fontSize: '9px' }}>Unavailable</span>
           </div>

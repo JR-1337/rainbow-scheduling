@@ -354,19 +354,21 @@ export const MobileAdminScheduleGrid = ({
                     const shift = shifts[`${emp.id}-${dateStr}`];
                     // Defensive: unknown event types are silently hidden so a malformed
                     // Sheet row can't crash the grid.
-                    const cellEvents = (events[`${emp.id}-${dateStr}`] || []).filter(ev => EVENT_TYPES[ev.type]);
+                    const rawCellEvents = events[`${emp.id}-${dateStr}`] || [];
+                    const cellEvents = rawCellEvents.filter(ev => EVENT_TYPES[ev.type] && ev.type !== 'unavailable');
                     const hasEvents = cellEvents.length > 0;
                     const firstEvent = hasEvents ? cellEvents[0] : null;
                     const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
                     const eventOnly = !shift && hasEvents;
                     const sickEvent = cellEvents.find(ev => ev.type === 'sick');
                     const hasSick = !!sickEvent;
+                    const hasAdminUnavailable = rawCellEvents.some(ev => ev.type === 'unavailable');
 
                     const approvedTimeOff = approvedTimeOffSet?.has(`${emp.email}-${dateStr}`) || false;
 
                     const dayName = getDayName(date);
                     const avail = emp.availability?.[dayName];
-                    const isUnavailable = avail && !avail.available;
+                    const isUnavailable = (avail && !avail.available) || hasAdminUnavailable;
                     const role = shift ? ROLES_BY_ID[shift.role] : null;
                     const isTitled = hasTitle(emp);
                     const labelText = shift ? (isTitled ? '' : role?.name) : '';

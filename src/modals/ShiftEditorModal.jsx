@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Star, Trash2, Check, AlertTriangle, Thermometer, X, Plus } from 'lucide-react';
+import { Star, Trash2, Check, AlertTriangle, Thermometer, Ban, X, Plus } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES, EVENT_TYPES } from '../constants';
 import { getPKDefaultTimes, MEETING_DEFAULT_TIMES } from '../utils/eventDefaults';
@@ -105,17 +105,24 @@ export const ShiftEditorModal = ({
   const [pkDraft, setPkDraft] = useState(seedFor('pk'));
   const [pkBooked, setPkBooked] = useState(() => !!existingEvents.find(e => e.type === 'pk'));
 
-  // Sick (absence) state — immediate-save toggle, separate category.
+  // Day Status (admin-only): unifies the day-level off-states. Sick has a note
+  // input; Unavailable is pure status (no free-text). Mutually exclusive with
+  // Work/Meeting/PK booking — selecting Sick or Unavailable mutes the pills.
   const existingSick = existingEvents.find(e => e.type === 'sick');
-  const [sickActive, setSickActive] = useState(!!existingSick);
+  const existingUnavailable = existingEvents.find(e => e.type === 'unavailable');
+  const seedDayStatus = () => existingSick ? 'sick' : existingUnavailable ? 'unavailable' : 'working';
+  const [dayStatus, setDayStatus] = useState(seedDayStatus());
   const [sickNote, setSickNote] = useState(existingSick?.note || '');
+  const isSick = dayStatus === 'sick';
+  const isUnavailable = dayStatus === 'unavailable';
+  const isOffDay = isSick || isUnavailable;
 
   useEffect(() => {
     setWorkDraft(seedFor('work'));
     setMeetingDrafts(seedMeetings());
     setPkDraft(seedFor('pk'));
     setPkBooked(!!existingEvents.find(e => e.type === 'pk'));
-    setSickActive(!!existingSick);
+    setDayStatus(seedDayStatus());
     setSickNote(existingSick?.note || '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingShift, existingEvents, date, employee?.id]);
@@ -131,16 +138,17 @@ export const ShiftEditorModal = ({
   const workGross = calculateHours(workDraft.startTime, workDraft.endTime);
   const workBreakMin = computeBreakMinutes(workGross);
   const workNet = Math.max(0, workGross - workBreakMin / 60);
-  // Period projection: when sick, day contributes 0; otherwise reflect the
-  // current work draft's net delta (existing shift net replaced by new draft net).
+  // Period projection: when day is off (sick or unavailable), day contributes 0;
+  // otherwise reflect the current work draft's net delta (existing shift net
+  // replaced by new draft net).
   const existingShiftNet = existingShift ? computeNetHoursForShift(existingShift) : 0;
-  const projectedTotal = sickActive ? totalPeriodHours
+  const projectedTotal = isOffDay ? totalPeriodHours
     : hasType('work')
       ? totalPeriodHours - existingShiftNet + workNet
       : totalPeriodHours;
 
   // Compute violations on each render — cheap pure function.
-  const currentStreak = !sickActive && hasType('work') ? priorWorkStreak + 1 : 0;
+  const currentStreak = !isOffDay && hasType('work') ? priorWorkStreak + 1 : 0;
   const violations = computeViolations({
     employee,
     dateStr: toDateKey(date),
@@ -157,7 +165,7 @@ export const ShiftEditorModal = ({
   const handleSave = () => {
     const payloads = [];
     const k = toDateKey(date);
-    if (sickActive) {
+    if (isSick) {
       if (existingShift) {
         payloads.push({ employeeId: employee.id, date: k, type: 'work', deleted: true });
       }
@@ -180,7 +188,25 @@ export const ShiftEditorModal = ({
         hours: calculateHours(t.start, t.end),
       });
     }
-    if (hasType('work') && !sickActive) {
+    if (isUnavailable) {
+      if (existingShift) {
+        payloads.push({ employeeId: employee.id, date: k, type: 'work', deleted: true });
+      }
+      const t = getDefaultBookingTimes(date);
+      payloads.push({
+        employeeId: employee.id,
+        employeeName: employee.name,
+        date: k,
+        startTime: t.start,
+        endTime: t.end,
+        role: 'none',
+        task: '',
+        type: 'unavailable',
+        note: '',
+        hours: 0,
+      });
+    }
+    if (hasType('work') && !isOffDay) {
       payloads.push({
         employeeId: employee.id,
         employeeName: employee.name,
@@ -194,7 +220,7 @@ export const ShiftEditorModal = ({
         hours: calculateHours(workDraft.startTime, workDraft.endTime),
       });
     }
-    if (!sickActive) {
+    if (!isOffDay) {
       meetingDrafts.forEach(draft => {
         payloads.push({
           id: draft.id,
@@ -342,15 +368,50 @@ export const ShiftEditorModal = ({
     }
   };
 
-  const toggleSick = () => {
-    const next = !sickActive;
-    setSickActive(next);
-    if (!next) setSickNote('');
-    saveSick(next, next ? sickNote : '');
+  const saveUnavailable = (nextActive) => {
+    const k = toDateKey(date);
+    if (nextActive) {
+      const payloads = [];
+      if (existingShift) {
+        payloads.push({ employeeId: employee.id, date: k, type: 'work', deleted: true });
+      }
+      const t = getDefaultBookingTimes(date);
+      payloads.push({
+        employeeId: employee.id,
+        employeeName: employee.name,
+        date: k,
+        startTime: t.start,
+        endTime: t.end,
+        role: 'none',
+        task: '',
+        type: 'unavailable',
+        note: '',
+        hours: 0,
+      });
+      const last = payloads.length - 1;
+      payloads.forEach((p, i) => onSave(p, { quiet: i < last }));
+      setMeetingDrafts([]);
+      setPkBooked(false);
+    } else {
+      onSave({ employeeId: employee.id, date: k, type: 'unavailable', deleted: true });
+    }
+  };
+
+  // Day Status segmented control: working / sick / unavailable. Mutually
+  // exclusive. Switching off a sick/unavailable state always clears that
+  // marker; switching on commits the new marker (and clears the other).
+  const setStatus = (next) => {
+    if (next === dayStatus) return;
+    const prev = dayStatus;
+    setDayStatus(next);
+    if (prev === 'sick') { saveSick(false, ''); setSickNote(''); }
+    if (prev === 'unavailable') saveUnavailable(false);
+    if (next === 'sick') saveSick(true, sickNote);
+    if (next === 'unavailable') saveUnavailable(true);
   };
 
   const commitSickNote = () => {
-    if (sickActive && sickNote !== (existingSick?.note || '')) {
+    if (isSick && sickNote !== (existingSick?.note || '')) {
       saveSick(true, sickNote);
     }
   };
@@ -522,31 +583,45 @@ export const ShiftEditorModal = ({
         </div>
       </div>
 
-      {/* ABSENCE — own container, amber palette, pattern-interrupt vs activities. */}
+      {/* DAY STATUS — admin-only 3-state segmented control. Working = default
+          (work/meeting/PK active below). Sick/Unavailable mute the pills.
+          Sick keeps its note input; Unavailable is pure status. */}
       {isAdmin && (
         <div className="p-2 rounded-lg mb-2"
           style={{
-            backgroundColor: sickActive ? EVENT_TYPES.sick.bg : THEME.bg.tertiary,
-            border: `1px solid ${sickActive ? EVENT_TYPES.sick.border : THEME.border.default}`,
+            backgroundColor: isSick ? EVENT_TYPES.sick.bg
+              : isUnavailable ? EVENT_TYPES.unavailable.bg
+              : THEME.bg.tertiary,
+            border: `1px solid ${isSick ? EVENT_TYPES.sick.border
+              : isUnavailable ? EVENT_TYPES.unavailable.border
+              : THEME.border.default}`,
           }}>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <Thermometer size={14} style={{ color: sickActive ? EVENT_TYPES.sick.text : THEME.text.secondary }} />
-              <span className="text-xs font-medium" style={{ color: sickActive ? EVENT_TYPES.sick.text : THEME.text.primary }}>
-                {sickActive ? 'Called in sick' : 'Mark as sick'}
-              </span>
-            </div>
-            <button type="button" onClick={toggleSick}
-              role="switch"
-              aria-checked={sickActive}
-              aria-label={sickActive ? 'Unmark sick' : 'Mark sick'}
-              className="relative h-5 w-9 rounded-full transition-colors shrink-0"
-              style={{ backgroundColor: sickActive ? EVENT_TYPES.sick.border : THEME.border.default }}>
-              <span className="absolute top-0.5 block h-4 w-4 rounded-full bg-white transition-transform"
-                style={{ transform: sickActive ? 'translateX(18px)' : 'translateX(2px)' }} />
-            </button>
+          <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: THEME.text.muted }}>Day Status</p>
+          <div className="grid grid-cols-3 gap-1" role="radiogroup" aria-label="Day Status">
+            {[
+              { key: 'working', label: 'Working', icon: null, palette: { bg: THEME.accent.blue, text: 'white', border: THEME.accent.blue } },
+              { key: 'sick', label: 'Sick', icon: <Thermometer size={11} />, palette: { bg: EVENT_TYPES.sick.border, text: 'white', border: EVENT_TYPES.sick.border } },
+              { key: 'unavailable', label: 'Unavailable', icon: <Ban size={11} />, palette: { bg: THEME.text.muted, text: 'white', border: THEME.text.muted } },
+            ].map(opt => {
+              const selected = dayStatus === opt.key;
+              return (
+                <button key={opt.key} type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setStatus(opt.key)}
+                  className="px-2 py-1 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors"
+                  style={{
+                    backgroundColor: selected ? opt.palette.bg : 'transparent',
+                    color: selected ? opt.palette.text : THEME.text.muted,
+                    border: `1px ${selected ? 'solid' : 'dashed'} ${selected ? opt.palette.border : THEME.border.default}`,
+                  }}>
+                  {opt.icon}
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
           </div>
-          {sickActive && (
+          {isSick && (
             <input
               value={sickNote}
               onChange={e => setSickNote(e.target.value)}
@@ -559,8 +634,9 @@ export const ShiftEditorModal = ({
       )}
 
       {/* SCHEDULED — three peer toggles, unified palette. Tap = toggle (book or
-          unbook immediately). No focus state. Muted when sick is active. */}
-      <div className="mb-2" style={{ opacity: sickActive ? 0.5 : 1, pointerEvents: sickActive ? 'none' : 'auto' }}>
+          unbook immediately). No focus state. Muted when day is sick OR
+          admin-unavailable. */}
+      <div className="mb-2" style={{ opacity: isOffDay ? 0.5 : 1, pointerEvents: isOffDay ? 'none' : 'auto' }}>
         <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: THEME.text.muted }}>Scheduled</p>
         <div className="flex items-center gap-1 flex-wrap">
           {ACTIVITY_TYPES.map(type => {
@@ -589,7 +665,7 @@ export const ShiftEditorModal = ({
       </div>
 
       {/* Per-type edit forms — stacked, shown only for booked types. */}
-      <div style={{ opacity: sickActive ? 0.5 : 1, pointerEvents: sickActive ? 'none' : 'auto' }}>
+      <div style={{ opacity: isOffDay ? 0.5 : 1, pointerEvents: isOffDay ? 'none' : 'auto' }}>
         {hasType('work') && renderActivityForm('work')}
         {hasType('meeting') && renderMeetingsSection()}
         {hasType('pk') && renderActivityForm('pk')}
@@ -598,7 +674,7 @@ export const ShiftEditorModal = ({
       <div className="p-2 rounded-lg mb-3 grid grid-cols-2 gap-2 text-center" style={{ backgroundColor: THEME.bg.tertiary }}>
         <div>
           <span className="text-xs" style={{ color: THEME.text.muted }}>TODAY</span>
-          {sickActive || !hasType('work') ? (
+          {isOffDay || !hasType('work') ? (
             <p className="text-lg font-bold" style={{ color: THEME.accent.cyan }}>
               <AnimatedNumber value={0} decimals={1} suffix="h" />
             </p>

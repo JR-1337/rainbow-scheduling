@@ -40,6 +40,14 @@ export const EVENT_TYPES = {
     text: THEME.event.sickText,
     border: THEME.event.sickBorder,
   },
+  unavailable: {
+    id: 'unavailable',
+    label: 'Unavailable',
+    shortLabel: 'OFF',
+    bg: THEME.bg.tertiary,
+    text: THEME.text.muted,
+    border: THEME.border.subtle,
+  },
 };
 
 // Primary store contact rendered on the PDF printout. Matches backend CONFIG.ADMIN_EMAIL.
