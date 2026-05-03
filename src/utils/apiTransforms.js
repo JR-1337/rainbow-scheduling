@@ -77,6 +77,7 @@ export function partitionShiftsAndEvents(shiftData) {
       endTime,
       hours: calculateHours(startTime, endTime)
     };
+    if (!fixedShift.employeeId) return; // Defensive: rows with empty employeeId would collide on key.
     const key = `${fixedShift.employeeId}-${dateStr}`;
     const shiftType = fixedShift.type || 'work';
     if (shiftType === 'work') {

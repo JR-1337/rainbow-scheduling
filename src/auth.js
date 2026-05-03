@@ -24,11 +24,12 @@ export const setAuthToken = (token) => {
   } catch {}
 };
 
-export const clearAuth = () => {
+export const clearAuth = (reason) => {
   _token = null;
   try {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    if (reason) localStorage.setItem('rainbow_auth_clear_reason', reason);
   } catch {}
 };
 
@@ -51,8 +52,13 @@ export const setCachedUser = (user) => {
 export const setOnAuthFailure = (cb) => { _onAuthFailure = cb; };
 
 export const handleAuthError = (errorCode) => {
+  if (errorCode === 'AUTH_REQUIRED') {
+    clearAuth('account_inactive');
+    if (_onAuthFailure) _onAuthFailure(errorCode);
+    return true;
+  }
   if (errorCode === 'AUTH_EXPIRED' || errorCode === 'AUTH_INVALID') {
-    clearAuth();
+    clearAuth('session_ended');
     if (_onAuthFailure) _onAuthFailure(errorCode);
     return true;
   }

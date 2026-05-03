@@ -170,7 +170,7 @@ export default function App() {
     const set = new Set();
     for (const req of timeOffRequests) {
       if (req.status !== 'approved' || !req.email || !req.datesRequested) continue;
-      for (const d of req.datesRequested.split(',')) set.add(`${req.email}-${d}`);
+      for (const d of (typeof req.datesRequested === 'string' ? req.datesRequested : '').split(',').filter(Boolean)) set.add(`${req.email}-${d}`);
     }
     return set;
   }, [timeOffRequests]);
@@ -1001,7 +1001,7 @@ export default function App() {
   const submitTimeOffRequest = async (request) => {
     await guardedMutation('Submitting request', async () => {
     const result = await apiCall('submitTimeOffRequest', {
-      dates: request.datesRequested.split(','),
+      dates: (typeof request.datesRequested === 'string' ? request.datesRequested : '').split(',').filter(Boolean),
       reason: request.reason || ''
     });
 
@@ -1469,7 +1469,7 @@ export default function App() {
     // Check if request has any future dates
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dates = request.datesRequested.split(',');
+    const dates = (typeof request.datesRequested === 'string' ? request.datesRequested : '').split(',').filter(Boolean);
     const hasFutureDates = dates.some(d => parseLocalDate(d) >= today);
     
     if (!hasFutureDates) {

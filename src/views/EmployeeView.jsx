@@ -315,7 +315,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
     const set = new Set();
     for (const req of timeOffRequests) {
       if (req.status !== 'approved' || !req.email || !req.datesRequested) continue;
-      for (const d of req.datesRequested.split(',')) set.add(`${req.email}-${d}`);
+      for (const d of (typeof req.datesRequested === 'string' ? req.datesRequested : '').split(',').filter(Boolean)) set.add(`${req.email}-${d}`);
     }
     return set;
   }, [timeOffRequests]);

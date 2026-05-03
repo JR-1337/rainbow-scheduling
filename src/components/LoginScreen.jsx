@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { THEME } from '../theme';
 import { apiCall } from '../utils/api';
 import { setAuthToken, setCachedUser } from '../auth';
 import { ChangePasswordModal } from '../modals/ChangePasswordModal';
+
+const AUTH_CLEAR_REASON_KEY = 'rainbow_auth_clear_reason';
+
+const AUTH_CLEAR_BANNERS = {
+  account_inactive: 'Your account is no longer active. Please contact your administrator.',
+  session_ended: 'Your session ended. Please sign in again.'
+};
 
 export const LoginScreen = ({ onLogin, onLoadingComplete }) => {
   const [email, setEmail] = useState('');
@@ -11,6 +18,17 @@ export const LoginScreen = ({ onLogin, onLoadingComplete }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [authBanner, setAuthBanner] = useState('');
+
+  useEffect(() => {
+    try {
+      const reason = localStorage.getItem(AUTH_CLEAR_REASON_KEY);
+      if (reason) {
+        setAuthBanner(AUTH_CLEAR_BANNERS[reason] || 'Your session ended. Please sign in again.');
+        localStorage.removeItem(AUTH_CLEAR_REASON_KEY);
+      }
+    } catch {}
+  }, []);
 
   const [pendingUser, setPendingUser] = useState(null);
   const [showFirstLoginPassword, setShowFirstLoginPassword] = useState(false);
@@ -62,6 +80,12 @@ export const LoginScreen = ({ onLogin, onLoadingComplete }) => {
           </div>
           <p className="text-sm mt-2" style={{ color: THEME.accent.purple }}>Staff Scheduling</p>
         </div>
+
+        {authBanner && (
+          <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ color: THEME.text.primary, backgroundColor: THEME.status.warning + '33', border: `1px solid ${THEME.status.warning}` }}>
+            {authBanner}
+          </p>
+        )}
 
         <div className="mb-4">
           <label htmlFor="login-email" className="login-label block text-xs font-medium mb-1">Email</label>
