@@ -2,6 +2,14 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.30.2 (Refactor: batchSaveShifts uses withDocumentLock_ helper)
+ *
+ * Changes in v2.30.2:
+ * - batchSaveShifts now wraps its body in withDocumentLock_('saving the schedule')
+ *   instead of calling LockService.getDocumentLock() + tryLock(10000) inline.
+ *   Single source of truth for the lock + timeout + CONCURRENT_EDIT response shape.
+ *   Behavior unchanged: same instance, same 10s timeout, clean error on contention.
+ *
  * Version: 2.30.1 (Hotfix: align withDocumentLock_ timeout with batchSaveShifts)
  *
  * Changes in v2.30.1:
@@ -2217,13 +2225,9 @@ function batchSaveShifts(payload) {
   };
 
   // v2.19 perf: single Sheets.Spreadsheets.Values.update() replaces the N*deleteRow + N*updateRow/appendRow
-  // loop. One round trip to Sheets API instead of hundreds. Document-level lock serializes concurrent saves;
-  // tryLock returns a clean error code on collision rather than a bare Apps Script throw.
-  const lock = LockService.getDocumentLock();
-  if (!lock.tryLock(10000)) {
-    return { success: false, error: { code: 'CONCURRENT_EDIT', message: 'Another admin is saving the schedule. Please wait a moment and try again.' } };
-  }
-  try {
+  // loop. One round trip to Sheets API instead of hundreds. v2.30.2: lock acquisition delegated to
+  // withDocumentLock_ so the timeout (10s) and CONCURRENT_EDIT contract are owned by one helper.
+  return withDocumentLock_(() => {
     const sheet = getSheet(CONFIG.TABS.SHIFTS);
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     const existingValues = sheet.getDataRange().getValues();
@@ -2304,9 +2308,7 @@ function batchSaveShifts(payload) {
       `Bulk schedule save: ${savedCount} shift(s) written, ${deletedCountSafe} removed.`);
 
     return { success: true, data: { savedCount, deletedCount: deletedCountSafe } };
-  } finally {
-    lock.releaseLock();
-  }
+  }, 'saving the schedule');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
