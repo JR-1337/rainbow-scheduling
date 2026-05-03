@@ -5,6 +5,7 @@ import { parseLocalDate, escapeHtml } from './utils/format';
 import { toDateKey, getDayName, formatDate, formatMonthWord, getWeekNumber, formatTimeDisplay, formatTimeShort, parseTime } from './utils/date';
 import { isStatHoliday } from './utils/storeHours';
 import { TooltipButton, Modal } from './components/primitives';
+import { AdaptiveModal } from './components/AdaptiveModal';
 import { haptic, AnimatedNumber, ScheduleSkeleton, TaskStarTooltip, GradientBackground, Logo, StaffingBar } from './components/uiKit';
 import { PAY_PERIOD_START, CURRENT_PERIOD_INDEX, getPayPeriodDates } from './utils/payPeriod';
 import { matchesOfferId, matchesSwapId, errorMsg } from './utils/requests';
@@ -2576,29 +2577,46 @@ export default function App() {
         return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} weekHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={approvedTimeOffSet.has(`${editingShift.employee.email}-${toDateKey(editingShift.date)}`)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
       })()}
       {violationsPanelOpen && (
-        <Modal isOpen onClose={() => setViolationsPanelOpen(false)} title={`${allViolations.length} schedule violation${allViolations.length === 1 ? '' : 's'}`} size="md">
+        <AdaptiveModal isOpen onClose={() => setViolationsPanelOpen(false)} title={`${allViolations.length} schedule violation${allViolations.length === 1 ? '' : 's'}`}>
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {allViolations.map(({ emp, dateStr, violations }) => (
-              <button
-                key={`${emp.id}-${dateStr}`}
-                onClick={() => {
-                  setViolationsPanelOpen(false);
-                  setEditingShift({ employee: emp, date: new Date(dateStr + 'T12:00:00') });
-                }}
-                className="w-full text-left p-2 rounded-lg hover:opacity-80"
-                style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.subtle}` }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>{emp.name}</span>
-                  <span className="text-[10px]" style={{ color: THEME.text.muted }}>{dateStr}</span>
+            {!isCurrentPeriodEditMode && (
+              <p className="text-xs px-2 py-1.5 rounded" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}>
+                Edit Mode is off for this period. Toggle Edit Mode on to fix violations.
+              </p>
+            )}
+            {allViolations.map(({ emp, dateStr, violations }) => {
+              const rowStyle = { backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.subtle}` };
+              const body = (
+                <>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>{emp.name}</span>
+                    <span className="text-[10px]" style={{ color: THEME.text.muted }}>{dateStr}</span>
+                  </div>
+                  <ul className="text-[11px] space-y-0.5" style={{ color: THEME.text.secondary }}>
+                    {violations.map(v => <li key={v.rule}>• {v.detail}</li>)}
+                  </ul>
+                </>
+              );
+              return isCurrentPeriodEditMode ? (
+                <button
+                  key={`${emp.id}-${dateStr}`}
+                  onClick={() => {
+                    setViolationsPanelOpen(false);
+                    setEditingShift({ employee: emp, date: new Date(dateStr + 'T12:00:00') });
+                  }}
+                  className="w-full text-left p-2 rounded-lg hover:opacity-80"
+                  style={rowStyle}
+                >
+                  {body}
+                </button>
+              ) : (
+                <div key={`${emp.id}-${dateStr}`} className="w-full text-left p-2 rounded-lg" style={{ ...rowStyle, opacity: 0.65, cursor: 'not-allowed' }}>
+                  {body}
                 </div>
-                <ul className="text-[11px] space-y-0.5" style={{ color: THEME.text.secondary }}>
-                  {violations.map(v => <li key={v.rule}>• {v.detail}</li>)}
-                </ul>
-              </button>
-            ))}
+              );
+            })}
           </div>
-        </Modal>
+        </AdaptiveModal>
       )}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <EmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onEdit={(emp) => { setInactivePanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />

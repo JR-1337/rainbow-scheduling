@@ -120,10 +120,6 @@ export const ShiftEditorModal = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingShift, existingEvents, date, employee?.id]);
 
-  // Per-modal-session dismissal — reset when employee/day changes.
-  const [dismissedRules, setDismissedRules] = useState(new Set());
-  useEffect(() => { setDismissedRules(new Set()); }, [employee?.id, date]);
-
   const hasType = (type) => type === 'work'
     ? !!existingShift
     : type === 'meeting'
@@ -153,8 +149,6 @@ export const ShiftEditorModal = ({
     hasApprovedTimeOff,
     availability,
   });
-  const visibleViolations = violations.filter(v => !dismissedRules.has(v.rule));
-
   // Save persists the CURRENT drafts for every booked type. Booking happens on
   // tap (immediate save of defaults); Save captures edits the user made after
   // the initial book. When sick is active the reason input commits on blur,
@@ -497,9 +491,9 @@ export const ShiftEditorModal = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Shift" size="sm">
-      {visibleViolations.length > 0 && (
+      {violations.length > 0 && (
         <div className="mb-2 space-y-1.5">
-          {visibleViolations.map(v => (
+          {violations.map(v => (
             <div key={v.rule} className="p-2 rounded-lg flex items-start gap-2"
                  style={{
                    backgroundColor: (v.severity === 'error' ? THEME.status.error : THEME.status.warning) + '20',
@@ -510,14 +504,6 @@ export const ShiftEditorModal = ({
                 marginTop: 1, flexShrink: 0,
               }} />
               <p className="text-xs flex-1" style={{ color: THEME.text.primary }}>{v.detail}</p>
-              <button
-                type="button"
-                onClick={() => setDismissedRules(prev => { const n = new Set(prev); n.add(v.rule); return n; })}
-                className="flex-shrink-0 rounded p-0.5 hover:opacity-70"
-                aria-label={`Dismiss ${v.rule}`}
-              >
-                <X size={12} style={{ color: THEME.text.muted }} />
-              </button>
             </div>
           ))}
         </div>
