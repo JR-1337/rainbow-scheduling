@@ -1599,6 +1599,49 @@ export default function App() {
     />
   );
 
+  const violationsPanelEl = violationsPanelOpen && (
+    <AdaptiveModal isOpen onClose={() => setViolationsPanelOpen(false)} title={`${allViolations.length} schedule violation${allViolations.length === 1 ? '' : 's'}`}>
+      <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+        {!isCurrentPeriodEditMode && (
+          <p className="text-xs px-2 py-1.5 rounded" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}>
+            Edit Mode is off for this period. Toggle Edit Mode on to fix violations.
+          </p>
+        )}
+        {allViolations.map(({ emp, dateStr, violations }) => {
+          const rowStyle = { backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.subtle}` };
+          const body = (
+            <>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>{emp.name}</span>
+                <span className="text-[10px]" style={{ color: THEME.text.muted }}>{dateStr}</span>
+              </div>
+              <ul className="text-[11px] space-y-0.5" style={{ color: THEME.text.secondary }}>
+                {violations.map(v => <li key={v.rule}>• {v.detail}</li>)}
+              </ul>
+            </>
+          );
+          return isCurrentPeriodEditMode ? (
+            <button
+              key={`${emp.id}-${dateStr}`}
+              onClick={() => {
+                setViolationsPanelOpen(false);
+                setEditingShift({ employee: emp, date: new Date(dateStr + 'T12:00:00') });
+              }}
+              className="w-full text-left p-2 rounded-lg hover:opacity-80"
+              style={rowStyle}
+            >
+              {body}
+            </button>
+          ) : (
+            <div key={`${emp.id}-${dateStr}`} className="w-full text-left p-2 rounded-lg" style={{ ...rowStyle, opacity: 0.65, cursor: 'not-allowed' }}>
+              {body}
+            </div>
+          );
+        })}
+      </div>
+    </AdaptiveModal>
+  );
+
   // Logo click returns admin to "home": schedule tab, current pay period, week 1,
   // scrolled to top. Stateful (not a full reload) so unsaved drafts/modals the
   // admin may have in flight don't get wiped.
@@ -2051,6 +2094,9 @@ export default function App() {
 
         {/* S36 — Unified PK modal (mobile admin) */}
         {pkModalEl}
+
+        {/* Violations panel (mobile admin: triangle button on schedule tab) */}
+        {violationsPanelEl}
 
         {/* Employee Form Modal (mobile admin: reached via MobileStaffPanel) */}
         <EmployeeFormModal
@@ -2576,48 +2622,7 @@ export default function App() {
         );
         return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} weekHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={approvedTimeOffSet.has(`${editingShift.employee.email}-${toDateKey(editingShift.date)}`)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
       })()}
-      {violationsPanelOpen && (
-        <AdaptiveModal isOpen onClose={() => setViolationsPanelOpen(false)} title={`${allViolations.length} schedule violation${allViolations.length === 1 ? '' : 's'}`}>
-          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {!isCurrentPeriodEditMode && (
-              <p className="text-xs px-2 py-1.5 rounded" style={{ backgroundColor: THEME.bg.elevated, color: THEME.text.muted }}>
-                Edit Mode is off for this period. Toggle Edit Mode on to fix violations.
-              </p>
-            )}
-            {allViolations.map(({ emp, dateStr, violations }) => {
-              const rowStyle = { backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.subtle}` };
-              const body = (
-                <>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-xs" style={{ color: THEME.text.primary }}>{emp.name}</span>
-                    <span className="text-[10px]" style={{ color: THEME.text.muted }}>{dateStr}</span>
-                  </div>
-                  <ul className="text-[11px] space-y-0.5" style={{ color: THEME.text.secondary }}>
-                    {violations.map(v => <li key={v.rule}>• {v.detail}</li>)}
-                  </ul>
-                </>
-              );
-              return isCurrentPeriodEditMode ? (
-                <button
-                  key={`${emp.id}-${dateStr}`}
-                  onClick={() => {
-                    setViolationsPanelOpen(false);
-                    setEditingShift({ employee: emp, date: new Date(dateStr + 'T12:00:00') });
-                  }}
-                  className="w-full text-left p-2 rounded-lg hover:opacity-80"
-                  style={rowStyle}
-                >
-                  {body}
-                </button>
-              ) : (
-                <div key={`${emp.id}-${dateStr}`} className="w-full text-left p-2 rounded-lg" style={{ ...rowStyle, opacity: 0.65, cursor: 'not-allowed' }}>
-                  {body}
-                </div>
-              );
-            })}
-          </div>
-        </AdaptiveModal>
-      )}
+      {violationsPanelEl}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <EmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onEdit={(emp) => { setInactivePanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
       <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />
