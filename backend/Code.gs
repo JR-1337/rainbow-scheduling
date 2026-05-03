@@ -2,6 +2,18 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.30.0 (Batch 3: TOCTOU concurrency hardening)
+ *
+ * Changes in v2.30.0 (Batch 3 of audit-fixes-2026-05-02):
+ * - withDocumentLock_(fn, errorContext) helper wraps fn() in a document
+ *   lock with 5s tryLock. Returns CONCURRENT_EDIT cleanly on contention.
+ * - 16 state-mutating request handlers (time-off / shift-offer / shift-swap
+ *   approve / deny / revoke / cancel / accept / decline / reject) now wrap
+ *   their read+check+write blocks in withDocumentLock_. Re-fetch happens
+ *   inside the lock to defeat stale snapshots. Two admins clicking
+ *   approve+deny on the same request within the same window: one wins,
+ *   the loser sees CONCURRENT_EDIT or INVALID_STATUS.
+ *
  * Version: 2.29.1 (Hotfix: changePassword case-fold for default-password users)
  *
  * Changes in v2.29.1 (hotfix between Batch 2 and Batch 3):
@@ -585,6 +597,31 @@ function bustSheetCache_(tabName) {
   }
 }
 
+// v2.30: TOCTOU guard for state-mutating handlers. Wraps fn() in a document
+// lock with a 5s tryLock; clean CONCURRENT_EDIT response on contention.
+// fn() is expected to return either {success: true, ...} or {success: false, ...}.
+// verifyAuth() must be called OUTSIDE this wrapper (it's a read-only check and
+// putting it inside increases lock hold time unnecessarily).
+// LockService.getDocumentLock() is non-reentrant -- never call withDocumentLock_
+// from inside a fn that is already inside withDocumentLock_.
+function withDocumentLock_(fn, errorContext) {
+  const lock = LockService.getDocumentLock();
+  if (!lock.tryLock(5000)) {
+    return {
+      success: false,
+      error: {
+        code: 'CONCURRENT_EDIT',
+        message: `Another action is in progress${errorContext ? ` (${errorContext})` : ''}. Please wait a moment and try again.`
+      }
+    };
+  }
+  try {
+    return fn();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function getCachedSheetData_(tabName) {
   const cached = cacheGet_(tabName);
   if (cached !== null) {
@@ -1103,31 +1140,35 @@ function cancelTimeOffRequest(payload) {
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Request not found' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  if (request.employeeEmail !== callerEmail && !isAdminUser(callerEmail)) {
-    return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You can only cancel your own requests' } };
-  }
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Request not found' } };
 
-  if (request.status !== 'pending') {
-    return { success: false, error: { code: 'INVALID_STATUS', message: `Cannot cancel a request that is already ${request.status}` } };
-  }
+    if (request.employeeEmail !== callerEmail && !isAdminUser(callerEmail)) {
+      return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You can only cancel your own requests' } };
+    }
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'cancelled',
-    decidedTimestamp: now,
-    decidedBy: callerEmail
-  });
+    if (request.status !== 'pending') {
+      return { success: false, error: { code: 'INVALID_STATUS', message: `Cannot cancel a request that is already ${request.status}` } };
+    }
 
-  sendTimeOffCancelledEmail(request.employeeName, request.datesRequested.split(','));
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'cancelled',
+      decidedTimestamp: now,
+      decidedBy: callerEmail
+    });
 
-  return { success: true, data: { requestId, status: 'cancelled' } };
+    sendTimeOffCancelledEmail(request.employeeName, request.datesRequested.split(','));
+
+    return { success: true, data: { requestId, status: 'cancelled' } };
+  }, 'time-off cancel');
 }
 
 function approveTimeOffRequest(payload) {
@@ -1135,30 +1176,34 @@ function approveTimeOffRequest(payload) {
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Request not found' } };
-  if (request.status !== 'pending') {
-    const staleMsg = request.status === 'cancelled' ? 'This request has been cancelled by the employee.' :
-                     request.status === 'approved' ? 'This request has already been approved.' :
-                     request.status === 'denied' ? 'This request has already been denied.' :
-                     'This request is no longer pending (status: ' + request.status + ').';
-    return { success: false, error: { code: 'INVALID_STATUS', message: staleMsg } };
-  }
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'approved',
-    decidedTimestamp: now,
-    decidedBy: callerEmail
-  });
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Request not found' } };
+    if (request.status !== 'pending') {
+      const staleMsg = request.status === 'cancelled' ? 'This request has been cancelled by the employee.' :
+                       request.status === 'approved' ? 'This request has already been approved.' :
+                       request.status === 'denied' ? 'This request has already been denied.' :
+                       'This request is no longer pending (status: ' + request.status + ').';
+      return { success: false, error: { code: 'INVALID_STATUS', message: staleMsg } };
+    }
 
-  sendTimeOffApprovedEmail(request.employeeEmail, request.employeeName, request.datesRequested.split(','), auth.employee.name);
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'approved',
+      decidedTimestamp: now,
+      decidedBy: callerEmail
+    });
 
-  return { success: true, data: { requestId, status: 'approved', decidedTimestamp: now } };
+    sendTimeOffApprovedEmail(request.employeeEmail, request.employeeName, request.datesRequested.split(','), auth.employee.name);
+
+    return { success: true, data: { requestId, status: 'approved', decidedTimestamp: now } };
+  }, 'time-off approve');
 }
 
 function denyTimeOffRequest(payload) {
@@ -1166,31 +1211,35 @@ function denyTimeOffRequest(payload) {
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Request not found' } };
-  if (request.status !== 'pending') {
-    const staleMsg = request.status === 'cancelled' ? 'This request has been cancelled by the employee.' :
-                     request.status === 'approved' ? 'This request has already been approved.' :
-                     request.status === 'denied' ? 'This request has already been denied.' :
-                     'This request is no longer pending (status: ' + request.status + ').';
-    return { success: false, error: { code: 'INVALID_STATUS', message: staleMsg } };
-  }
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'denied',
-    decidedTimestamp: now,
-    decidedBy: callerEmail,
-    reason: reason || ''
-  });
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Request not found' } };
+    if (request.status !== 'pending') {
+      const staleMsg = request.status === 'cancelled' ? 'This request has been cancelled by the employee.' :
+                       request.status === 'approved' ? 'This request has already been approved.' :
+                       request.status === 'denied' ? 'This request has already been denied.' :
+                       'This request is no longer pending (status: ' + request.status + ').';
+      return { success: false, error: { code: 'INVALID_STATUS', message: staleMsg } };
+    }
 
-  sendTimeOffDeniedEmail(request.employeeEmail, request.employeeName, request.datesRequested.split(','), reason);
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'denied',
+      decidedTimestamp: now,
+      decidedBy: callerEmail,
+      reason: reason || ''
+    });
 
-  return { success: true, data: { requestId, status: 'denied', decidedTimestamp: now } };
+    sendTimeOffDeniedEmail(request.employeeEmail, request.employeeName, request.datesRequested.split(','), reason);
+
+    return { success: true, data: { requestId, status: 'denied', decidedTimestamp: now } };
+  }, 'time-off deny');
 }
 
 function revokeTimeOffRequest(payload) {
@@ -1198,30 +1247,34 @@ function revokeTimeOffRequest(payload) {
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Request not found' } };
-  if (request.status !== 'approved') return { success: false, error: { code: 'INVALID_STATUS', message: 'Can only revoke approved requests' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  const dates = request.datesRequested.split(',');
-  if (!anyDateInFuture(dates)) {
-    return { success: false, error: { code: 'CANNOT_REVOKE_PAST', message: 'Cannot revoke - all dates have already passed' } };
-  }
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Request not found' } };
+    if (request.status !== 'approved') return { success: false, error: { code: 'INVALID_STATUS', message: 'Can only revoke approved requests' } };
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'revoked',
-    revokedTimestamp: now,
-    revokedBy: callerEmail,
-    reason: reason || ''
-  });
+    const dates = request.datesRequested.split(',');
+    if (!anyDateInFuture(dates)) {
+      return { success: false, error: { code: 'CANNOT_REVOKE_PAST', message: 'Cannot revoke - all dates have already passed' } };
+    }
 
-  sendTimeOffRevokedEmail(request.employeeEmail, request.employeeName, dates, reason, auth.employee.name);
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'revoked',
+      revokedTimestamp: now,
+      revokedBy: callerEmail,
+      reason: reason || ''
+    });
 
-  return { success: true, data: { requestId, status: 'revoked' } };
+    sendTimeOffRevokedEmail(request.employeeEmail, request.employeeName, dates, reason, auth.employee.name);
+
+    return { success: true, data: { requestId, status: 'revoked' } };
+  }, 'time-off revoke');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1295,25 +1348,29 @@ function acceptShiftOffer(payload) {
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
-  if (request.recipientEmail !== callerEmail) return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You are not the recipient of this offer' } };
-  if (request.status !== 'awaiting_recipient') return { success: false, error: { code: 'INVALID_STATUS', message: 'This offer is no longer awaiting your response' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'awaiting_admin',
-    recipientNote: note || '',
-    recipientRespondedTimestamp: now
-  });
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
+    if (request.recipientEmail !== callerEmail) return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You are not the recipient of this offer' } };
+    if (request.status !== 'awaiting_recipient') return { success: false, error: { code: 'INVALID_STATUS', message: 'This offer is no longer awaiting your response' } };
 
-  sendOfferAcceptedEmail(request.employeeName, request.recipientName, request.shiftDate, request.shiftStart, request.shiftEnd, request.shiftRole);
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'awaiting_admin',
+      recipientNote: note || '',
+      recipientRespondedTimestamp: now
+    });
 
-  return { success: true, data: { requestId, status: 'awaiting_admin' } };
+    sendOfferAcceptedEmail(request.employeeName, request.recipientName, request.shiftDate, request.shiftStart, request.shiftEnd, request.shiftRole);
+
+    return { success: true, data: { requestId, status: 'awaiting_admin' } };
+  }, 'shift-offer accept');
 }
 
 function declineShiftOffer(payload) {
@@ -1321,25 +1378,29 @@ function declineShiftOffer(payload) {
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
-  if (request.recipientEmail !== callerEmail) return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You are not the recipient of this offer' } };
-  if (request.status !== 'awaiting_recipient') return { success: false, error: { code: 'INVALID_STATUS', message: 'This offer is no longer awaiting your response' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'recipient_rejected',
-    recipientNote: note || '',
-    recipientRespondedTimestamp: now
-  });
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
+    if (request.recipientEmail !== callerEmail) return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You are not the recipient of this offer' } };
+    if (request.status !== 'awaiting_recipient') return { success: false, error: { code: 'INVALID_STATUS', message: 'This offer is no longer awaiting your response' } };
 
-  sendOfferDeclinedEmail(request.employeeEmail, request.employeeName, request.recipientName, request.shiftDate, note);
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'recipient_rejected',
+      recipientNote: note || '',
+      recipientRespondedTimestamp: now
+    });
 
-  return { success: true, data: { requestId, status: 'recipient_rejected' } };
+    sendOfferDeclinedEmail(request.employeeEmail, request.employeeName, request.recipientName, request.shiftDate, note);
+
+    return { success: true, data: { requestId, status: 'recipient_rejected' } };
+  }, 'shift-offer decline');
 }
 
 function cancelShiftOffer(payload) {
@@ -1347,32 +1408,36 @@ function cancelShiftOffer(payload) {
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  if (request.employeeEmail !== callerEmail && !isAdminUser(callerEmail)) {
-    return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You can only cancel your own offers' } };
-  }
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
 
-  if (!['awaiting_recipient', 'awaiting_admin'].includes(request.status)) {
-    return { success: false, error: { code: 'INVALID_STATUS', message: 'This offer can no longer be cancelled' } };
-  }
+    if (request.employeeEmail !== callerEmail && !isAdminUser(callerEmail)) {
+      return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You can only cancel your own offers' } };
+    }
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'cancelled',
-    cancelledTimestamp: now
-  });
+    if (!['awaiting_recipient', 'awaiting_admin'].includes(request.status)) {
+      return { success: false, error: { code: 'INVALID_STATUS', message: 'This offer can no longer be cancelled' } };
+    }
 
-  if (request.status === 'awaiting_recipient') {
-    sendOfferCancelledEmail(request.recipientEmail, request.recipientName, request.employeeName, request.shiftDate);
-  }
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'cancelled',
+      cancelledTimestamp: now
+    });
 
-  return { success: true, data: { requestId, status: 'cancelled' } };
+    if (request.status === 'awaiting_recipient') {
+      sendOfferCancelledEmail(request.recipientEmail, request.recipientName, request.employeeName, request.shiftDate);
+    }
+
+    return { success: true, data: { requestId, status: 'cancelled' } };
+  }, 'shift-offer cancel');
 }
 
 function approveShiftOffer(payload) {
@@ -1380,50 +1445,54 @@ function approveShiftOffer(payload) {
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
-  if (request.status !== 'awaiting_admin') return { success: false, error: { code: 'INVALID_STATUS', message: 'Offer is not awaiting admin approval' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  // v2.29: validate recipient + shift BEFORE writing status. Avoids state where
-  // SHIFT_CHANGES says "approved" but no shift transfer happened.
-  const recipient = getEmployeeByEmail(request.recipientEmail);
-  if (!recipient) {
-    return { success: false, error: { code: 'NOT_FOUND', message: 'Recipient employee not found or no longer active' } };
-  }
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
+    if (request.status !== 'awaiting_admin') return { success: false, error: { code: 'INVALID_STATUS', message: 'Offer is not awaiting admin approval' } };
 
-  const shifts = getSheetData(CONFIG.TABS.SHIFTS);
-  const shiftRow = shifts.find(s =>
-    s.employeeEmail === request.employeeEmail &&
-    s.date === request.shiftDate &&
-    (s.type || 'work') === 'work'
-  );
-  // Note: shiftRow may legitimately be missing if the shift was already deleted;
-  // approval still proceeds (the request stays in the log) but no shift transfer
-  // occurs. This matches existing behavior in the "if (shiftRow)" branch below.
+    // v2.29: validate recipient + shift BEFORE writing status. Avoids state where
+    // SHIFT_CHANGES says "approved" but no shift transfer happened.
+    const recipient = getEmployeeByEmail(request.recipientEmail);
+    if (!recipient) {
+      return { success: false, error: { code: 'NOT_FOUND', message: 'Recipient employee not found or no longer active' } };
+    }
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'approved',
-    decidedTimestamp: now,
-    decidedBy: callerEmail,
-    adminNote: note || ''
-  });
+    const shifts = getSheetData(CONFIG.TABS.SHIFTS);
+    const shiftRow = shifts.find(s =>
+      s.employeeEmail === request.employeeEmail &&
+      s.date === request.shiftDate &&
+      (s.type || 'work') === 'work'
+    );
+    // Note: shiftRow may legitimately be missing if the shift was already deleted;
+    // approval still proceeds (the request stays in the log) but no shift transfer
+    // occurs. This matches existing behavior in the "if (shiftRow)" branch below.
 
-  if (shiftRow) {
-    updateRow(CONFIG.TABS.SHIFTS, shiftRow._rowIndex, {
-      employeeId: recipient.id,
-      employeeName: recipient.name,
-      employeeEmail: recipient.email
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'approved',
+      decidedTimestamp: now,
+      decidedBy: callerEmail,
+      adminNote: note || ''
     });
-  }
 
-  sendOfferApprovedEmail(request.employeeEmail, request.recipientEmail, request.employeeName, request.recipientName, request.shiftDate, request.shiftStart, request.shiftEnd, request.shiftRole);
+    if (shiftRow) {
+      updateRow(CONFIG.TABS.SHIFTS, shiftRow._rowIndex, {
+        employeeId: recipient.id,
+        employeeName: recipient.name,
+        employeeEmail: recipient.email
+      });
+    }
 
-  return { success: true, data: { requestId, status: 'approved', decidedTimestamp: now } };
+    sendOfferApprovedEmail(request.employeeEmail, request.recipientEmail, request.employeeName, request.recipientName, request.shiftDate, request.shiftStart, request.shiftEnd, request.shiftRole);
+
+    return { success: true, data: { requestId, status: 'approved', decidedTimestamp: now } };
+  }, 'shift-offer approve');
 }
 
 function rejectShiftOffer(payload) {
@@ -1431,25 +1500,29 @@ function rejectShiftOffer(payload) {
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
-  if (request.status !== 'awaiting_admin') return { success: false, error: { code: 'INVALID_STATUS', message: 'Offer is not awaiting admin approval' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'rejected',
-    decidedTimestamp: now,
-    decidedBy: callerEmail,
-    adminNote: note || ''
-  });
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
+    if (request.status !== 'awaiting_admin') return { success: false, error: { code: 'INVALID_STATUS', message: 'Offer is not awaiting admin approval' } };
 
-  sendOfferRejectedEmail(request.employeeEmail, request.recipientEmail, request.employeeName, request.recipientName, request.shiftDate, note);
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'rejected',
+      decidedTimestamp: now,
+      decidedBy: callerEmail,
+      adminNote: note || ''
+    });
 
-  return { success: true, data: { requestId, status: 'rejected', decidedTimestamp: now } };
+    sendOfferRejectedEmail(request.employeeEmail, request.recipientEmail, request.employeeName, request.recipientName, request.shiftDate, note);
+
+    return { success: true, data: { requestId, status: 'rejected', decidedTimestamp: now } };
+  }, 'shift-offer reject');
 }
 
 function revokeShiftOffer(payload) {
@@ -1457,46 +1530,50 @@ function revokeShiftOffer(payload) {
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
-  if (request.status !== 'approved') return { success: false, error: { code: 'INVALID_STATUS', message: 'Can only revoke approved offers' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  if (isDateInPast(request.shiftDate)) {
-    return { success: false, error: { code: 'CANNOT_REVOKE_PAST', message: 'Cannot revoke - shift date has already passed' } };
-  }
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Offer not found' } };
+    if (request.status !== 'approved') return { success: false, error: { code: 'INVALID_STATUS', message: 'Can only revoke approved offers' } };
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'revoked',
-    revokedTimestamp: now,
-    revokedBy: callerEmail,
-    adminNote: note || ''
-  });
+    if (isDateInPast(request.shiftDate)) {
+      return { success: false, error: { code: 'CANNOT_REVOKE_PAST', message: 'Cannot revoke - shift date has already passed' } };
+    }
 
-  const shifts = getSheetData(CONFIG.TABS.SHIFTS);
-  const shiftRow = shifts.find(s =>
-    s.employeeEmail === request.recipientEmail &&
-    s.date === request.shiftDate &&
-    (s.type || 'work') === 'work'
-  );
-
-  if (shiftRow) {
-    const offerer = getEmployeeByEmail(request.employeeEmail);
-    if (!offerer) return { success: false, error: { code: 'NOT_FOUND', message: 'Original employee not found' } };
-    updateRow(CONFIG.TABS.SHIFTS, shiftRow._rowIndex, {
-      employeeId: offerer.id,
-      employeeName: offerer.name,
-      employeeEmail: offerer.email
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'revoked',
+      revokedTimestamp: now,
+      revokedBy: callerEmail,
+      adminNote: note || ''
     });
-  }
 
-  sendOfferRevokedEmail(request.employeeEmail, request.recipientEmail, request.employeeName, request.recipientName, request.shiftDate, request.shiftStart, request.shiftEnd, note);
+    const shifts = getSheetData(CONFIG.TABS.SHIFTS);
+    const shiftRow = shifts.find(s =>
+      s.employeeEmail === request.recipientEmail &&
+      s.date === request.shiftDate &&
+      (s.type || 'work') === 'work'
+    );
 
-  return { success: true, data: { requestId, status: 'revoked' } };
+    if (shiftRow) {
+      const offerer = getEmployeeByEmail(request.employeeEmail);
+      if (!offerer) return { success: false, error: { code: 'NOT_FOUND', message: 'Original employee not found' } };
+      updateRow(CONFIG.TABS.SHIFTS, shiftRow._rowIndex, {
+        employeeId: offerer.id,
+        employeeName: offerer.name,
+        employeeEmail: offerer.email
+      });
+    }
+
+    sendOfferRevokedEmail(request.employeeEmail, request.recipientEmail, request.employeeName, request.recipientName, request.shiftDate, request.shiftStart, request.shiftEnd, note);
+
+    return { success: true, data: { requestId, status: 'revoked' } };
+  }, 'shift-offer revoke');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1569,25 +1646,29 @@ function acceptSwapRequest(payload) {
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Swap request not found' } };
-  if (request.partnerEmail !== callerEmail) return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You are not the partner in this swap' } };
-  if (request.status !== 'awaiting_partner') return { success: false, error: { code: 'INVALID_STATUS', message: 'This swap is no longer awaiting your response' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'awaiting_admin',
-    partnerNote: note || '',
-    partnerRespondedTimestamp: now
-  });
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Swap request not found' } };
+    if (request.partnerEmail !== callerEmail) return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You are not the partner in this swap' } };
+    if (request.status !== 'awaiting_partner') return { success: false, error: { code: 'INVALID_STATUS', message: 'This swap is no longer awaiting your response' } };
 
-  sendSwapAcceptedEmail(request.employeeName, request.partnerName, request);
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'awaiting_admin',
+      partnerNote: note || '',
+      partnerRespondedTimestamp: now
+    });
 
-  return { success: true, data: { requestId, status: 'awaiting_admin' } };
+    sendSwapAcceptedEmail(request.employeeName, request.partnerName, request);
+
+    return { success: true, data: { requestId, status: 'awaiting_admin' } };
+  }, 'shift-swap accept');
 }
 
 function declineSwapRequest(payload) {
@@ -1595,25 +1676,29 @@ function declineSwapRequest(payload) {
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Swap request not found' } };
-  if (request.partnerEmail !== callerEmail) return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You are not the partner in this swap' } };
-  if (request.status !== 'awaiting_partner') return { success: false, error: { code: 'INVALID_STATUS', message: 'This swap is no longer awaiting your response' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'partner_rejected',
-    partnerNote: note || '',
-    partnerRespondedTimestamp: now
-  });
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Swap request not found' } };
+    if (request.partnerEmail !== callerEmail) return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You are not the partner in this swap' } };
+    if (request.status !== 'awaiting_partner') return { success: false, error: { code: 'INVALID_STATUS', message: 'This swap is no longer awaiting your response' } };
 
-  sendSwapDeclinedEmail(request.employeeEmail, request.employeeName, request.partnerName, note);
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'partner_rejected',
+      partnerNote: note || '',
+      partnerRespondedTimestamp: now
+    });
 
-  return { success: true, data: { requestId, status: 'partner_rejected' } };
+    sendSwapDeclinedEmail(request.employeeEmail, request.employeeName, request.partnerName, note);
+
+    return { success: true, data: { requestId, status: 'partner_rejected' } };
+  }, 'shift-swap decline');
 }
 
 function cancelSwapRequest(payload) {
@@ -1621,30 +1706,34 @@ function cancelSwapRequest(payload) {
 
   const auth = verifyAuth(payload);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Swap request not found' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  if (request.employeeEmail !== callerEmail && !isAdminUser(callerEmail)) {
-    return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You can only cancel your own swap requests' } };
-  }
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Swap request not found' } };
 
-  if (!['awaiting_partner', 'awaiting_admin'].includes(request.status)) {
-    return { success: false, error: { code: 'INVALID_STATUS', message: 'This swap can no longer be cancelled' } };
-  }
+    if (request.employeeEmail !== callerEmail && !isAdminUser(callerEmail)) {
+      return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You can only cancel your own swap requests' } };
+    }
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'cancelled',
-    cancelledTimestamp: now
-  });
+    if (!['awaiting_partner', 'awaiting_admin'].includes(request.status)) {
+      return { success: false, error: { code: 'INVALID_STATUS', message: 'This swap can no longer be cancelled' } };
+    }
 
-  sendSwapCancelledEmail(request.partnerEmail, request.partnerName, request.employeeName);
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'cancelled',
+      cancelledTimestamp: now
+    });
 
-  return { success: true, data: { requestId, status: 'cancelled' } };
+    sendSwapCancelledEmail(request.partnerEmail, request.partnerName, request.employeeName);
+
+    return { success: true, data: { requestId, status: 'cancelled' } };
+  }, 'shift-swap cancel');
 }
 
 function approveSwapRequest(payload) {
@@ -1652,48 +1741,52 @@ function approveSwapRequest(payload) {
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Swap request not found' } };
-  if (request.status !== 'awaiting_admin') return { success: false, error: { code: 'INVALID_STATUS', message: 'Swap is not awaiting admin approval' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'approved',
-    decidedTimestamp: now,
-    decidedBy: callerEmail,
-    swapAdminNote: note || ''
-  });
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Swap request not found' } };
+    if (request.status !== 'awaiting_admin') return { success: false, error: { code: 'INVALID_STATUS', message: 'Swap is not awaiting admin approval' } };
 
-  const shifts = getSheetData(CONFIG.TABS.SHIFTS);
-  const initiatorShiftRow = shifts.find(s =>
-    s.employeeEmail === request.employeeEmail &&
-    s.date === request.initiatorShiftDate &&
-    (s.type || 'work') === 'work'
-  );
-  const partnerShiftRow = shifts.find(s =>
-    s.employeeEmail === request.partnerEmail &&
-    s.date === request.partnerShiftDate &&
-    (s.type || 'work') === 'work'
-  );
-  const initiator = getEmployeeByEmail(request.employeeEmail);
-  const partner = getEmployeeByEmail(request.partnerEmail);
-
-  if (initiatorShiftRow && partnerShiftRow && initiator && partner) {
-    updateRow(CONFIG.TABS.SHIFTS, initiatorShiftRow._rowIndex, {
-      employeeId: partner.id, employeeName: partner.name, employeeEmail: partner.email
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'approved',
+      decidedTimestamp: now,
+      decidedBy: callerEmail,
+      swapAdminNote: note || ''
     });
-    updateRow(CONFIG.TABS.SHIFTS, partnerShiftRow._rowIndex, {
-      employeeId: initiator.id, employeeName: initiator.name, employeeEmail: initiator.email
-    });
-  }
 
-  sendSwapApprovedEmail(request.employeeEmail, request.partnerEmail, request.employeeName, request.partnerName, request);
+    const shifts = getSheetData(CONFIG.TABS.SHIFTS);
+    const initiatorShiftRow = shifts.find(s =>
+      s.employeeEmail === request.employeeEmail &&
+      s.date === request.initiatorShiftDate &&
+      (s.type || 'work') === 'work'
+    );
+    const partnerShiftRow = shifts.find(s =>
+      s.employeeEmail === request.partnerEmail &&
+      s.date === request.partnerShiftDate &&
+      (s.type || 'work') === 'work'
+    );
+    const initiator = getEmployeeByEmail(request.employeeEmail);
+    const partner = getEmployeeByEmail(request.partnerEmail);
 
-  return { success: true, data: { requestId, status: 'approved', decidedTimestamp: now } };
+    if (initiatorShiftRow && partnerShiftRow && initiator && partner) {
+      updateRow(CONFIG.TABS.SHIFTS, initiatorShiftRow._rowIndex, {
+        employeeId: partner.id, employeeName: partner.name, employeeEmail: partner.email
+      });
+      updateRow(CONFIG.TABS.SHIFTS, partnerShiftRow._rowIndex, {
+        employeeId: initiator.id, employeeName: initiator.name, employeeEmail: initiator.email
+      });
+    }
+
+    sendSwapApprovedEmail(request.employeeEmail, request.partnerEmail, request.employeeName, request.partnerName, request);
+
+    return { success: true, data: { requestId, status: 'approved', decidedTimestamp: now } };
+  }, 'shift-swap approve');
 }
 
 function rejectSwapRequest(payload) {
@@ -1701,25 +1794,29 @@ function rejectSwapRequest(payload) {
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Swap request not found' } };
-  if (request.status !== 'awaiting_admin') return { success: false, error: { code: 'INVALID_STATUS', message: 'Swap is not awaiting admin approval' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'rejected',
-    decidedTimestamp: now,
-    decidedBy: callerEmail,
-    swapAdminNote: note || ''
-  });
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Swap request not found' } };
+    if (request.status !== 'awaiting_admin') return { success: false, error: { code: 'INVALID_STATUS', message: 'Swap is not awaiting admin approval' } };
 
-  sendSwapRejectedEmail(request.employeeEmail, request.partnerEmail, request.employeeName, request.partnerName, note);
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'rejected',
+      decidedTimestamp: now,
+      decidedBy: callerEmail,
+      swapAdminNote: note || ''
+    });
 
-  return { success: true, data: { requestId, status: 'rejected', decidedTimestamp: now } };
+    sendSwapRejectedEmail(request.employeeEmail, request.partnerEmail, request.employeeName, request.partnerName, note);
+
+    return { success: true, data: { requestId, status: 'rejected', decidedTimestamp: now } };
+  }, 'shift-swap reject');
 }
 
 function revokeSwapRequest(payload) {
@@ -1727,52 +1824,56 @@ function revokeSwapRequest(payload) {
 
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
-  const callerEmail = auth.employee.email;
 
-  const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
-  const request = requests.find(r => r.requestId === requestId);
+  return withDocumentLock_(() => {
+    const callerEmail = auth.employee.email;
 
-  if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Swap request not found' } };
-  if (request.status !== 'approved') return { success: false, error: { code: 'INVALID_STATUS', message: 'Can only revoke approved swaps' } };
+    // Re-fetch inside the lock to defeat stale snapshots.
+    const requests = getSheetData(CONFIG.TABS.SHIFT_CHANGES);
+    const request = requests.find(r => r.requestId === requestId);
 
-  if (isDateInPast(request.initiatorShiftDate) || isDateInPast(request.partnerShiftDate)) {
-    return { success: false, error: { code: 'CANNOT_REVOKE_PAST', message: 'Cannot revoke - one or both shift dates have already passed' } };
-  }
+    if (!request) return { success: false, error: { code: 'NOT_FOUND', message: 'Swap request not found' } };
+    if (request.status !== 'approved') return { success: false, error: { code: 'INVALID_STATUS', message: 'Can only revoke approved swaps' } };
 
-  const now = new Date().toISOString();
-  updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
-    status: 'revoked',
-    revokedTimestamp: now,
-    revokedBy: callerEmail,
-    swapAdminNote: note || ''
-  });
+    if (isDateInPast(request.initiatorShiftDate) || isDateInPast(request.partnerShiftDate)) {
+      return { success: false, error: { code: 'CANNOT_REVOKE_PAST', message: 'Cannot revoke - one or both shift dates have already passed' } };
+    }
 
-  const shifts = getSheetData(CONFIG.TABS.SHIFTS);
-  const initiatorNowOnPartnerDate = shifts.find(s =>
-    s.employeeEmail === request.employeeEmail &&
-    s.date === request.partnerShiftDate &&
-    (s.type || 'work') === 'work'
-  );
-  const partnerNowOnInitiatorDate = shifts.find(s =>
-    s.employeeEmail === request.partnerEmail &&
-    s.date === request.initiatorShiftDate &&
-    (s.type || 'work') === 'work'
-  );
-  const initiator = getEmployeeByEmail(request.employeeEmail);
-  const partner = getEmployeeByEmail(request.partnerEmail);
-
-  if (initiatorNowOnPartnerDate && partnerNowOnInitiatorDate && initiator && partner) {
-    updateRow(CONFIG.TABS.SHIFTS, initiatorNowOnPartnerDate._rowIndex, {
-      employeeId: partner.id, employeeName: partner.name, employeeEmail: partner.email
+    const now = new Date().toISOString();
+    updateRow(CONFIG.TABS.SHIFT_CHANGES, request._rowIndex, {
+      status: 'revoked',
+      revokedTimestamp: now,
+      revokedBy: callerEmail,
+      swapAdminNote: note || ''
     });
-    updateRow(CONFIG.TABS.SHIFTS, partnerNowOnInitiatorDate._rowIndex, {
-      employeeId: initiator.id, employeeName: initiator.name, employeeEmail: initiator.email
-    });
-  }
 
-  sendSwapRevokedEmail(request.employeeEmail, request.partnerEmail, request.employeeName, request.partnerName, note);
+    const shifts = getSheetData(CONFIG.TABS.SHIFTS);
+    const initiatorNowOnPartnerDate = shifts.find(s =>
+      s.employeeEmail === request.employeeEmail &&
+      s.date === request.partnerShiftDate &&
+      (s.type || 'work') === 'work'
+    );
+    const partnerNowOnInitiatorDate = shifts.find(s =>
+      s.employeeEmail === request.partnerEmail &&
+      s.date === request.initiatorShiftDate &&
+      (s.type || 'work') === 'work'
+    );
+    const initiator = getEmployeeByEmail(request.employeeEmail);
+    const partner = getEmployeeByEmail(request.partnerEmail);
 
-  return { success: true, data: { requestId, status: 'revoked' } };
+    if (initiatorNowOnPartnerDate && partnerNowOnInitiatorDate && initiator && partner) {
+      updateRow(CONFIG.TABS.SHIFTS, initiatorNowOnPartnerDate._rowIndex, {
+        employeeId: partner.id, employeeName: partner.name, employeeEmail: partner.email
+      });
+      updateRow(CONFIG.TABS.SHIFTS, partnerNowOnInitiatorDate._rowIndex, {
+        employeeId: initiator.id, employeeName: initiator.name, employeeEmail: initiator.email
+      });
+    }
+
+    sendSwapRevokedEmail(request.employeeEmail, request.partnerEmail, request.employeeName, request.partnerName, note);
+
+    return { success: true, data: { requestId, status: 'revoked' } };
+  }, 'shift-swap revoke');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
