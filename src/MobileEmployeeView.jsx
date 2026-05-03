@@ -30,6 +30,8 @@ import { computeCellStyles } from './utils/scheduleCellStyles';
 import EventOnlyCell from './components/EventOnlyCell';
 import MobileBottomNavShell from './components/MobileBottomNav';
 import MobileDrawerShell from './components/MobileDrawerShell';
+import LongPressCell from './components/LongPressCell';
+import EventDetailSheet from './components/EventDetailSheet';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE DETECTION HOOK
@@ -165,6 +167,7 @@ export const MobileAnnouncementPopup = ({ isOpen, onClose, announcement }) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, loggedInUser, getEmployeeHours, approvedTimeOffSet, onShiftClick }) => {
   const scrollContainerRef = useRef(null);
+  const [eventSheetData, setEventSheetData] = useState(null);
   const NAME_COL_WIDTH = 60;
   const CELL_WIDTH = 80;
   const CELL_HEIGHT = 74;
@@ -297,7 +300,9 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                         borderBottom: `1px solid ${THEME.border.subtle}`,
                         padding: '2px'
                       }}>
-                        <div
+                        <LongPressCell as="div"
+                          enabled={cellEvents.length >= 2}
+                          onLongPress={() => setEventSheetData({ events: cellEvents, dateLabel: `${getDayName(date)} ${formatDate(date)}` })}
                           className="h-full rounded-md relative overflow-hidden"
                           onClick={(shift || hasEvents) && onShiftClick ? () => onShiftClick({ employee: emp, date, dateStr, shift, role, events: cellEvents }) : undefined}
                           style={{
@@ -356,7 +361,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                           ) : eventOnly ? (
                             <EventOnlyCell events={cellEvents} firstEventType={firstEventType} firstEvent={firstEvent} size="sm" />
                           ) : null}
-                        </div>
+                        </LongPressCell>
                       </td>
                     );
                   })}
@@ -367,6 +372,12 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
           </tbody>
         </table>
       </div>
+      <EventDetailSheet
+        isOpen={!!eventSheetData}
+        onClose={() => setEventSheetData(null)}
+        events={eventSheetData?.events || []}
+        dateLabel={eventSheetData?.dateLabel || ''}
+      />
     </div>
   );
 };

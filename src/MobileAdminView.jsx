@@ -35,6 +35,8 @@ import { computeCellStyles } from './utils/scheduleCellStyles';
 import EventOnlyCell from './components/EventOnlyCell';
 import MobileBottomNavShell from './components/MobileBottomNav';
 import MobileDrawerShell from './components/MobileDrawerShell';
+import LongPressCell from './components/LongPressCell';
+import EventDetailSheet from './components/EventDetailSheet';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN MOBILE HAMBURGER DRAWER
@@ -176,6 +178,7 @@ export const MobileAdminScheduleGrid = ({
   isEditMode = false, onCellClick, onNameClick, onHeaderClick
 }) => {
   const scrollContainerRef = React.useRef(null);
+  const [eventSheetData, setEventSheetData] = useState(null);
   const NAME_COL_WIDTH = 60;
   const CELL_WIDTH = 80;
   const CELL_HEIGHT = 74;
@@ -370,7 +373,9 @@ export const MobileAdminScheduleGrid = ({
                     const labelColor = shift ? role?.color : THEME.text.muted;
 
                     return (
-                      <td key={i}
+                      <LongPressCell as="td" key={i}
+                        enabled={cellEvents.length >= 2}
+                        onLongPress={() => setEventSheetData({ events: cellEvents, dateLabel: `${getDayName(date)} ${formatDate(date)}` })}
                         onClick={() => isEditMode && onCellClick && onCellClick(emp, date, shift || null)}
                         {...(isEditMode && onCellClick ? {
                           role: 'button',
@@ -439,7 +444,7 @@ export const MobileAdminScheduleGrid = ({
                             <EventOnlyCell events={cellEvents} firstEventType={firstEventType} firstEvent={firstEvent} size="sm" />
                           ) : null}
                         </div>
-                      </td>
+                      </LongPressCell>
                     );
                   })}
                 </tr>
@@ -449,6 +454,12 @@ export const MobileAdminScheduleGrid = ({
           </tbody>
         </table>
       </div>
+      <EventDetailSheet
+        isOpen={!!eventSheetData}
+        onClose={() => setEventSheetData(null)}
+        events={eventSheetData?.events || []}
+        dateLabel={eventSheetData?.dateLabel || ''}
+      />
     </div>
   );
 };
