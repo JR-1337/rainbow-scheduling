@@ -491,7 +491,7 @@ export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, time
       {renderWeek(week2Shapes, weekNum2)}
 
       {!hasAnything && (
-        <p className="text-sm text-center py-6" style={{ color: THEME.text.muted }}>No shifts scheduled this period</p>
+        <p className="text-sm text-center py-6" style={{ color: THEME.text.muted }}>Nothing scheduled this period</p>
       )}
     </div>
   );
