@@ -2,6 +2,20 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.31.0 (onboarding email modal: sendOnboardingEmail action + backfillOnboardingDates one-shot + WELCOME_TEMPLATE_HTML_ + LAUNCH_LIVE_ recipient gate.)
+ *
+ * Changes in v2.31.0:
+ * - sendOnboardingEmail action: generates per-recipient welcome PDF (navy/white branded),
+ *   fetches federal + Ontario TD1 PDFs from Drive by file ID, sends via MailApp with
+ *   BCC otr.scheduler. LAUNCH_LIVE_=false rewrites recipient to JR until launch.
+ * - backfillOnboardingDates one-shot: writes today's ISO date to welcomeSentAt for all
+ *   active employees whose welcomeSentAt is blank. Callable from Apps Script editor only.
+ * - WELCOME_TEMPLATE_HTML_, WELCOME_FED_TD1_ID_, WELCOME_ON_TD1_ID_, LAUNCH_LIVE_,
+ *   LAUNCH_REWRITE_TO_, WELCOME_FOLDER_ID_ constants added.
+ * - Routes map: 'sendOnboardingEmail' wired.
+ * - Manual step: add column Y header 'welcomeSentAt' to Employees sheet before paste-deploy.
+ * - Manual step: run backfillOnboardingDates() once from Apps Script editor after paste-deploy.
+ *
  * Version: 2.30.2 (Refactor: batchSaveShifts uses withDocumentLock_ helper)
  *
  * Changes in v2.30.2:
@@ -281,6 +295,95 @@ const SAVE_EMPLOYEE_FIELDS_ = [
 ];
 const SAVE_EMPLOYEE_OWNER_ONLY_FIELDS_ = ['isAdmin', 'isOwner', 'adminTier'];
 
+// ─── Onboarding email constants (v2.31.0) ────────────────────────────────────
+// Drive folder "New Employee Files" (otr.scheduler-owned). Apps Script runs
+// as otr.scheduler so DriveApp reads these without additional share grants.
+var WELCOME_FOLDER_ID_ = '1dWQOcZWMaAe_2YTGuPMhDmwXwXo45mtx';
+var WELCOME_FED_TD1_ID_ = '1w6KMoyOZLESx4nmcUaSaPIf0T6my8Brj';  // 2026 Federal tax TD1.pdf
+var WELCOME_ON_TD1_ID_  = '1Iu9dHa0FX_ya8osiPMWXkV0ld8U9kW29'; // 2026 Ontario tax TD1.pdf
+// Pre-launch recipient gate. Set LAUNCH_LIVE_ = true at launch to enable real recipients.
+// When false every onboarding send goes to LAUNCH_REWRITE_TO_ (JR's inbox). BCC otr.scheduler always.
+var LAUNCH_LIVE_ = false;
+var LAUNCH_REWRITE_TO_ = 'johnrichmond007@gmail.com';
+
+// Welcome PDF HTML template. Substitution fields: {{firstName}}, {{dateSent}}.
+// Visual layout mirrors the schedule email: navy (#0D0E22) header + dark-on-white body +
+// neutral footer. Wording is verbatim from docs/onboarding/welcome-source.md.
+// HEX literals used directly (backend does not import frontend theme constants).
+var WELCOME_TEMPLATE_HTML_ = '<!DOCTYPE html>' +
+  '<html lang="en"><head><meta charset="UTF-8">' +
+  '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+  '</head>' +
+  '<body style="margin:0;padding:0;background-color:#FDFEFC;font-family:Arial,Helvetica,sans-serif;">' +
+  '<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FDFEFC" style="background-color:#FDFEFC;">' +
+  '<tr><td align="center" style="padding:24px 12px;">' +
+  '<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;border-collapse:collapse;border:1px solid #E5E7EB;">' +
+
+  '<!-- Header -->' +
+  '<tr><td style="background-color:#0D0E22;padding:32px 24px 28px 24px;text-align:center;">' +
+  '<div style="line-height:1;color:#FDFEFC;">' +
+  '<div style="font-size:12px;font-weight:300;letter-spacing:3px;text-transform:uppercase;">OVER THE</div>' +
+  '<div style="font-size:18px;font-weight:600;letter-spacing:2.7px;text-transform:uppercase;margin-top:2px;">RAINBOW</div>' +
+  '</div>' +
+  '<div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:18px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">New Employee Welcome</div>' +
+  '</td></tr>' +
+
+  '<!-- Address block -->' +
+  '<tr><td style="padding:24px 24px 8px 24px;background-color:#FFFFFF;">' +
+  '<div style="font-size:13px;color:#374151;line-height:1.6;">' +
+  '123 - 55 Bloor St West. Toronto, Ontario. M4W 1A5<br>' +
+  'Phone: (416) 967-7448 | Fax: (416) 968-2457' +
+  '</div>' +
+  '</td></tr>' +
+
+  '<!-- Date -->' +
+  '<tr><td style="padding:8px 24px;background-color:#FFFFFF;">' +
+  '<div style="font-size:13px;color:#374151;">Date: {{dateSent}}</div>' +
+  '</td></tr>' +
+
+  '<!-- Salutation -->' +
+  '<tr><td style="padding:16px 24px 8px 24px;background-color:#FFFFFF;">' +
+  '<div style="font-size:14px;color:#0D0E22;font-weight:600;">Dear {{firstName}},</div>' +
+  '</td></tr>' +
+
+  '<!-- Body paragraphs -->' +
+  '<tr><td style="padding:8px 24px 24px 24px;background-color:#FFFFFF;">' +
+  '<div style="font-size:14px;color:#374151;line-height:1.8;">' +
+
+  '<p style="margin:0 0 14px 0;">Welcome to Over the Rainbow Ltd. Please print the attached documents:</p>' +
+
+  '<p style="margin:0 0 14px 0;">Employee Employment Contract. Please read this document and bring a signed copy with you on your first day of work or prior to.</p>' +
+
+  '<p style="margin:0 0 14px 0;">TD1 Federal and Ontario. These are personal tax credit forms that must be filled out and brought with you on your first day of work or prior to. Please note on page 2 &#8220;Total income less than total claim amount&#8221; &#8211; this box needs to be checked IF it pertains to you. Otherwise, please leave it blank.</p>' +
+
+  '<p style="margin:0 0 14px 0;">Please be sure to include apartment numbers, and postal codes on the above.</p>' +
+
+  '<p style="margin:0 0 14px 0;">Please write your email contact information on the top of one of the TD1 forms when you submit them.</p>' +
+
+  '<p style="margin:0 0 14px 0;">On your first day, please bring a void cheque for our payroll direct deposit.</p>' +
+
+  '<p style="margin:0 0 14px 0;">If you do not have a chequing account, please ask your bank for the direct deposit information. It is your responsibility to provide accurate information.</p>' +
+
+  '<p style="margin:0 0 14px 0;">If these forms are not signed and completed before your first shift, you will not be permitted to begin your shift.</p>' +
+
+  '<p style="margin:0 0 14px 0;">Please acknowledge receipt of this email.</p>' +
+
+  '<p style="margin:0 0 14px 0;">Sincerely,<br><br>Sarvi Ghahremanpour</p>' +
+
+  '</div>' +
+  '</td></tr>' +
+
+  '<!-- Footer -->' +
+  '<tr><td style="padding:16px 24px;background-color:#F5F3F0;border-top:1px solid #E5E7EB;">' +
+  '<div style="font-size:12px;color:#8B8580;text-align:center;">Over the Rainbow &bull; <a href="https://www.rainbowjeans.com" style="color:#8B8580;">www.rainbowjeans.com</a></div>' +
+  '<div style="font-size:11px;color:#ABABAB;text-align:center;margin-top:4px;">This is an automated message from the OTR Scheduling App.</div>' +
+  '</td></tr>' +
+
+  '</table>' +
+  '</td></tr>' +
+  '</table>' +
+  '</body></html>';
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // WEB APP ENTRY POINTS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -389,7 +492,8 @@ function handleRequest(action, payload) {
       'deleteAnnouncement': () => deleteAnnouncement(payload),
 
       // Email
-      'sendBrandedScheduleEmail': () => sendBrandedScheduleEmail(payload)
+      'sendBrandedScheduleEmail': () => sendBrandedScheduleEmail(payload),
+      'sendOnboardingEmail': () => sendOnboardingEmail(payload)
     };
 
     if (!handlers[action]) {
@@ -2500,6 +2604,155 @@ function sendBrandedScheduleEmail(payload) {
     Logger.log('Failed to send branded schedule email to ' + to + ': ' + error.toString());
     return { success: false, error: { code: 'SEND_FAILED', message: error.toString() } };
   }
+}
+
+// ─── v2.31.0: Onboarding email ───────────────────────────────────────────────
+
+/**
+ * sendOnboardingEmail(payload)
+ *
+ * Generates a branded welcome PDF for the new hire, attaches the two static
+ * TD1 tax-form PDFs from Drive, and sends via MailApp.
+ *
+ * Payload fields:
+ *   employeeId     {string}   required — must match an Employees row id
+ *   recipientEmail {string}   required — employee's email address
+ *   subject        {string}   required — email subject line
+ *   bodyText       {string}   optional — plaintext body typed by Sarvi
+ *   attachments    {Array}    optional — extra uploads: [{name, mimeType, dataBase64}]
+ *
+ * Returns: { success, sentTo, welcomeSentAtUpdated, rewrittenForLaunch }
+ *
+ * Auth gate: any logged-in admin.
+ * Lock: wrapped in withDocumentLock_ per v2.30.2 single-source-of-truth pattern.
+ * Pre-launch gate: LAUNCH_LIVE_=false rewrites recipient to LAUNCH_REWRITE_TO_.
+ * Idempotent for welcomeSentAt: only writes if cell is currently blank (resend preserves original).
+ */
+function sendOnboardingEmail(payload) {
+  var auth = verifyAuth(payload, true);
+  if (!auth.authorized) return { success: false, error: auth.error };
+
+  if (!payload.employeeId || !payload.recipientEmail || !payload.subject) {
+    return { success: false, error: { code: 'INVALID_PARAMS', message: 'Missing required fields: employeeId, recipientEmail, subject.' } };
+  }
+
+  return withDocumentLock_(function () {
+    var employees = getSheetData(CONFIG.TABS.EMPLOYEES);
+    var employee = employees.find(function (e) { return e.id === payload.employeeId; });
+    if (!employee) {
+      return { success: false, error: { code: 'NOT_FOUND', message: 'Employee not found: ' + payload.employeeId } };
+    }
+
+    // Pre-launch recipient rewrite.
+    var actualRecipient = LAUNCH_LIVE_ ? payload.recipientEmail : LAUNCH_REWRITE_TO_;
+    if (!LAUNCH_LIVE_) {
+      Logger.log('sendOnboardingEmail: LAUNCH_LIVE_=false — rewriting recipient from ' + payload.recipientEmail + ' to ' + actualRecipient);
+    }
+
+    // Build welcome PDF from WELCOME_TEMPLATE_HTML_.
+    var firstName = (employee.name || '').split(' ')[0] || 'Team Member';
+    var dateSent = Utilities.formatDate(new Date(), 'America/Toronto', 'MMMM d, yyyy');
+    var html = WELCOME_TEMPLATE_HTML_
+      .replace(/\{\{firstName\}\}/g, firstName)
+      .replace(/\{\{dateSent\}\}/g, dateSent);
+    var welcomePdf = Utilities.newBlob(html, 'text/html', 'welcome.html')
+      .getAs('application/pdf')
+      .setName('Welcome - ' + employee.name + '.pdf');
+
+    // Fetch static TD1 PDFs from Drive by file ID.
+    var fedBlob = DriveApp.getFileById(WELCOME_FED_TD1_ID_).getBlob();
+    var onBlob  = DriveApp.getFileById(WELCOME_ON_TD1_ID_).getBlob();
+
+    // Build attachments array: 3 defaults + any user-uploaded extras.
+    var extraAttachments = (payload.attachments || []).map(decodeUploadedAttachment_);
+    var attachments = [welcomePdf, fedBlob, onBlob].concat(extraAttachments);
+
+    // Convert plaintext body to HTML (newlines -> <br>, entities escaped inline).
+    var bodyText = payload.bodyText || '';
+    var htmlBody = bodyText.split('\n').map(function (line) {
+      return String(line)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }).join('<br>');
+
+    // Send email.
+    MailApp.sendEmail({
+      to: actualRecipient,
+      subject: payload.subject,
+      body: bodyText,
+      htmlBody: htmlBody || '',
+      attachments: attachments,
+      bcc: 'otr.scheduler@gmail.com',
+      name: 'OTR Scheduling'
+    });
+    Logger.log('sendOnboardingEmail: sent to ' + actualRecipient + ' (bcc otr.scheduler): ' + payload.subject);
+
+    // Write welcomeSentAt only if currently blank (preserve original on resend).
+    var welcomeSentAtUpdated = false;
+    var currentValue = employee.welcomeSentAt;
+    if (!currentValue || String(currentValue).trim() === '') {
+      var isoDate = Utilities.formatDate(new Date(), 'America/Toronto', 'yyyy-MM-dd');
+      updateRow(CONFIG.TABS.EMPLOYEES, employee._rowIndex, { welcomeSentAt: isoDate });
+      welcomeSentAtUpdated = true;
+      Logger.log('sendOnboardingEmail: set welcomeSentAt=' + isoDate + ' for employeeId=' + payload.employeeId);
+    } else {
+      Logger.log('sendOnboardingEmail: welcomeSentAt already set (' + currentValue + '), preserving original.');
+    }
+
+    return {
+      success: true,
+      sentTo: actualRecipient,
+      welcomeSentAtUpdated: welcomeSentAtUpdated,
+      rewrittenForLaunch: !LAUNCH_LIVE_
+    };
+  }, 'sending the onboarding email');
+}
+
+/**
+ * decodeUploadedAttachment_(spec)
+ *
+ * Converts a base64-encoded file upload from the frontend into a Blob
+ * suitable for MailApp attachments.
+ *
+ * spec: { name {string}, mimeType {string}, dataBase64 {string} }
+ * Returns: Utilities.Blob
+ */
+function decodeUploadedAttachment_(spec) {
+  return Utilities.newBlob(
+    Utilities.base64Decode(spec.dataBase64),
+    spec.mimeType,
+    spec.name
+  );
+}
+
+/**
+ * backfillOnboardingDates()
+ *
+ * One-shot backfill. Run once from the Apps Script editor after paste-deploy.
+ * NOT in the routes map — not callable from the frontend.
+ *
+ * Writes today's ISO date (yyyy-MM-dd, America/Toronto) to the welcomeSentAt
+ * column for every Employees row where:
+ *   - active = true
+ *   - welcomeSentAt is currently blank
+ *
+ * Idempotent: safe to run more than once (only fills blank cells).
+ * Logs: "Backfill complete. N rows updated."
+ */
+function backfillOnboardingDates() {
+  var employees = getSheetData(CONFIG.TABS.EMPLOYEES);
+  var isoDate = Utilities.formatDate(new Date(), 'America/Toronto', 'yyyy-MM-dd');
+  var count = 0;
+  employees.forEach(function (emp) {
+    var isActive = emp.active === true || emp.active === 'true' || emp.active === 'TRUE';
+    var alreadySet = emp.welcomeSentAt && String(emp.welcomeSentAt).trim() !== '';
+    if (isActive && !alreadySet) {
+      updateRow(CONFIG.TABS.EMPLOYEES, emp._rowIndex, { welcomeSentAt: isoDate });
+      count++;
+    }
+  });
+  Logger.log('Backfill complete. ' + count + ' rows updated.');
 }
 
 // v2.25.0: Notify Sarvi when a non-owner admin other than herself edits the
