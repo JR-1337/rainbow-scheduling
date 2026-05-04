@@ -12,6 +12,7 @@ import { computeViolations } from '../utils/violations';
 import { isStatHoliday, DEFAULT_SHIFT } from '../utils/storeHours';
 import { getDayName } from '../utils/date';
 import { hasTitle } from '../utils/employeeRender';
+import { canEditShiftDate } from '../utils/canEditShiftDate';
 
 const getDefaultBookingTimes = (date) => {
   const dayName = getDayName(date).toLowerCase();
@@ -57,6 +58,8 @@ export const ShiftEditorModal = ({
 }) => {
   const storeHours = getStoreHoursForDate(date);
   const isHoliday = isStatHoliday(date);
+  // v2.32.0: past-period edit lock. Read-only banner + disabled Save when locked.
+  const isPastPeriodLocked = date ? !canEditShiftDate(currentUser, date, new Date()) : false;
 
   const seedFor = (type) => {
     if (type === 'work') {
@@ -552,6 +555,12 @@ export const ShiftEditorModal = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Shift" size="sm">
+      {isPastPeriodLocked && (
+        <div className="mb-2 p-2 rounded-lg flex items-center gap-2" style={{ backgroundColor: THEME.bg.tertiary, border: `1px solid ${THEME.border.default}` }}>
+          <AlertTriangle size={14} style={{ color: THEME.text.muted, flexShrink: 0 }} />
+          <p className="text-xs" style={{ color: THEME.text.secondary }}>This shift is in a past pay period and cannot be edited.</p>
+        </div>
+      )}
       {violations.length > 0 && (
         <div className="mb-2 space-y-1.5">
           {violations.map(v => (
@@ -713,7 +722,7 @@ export const ShiftEditorModal = ({
         </div>
         <div className="flex gap-2">
           <GradientButton variant="secondary" small onClick={onClose}>Cancel</GradientButton>
-          <GradientButton small onClick={handleSave}><Check size={12} />Save</GradientButton>
+          <GradientButton small onClick={handleSave} disabled={isPastPeriodLocked}><Check size={12} />Save</GradientButton>
         </div>
       </div>
     </Modal>

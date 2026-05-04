@@ -34,6 +34,7 @@ import { computeDayUnionHours, computeNetHoursForShift, computeConsecutiveWorkDa
 import { computeViolations } from './utils/violations';
 import { getPKDefaultTimes } from './utils/eventDefaults';
 import { sortBySarviAdminsFTPT, employeeBucket } from './utils/employeeSort';
+import { canEditShiftDate } from './utils/canEditShiftDate';
 import { hasTitle } from './utils/employeeRender';
 import { getAuthToken, setAuthToken, clearAuth, setCachedUser, handleAuthError } from './auth';
 import { OTR, THEME, TYPE } from './theme';
@@ -1529,9 +1530,14 @@ export default function App() {
   const pendingRequestCount = pendingTimeOffCount + pendingOffersCount + pendingSwapsCount;
   
   // Grid cell click handler — stable ref keeps EmployeeRow memo effective
+  // v2.32.0: past-period edit lock; owner bypasses via canEditShiftDate.
   const handleCellClick = useCallback((emp, d, s) => {
+    if (!canEditShiftDate(currentUser, d, new Date())) {
+      showToast('info', 'Past pay period is locked.');
+      return;
+    }
     setEditingShift({ employee: emp, date: d, shift: s });
-  }, []);
+  }, [currentUser, showToast]);
 
   // Column header click handler — stable ref keeps ColumnHeaderCell memo effective
   const handleColumnHeaderClick = useCallback((date) => setEditingColumnDate(date), []);
@@ -1850,6 +1856,11 @@ export default function App() {
                 isEditMode={isCurrentPeriodEditMode}
                 onCellClick={(emp, date, shift) => {
                   if (isCurrentPeriodEditMode) {
+                    // v2.32.0: past-period edit lock; owner bypasses via canEditShiftDate.
+                    if (!canEditShiftDate(currentUser, date, new Date())) {
+                      showToast('info', 'Past pay period is locked.');
+                      return;
+                    }
                     setEditingShift({ employee: emp, date, shift });
                   }
                 }}
@@ -2448,7 +2459,7 @@ export default function App() {
                   return (
                     <React.Fragment key={e.id}>
                       {showDivider && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
-                      <EmployeeRow employee={e} dates={currentDates} shifts={shifts} events={events} onCellClick={handleCellClick} getEmployeeHours={getEmpHours} onEdit={handleEditEmployee} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} approvedTimeOffSet={approvedTimeOffSet} isLocked={!isCurrentPeriodEditMode} isAdmin={!!currentUser?.isAdmin} />
+                      <EmployeeRow employee={e} dates={currentDates} shifts={shifts} events={events} onCellClick={handleCellClick} getEmployeeHours={getEmpHours} onEdit={handleEditEmployee} onShowTooltip={handleShowTooltip} onHideTooltip={handleHideTooltip} approvedTimeOffSet={approvedTimeOffSet} isLocked={!isCurrentPeriodEditMode} isAdmin={!!currentUser?.isAdmin} currentUser={currentUser} />
                     </React.Fragment>
                   );
                 })}</div>

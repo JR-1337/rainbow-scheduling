@@ -8,10 +8,11 @@ import { getStoreHoursForDate } from '../utils/storeHoursOverrides';
 import { OVERTIME_THRESHOLDS } from '../utils/timemath';
 import { AnimatedNumber } from './uiKit';
 import { ScheduleCell } from './ScheduleCell';
+import { canEditShiftDate } from '../utils/canEditShiftDate';
 
 const EMPTY_EVENTS = Object.freeze([]);
 
-export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, onCellClick, getEmployeeHours, onEdit, isDeleted = false, onShowTooltip, onHideTooltip, approvedTimeOffSet, isLocked = false, isAdmin = false }) => {
+export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, onCellClick, getEmployeeHours, onEdit, isDeleted = false, onShowTooltip, onHideTooltip, approvedTimeOffSet, isLocked = false, isAdmin = false, currentUser = null }) => {
   const rowRef = useRef(null);
   const hours = getEmployeeHours(employee.id);
   const { first: nameFirst, rest: nameRest } = splitNameForSchedule(employee.name);
@@ -60,9 +61,12 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
         const dateStr = toDateKey(date);
         const cellEvents = events[`${employee.id}-${dateStr}`] || EMPTY_EVENTS;
         const approvedTimeOff = approvedTimeOffSet?.has(`${employee.email}-${dateStr}`) || false;
+        // v2.32.0: cell is locked if edit-mode lock OR past-period lock applies.
+        const pastLocked = currentUser ? !canEditShiftDate(currentUser, date, new Date()) : false;
+        const cellIsLocked = isLocked || pastLocked;
         return (
           <div key={dateStr} className={rowStrip} style={{ backgroundColor: THEME.bg.secondary }}>
-            <ScheduleCell shift={shift} events={cellEvents} date={date} availability={av} storeHours={storeHrs} onCellClick={onCellClick} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={isLocked} employee={employee} isAdmin={isAdmin} />
+            <ScheduleCell shift={shift} events={cellEvents} date={date} availability={av} storeHours={storeHrs} onCellClick={onCellClick} isDeleted={isDeleted} hasApprovedTimeOff={approvedTimeOff} isLocked={cellIsLocked} employee={employee} isAdmin={isAdmin} />
           </div>
         );
       })}
