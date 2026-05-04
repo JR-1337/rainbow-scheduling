@@ -23,6 +23,7 @@ import { useEscapeKey } from './hooks/useEscapeKey';
 import { EVENT_TYPES } from './constants';
 import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
 import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
+import { buildMyScheduleShape } from './utils/myScheduleShape';
 import { EventGlyphPill } from './components/EventGlyphPill';
 import { PKDetailsPanel } from './components/PKDetailsPanel';
 import SickStripeOverlay from './components/SickStripeOverlay';
@@ -395,111 +396,101 @@ export const MobileMySchedule = ({ currentUser, shifts, events = {}, dates, time
   const weekNum1 = getWeekNumber(week1[0]), weekNum2 = getWeekNumber(week2[0]);
   const todayStr = useMemo(() => toDateKey(new Date()), []);
 
-  // S64 Stage 8.1 — build shift list per week (hours computation removed in s033;
-  // employees no longer see totals).
-  const getWeekShifts = (weekDates) => {
-    const shiftList = [];
-    weekDates.forEach(date => {
-      const dateStr = toDateKey(date);
-      const k = `${currentUser.id}-${dateStr}`;
-      const shift = shifts[k];
-      if (shift) {
-        const role = ROLES_BY_ID[shift.role];
-        shiftList.push({ date, dateStr, shift, role });
-      }
-    });
-    return { shiftList };
+  // Per-day shapes from shared helper — single source of truth for Mine + desktop modal.
+  // Week-grouping and rendering stay here (mobile-specific layout).
+  const allShapes = useMemo(() => buildMyScheduleShape({
+    user: currentUser,
+    dates,
+    shifts,
+    events,
+    timeOffRequests,
+    todayStr,
+  }), [currentUser, dates, shifts, events, timeOffRequests, todayStr]);
+
+  const week1Shapes = allShapes.slice(0, 7);
+  const week2Shapes = allShapes.slice(7, 14);
+
+  const renderWeek = (weekShapes, weekNum) => {
+    // Count days with a work shift for the week header (matches prior behavior).
+    const shiftCount = weekShapes.filter(s => s.shift).length;
+    return (
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-2 px-1">
+          <h4 className="text-xs font-semibold" style={{ color: THEME.text.muted }}>WEEK {weekNum}</h4>
+          <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>{shiftCount} shift{shiftCount === 1 ? '' : 's'}</span>
+        </div>
+
+        <div className="space-y-1.5">
+          {weekShapes.map((shape, i) => {
+            const { date, shift, events: dayEvents, role, isTimeOff, isToday, dayName } = shape;
+            const isSelfTitled = hasTitle(currentUser);
+            const labelText = shift ? (isSelfTitled ? (currentUser.title || '') : (role?.name || '')) : '';
+            const labelColor = shift ? (isSelfTitled ? THEME.text.primary : (role?.color || THEME.text.primary)) : THEME.text.muted;
+
+            return (
+              <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg" style={{
+                backgroundColor: isToday ? THEME.accent.purple + '15' : THEME.bg.tertiary,
+                borderLeft: `3px solid ${shift ? labelColor : dayEvents.length > 0 ? EVENT_TYPES[dayEvents[0].type].border : isTimeOff ? THEME.text.muted : 'transparent'}`,
+                border: isToday ? `1px solid ${THEME.accent.purple}40` : undefined
+              }}>
+                <div className="w-12 flex-shrink-0">
+                  <p className="text-xs font-bold" style={{ color: isToday ? THEME.accent.purple : THEME.text.primary }}>{dayName}</p>
+                  <p style={{ color: THEME.text.muted, fontSize: '10px' }}>{date.getDate()}/{date.getMonth() + 1}</p>
+                </div>
+
+                <div className="flex-1 flex flex-col gap-1">
+                  {shift ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: (isSelfTitled ? THEME.bg.tertiary : (role?.color + '25')), color: labelColor }}>{labelText}</span>
+                      <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)} – {formatTimeShort(shift.endTime)}</span>
+                      {shift.task && (
+                        <span className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: THEME.task + '20', color: THEME.task }}>
+                          <Star size={8} fill={THEME.task} color={THEME.task} />{shift.task}
+                        </span>
+                      )}
+                    </div>
+                  ) : isTimeOff ? (
+                    <span className="text-xs" style={{ color: THEME.text.muted }}>Time Off (Approved)</span>
+                  ) : dayEvents.length === 0 ? (
+                    // Empty day — intentional "—" placeholder, same as prior inline behavior.
+                    <span className="text-xs" style={{ color: THEME.text.muted }}>—</span>
+                  ) : null}
+
+                  {/* Event pills — shortLabel (intentional: mobile has tight horizontal space;
+                      desktop MyScheduleModal uses full label for wider accordion rows). */}
+                  {dayEvents.map((ev, j) => {
+                    const et = EVENT_TYPES[ev.type];
+                    return (
+                      <div key={j} className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}` }}>{et.shortLabel}</span>
+                        <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(ev.startTime)} – {formatTimeShort(ev.endTime)}</span>
+                        {/* Note truncated (intentional: Mine row is one line; desktop modal expanded body wraps). */}
+                        {ev.note && <span className="text-xs truncate" style={{ color: THEME.text.muted }}>{ev.note}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
-  const w1 = getWeekShifts(week1);
-  const w2 = getWeekShifts(week2);
-  
-  // Approved time-off dates for this period
-  const myTimeOffDates = useMemo(() => {
-    const toDates = new Set();
-    timeOffRequests
-      .filter(r => r.email === currentUser.email && r.status === 'approved')
-      .forEach(r => r.datesRequested?.split(',').forEach(d => toDates.add(d)));
-    return toDates;
-  }, [timeOffRequests, currentUser.email]);
-  
-  const renderWeek = (weekDates, weekData, weekNum) => (
-    <div className="mb-3">
-      <div className="flex items-center justify-between mb-2 px-1">
-        <h4 className="text-xs font-semibold" style={{ color: THEME.text.muted }}>WEEK {weekNum}</h4>
-        <span className="text-xs font-medium" style={{ color: THEME.text.muted }}>{weekData.shiftList.length} shift{weekData.shiftList.length === 1 ? '' : 's'}</span>
-      </div>
-      
-      <div className="space-y-1.5">
-        {weekDates.map((date, i) => {
-          const dateStr = toDateKey(date);
-          const shift = shifts[`${currentUser.id}-${dateStr}`];
-          const dayEvents = (events[`${currentUser.id}-${dateStr}`] || []).filter(ev => EVENT_TYPES[ev.type]);
-          const role = shift ? ROLES_BY_ID[shift.role] : null;
-          const isSelfTitled = hasTitle(currentUser);
-          const labelText = shift ? (isSelfTitled ? (currentUser.title || '') : (role?.name || '')) : '';
-          const labelColor = shift ? (isSelfTitled ? THEME.text.primary : (role?.color || THEME.text.primary)) : THEME.text.muted;
-          const isTimeOff = myTimeOffDates.has(dateStr);
-          const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-          const today = toDateKey(date) === todayStr;
+  const hasAnything = allShapes.some(s => s.shift || s.events.length > 0 || s.isTimeOff);
 
-          return (
-            <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg" style={{
-              backgroundColor: today ? THEME.accent.purple + '15' : THEME.bg.tertiary,
-              borderLeft: `3px solid ${shift ? labelColor : dayEvents.length > 0 ? EVENT_TYPES[dayEvents[0].type].border : isTimeOff ? THEME.text.muted : 'transparent'}`,
-              border: today ? `1px solid ${THEME.accent.purple}40` : undefined
-            }}>
-              <div className="w-12 flex-shrink-0">
-                <p className="text-xs font-bold" style={{ color: today ? THEME.accent.purple : THEME.text.primary }}>{dayName}</p>
-                <p style={{ color: THEME.text.muted, fontSize: '10px' }}>{date.getDate()}/{date.getMonth() + 1}</p>
-              </div>
-
-              <div className="flex-1 flex flex-col gap-1">
-                {shift ? (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: (isSelfTitled ? THEME.bg.tertiary : (role?.color + '25')), color: labelColor }}>{labelText}</span>
-                    <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(shift.startTime)} – {formatTimeShort(shift.endTime)}</span>
-                    {shift.task && (
-                      <span className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: THEME.task + '20', color: THEME.task }}>
-                        <Star size={8} fill={THEME.task} color={THEME.task} />{shift.task}
-                      </span>
-                    )}
-                  </div>
-                ) : isTimeOff ? (
-                  <span className="text-xs" style={{ color: THEME.text.muted }}>Time Off (Approved)</span>
-                ) : dayEvents.length === 0 ? (
-                  <span className="text-xs" style={{ color: THEME.text.muted }}>—</span>
-                ) : null}
-
-                {dayEvents.map((ev, j) => {
-                  const et = EVENT_TYPES[ev.type];
-                  return (
-                    <div key={j} className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: et.bg, color: et.text, border: `1px solid ${et.border}` }}>{et.shortLabel}</span>
-                      <span className="text-xs" style={{ color: THEME.text.secondary }}>{formatTimeShort(ev.startTime)} – {formatTimeShort(ev.endTime)}</span>
-                      {ev.note && <span className="text-xs truncate" style={{ color: THEME.text.muted }}>{ev.note}</span>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-  
   return (
     <div className="rounded-xl p-3" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }}>
       {/* Period Summary Header */}
       <div className="flex items-center justify-between mb-3 pb-2" style={{ borderBottom: `1px solid ${THEME.border.subtle}` }}>
         <h3 className="text-sm font-semibold" style={{ color: THEME.text.primary }}>My Schedule</h3>
       </div>
-      
-      {renderWeek(week1, w1, weekNum1)}
-      {renderWeek(week2, w2, weekNum2)}
-      
-      {w1.shiftList.length === 0 && w2.shiftList.length === 0 && (
+
+      {renderWeek(week1Shapes, weekNum1)}
+      {renderWeek(week2Shapes, weekNum2)}
+
+      {!hasAnything && (
         <p className="text-sm text-center py-6" style={{ color: THEME.text.muted }}>No shifts scheduled this period</p>
       )}
     </div>
