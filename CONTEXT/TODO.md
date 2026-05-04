@@ -21,7 +21,7 @@ Rules:
 
 ## Active
 
-ekphrasis. predictive coding.
+scumble. attractor dynamics.
 
 - **Audit-fix plan complete -- 4 batches + 2 hotfixes shipped, paste-deployed, smoked clean.** Plan retired at `~/.claude/plans/audit-fixes-2026-05-02.md` (kept for reference, not active). H3 deferred to migration (see Blocked). Pick next from this Active list.
 

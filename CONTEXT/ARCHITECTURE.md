@@ -24,7 +24,7 @@ Rules:
 ## Components
 
 - Frontend -- React 18 + Vite + Tailwind + Lucide -- `src/`
-- Backend -- Google Apps Script -- `backend/Code.gs` (~3484 lines, v2.32.2 live as of s061 paste-deploy 2026-05-04)
+- Backend -- Google Apps Script -- `backend/Code.gs` (~3484 lines, v2.32.3 live as of s062 paste-deploy 2026-05-04)
 - Data -- Google Sheets (5 tabs) -- schema in `docs/schemas/sheets-schema.md`
 - Deploy -- Vercel auto on push (frontend) + Apps Script manual (backend)
 - Email -- MailApp as "OTR Scheduling"

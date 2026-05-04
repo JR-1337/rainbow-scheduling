@@ -17,6 +17,15 @@ ASCII operators only.
 
 <!-- 2026-05-04 (s061) archive pass: 78 entries moved to CONTEXT/archive/lessons-archive.md to bring active under 60%-of-ceiling target (15k chars). Carry from s059 + s060. Archive holds full preserved entries. Future entries: append at top per "newest at top" rule. -->
 
+## [PROJECT] -- Inventory mobile-parallel render surfaces in every plan touching admin UI
+
+Rule: Any plan that renames a button, changes a confirm copy, mounts a modal, or alters a panel render path on the admin side must inventory every mobile-parallel surface (App.jsx mobile branch, MobileStaffPanel, MobileAdminView, mobile modal mounts) and patch them in the same commit set.
+Trigger: Pre-implementation plan inventory for any admin-side UI change in src/App.jsx, src/panels/, or src/modals/.
+Why: App.jsx splits early into a mobile-admin branch and a desktop branch. Each branch has its own modal mounts and panel renders. Touching one branch ships a half-mounted feature into production. Hit twice in two sessions: s061 missed MobileStaffPanel on the Archive button rename; s062 missed mounting OnboardingEmailModal in the mobile admin branch (the EmployeeFormModal had the trigger but the target modal was only in the desktop tree).
+Provenance: 2026-05-04 (s061 + s062) -- graduated from Anti-Patterns after second incident in same session window.
+Tags: surface: react, concern: ux
+Affirmations: 0
+
 ## [PROJECT] -- OTR 5 brand accent colors immutable
 
 Rule: Use only the OTR 5 brand accent hex codes (#EC3228 red, #0453A3 blue, #F57F20 orange, #00A84D green, #932378 purple) for non-functional accents; do not introduce additional accents or modify these without explicit JR approval.
