@@ -2,6 +2,26 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.32.1 (Audit fixes: timezone-correct date parsing, idempotent archive/restore, truthy isOwner, silent-strip owner-only fields for non-owner saveEmployee)
+ *
+ * Changes in v2.32.1:
+ * - parseLocalDate_ helper: parses 'YYYY-MM-DD' as local-midnight (matches PAY_PERIOD_START
+ *   construction). canEditShiftDate_ now uses it for both shiftDate and todayStr so the
+ *   gate no longer false-blocks at period-start boundaries (CRITICAL audit finding).
+ * - saveShift / batchSaveShifts compute todayStr via Utilities.formatDate(.., scriptTimeZone, 'yyyy-MM-dd')
+ *   instead of toISOString().split('T')[0] -- avoids UTC drift after script timezone evening.
+ * - canEditShiftDate_ owner check changed from `=== true` to `!!` so a Sheet text-cell
+ *   value of "TRUE" still triggers the bypass.
+ * - archiveEmployee target.isOwner check changed to `!!` (same reason). Owner cannot be
+ *   archived even if the column stores text.
+ * - archiveEmployee + unarchiveEmployee made idempotent on retry: each checks the destination
+ *   sheet for a pre-existing row with the same id before re-appending. Mid-flight delete
+ *   failures wrapped in try/catch and surfaced via deleteWarning in the response payload.
+ * - saveEmployee owner-only-field guard: previously hard-rejected non-owner submitting any
+ *   of [isAdmin, isOwner, adminTier] even with no-change values. Now silent-drops on no-op
+ *   (matches existing row, or default false/empty for new) and rejects only on real
+ *   privilege escalation. Unblocks admin1 tier (Sarvi) from adding new employees.
+ *
  * Version: 2.32.0 (Past-period edit lock + employees archive actions + EmployeesArchive sheet)
  *
  * Changes in v2.32.0:
@@ -2168,18 +2188,38 @@ function getShifts(payload) {
 }
 
 /**
+ * v2.32.0: Parse a 'YYYY-MM-DD' string into a local-midnight Date, matching
+ * the local-time constructor used for PAY_PERIOD_START. Returns null on bad input.
+ * v2.32.1: extracted so canEditShiftDate_ can avoid `new Date(str)` UTC-parsing
+ * mismatch with PAY_PERIOD_START (local-midnight).
+ */
+function parseLocalDate_(dateStr) {
+  if (!dateStr) return null;
+  const parts = String(dateStr).split('-');
+  if (parts.length !== 3) return null;
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+}
+
+/**
  * v2.32.0: Gate helper — returns true if caller is allowed to edit a shift
  * on the given date. Owner bypasses all gates. Everyone else is gated by
  * their pastPeriodGraceDays field (defaults to 0).
+ * v2.32.1: dates parsed via parseLocalDate_ so all comparisons are in local
+ * timezone (matching PAY_PERIOD_START). Owner check uses truthy `!!` so a
+ * Sheet column storing the string "TRUE" still triggers the bypass.
  */
 function canEditShiftDate_(callerEmployee, shiftDateStr, todayStr) {
-  // Owner bypasses all gates.
-  if (callerEmployee && callerEmployee.isOwner === true) return true;
+  // Owner bypasses all gates. Truthy check tolerates Sheet text-cell "TRUE".
+  if (callerEmployee && !!callerEmployee.isOwner) return true;
 
-  // Normalize dates.
-  const shiftDate = new Date(shiftDateStr);
-  const today = new Date(todayStr);
-  if (isNaN(shiftDate.getTime()) || isNaN(today.getTime())) return false;
+  // Normalize dates as LOCAL midnight (matches PAY_PERIOD_START construction).
+  const shiftDate = parseLocalDate_(shiftDateStr);
+  const today = parseLocalDate_(todayStr);
+  if (!shiftDate || !today) return false;
 
   // Compute current pay-period end (PAY_PERIOD_START anchor + 14-day cadence).
   // Anchor matches src/utils/payPeriod.js: 2026-01-26.
@@ -2231,7 +2271,8 @@ function saveShift(payload) {
 
   // Past-period edit lock (v2.32.0). Allow current/future periods always; past
   // periods gated by caller.pastPeriodGraceDays (owner bypasses entirely).
-  const todayStr = new Date().toISOString().split('T')[0];
+  // v2.32.1: todayStr in local timezone matches the local-midnight period anchor.
+  const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   if (!canEditShiftDate_(auth.employee, shiftDate, todayStr)) {
     return { success: false, error: { code: 'PAST_PERIOD_LOCKED', message: 'You cannot edit shifts in past pay periods.' } };
   }
@@ -2297,16 +2338,30 @@ function saveEmployee(payload) {
   for (const key of SAVE_EMPLOYEE_FIELDS_) {
     if (employee[key] !== undefined) filtered[key] = employee[key];
   }
-  for (const key of SAVE_EMPLOYEE_OWNER_ONLY_FIELDS_) {
-    if (employee[key] !== undefined) {
-      if (!callerIsOwner) {
-        return { success: false, error: { code: 'AUTH_FORBIDDEN', message: `Only the owner can change ${key}` } };
-      }
-      filtered[key] = employee[key];
-    }
-  }
-
+  // v2.32.1: previously, ANY non-owner submitting any owner-only field was
+  // hard-rejected with AUTH_FORBIDDEN — even when the value matched the
+  // existing row (i.e. "no change"). That broke non-owner admin's ability to
+  // add a new staff employee, because the form always sent isAdmin=false.
+  // New behavior: owner-only fields are silently dropped for non-owner callers
+  // unless the value differs from the existing row's value (edit) or is
+  // non-default (new row attempt to elevate). Hard-reject only when it would
+  // be a real privilege escalation.
   const existingEmployee = employees.find(e => e.id === employee.id);
+  for (const key of SAVE_EMPLOYEE_OWNER_ONLY_FIELDS_) {
+    if (employee[key] === undefined) continue;
+    if (callerIsOwner) {
+      filtered[key] = employee[key];
+      continue;
+    }
+    // Non-owner: drop silently if no-op, reject if escalation.
+    const submitted = employee[key];
+    const existingValue = existingEmployee ? existingEmployee[key] : undefined;
+    const isNoOp = existingEmployee
+      ? String(submitted) === String(existingValue || '')
+      : (submitted === false || submitted === '' || submitted === null || submitted === undefined);
+    if (isNoOp) continue;
+    return { success: false, error: { code: 'AUTH_FORBIDDEN', message: `Only the owner can change ${key}` } };
+  }
 
   if (existingEmployee) {
     updateRow(CONFIG.TABS.EMPLOYEES, existingEmployee._rowIndex, filtered);
@@ -2355,9 +2410,18 @@ function archiveEmployee(payload) {
     if (!target) {
       return { success: false, error: { code: 'NOT_FOUND', message: 'Employee not found.' } };
     }
-    if (target.isOwner === true) {
+    // v2.32.1: truthy check tolerates Sheet text-cell "TRUE" so the owner row
+    // cannot be archived even if isOwner column is text rather than boolean.
+    if (!!target.isOwner) {
       return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Cannot archive the owner account.' } };
     }
+
+    // v2.32.1: idempotency. If a prior archive attempt failed mid-flight (after
+    // the EmployeesArchive append but before the Employees deleteRow), the
+    // employee row exists in BOTH sheets. Detect and skip the re-append so we
+    // don't create duplicate archive rows on retry.
+    const archived = getSheetData(CONFIG.TABS.EMPLOYEES_ARCHIVE);
+    const alreadyArchived = archived.find(e => e.id === employeeId);
 
     // Snapshot employeeName/employeeEmail into shift rows missing them.
     const shifts = getSheetData(CONFIG.TABS.SHIFTS);
@@ -2373,19 +2437,28 @@ function archiveEmployee(payload) {
     });
     if (backfilled > 0) bustSheetCache_(CONFIG.TABS.SHIFTS);
 
-    // Insert into EmployeesArchive.
-    const archiveRow = Object.assign({}, target, {
-      archivedAt: new Date().toISOString().split('T')[0],
-      archivedBy: auth.employee.id
-    });
-    delete archiveRow._rowIndex;
-    appendRow(CONFIG.TABS.EMPLOYEES_ARCHIVE, archiveRow);
+    if (!alreadyArchived) {
+      // Insert into EmployeesArchive.
+      const archiveRow = Object.assign({}, target, {
+        archivedAt: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+        archivedBy: auth.employee.id
+      });
+      delete archiveRow._rowIndex;
+      appendRow(CONFIG.TABS.EMPLOYEES_ARCHIVE, archiveRow);
+    }
 
-    // Delete from Employees.
-    getSheet(CONFIG.TABS.EMPLOYEES).deleteRow(target._rowIndex);
-    bustSheetCache_(CONFIG.TABS.EMPLOYEES);
+    // Delete from Employees. v2.32.1: wrap in try/catch so a mid-flight failure
+    // doesn't leave both sheets in an inconsistent state with no error returned.
+    let deleteWarning = null;
+    try {
+      getSheet(CONFIG.TABS.EMPLOYEES).deleteRow(target._rowIndex);
+      bustSheetCache_(CONFIG.TABS.EMPLOYEES);
+    } catch (err) {
+      deleteWarning = String(err && err.message || err);
+      console.warn('archiveEmployee deleteRow failed for ' + employeeId + ': ' + deleteWarning);
+    }
 
-    return { success: true, data: { archivedId: employeeId, snapshottedShifts: backfilled } };
+    return { success: true, data: { archivedId: employeeId, snapshottedShifts: backfilled, deleteWarning: deleteWarning } };
   }, 'archiveEmployee');
 }
 
@@ -2398,6 +2471,7 @@ function unarchiveEmployee(payload) {
   const { employeeId } = payload;
   const auth = verifyAuth(payload, true);
   if (!auth.authorized) return { success: false, error: auth.error };
+  // v2.32.1: truthy check tolerates Sheet text-cell "TRUE".
   if (!auth.employee.isOwner) {
     return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Only the owner can restore archived employees.' } };
   }
@@ -2409,17 +2483,32 @@ function unarchiveEmployee(payload) {
       return { success: false, error: { code: 'NOT_FOUND', message: 'Archived employee not found.' } };
     }
 
-    const restored = Object.assign({}, target, { active: false });
-    delete restored.archivedAt;
-    delete restored.archivedBy;
-    delete restored._rowIndex;
-    appendRow(CONFIG.TABS.EMPLOYEES, restored);
+    // v2.32.1: idempotency. If a prior unarchive failed mid-flight (after
+    // appendRow to Employees, before deleteRow from Archive), the employee
+    // would exist in both sheets. Detect and skip the re-append.
+    const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
+    const alreadyRestored = employees.find(e => e.id === employeeId);
 
-    getSheet(CONFIG.TABS.EMPLOYEES_ARCHIVE).deleteRow(target._rowIndex);
+    if (!alreadyRestored) {
+      const restored = Object.assign({}, target, { active: false });
+      delete restored.archivedAt;
+      delete restored.archivedBy;
+      delete restored._rowIndex;
+      appendRow(CONFIG.TABS.EMPLOYEES, restored);
+    }
+
+    // v2.32.1: wrap deleteRow in try/catch.
+    let deleteWarning = null;
+    try {
+      getSheet(CONFIG.TABS.EMPLOYEES_ARCHIVE).deleteRow(target._rowIndex);
+    } catch (err) {
+      deleteWarning = String(err && err.message || err);
+      console.warn('unarchiveEmployee deleteRow failed for ' + employeeId + ': ' + deleteWarning);
+    }
     bustSheetCache_(CONFIG.TABS.EMPLOYEES);
     bustSheetCache_(CONFIG.TABS.EMPLOYEES_ARCHIVE);
 
-    return { success: true, data: { restoredId: employeeId } };
+    return { success: true, data: { restoredId: employeeId, deleteWarning: deleteWarning } };
   }, 'unarchiveEmployee');
 }
 
@@ -2548,7 +2637,8 @@ function batchSaveShifts(payload) {
 
   // Past-period edit lock (v2.32.0). Reject the entire batch if any shift OR
   // any period-purge date falls in a locked past period for this caller.
-  const todayStr = new Date().toISOString().split('T')[0];
+  // v2.32.1: todayStr in local timezone matches the local-midnight period anchor.
+  const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   const allDates = (shifts || []).map(s => normalizeDate(s.date)).concat(periodDates || []);
   for (const d of allDates) {
     if (!d) continue;
