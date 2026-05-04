@@ -57,6 +57,7 @@ import { ChangePasswordModal } from './modals/ChangePasswordModal';
 import { EmployeeFormModal } from './modals/EmployeeFormModal';
 import { OnboardingEmailModal } from './modals/OnboardingEmailModal';
 import MyScheduleModal from './modals/MyScheduleModal';
+import { ArchivedEmployeesPanel } from './modals/ArchivedEmployeesPanel';
 import { RequestDaysOffModal } from './modals/RequestDaysOffModal';
 import { EmailModal } from './modals/EmailModal';
 import { AutofillClearModal } from './modals/AutofillClearModal';
@@ -65,7 +66,7 @@ export { THEME, TYPE, ROLES, ROLES_BY_ID };
 export { getStoreHoursForDate } from './utils/storeHoursOverrides';
 import { 
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Mail, Save, Send, FileText, X,
-  User, Users, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, EyeOff, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu, BookOpen, AlertTriangle
+  User, Users, Calendar, Check, AlertCircle, Star, Edit3, Trash2, UserX, UserCheck, Eye, EyeOff, LogOut, Shield, Settings, Key, MessageSquare, Loader, ClipboardList, ArrowRightLeft, ArrowRight, Bell, Zap, Clock, Menu, BookOpen, AlertTriangle, Archive
 } from 'lucide-react';
 
 // Daily staffing targets - defaults (overridden by Settings tab if configured)
@@ -2365,6 +2366,12 @@ export default function App() {
                     <span className="flex items-center gap-2"><Users size={14} style={{ color: THEME.text.secondary }} />Employees</span>
                     {inactiveCount > 0 && <span className="text-xs" style={{ color: THEME.text.muted, fontSize: '10px' }}>{inactiveCount} inactive</span>}
                   </button>
+                  {currentUser?.isOwner && (
+                    <button role="menuitem" onClick={() => { setAdminMenuOpen(false); setArchivedPanelOpen(true); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.text.primary }}>
+                      <Archive size={14} style={{ color: THEME.text.secondary }} />
+                      Archive...
+                    </button>
+                  )}
                   <button role="menuitem" onClick={() => { setAdminMenuOpen(false); setSettingsOpen(true); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.text.primary }}>
                     <Settings size={14} style={{ color: THEME.text.secondary }} />
                     Admin Settings
@@ -2750,6 +2757,7 @@ export default function App() {
       {violationsPanelEl}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <EmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onEdit={(emp) => { setInactivePanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
+      <ArchivedEmployeesPanel isOpen={archivedPanelOpen} onClose={() => setArchivedPanelOpen(false)} archivedEmployees={employeesArchive} employees={employees} onRestore={unarchiveEmployee} onHardDelete={hardDeleteArchivedEmployee} />
       <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />
       <ChangePasswordModal isOpen={mobileAdminChangePasswordOpen} onClose={() => setMobileAdminChangePasswordOpen(false)} currentUser={currentUser} />
       {pkModalEl}
