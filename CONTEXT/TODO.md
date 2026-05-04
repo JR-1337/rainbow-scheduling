@@ -25,8 +25,6 @@ gamboge. predictive coding.
 
 - **Audit-fix plan complete -- 4 batches + 2 hotfixes shipped, paste-deployed, smoked clean.** Plan retired at `~/.claude/plans/audit-fixes-2026-05-02.md` (kept for reference, not active). H3 deferred to migration (see Blocked). Pick next from this Active list.
 
-- **[s058 raised by JR] Day Status segmented control: rename "Working" -> "Available".** The current `[Working | Sick | Unavailable]` triple in `ShiftEditorModal` (s057 commit `e53768e`) reads as confusing because the cell underneath says "work" too. "Available" matches the semantic of the other two states (Sick / Unavailable describe day-state, not action). Rename in the segmented-control labels only; the `dayStatus` state values stay unchanged (`'working'` internal token is fine). Single file (`ShiftEditorModal.jsx`), single commit.
-
 - **[s058 raised by JR] Desktop period-nav missing the Future / Past / Current Period label.** Mobile period-nav at the top of the schedule view shows a label distinguishing whether the active period is in the future, past, or current. Desktop version doesn't. Parity ask. Locate the label render in the mobile period-nav component, mirror onto the desktop period-nav (likely a sibling render in `App.jsx` or a shared period-nav primitive). Mobile + desktop parity rule applies.
 
 - **[s058 raised by JR] Past pay-period edit lock -- design discussion.** Today: no lock; all admins (including Sarvi) can edit any period via `saveShift` / `batchSaveShifts` (gated on `requiredAdmin=true` only, no date filter). JR's instinct (verbatim, s058): "i think they might need to be locked to everyone but me. even sarvi." Three design flavors to weigh in the next session: (1) Owner-only past-period edit (`employee.isOwner === true` required for any write where shift date < current period start) -- cleanest record integrity, but Sarvi loses retroactive-fix authority. (2) Admin1-tier (JR + Sarvi) past-period edit -- Sarvi keeps fix authority; future admin2 hires blocked. (3) Time-window grace -- anyone within N days of period end (e.g., 7-day grace), then owner-only after. Most common in payroll-grade software; balances normal-ops humanity with hard lock for compliance. JR leans Owner-only or Time-window. Decide before live cutover (this rule has audit implications -- see Ontario ESA archive item below). Touches the same backend gate as the orphan-shift defensive filter and the soft-delete archive feature; bundle the design conversation.
@@ -91,6 +89,8 @@ gamboge. predictive coding.
 - Missing validation: no automated test suite; manual Playwright smoke only.
 
 ## Completed
+
+- [2026-05-04] **Day Status 'Working' label renamed to 'Available' (commit `e3090e4`)** -- the segmented control under the work cell read as redundant/confusing because the cell already says "work". 'Available' matches the semantic of the other two states (Sick / Unavailable). Internal `dayStatus` token stays `'working'` so no downstream call sites change. Single line at `src/modals/ShiftEditorModal.jsx:602`. Build PASS; Vercel auto-deploy.
 
 - [2026-05-03] **Login default-password hint corrected (commit `48db3c4`)** -- LoginScreen first-time hint still said "Use your employee ID as password" since pre-v2.27.0; replaced with "Your default password is your first name and last initial with no space, e.g. JohnR" per JR's verbatim wording. Single-line frontend-only edit at `src/components/LoginScreen.jsx:130`. Build PASS; Vercel auto-deploy.
 
