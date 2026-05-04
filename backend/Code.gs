@@ -2,7 +2,14 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.32.2 (Auto-clear future shifts + events on archive + deactivate)
+ * Version: 2.32.3 (Drop hardcoded BCC otr.scheduler from sendOnboardingEmail; payload-driven optional)
+ *
+ * Changes in v2.32.3:
+ * - sendOnboardingEmail no longer hardcodes bcc: 'otr.scheduler@gmail.com'.
+ *   Script runs as otr.scheduler so MailApp already files the sent copy in
+ *   otr.scheduler's Sent folder; the BCC was duplicating it into the Inbox.
+ *   Capability preserved: payload.bcc still respected when present (mirrors
+ *   sendBrandedScheduleEmail's existing pattern).
  *
  * Changes in v2.32.2:
  * - archiveEmployee and saveEmployee deactivation path now auto-clear future
@@ -61,8 +68,8 @@
  *
  * Changes in v2.31.0:
  * - sendOnboardingEmail action: generates per-recipient welcome PDF (navy/white branded),
- *   fetches federal + Ontario TD1 PDFs from Drive by file ID, sends via MailApp with
- *   BCC otr.scheduler. LAUNCH_LIVE_=false rewrites recipient to JR until launch.
+ *   fetches federal + Ontario TD1 PDFs from Drive by file ID, sends via MailApp.
+ *   LAUNCH_LIVE_=false rewrites recipient to JR until launch.
  * - backfillOnboardingDates one-shot: writes today's ISO date to welcomeSentAt for all
  *   active employees whose welcomeSentAt is blank. Callable from Apps Script editor only.
  * - WELCOME_TEMPLATE_HTML_, WELCOME_FED_TD1_ID_, WELCOME_ON_TD1_ID_, LAUNCH_LIVE_,
@@ -358,7 +365,7 @@ var WELCOME_FOLDER_ID_ = '1dWQOcZWMaAe_2YTGuPMhDmwXwXo45mtx';
 var WELCOME_FED_TD1_ID_ = '1w6KMoyOZLESx4nmcUaSaPIf0T6my8Brj';  // 2026 Federal tax TD1.pdf
 var WELCOME_ON_TD1_ID_  = '1Iu9dHa0FX_ya8osiPMWXkV0ld8U9kW29'; // 2026 Ontario tax TD1.pdf
 // Pre-launch recipient gate. Set LAUNCH_LIVE_ = true at launch to enable real recipients.
-// When false every onboarding send goes to LAUNCH_REWRITE_TO_ (JR's inbox). BCC otr.scheduler always.
+// When false every onboarding send goes to LAUNCH_REWRITE_TO_ (JR's inbox).
 var LAUNCH_LIVE_ = false;
 var LAUNCH_REWRITE_TO_ = 'johnrichmond007@gmail.com';
 
@@ -3054,17 +3061,18 @@ function sendOnboardingEmail(payload) {
       ? BRANDED_EMAIL_WRAPPER_HTML_(bodyText, OTR_ACCENT_DEFAULT_)
       : '';
 
-    // Send email.
-    MailApp.sendEmail({
+    // Send email. BCC is payload-driven and optional (mirrors sendBrandedScheduleEmail).
+    var mailParams = {
       to: actualRecipient,
       subject: payload.subject,
       body: bodyText,
       htmlBody: htmlBody || '',
       attachments: attachments,
-      bcc: 'otr.scheduler@gmail.com',
       name: 'OTR Scheduling'
-    });
-    Logger.log('sendOnboardingEmail: sent to ' + actualRecipient + ' (bcc otr.scheduler): ' + payload.subject);
+    };
+    if (payload.bcc) mailParams.bcc = payload.bcc;
+    MailApp.sendEmail(mailParams);
+    Logger.log('sendOnboardingEmail: sent to ' + actualRecipient + (payload.bcc ? ' (bcc ' + payload.bcc + ')' : '') + ': ' + payload.subject);
 
     // Write welcomeSentAt only if currently blank (preserve original on resend).
     var welcomeSentAtUpdated = false;
