@@ -97,7 +97,6 @@ export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, da
           subject: built.subject,
           htmlBody: built.html,
           plaintextBody: built.plaintext,
-          bcc: 'otr.scheduler@gmail.com',
         });
 
         if (res && res.success) {
