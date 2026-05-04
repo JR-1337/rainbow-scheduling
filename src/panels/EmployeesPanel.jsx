@@ -1,15 +1,14 @@
 import { useState, useMemo } from 'react';
-import { UserCheck, Shield, Edit3, Trash2 } from 'lucide-react';
+import { UserCheck, Shield, Edit3, Archive } from 'lucide-react';
 import { THEME } from '../theme';
 import { Modal, GradientButton } from '../components/primitives';
 
 // Desktop Employees panel. Mirrors mobile MobileStaffPanel chip filter so
 // admins can browse Active / Inactive / Deleted from one panel on desktop too.
-// Delete itself happens inside EmployeeFormModal (Edit -> Remove with built-in
-// confirm at EmployeeFormModal:80) so we don't duplicate that flow here.
-export const EmployeesPanel = ({ isOpen, onClose, employees, onEdit, onReactivate, onDelete }) => {
+// Archive itself happens via EmployeeFormModal (Edit -> Archive) OR directly from the Inactive list (Archive button + confirm).
+export const EmployeesPanel = ({ isOpen, onClose, employees, onEdit, onReactivate, onArchive }) => {
   const [filter, setFilter] = useState('active');
-  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmArchive, setConfirmArchive] = useState(null);
 
   const { active, inactive, deleted } = useMemo(() => ({
     active: employees.filter(e => e.active && !e.deleted && !e.isOwner),
@@ -43,15 +42,15 @@ export const EmployeesPanel = ({ isOpen, onClose, employees, onEdit, onReactivat
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Employees" size="md">
-      {confirmDelete ? (
+      {confirmArchive ? (
         <div className="py-2">
           <h3 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: THEME.status.error }}>
-            <Trash2 size={14} />Remove {confirmDelete.name}?
+            <Archive size={14} />Archive {confirmArchive.name}?
           </h3>
-          <p className="text-xs mb-3" style={{ color: THEME.text.secondary }}>This removes {confirmDelete.name} from the active roster. Their past shifts stay on the schedule. You can restore from the Deleted tab.</p>
+          <p className="text-xs mb-3" style={{ color: THEME.text.secondary }}>Archive {confirmArchive.name}? Their past shifts stay on the schedule for payroll. Restore via the owner-only Archived Employees panel within 5 years.</p>
           <div className="flex justify-end gap-2">
-            <GradientButton variant="secondary" small onClick={() => setConfirmDelete(null)}>Cancel</GradientButton>
-            <GradientButton danger small onClick={() => { onDelete(confirmDelete.id); setConfirmDelete(null); }}><Trash2 size={10} />Remove</GradientButton>
+            <GradientButton variant="secondary" small onClick={() => setConfirmArchive(null)}>Cancel</GradientButton>
+            <GradientButton danger small onClick={() => { onArchive(confirmArchive.id); setConfirmArchive(null); }}><Archive size={10} />Archive</GradientButton>
           </div>
         </div>
       ) : (
@@ -91,7 +90,7 @@ export const EmployeesPanel = ({ isOpen, onClose, employees, onEdit, onReactivat
                     {filter === 'inactive' && (
                       <>
                         <GradientButton variant="secondary" small onClick={() => onReactivate(emp.id)}>Reactivate</GradientButton>
-                        <GradientButton danger small onClick={() => setConfirmDelete(emp)}><Trash2 size={10} />Remove</GradientButton>
+                        <GradientButton danger small onClick={() => setConfirmArchive(emp)}><Archive size={10} />Archive</GradientButton>
                       </>
                     )}
                     {filter === 'deleted' && (

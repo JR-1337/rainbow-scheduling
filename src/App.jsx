@@ -857,16 +857,6 @@ export default function App() {
         showToast('error', 'Admin accounts cannot be deactivated. Demote to Staff first.', 6000);
         return false;
       }
-      const futureShifts = getFutureShiftDates(e.id, shifts);
-      if (futureShifts.length > 0) {
-        showToast('error', formatFutureShiftsBlockMessage('deactivate', e.name, futureShifts), 8000);
-        return false;
-      }
-      const futureEvents = getFutureEventDates(e.id, events);
-      if (futureEvents.length > 0) {
-        showToast('error', formatFutureEventsBlockMessage('deactivate', e.name, futureEvents), 8000);
-        return false;
-      }
     }
 
     // Do NOT clear editingEmp: if save fails modal stays open and labelled "Edit".
@@ -896,7 +886,36 @@ export default function App() {
 
     if (result.success) {
       setEditingEmp(null);
-      showToast('success', wasEditing ? `${e.name} updated` : `${e.name} added`);
+      const isDeactivation = editingEmp && editingEmp.active && !e.active;
+      if (isDeactivation) {
+        const clearedShifts = result.data?.clearedShifts || 0;
+        const clearedEvents = result.data?.clearedEvents || 0;
+        const today = toDateKey(new Date());
+        setShifts(prev => {
+          const next = { ...prev };
+          Object.keys(next).forEach(key => {
+            const s = next[key];
+            if (s.employeeId === e.id && s.date >= today) delete next[key];
+          });
+          return next;
+        });
+        setEvents(prev => {
+          const next = { ...prev };
+          Object.keys(next).forEach(key => {
+            if (key.startsWith(`${e.id}-`)) {
+              const date = key.slice(`${e.id}-`.length);
+              if (date >= today) delete next[key];
+            }
+          });
+          return next;
+        });
+        const detail = clearedShifts || clearedEvents
+          ? ` (${clearedShifts} future shift${clearedShifts === 1 ? '' : 's'}${clearedEvents ? `, ${clearedEvents} future event${clearedEvents === 1 ? '' : 's'}` : ''} cleared)`
+          : '';
+        showToast('success', `${e.name} set to Inactive${detail}`);
+      } else {
+        showToast('success', wasEditing ? `${e.name} updated` : `${e.name} added`);
+      }
       if (!wasEditing && result.success) {
         setOnboardingTarget({ ...e, id: result.id || e.id });
       }
@@ -966,9 +985,34 @@ export default function App() {
     if (!emp) return false;
     const result = await apiCall('archiveEmployee', { employeeId: id });
     if (result.success) {
+      const clearedShifts = result.data?.clearedShifts || 0;
+      const clearedEvents = result.data?.clearedEvents || 0;
+      const today = toDateKey(new Date());
       setEmployees(prev => prev.filter(e => e.id !== id));
       setEmployeesArchive(prev => [...prev, { ...emp, archivedAt: new Date().toISOString().split('T')[0], archivedBy: currentUser?.id }]);
-      showToast('success', `${emp.name} archived`);
+      // Strip future shifts and events from local state.
+      setShifts(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(key => {
+          const s = next[key];
+          if (s.employeeId === id && s.date >= today) delete next[key];
+        });
+        return next;
+      });
+      setEvents(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(key => {
+          if (key.startsWith(`${id}-`)) {
+            const date = key.slice(`${id}-`.length);
+            if (date >= today) delete next[key];
+          }
+        });
+        return next;
+      });
+      const detail = clearedShifts || clearedEvents
+        ? ` (cleared ${clearedShifts} future shift${clearedShifts === 1 ? '' : 's'}${clearedEvents ? `, ${clearedEvents} future event${clearedEvents === 1 ? '' : 's'}` : ''})`
+        : '';
+      showToast('success', `${emp.name} archived${detail}`);
       return true;
     } else {
       showToast('error', errorMsg(result, 'Failed to archive employee'));
@@ -2206,12 +2250,14 @@ export default function App() {
           isOpen={empFormOpen}
           onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }}
           onSave={saveEmployee}
-          onDelete={deleteEmployee}
+          onArchive={archiveEmployee}
           employee={editingEmp}
           currentUser={currentUser}
           showToast={showToast}
           employees={employees}
           onSendOnboarding={(emp) => { setEmpFormOpen(false); setEditingEmp(null); setOnboardingTarget(emp); }}
+          shifts={shifts}
+          events={events}
         />
 
         {/* Column Header Editor (mobile admin: tap day header in Edit Mode) */}
@@ -2731,7 +2777,7 @@ export default function App() {
         </div>
       </main>
       
-      <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} onArchive={archiveEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} employees={employees} onSendOnboarding={(emp) => { setEmpFormOpen(false); setEditingEmp(null); setOnboardingTarget(emp); }} />
+      <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onArchive={archiveEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} employees={employees} onSendOnboarding={(emp) => { setEmpFormOpen(false); setEditingEmp(null); setOnboardingTarget(emp); }} shifts={shifts} events={events} />
       <OnboardingEmailModal
         isOpen={!!onboardingTarget}
         employee={onboardingTarget}
@@ -2765,7 +2811,7 @@ export default function App() {
       })()}
       {violationsPanelEl}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
-      <EmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onEdit={(emp) => { setInactivePanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }} onReactivate={reactivateEmployee} onDelete={deleteEmployee} />
+      <EmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onEdit={(emp) => { setInactivePanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }} onReactivate={reactivateEmployee} onArchive={archiveEmployee} />
       <ArchivedEmployeesPanel isOpen={archivedPanelOpen} onClose={() => setArchivedPanelOpen(false)} archivedEmployees={employeesArchive} employees={employees} onRestore={unarchiveEmployee} onHardDelete={hardDeleteArchivedEmployee} />
       <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />
       <ChangePasswordModal isOpen={mobileAdminChangePasswordOpen} onClose={() => setMobileAdminChangePasswordOpen(false)} currentUser={currentUser} />
