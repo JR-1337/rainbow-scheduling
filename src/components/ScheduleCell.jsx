@@ -63,13 +63,14 @@ export const ScheduleCell = React.memo(({ shift, events = [], date, onCellClick,
     <>
       <div
         onClick={isClickable ? handleClick : undefined}
+        title={isLocked && !isDeleted ? 'Past period locked' : undefined}
         {...(isClickable ? {
           role: 'button',
           tabIndex: 0,
           onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); } },
           'aria-label': `${employee?.name} ${formatDate(date)}${shift ? ' edit shift' : ' add shift'}`,
         } : {})}
-        className={`h-[4.5rem] rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked && (shift || hasEvents) ? 'cursor-default' : isLocked ? 'cursor-not-allowed' : ''}`}
+        className={`h-[4.5rem] rounded-lg transition-all relative overflow-hidden ${isClickable ? 'cursor-pointer group' : isLocked ? 'cursor-not-allowed' : ''}`}
         style={{
           ...computeCellStyles({ hasSick, isTimeOff: hasApprovedTimeOff, isUnavailable: isFullyUnavailable, isTitled: isTitledShift, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: true }),
         }}>

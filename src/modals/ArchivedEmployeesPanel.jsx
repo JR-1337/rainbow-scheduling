@@ -65,6 +65,7 @@ export const ArchivedEmployeesPanel = ({ isOpen, onClose, archivedEmployees = []
             onChange={e => setHardDeleteConfirmName(e.target.value)}
             placeholder={`Type ${hardDeleteTarget.name} to confirm`}
             className="mb-3"
+            autoFocus
           />
           <div className="flex justify-center gap-2">
             <GradientButton variant="secondary" small onClick={() => { setHardDeleteTarget(null); setHardDeleteConfirmName(''); }}>Cancel</GradientButton>

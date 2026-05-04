@@ -115,6 +115,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, onArchive
             onChange={e => setEraseConfirmName(e.target.value)}
             placeholder={`Type ${employee?.name} to confirm`}
             className="mb-3"
+            autoFocus
           />
           <div className="flex justify-center gap-2">
             <GradientButton variant="secondary" small onClick={() => { setShowEraseConfirm(false); setEraseConfirmName(''); }}>Cancel</GradientButton>

@@ -33,10 +33,10 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   );
 };
 
-export const Input = ({ label, type = 'text', value, onChange, placeholder, required }) => (
-  <label className="mb-2 block">
-    <span className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>{label} {required && <span style={{ color: THEME.status.error }}>*</span>}</span>
-    <input type={type} value={value} onChange={onChange} placeholder={placeholder} className="w-full px-2 py-1.5 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
+export const Input = ({ label, type = 'text', value, onChange, placeholder, required, autoFocus, className = '' }) => (
+  <label className={`mb-2 block ${className}`}>
+    {label && <span className="block text-xs font-medium mb-0.5" style={{ color: THEME.text.secondary }}>{label} {required && <span style={{ color: THEME.status.error }}>*</span>}</span>}
+    <input type={type} value={value} onChange={onChange} placeholder={placeholder} autoFocus={autoFocus} className="w-full px-2 py-1.5 rounded-lg outline-none text-sm" style={{ backgroundColor: THEME.bg.elevated, border: `1px solid ${THEME.border.default}`, color: THEME.text.primary }} />
   </label>
 );
 
