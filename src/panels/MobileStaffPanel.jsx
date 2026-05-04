@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
-import { UserCheck, Trash2, Plus, Edit3, Shield } from 'lucide-react';
+import { UserCheck, Archive, Plus, Edit3, Shield } from 'lucide-react';
 import { THEME } from '../App';
 import { MobileBottomSheet } from '../MobileEmployeeView';
 import { Button } from '../components/Button';
 
-export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, onReactivate, onDelete }) => {
+export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, onReactivate, onArchive }) => {
   const [filter, setFilter] = useState('active');
-  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmArchive, setConfirmArchive] = useState(null);
 
   const { active, inactive, deleted } = useMemo(() => ({
     active: employees.filter(e => e.active && !e.deleted && !e.isOwner),
@@ -39,17 +39,17 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
     );
   };
 
-  if (confirmDelete) {
+  if (confirmArchive) {
     return (
-      <MobileBottomSheet isOpen={isOpen} onClose={() => setConfirmDelete(null)} title="Remove employee?">
+      <MobileBottomSheet isOpen={isOpen} onClose={() => setConfirmArchive(null)} title="Archive employee?">
         <div className="py-2">
           <h3 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: THEME.status.error }}>
-            <Trash2 size={14} />Remove {confirmDelete.name}?
+            <Archive size={14} />Archive {confirmArchive.name}?
           </h3>
-          <p className="text-xs mb-3" style={{ color: THEME.text.secondary }}>This removes {confirmDelete.name} from the active roster. Their past shifts stay on the schedule. You can restore from the Deleted tab.</p>
+          <p className="text-xs mb-3" style={{ color: THEME.text.secondary }}>Archive {confirmArchive.name}? Their past shifts stay on the schedule for payroll. Restore via the owner-only Archived Employees panel within 5 years.</p>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" size="md" onClick={() => setConfirmDelete(null)}>Cancel</Button>
-            <Button variant="destructive" size="md" leftIcon={Trash2} iconSize={14} onClick={() => { onDelete(confirmDelete.id); setConfirmDelete(null); }} style={{ backgroundColor: THEME.status.error, color: '#fff' }}>Remove</Button>
+            <Button variant="secondary" size="md" onClick={() => setConfirmArchive(null)}>Cancel</Button>
+            <Button variant="destructive" size="md" leftIcon={Archive} iconSize={14} onClick={() => { onArchive(confirmArchive.id); setConfirmArchive(null); }} style={{ backgroundColor: THEME.status.error, color: '#fff' }}>Archive</Button>
           </div>
         </div>
       </MobileBottomSheet>
@@ -115,13 +115,13 @@ export const MobileStaffPanel = ({ isOpen, onClose, employees, onEdit, onAdd, on
                     <Button
                       variant="destructive"
                       size="md"
-                      leftIcon={Trash2}
+                      leftIcon={Archive}
                       iconSize={14}
-                      onClick={() => setConfirmDelete(emp)}
-                      aria-label={`Remove ${emp.name}`}
+                      onClick={() => setConfirmArchive(emp)}
+                      aria-label={`Archive ${emp.name}`}
                       style={{ backgroundColor: THEME.status.error + '20', border: 'none' }}
                     >
-                      Remove
+                      Archive
                     </Button>
                   </>
                 )}

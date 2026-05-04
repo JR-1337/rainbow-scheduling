@@ -2146,7 +2146,7 @@ export default function App() {
           onEdit={(emp) => { reopenStaffAfterFormRef.current = true; setMobileStaffPanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }}
           onAdd={() => { reopenStaffAfterFormRef.current = true; setMobileStaffPanelOpen(false); setEditingEmp(null); setEmpFormOpen(true); }}
           onReactivate={reactivateEmployee}
-          onDelete={deleteEmployee}
+          onArchive={archiveEmployee}
         />
 
         {/* Bottom Tab Bar (Phase 6) */}
