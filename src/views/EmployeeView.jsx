@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Bell, Calendar, Eye, Key, Loader, LogOut, Shield, Star, User, ArrowRight, ArrowRightLeft } from 'lucide-react';
 import {
   THEME, ROLES, ROLES_BY_ID,
@@ -23,6 +23,7 @@ import { ReceivedSwapsHistoryPanel } from '../panels/ReceivedSwapsHistoryPanel';
 import { UnifiedRequestHistory } from '../panels/UnifiedRequestHistory';
 import { RequestTimeOffModal } from '../modals/RequestTimeOffModal';
 import { ChangePasswordModal } from '../modals/ChangePasswordModal';
+import MyScheduleModal from '../modals/MyScheduleModal';
 import { RequestDaysOffModal } from '../modals/RequestDaysOffModal';
 import { OfferShiftModal } from '../modals/OfferShiftModal';
 import { SwapShiftModal } from '../modals/SwapShiftModal';
@@ -194,7 +195,23 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
   
   // Change password modal
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
-  
+
+  // Desktop account menu dropdown + My Schedule modal
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [myScheduleOpen, setMyScheduleOpen] = useState(false);
+  const accountMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const handler = (e) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target)) {
+        setAccountMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [accountMenuOpen]);
+
   // Track which resolved requests the user has seen (to show notifications)
   // Initialize with ALL currently resolved items so only NEW resolutions during session show notifications
   const [seenRequestIds, setSeenRequestIds] = useState(() => {
@@ -765,19 +782,49 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
                 </div>
               )}
             </button>
-            <div className="text-right">
-              <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>{currentUser.name}</p>
-              <p className="text-xs" style={{ color: THEME.accent.cyan }}>{myShiftsCount} shifts</p>
+            <div className="relative" ref={accountMenuRef}>
+              <button
+                onClick={() => setAccountMenuOpen(v => !v)}
+                className="flex items-center gap-2 pl-1.5 pr-2 py-1 rounded-lg transition-colors"
+                style={{ backgroundColor: accountMenuOpen ? THEME.bg.tertiary : 'transparent' }}
+                aria-haspopup="menu"
+                aria-expanded={accountMenuOpen}
+                title="Account menu"
+              >
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
+                     style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: '#fff' }}>
+                  {currentUser.name.split(' ').map(n => n[0]).join('')}
+                </div>
+                <div className="text-right leading-tight">
+                  <p className="text-xs font-medium" style={{ color: THEME.text.primary }}>{currentUser.name}</p>
+                  <p className="text-xs" style={{ color: THEME.accent.cyan }}>{myShiftsCount} shifts</p>
+                </div>
+              </button>
+              {accountMenuOpen && (
+                <div role="menu" className="absolute right-0 mt-1 w-56 rounded-xl overflow-hidden z-50"
+                     style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, boxShadow: THEME.shadow.card }}>
+                  <button role="menuitem" onClick={() => { setAccountMenuOpen(false); setMyScheduleOpen(true); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5"
+                          style={{ color: THEME.text.primary }}>
+                    <Calendar size={14} style={{ color: THEME.text.secondary }} />
+                    My Schedule
+                  </button>
+                  <button role="menuitem" onClick={() => { setAccountMenuOpen(false); setChangePasswordOpen(true); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5"
+                          style={{ color: THEME.text.primary }}>
+                    <Key size={14} style={{ color: THEME.text.secondary }} />
+                    Change Password
+                  </button>
+                  <div className="h-px mx-2" style={{ backgroundColor: THEME.border.subtle }} />
+                  <button role="menuitem" onClick={() => { setAccountMenuOpen(false); onLogout(); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5"
+                          style={{ color: THEME.status.error }}>
+                    <LogOut size={14} />
+                    Sign Out
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs" style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: '#fff' }}>
-              {currentUser.name.split(' ').map(n => n[0]).join('')}
-            </div>
-            <button onClick={() => setChangePasswordOpen(true)} className="p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }} title="Change Password">
-              <Key size={14} />
-            </button>
-            <button onClick={onLogout} className="p-1.5 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.muted }}>
-              <LogOut size={14} />
-            </button>
           </div>
         </div>
       </header>
@@ -1063,6 +1110,15 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
         isOpen={changePasswordOpen}
         onClose={() => setChangePasswordOpen(false)}
         currentUser={currentUser}
+      />
+      <MyScheduleModal
+        isOpen={myScheduleOpen}
+        onClose={() => setMyScheduleOpen(false)}
+        currentUser={currentUser}
+        shifts={shifts}
+        events={events}
+        dates={dates}
+        timeOffRequests={timeOffRequests}
       />
     </div>
   );
