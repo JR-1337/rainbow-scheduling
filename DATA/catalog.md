@@ -25,14 +25,14 @@ Rules:
 - ASCII operators only in notes.
 -->
 
-## gold-sources-inventory
-- id: gold-sources-inventory
-- path: rubrics/gold-sources-inventory.md
+## routing-index
+- id: routing-index
+- path: routing-index.md
 - kind: rubric
 - sensitivity: public
 - loop_use: human_review
 - hash_or_version:
-- notes: forward-looking map of in-tree gold (Apps Script API surface, Sheets schema, brand palette, PDF layout registry, scheduling state machine, deploy fingerprint, ontario.ca statutory references). Sheets-side employee/shift data is PII and lives in Google cloud, not in repo. First scoring-loop candidate = Apps Script API regression OR PDF render regression.
+- notes: pointer map to project-authoritative sources OUTSIDE DATA/ (in-tree gold + external integrations). Migrated from legacy DATA/rubrics/gold-sources-inventory.md on 2026-05-04 via /data-capture. 8-category schema; carries the Governance summary including the open pitchdeck-PII verification ask.
 
 <!-- TEMPLATE
 ## fx-example-id
