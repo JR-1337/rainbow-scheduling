@@ -2,6 +2,17 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.32.2 (Auto-clear future shifts + events on archive + deactivate)
+ *
+ * Changes in v2.32.2:
+ * - archiveEmployee and saveEmployee deactivation path now auto-clear future
+ *   shift + event rows. New helper clearFutureShiftsAndEventsForEmployee_
+ *   does the row deletion. Frontend "warn but block" pattern retired in favor
+ *   of "auto-clear and surface count in toast."
+ * - saveEmployee wrapped in withDocumentLock_ so the deactivate transition is
+ *   atomic. Response payloads carry {clearedShifts, clearedEvents} counts so
+ *   frontend can craft a useful toast.
+ *
  * Version: 2.32.1 (Audit fixes: timezone-correct date parsing, idempotent archive/restore, truthy isOwner, silent-strip owner-only fields for non-owner saveEmployee)
  *
  * Changes in v2.32.1:
@@ -2363,28 +2374,73 @@ function saveEmployee(payload) {
     return { success: false, error: { code: 'AUTH_FORBIDDEN', message: `Only the owner can change ${key}` } };
   }
 
-  if (existingEmployee) {
-    updateRow(CONFIG.TABS.EMPLOYEES, existingEmployee._rowIndex, filtered);
-  } else {
-    // New employee. If admin didn't supply an explicit password, compute the
-    // FirstnameL default from the name. Default-password hashes are computed
-    // from the lowercased value so login accepts any casing.
-    // employee.password may be admin-supplied (initial password override).
-    // Prefer it but fall through to computeDefaultPassword_ if missing.
-    const plaintextPw = employee.password || computeDefaultPassword_(filtered.name, employees);
-    const salt = generateSalt_();
-    const hash = hashPassword_(salt, String(plaintextPw).toLowerCase());
-    const employeeToSave = {
-      ...filtered,
-      password: plaintextPw,
-      passwordHash: hash,
-      passwordSalt: salt,
-      passwordChanged: false
-    };
-    appendRow(CONFIG.TABS.EMPLOYEES, employeeToSave);
-  }
+  // v2.32.2: detect active=true → active=false transition. Clear future shifts
+  // and events as part of the deactivation. Wrapped in withDocumentLock_ so the
+  // future-clearing and the row update are atomic — partial state would be
+  // "row still active but future shifts gone" which would surprise admins.
+  const isDeactivating = !!(existingEmployee && existingEmployee.active && filtered.active === false);
 
-  return { success: true, data: { employee } };
+  return withDocumentLock_(() => {
+    let cleared = { clearedShifts: 0, clearedEvents: 0 };
+    if (isDeactivating) {
+      cleared = clearFutureShiftsAndEventsForEmployee_(employee.id);
+    }
+
+    if (existingEmployee) {
+      updateRow(CONFIG.TABS.EMPLOYEES, existingEmployee._rowIndex, filtered);
+    } else {
+      // New employee. If admin didn't supply an explicit password, compute the
+      // FirstnameL default from the name. Default-password hashes are computed
+      // from the lowercased value so login accepts any casing.
+      // employee.password may be admin-supplied (initial password override).
+      // Prefer it but fall through to computeDefaultPassword_ if missing.
+      const plaintextPw = employee.password || computeDefaultPassword_(filtered.name, employees);
+      const salt = generateSalt_();
+      const hash = hashPassword_(salt, String(plaintextPw).toLowerCase());
+      const employeeToSave = {
+        ...filtered,
+        password: plaintextPw,
+        passwordHash: hash,
+        passwordSalt: salt,
+        passwordChanged: false
+      };
+      appendRow(CONFIG.TABS.EMPLOYEES, employeeToSave);
+    }
+
+    return { success: true, data: { employee, clearedShifts: cleared.clearedShifts, clearedEvents: cleared.clearedEvents } };
+  }, 'saveEmployee');
+}
+
+/**
+ * v2.32.2: Delete shift + event rows for an employee where date >= today.
+ * Lives in the Shifts tab (events are type IN ('meeting','pk','sick','timeOff')
+ * rows; work shifts are type='work' or missing). Returns counts split by
+ * shift vs event so the caller can craft a useful toast.
+ *
+ * Caller is responsible for holding the document lock and busting the cache.
+ */
+function clearFutureShiftsAndEventsForEmployee_(employeeId) {
+  const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const shifts = getSheetData(CONFIG.TABS.SHIFTS);
+  let clearedShifts = 0;
+  let clearedEvents = 0;
+  // Iterate from highest _rowIndex to lowest; deleteRow shifts subsequent rows.
+  const targets = shifts
+    .filter(s => s.employeeId === employeeId && s.date >= todayStr)
+    .sort((a, b) => b._rowIndex - a._rowIndex);
+  const sheet = getSheet(CONFIG.TABS.SHIFTS);
+  targets.forEach(row => {
+    try {
+      sheet.deleteRow(row._rowIndex);
+      const isEvent = row.type && row.type !== 'work';
+      if (isEvent) clearedEvents++;
+      else clearedShifts++;
+    } catch (err) {
+      console.warn('clearFutureShiftsAndEventsForEmployee_ deleteRow failed at row ' + row._rowIndex + ': ' + (err && err.message || err));
+    }
+  });
+  if (clearedShifts > 0 || clearedEvents > 0) bustSheetCache_(CONFIG.TABS.SHIFTS);
+  return { clearedShifts, clearedEvents };
 }
 
 /**
@@ -2437,6 +2493,9 @@ function archiveEmployee(payload) {
     });
     if (backfilled > 0) bustSheetCache_(CONFIG.TABS.SHIFTS);
 
+    // v2.32.2: clear future shifts + events for this employee.
+    const cleared = clearFutureShiftsAndEventsForEmployee_(employeeId);
+
     if (!alreadyArchived) {
       // Insert into EmployeesArchive.
       const archiveRow = Object.assign({}, target, {
@@ -2458,7 +2517,7 @@ function archiveEmployee(payload) {
       console.warn('archiveEmployee deleteRow failed for ' + employeeId + ': ' + deleteWarning);
     }
 
-    return { success: true, data: { archivedId: employeeId, snapshottedShifts: backfilled, deleteWarning: deleteWarning } };
+    return { success: true, data: { archivedId: employeeId, snapshottedShifts: backfilled, clearedShifts: cleared.clearedShifts, clearedEvents: cleared.clearedEvents, deleteWarning: deleteWarning } };
   }, 'archiveEmployee');
 }
 
