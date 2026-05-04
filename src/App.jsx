@@ -54,6 +54,7 @@ import { CommunicationsPanel } from './panels/CommunicationsPanel';
 import { AdminSettingsModal } from './modals/AdminSettingsModal';
 import { ChangePasswordModal } from './modals/ChangePasswordModal';
 import { EmployeeFormModal } from './modals/EmployeeFormModal';
+import { OnboardingEmailModal } from './modals/OnboardingEmailModal';
 import { RequestDaysOffModal } from './modals/RequestDaysOffModal';
 import { EmailModal } from './modals/EmailModal';
 import { AutofillClearModal } from './modals/AutofillClearModal';
@@ -111,6 +112,7 @@ export default function App() {
   const [events, setEvents] = useState({});
   const [empFormOpen, setEmpFormOpen] = useState(false);
   const [editingEmp, setEditingEmp] = useState(null);
+  const [onboardingTarget, setOnboardingTarget] = useState(null);
   const [emailOpen, setEmailOpen] = useState(false);
   const [editingShift, setEditingShift] = useState(null);
   const [unsaved, setUnsaved] = useState(false);
@@ -874,6 +876,9 @@ export default function App() {
     if (result.success) {
       setEditingEmp(null);
       showToast('success', wasEditing ? `${e.name} updated` : `${e.name} added`);
+      if (!wasEditing && result.success) {
+        setOnboardingTarget({ ...e, id: result.id || e.id });
+      }
       return true;
     } else {
       // Revert so the UI matches the server's rejection; keep editingEmp
@@ -2126,6 +2131,7 @@ export default function App() {
           currentUser={currentUser}
           showToast={showToast}
           employees={employees}
+          onSendOnboarding={(emp) => { setEmpFormOpen(false); setEditingEmp(null); setOnboardingTarget(emp); }}
         />
 
         {/* Column Header Editor (mobile admin: tap day header in Edit Mode) */}
@@ -2629,7 +2635,14 @@ export default function App() {
         </div>
       </main>
       
-      <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} employees={employees} />
+      <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} employees={employees} onSendOnboarding={(emp) => { setEmpFormOpen(false); setEditingEmp(null); setOnboardingTarget(emp); }} />
+      <OnboardingEmailModal
+        isOpen={!!onboardingTarget}
+        employee={onboardingTarget}
+        currentUser={currentUser}
+        showToast={showToast}
+        onClose={() => setOnboardingTarget(null)}
+      />
       {editingShift && (() => {
         const prior = new Date(editingShift.date); prior.setDate(prior.getDate() - 1);
         const priorStreak = computeConsecutiveWorkDayStreak(

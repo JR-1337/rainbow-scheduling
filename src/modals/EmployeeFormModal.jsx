@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Loader, UserCheck, UserX, Shield, Clock, Key, Check, AlertTriangle } from 'lucide-react';
+import { Trash2, Loader, UserCheck, UserX, Shield, Clock, Key, Check, AlertTriangle, Mail } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES } from '../constants';
 import { apiCall } from '../utils/api';
 import { Modal, GradientButton, Input } from '../components/primitives';
 import { hasTitle } from '../utils/employeeRender';
 import { computeDefaultPassword } from '../utils/employees';
-export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null, currentUser = null, showToast, suggestedPassword = '', employees = [] }) => {
+export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee = null, currentUser = null, showToast, suggestedPassword = '', employees = [], onSendOnboarding }) => {
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   // Availability is the outer eligibility window, not the booking window.
   // Default to the widest reasonable bound (06-22) so Sarvi only narrows
@@ -120,6 +120,28 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, employee 
         </div>
       ) : (
         <>
+          {employee && onSendOnboarding && (
+            <div className="flex items-center justify-end mb-2">
+              <button
+                type="button"
+                onClick={() => onSendOnboarding(employee)}
+                title={employee.welcomeSentAt ? `Onboarding sent ${employee.welcomeSentAt}` : 'Onboarding not yet sent'}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs"
+                style={{
+                  backgroundColor: employee.welcomeSentAt ? '#00A84D15' : THEME.bg.tertiary,
+                  border: `1px solid ${employee.welcomeSentAt ? '#00A84D40' : THEME.border.default}`,
+                  color: employee.welcomeSentAt ? '#00A84D' : THEME.text.muted,
+                  minHeight: 32,
+                }}>
+                <Mail
+                  size={14}
+                  fill={employee.welcomeSentAt ? '#00A84D' : 'transparent'}
+                  stroke={employee.welcomeSentAt ? '#00A84D' : THEME.text.muted}
+                />
+                <span>{employee.welcomeSentAt ? `Sent ${employee.welcomeSentAt}` : 'Not sent'}</span>
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <Input label="Name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
             <div>
