@@ -2201,7 +2201,12 @@ export default function App() {
             <div className="h-8 w-px" style={{ backgroundColor: THEME.border.default }} />
             <div className="flex items-center gap-2">
               <button onClick={() => setPeriodIndex(periodIndex - 1)} aria-label="Previous pay period" className="p-2 rounded-lg hover:scale-105 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary }}><ChevronLeft size={14} /></button>
-              <div className="text-center min-w-[100px]"><p className="font-medium" style={{ color: THEME.text.primary, fontSize: TYPE.body }}>{formatDate(startDate)} – {formatDate(endDate)}</p></div>
+              <div className="text-center min-w-[100px]">
+                <p className="font-medium" style={{ color: THEME.text.primary, fontSize: TYPE.body }}>{formatDate(startDate)} – {formatDate(endDate)}</p>
+                {periodIndex === CURRENT_PERIOD_INDEX && <p className="font-medium" style={{ color: THEME.accent.cyan, fontSize: '10px', marginTop: 1 }}>Current Period</p>}
+                {periodIndex > CURRENT_PERIOD_INDEX && <p className="font-medium" style={{ color: THEME.accent.purple, fontSize: '10px', marginTop: 1 }}>Future</p>}
+                {periodIndex < CURRENT_PERIOD_INDEX && <p className="font-medium" style={{ color: THEME.text.muted, fontSize: '10px', marginTop: 1 }}>Past</p>}
+              </div>
               <button onClick={() => setPeriodIndex(periodIndex + 1)} aria-label="Next pay period" className="p-2 rounded-lg hover:scale-105 min-w-[44px] min-h-[44px] flex items-center justify-center" style={{ backgroundColor: THEME.bg.tertiary, color: THEME.text.secondary }}><ChevronRight size={14} /></button>
             </div>
             
