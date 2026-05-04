@@ -2,6 +2,15 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.31.1 (Hotfix: wrap onboarding email body in BRANDED_EMAIL_WRAPPER_HTML_)
+ *
+ * Changes in v2.31.1:
+ * - sendOnboardingEmail: when the admin types a message body in the modal, wrap
+ *   it via BRANDED_EMAIL_WRAPPER_HTML_(bodyText, OTR_ACCENT_DEFAULT_) so the
+ *   typed message matches the schedule-distribution email branding (navy header,
+ *   white background, footer). Empty body still sends as empty htmlBody (subject
+ *   + attachments only). Welcome PDF generation unchanged.
+ *
  * Version: 2.31.0 (onboarding email modal: sendOnboardingEmail action + backfillOnboardingDates one-shot + WELCOME_TEMPLATE_HTML_ + LAUNCH_LIVE_ recipient gate.)
  *
  * Changes in v2.31.0:
@@ -2667,14 +2676,14 @@ function sendOnboardingEmail(payload) {
     var extraAttachments = (payload.attachments || []).map(decodeUploadedAttachment_);
     var attachments = [welcomePdf, fedBlob, onBlob].concat(extraAttachments);
 
-    // Convert plaintext body to HTML (newlines -> <br>, entities escaped inline).
+    // v2.31.1: when Sarvi types a body, wrap it in the branded email shell so the
+    // typed message matches the schedule-distribution email visual language. When
+    // the body is empty, send htmlBody as '' (recipient sees subject + attachments
+    // with no body block — attachments are the payload).
     var bodyText = payload.bodyText || '';
-    var htmlBody = bodyText.split('\n').map(function (line) {
-      return String(line)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    }).join('<br>');
+    var htmlBody = bodyText.trim()
+      ? BRANDED_EMAIL_WRAPPER_HTML_(bodyText, OTR_ACCENT_DEFAULT_)
+      : '';
 
     // Send email.
     MailApp.sendEmail({
