@@ -1,24 +1,25 @@
 <!-- SCHEMA: lessons-archive.md
-Version: 1
-Purpose: retired lesson entries moved out of active LESSONS.md when
-  the lesson is one-shot, the underlying code path was deleted, or
-  the entry is a positive observation rather than a pitfall.
-  Distinct from CONTEXT/archive/YYYY-MM-{slug}.md time-bucket retirements.
+Version: 6.2
+Purpose: retired LESSONS entries moved out of active LESSONS.md when
+  the 25,000-char ceiling is crossed, on `Graduated: YYYY-MM-DD to <target>`
+  marker, or on opportunistic stale review. Distinct from
+  CONTEXT/archive/YYYY-MM-{slug}.md time-bucket retirements: this is
+  a single growing file.
 
 Write mode: prepend each moved entry at the top (newest first, mirrors
   active LESSONS.md ordering). Never edit moved entries in place; if
-  a moved entry is later re-litigated, write a fresh entry to active
-  LESSONS.md.
+  a moved lesson recurs and earns new affirmations, write a fresh entry
+  to active LESSONS.md and reference the archived one by title.
 
-Move triggers:
-  (1) one-shot fix where the code path was deleted
-  (2) positive observation ("X works") rather than a pitfall to avoid
-  (3) superseded by a newer entry that covers the same ground
-  (4) opportunistic stale review at maintenance pass
-  (5) ceiling pressure on active LESSONS.md (per active schema's archive flow)
-
-Both files newest-at-top. Moved entries keep all fields intact and
-gain a `Moved: YYYY-MM-DD (sNNN) -- <reason>` line at the bottom.
+Rules:
+- Entries copy the LESSONS.md template shape (see LESSONS.md header
+  above for fields including Affirmations and Graduated). No new fields here.
+- Newest at top, both this file and active LESSONS.md.
+- File born from this header on first move. No template block; the
+  shape comes from LESSONS.md.
+- Cross-project graduations go to `{GLOBAL_ROOT}/CONTEXT/LESSONS.md`,
+  NOT here. This file holds project-scoped retirements only.
+- ASCII operators only.
 -->
 
 <!-- ============================================================ -->

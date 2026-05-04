@@ -1,5 +1,9 @@
 node_modules/
-.claude/
+# Per-machine settings + transient markers (kept out of git);
+# .claude/hooks/ and .claude/settings.json ship in git as the consumer audit trail.
+.claude/settings.local.json
+.claude/.upgrade-in-progress
+.claude/scheduled_tasks.lock
 .vercel
 dist/
 Photos/

@@ -1,7 +1,7 @@
 <!-- SCHEMA: decisions-archive.md
-Version: 1
+Version: 6.2
 Purpose: retired decision entries moved out of active DECISIONS.md when
-  the 150-line ceiling is crossed, on `Superseded by:` link, or on
+  the 25,000-char ceiling is crossed, on `Superseded by:` link, or on
   opportunistic stale review. Distinct from CONTEXT/archive/YYYY-MM-{slug}.md
   time-bucket retirements: this is a single growing file.
 

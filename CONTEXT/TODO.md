@@ -1,5 +1,5 @@
 <!-- SCHEMA: TODO.md
-Version: 5.2
+Version: 6.2
 Purpose: current worklist, blockers, verification state, recent completions.
 Write mode: overwrite in place as status changes. Not append-only.
 
@@ -11,7 +11,7 @@ Sections (in order):
 
 Rules:
 - Concision via shape, not word count -- match the example structure.
-- ASCII operators only (see Operator Legend in PROJECT_MEMORY_BOOTSTRAP.md).
+- ASCII operators only (see Operator Legend in the Telegraphic Memory Style section of specs/BOOTSTRAP_REFERENCE.md).
 - If you catch yourself writing rationale, move it to DECISIONS.md.
 - If you catch yourself writing architecture notes, move them to ARCHITECTURE.md.
 - If you catch yourself writing preferences, move them to LESSONS.md.

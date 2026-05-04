@@ -1,0 +1,53 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__playwright__*"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(rm -rf *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-snapshot-required.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-no-emdash.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-agents-size.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/block-rm-rf-context.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/validate-schema-header.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

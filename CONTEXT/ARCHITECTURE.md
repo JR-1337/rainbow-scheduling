@@ -1,7 +1,7 @@
 <!-- SCHEMA: ARCHITECTURE.md
-Version: 5.2
+Version: 6.2
 Purpose: current structure, boundaries, flows, and integrations.
-Write mode: overwrite the snapshot. Do not append history.
+Write mode: overwrite the snapshot each time. This file is a current-state view; rationale history belongs in DECISIONS.md.
 
 Rules:
 - Snapshot of the system as it is now. Not a log of how it got here.
@@ -125,6 +125,7 @@ Rules:
 - Apps Script web app -- GET `?action=NAME&payload=JSON` -- ours (manual deploy)
 - Vercel -- frontend hosting -- ours (auto on push to main)
 - MailApp (Gmail) -- sender "OTR Scheduling" -- ours
+- drift-scan cron -- RemoteTrigger trig_01FgamZJH8VeTombNpN4CQEg -- weekly Mon 02:07 UTC -- writes CONTEXT/drift-reports/drift-YYYY-MM-DD.md
 
 ## Boundaries
 
