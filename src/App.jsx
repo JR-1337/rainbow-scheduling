@@ -186,6 +186,9 @@ export default function App() {
   const adminMenuRef = useRef(null);
   useDismissOnOutside(adminMenuRef, adminMenuOpen, () => setAdminMenuOpen(false));
   const [myScheduleOpen, setMyScheduleOpen] = useState(false);
+  // v2.32.0: Archived Employees panel (owner-only).
+  const [archivedPanelOpen, setArchivedPanelOpen] = useState(false);
+  const [employeesArchive, setEmployeesArchive] = useState([]);
   const [adminDaysOffModalOpen, setAdminDaysOffModalOpen] = useState(false);
   const [pkModalOpen, setPkModalOpen] = useState(false);
   const [mobileActionSheetOpen, setMobileActionSheetOpen] = useState(false);
@@ -348,6 +351,11 @@ export default function App() {
         setStaffingTargetOverrides(loadedTargetOverrides);
       }
       
+      // v2.32.0: load archived employees for owner only.
+      if (result.data.employeesArchive && Array.isArray(result.data.employeesArchive)) {
+        setEmployeesArchive(result.data.employeesArchive);
+      }
+
       setIsLoadingData(false);
       return true;
     } else {
@@ -892,6 +900,8 @@ export default function App() {
     }
   };
   
+  // DEPRECATED (v2.32.0): deleteEmployee flips deleted=true / active=false (soft-delete) for back-compat
+  // reads. New flows use archiveEmployee (row move to EmployeesArchive sheet). Keep for rollback safety.
   const deleteEmployee = async (id) => {
     const emp = employees.find(e => e.id === id);
     if (!emp) return false;
@@ -940,6 +950,53 @@ export default function App() {
     }
   };
   
+  // v2.32.0: archiveEmployee moves the row to EmployeesArchive sheet. Admin1 tier.
+  const archiveEmployee = async (id) => {
+    const emp = employees.find(e => e.id === id);
+    if (!emp) return false;
+    const result = await apiCall('archiveEmployee', { employeeId: id });
+    if (result.success) {
+      setEmployees(prev => prev.filter(e => e.id !== id));
+      setEmployeesArchive(prev => [...prev, { ...emp, archivedAt: new Date().toISOString().split('T')[0], archivedBy: currentUser?.id }]);
+      showToast('success', `${emp.name} archived`);
+      return true;
+    } else {
+      showToast('error', errorMsg(result, 'Failed to archive employee'));
+      return false;
+    }
+  };
+
+  // v2.32.0: unarchiveEmployee restores from EmployeesArchive. Owner-only.
+  const unarchiveEmployee = async (id) => {
+    const row = employeesArchive.find(e => e.id === id);
+    if (!row) return false;
+    const result = await apiCall('unarchiveEmployee', { employeeId: id });
+    if (result.success) {
+      setEmployeesArchive(prev => prev.filter(e => e.id !== id));
+      setEmployees(prev => [...prev, { ...row, active: false, archivedAt: undefined, archivedBy: undefined }]);
+      showToast('success', `${row.name} restored`);
+      return true;
+    } else {
+      showToast('error', errorMsg(result, 'Failed to restore employee'));
+      return false;
+    }
+  };
+
+  // v2.32.0: hardDeleteArchivedEmployee. Owner-only, 5-yr retention gate on backend.
+  const hardDeleteArchivedEmployee = async (id, confirmName) => {
+    const row = employeesArchive.find(e => e.id === id);
+    if (!row) return false;
+    const result = await apiCall('hardDeleteArchivedEmployee', { employeeId: id, confirmName });
+    if (result.success) {
+      setEmployeesArchive(prev => prev.filter(e => e.id !== id));
+      showToast('success', `${row.name} permanently deleted`);
+      return true;
+    } else {
+      showToast('error', errorMsg(result, 'Failed to delete'));
+      return false;
+    }
+  };
+
   // Reactivate brings back inactive or deleted employees
   const reactivateEmployee = async (id) => {
     const emp = employees.find(e => e.id === id);
@@ -2658,7 +2715,7 @@ export default function App() {
         </div>
       </main>
       
-      <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} employees={employees} onSendOnboarding={(emp) => { setEmpFormOpen(false); setEditingEmp(null); setOnboardingTarget(emp); }} />
+      <EmployeeFormModal isOpen={empFormOpen} onClose={() => { setEmpFormOpen(false); setEditingEmp(null); }} onSave={saveEmployee} onDelete={deleteEmployee} onArchive={archiveEmployee} employee={editingEmp} currentUser={currentUser} showToast={showToast} employees={employees} onSendOnboarding={(emp) => { setEmpFormOpen(false); setEditingEmp(null); setOnboardingTarget(emp); }} />
       <OnboardingEmailModal
         isOpen={!!onboardingTarget}
         employee={onboardingTarget}
