@@ -21,7 +21,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   if (!isOpen) return null;
   const sizes = { sm: 'max-w-xs', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl' };
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label={title || 'Dialog'} onClick={onClose}>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 modal-backdrop active" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} role="dialog" aria-modal="true" aria-label={title || 'Dialog'} onClick={onClose}>
       <div ref={dialogRef} className={`${sizes[size]} w-full rounded-xl overflow-hidden shadow-2xl max-h-[80vh] flex flex-col modal-content active`} style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}` }} onClick={e => e.stopPropagation()}>
         <div className="px-3 py-2 flex items-center justify-between flex-shrink-0" style={{ borderBottom: `1px solid ${THEME.border.subtle}`, background: `linear-gradient(135deg, ${THEME.bg.tertiary}, ${THEME.bg.secondary})` }}>
           <h2 className="font-semibold" style={{ color: THEME.text.primary, fontSize: TYPE.title }}>{title}</h2>
