@@ -55,6 +55,7 @@ import { AdminSettingsModal } from './modals/AdminSettingsModal';
 import { ChangePasswordModal } from './modals/ChangePasswordModal';
 import { EmployeeFormModal } from './modals/EmployeeFormModal';
 import { OnboardingEmailModal } from './modals/OnboardingEmailModal';
+import MyScheduleModal from './modals/MyScheduleModal';
 import { RequestDaysOffModal } from './modals/RequestDaysOffModal';
 import { EmailModal } from './modals/EmailModal';
 import { AutofillClearModal } from './modals/AutofillClearModal';
@@ -183,6 +184,7 @@ export default function App() {
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const adminMenuRef = useRef(null);
   useDismissOnOutside(adminMenuRef, adminMenuOpen, () => setAdminMenuOpen(false));
+  const [myScheduleOpen, setMyScheduleOpen] = useState(false);
   const [adminDaysOffModalOpen, setAdminDaysOffModalOpen] = useState(false);
   const [pkModalOpen, setPkModalOpen] = useState(false);
   const [mobileActionSheetOpen, setMobileActionSheetOpen] = useState(false);
@@ -2282,6 +2284,11 @@ export default function App() {
               </button>
               {adminMenuOpen && (
                 <div role="menu" className="absolute right-0 mt-1 w-56 rounded-xl overflow-hidden z-50" style={{ backgroundColor: THEME.bg.secondary, border: `1px solid ${THEME.border.default}`, boxShadow: THEME.shadow.card }}>
+                  <button role="menuitem" onClick={() => { setAdminMenuOpen(false); setMyScheduleOpen(true); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.text.primary }}>
+                    <Calendar size={14} style={{ color: THEME.text.secondary }} />
+                    My Schedule
+                  </button>
+                  <div className="h-px mx-2" style={{ backgroundColor: THEME.border.subtle }} />
                   <button role="menuitem" onClick={() => { setAdminMenuOpen(false); setEditingEmp(null); setEmpFormOpen(true); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-black/5" style={{ color: THEME.text.primary }}>
                     <User size={14} style={{ color: THEME.text.secondary }} />
                     Add Employee
@@ -2652,6 +2659,15 @@ export default function App() {
           const today = new Date().toISOString().slice(0, 10);
           setEmployees(prev => prev.map(e => e.id === empId ? { ...e, welcomeSentAt: today } : e));
         }}
+      />
+      <MyScheduleModal
+        isOpen={myScheduleOpen}
+        onClose={() => setMyScheduleOpen(false)}
+        currentUser={currentUser}
+        shifts={shifts}
+        events={events}
+        dates={dates}
+        timeOffRequests={timeOffRequests}
       />
       {editingShift && (() => {
         const prior = new Date(editingShift.date); prior.setDate(prior.getDate() - 1);
