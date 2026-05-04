@@ -599,7 +599,7 @@ export const ShiftEditorModal = ({
           <p className="text-[10px] uppercase tracking-wider mb-1.5" style={{ color: THEME.text.muted }}>Day Status</p>
           <div className="grid grid-cols-3 gap-1" role="radiogroup" aria-label="Day Status">
             {[
-              { key: 'working', label: 'Working', icon: null, palette: { bg: THEME.accent.blue, text: 'white', border: THEME.accent.blue } },
+              { key: 'working', label: 'Available', icon: null, palette: { bg: THEME.accent.blue, text: 'white', border: THEME.accent.blue } },
               { key: 'sick', label: 'Sick', icon: <Thermometer size={11} />, palette: { bg: EVENT_TYPES.sick.border, text: 'white', border: EVENT_TYPES.sick.border } },
               { key: 'unavailable', label: 'Unavailable', icon: <Ban size={11} />, palette: { bg: THEME.text.muted, text: 'white', border: THEME.text.muted } },
             ].map(opt => {
