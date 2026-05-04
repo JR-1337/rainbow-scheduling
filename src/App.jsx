@@ -28,7 +28,7 @@ import { PKDetailsPanel } from './components/PKDetailsPanel';
 import { getStoreHoursForDate, setStoreHoursOverrides as syncStoreHoursOverrides, setStaffingTargetOverrides as syncStaffingTargetOverrides } from './utils/storeHoursOverrides';
 import { apiCall } from './utils/api';
 import { normalizeAnnouncements, partitionRequests, parseEmployeesFromApi, partitionShiftsAndEvents, filterToLivePeriods } from './utils/apiTransforms';
-import { getFutureShiftDates, formatFutureShiftsBlockMessage, getFutureEventDates, formatFutureEventsBlockMessage, serializeEmployeeForApi, filterSchedulableEmployees } from './utils/employees';
+import { getFutureShiftDates, getFutureEventDates, serializeEmployeeForApi, filterSchedulableEmployees } from './utils/employees';
 import { createShiftFromAvailability, applyShiftMutation, collectPeriodShiftsForSave, transferShiftBetweenEmployees, swapShiftsBetweenEmployees } from './utils/scheduleOps';
 import { computeDayUnionHours, computeNetHoursForShift, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { computeViolations } from './utils/violations';
@@ -925,56 +925,6 @@ export default function App() {
       // so modal stays labelled "Edit Employee" while user retries.
       setEmployees(prevEmployees);
       showToast('error', errorMsg(result, 'Failed to save employee'));
-      return false;
-    }
-  };
-  
-  // DEPRECATED (v2.32.0): deleteEmployee flips deleted=true / active=false (soft-delete) for back-compat
-  // reads. New flows use archiveEmployee (row move to EmployeesArchive sheet). Keep for rollback safety.
-  const deleteEmployee = async (id) => {
-    const emp = employees.find(e => e.id === id);
-    if (!emp) return false;
-
-    if (currentUser && emp.email === currentUser.email) {
-      showToast('error', 'You cannot remove your own account.', 6000);
-      return false;
-    }
-    if (emp.isOwner) {
-      showToast('error', 'The owner account cannot be removed.', 6000);
-      return false;
-    }
-    if (emp.isAdmin) {
-      showToast('error', 'Admin accounts cannot be removed. Demote to Staff first.', 6000);
-      return false;
-    }
-
-    const futureShifts = getFutureShiftDates(id, shifts);
-    if (futureShifts.length > 0) {
-      showToast('error', formatFutureShiftsBlockMessage('remove', emp.name, futureShifts), 8000);
-      return false;
-    }
-    const futureEvents = getFutureEventDates(id, events);
-    if (futureEvents.length > 0) {
-      showToast('error', formatFutureEventsBlockMessage('remove', emp.name, futureEvents), 8000);
-      return false;
-    }
-
-    const prevEmployees = employees;
-    setEmployees(employees.map(e => e.id === id ? { ...e, deleted: true, active: false } : e));
-
-    const employeeForApi = serializeEmployeeForApi(emp, { deleted: true, active: false });
-
-    // Call API to persist
-    const result = await apiCall('saveEmployee', {
-      employee: employeeForApi
-    });
-
-    if (result.success) {
-      showToast('success', `${emp.name} removed`);
-      return true;
-    } else {
-      setEmployees(prevEmployees);
-      showToast('error', errorMsg(result, 'Failed to remove employee'));
       return false;
     }
   };

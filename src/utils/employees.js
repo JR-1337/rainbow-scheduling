@@ -1,5 +1,4 @@
 import { toDateKey } from './date';
-import { parseLocalDate } from './format';
 
 export function getFutureShiftDates(employeeId, shiftsObj) {
   const today = toDateKey(new Date());
@@ -24,24 +23,6 @@ export function getFutureEventDates(employeeId, eventsObj) {
     if (date > today) dates.add(date);
   }
   return Array.from(dates).sort();
-}
-
-export function formatFutureEventsBlockMessage(verb, name, futureDates) {
-  const formatted = futureDates.slice(0, 5).map(d => {
-    const date = parseLocalDate(d);
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  }).join(', ');
-  const moreText = futureDates.length > 5 ? ` and ${futureDates.length - 5} more` : '';
-  return `Cannot ${verb}: ${name} has ${futureDates.length} future event(s) (PK / meeting / sick / etc.): ${formatted}${moreText}. Clear those events first.`;
-}
-
-export function formatFutureShiftsBlockMessage(verb, name, futureDates) {
-  const formatted = futureDates.slice(0, 5).map(d => {
-    const date = parseLocalDate(d);
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  }).join(', ');
-  const moreText = futureDates.length > 5 ? ` and ${futureDates.length - 5} more` : '';
-  return `Cannot ${verb}: ${name} has ${futureDates.length} future shift(s): ${formatted}${moreText}. Remove or reassign shifts first.`;
 }
 
 // Mirrors backend computeDefaultPassword_ in backend/Code.gs. Pure preview;
