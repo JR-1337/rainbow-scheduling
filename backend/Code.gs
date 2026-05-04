@@ -2,6 +2,21 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.32.0 (Past-period edit lock + employees archive actions + EmployeesArchive sheet)
+ *
+ * Changes in v2.32.0:
+ * - canEditShiftDate_ helper: gates saveShift + batchSaveShifts on caller.pastPeriodGraceDays
+ *   (owner bypasses; default 0 blocks past-period edits for all other callers).
+ * - archiveEmployee action: moves row from Employees to EmployeesArchive, snapshots
+ *   employeeName/employeeEmail into shift rows that are missing them. Admin1 tier only.
+ * - unarchiveEmployee action: restores archived row to Employees (active=false). Owner-only.
+ * - hardDeleteArchivedEmployee action: hard-deletes after 5-yr retention check + name confirm.
+ *   Owner-only.
+ * - CONFIG.TABS.EMPLOYEES_ARCHIVE added.
+ * - getAllData: owner callers receive employeesArchive field from EmployeesArchive sheet.
+ * - Action map: archiveEmployee / unarchiveEmployee / hardDeleteArchivedEmployee wired.
+ * - Manual sheet step: add pastPeriodGraceDays column to Employees; create EmployeesArchive tab.
+ *
  * Version: 2.31.1 (Hotfix: wrap onboarding email body in BRANDED_EMAIL_WRAPPER_HTML_)
  *
  * Changes in v2.31.1:
@@ -286,6 +301,7 @@ const CONFIG = {
   SPREADSHEET_ID: '', // ADD YOUR SPREADSHEET ID HERE
   TABS: {
     EMPLOYEES: 'Employees',
+    EMPLOYEES_ARCHIVE: 'EmployeesArchive',
     SHIFTS: 'Shifts',
     SETTINGS: 'Settings',
     ANNOUNCEMENTS: 'Announcements',
@@ -491,6 +507,9 @@ function handleRequest(action, payload) {
       'getShifts': () => getShifts(payload),
       'saveShift': () => saveShift(payload),
       'saveEmployee': () => saveEmployee(payload),
+      'archiveEmployee': () => archiveEmployee(payload),
+      'unarchiveEmployee': () => unarchiveEmployee(payload),
+      'hardDeleteArchivedEmployee': () => hardDeleteArchivedEmployee(payload),
       'saveLivePeriods': () => saveLivePeriods(payload),
       'saveStaffingTargets': () => saveStaffingTargets(payload),
       'saveSetting': () => saveSetting(payload),
@@ -2106,20 +2125,27 @@ function getAllData(payload) {
   }
 
   const callerIsAdmin = !!(auth.employee.isAdmin || auth.employee.isOwner);
-  return {
-    success: true,
-    data: {
-      employees: employees.map(e => safeEmployeeForCaller_(e, callerIsAdmin)),
-      shifts: shifts.map(s => { const { _rowIndex, ...rest } = s; return { ...rest, type: rest.type || 'work', note: rest.note || '' }; }),
-      settings,
-      announcements,
-      requests: requests.map(r => { const { _rowIndex, ...rest } = r; return rest; }),
-      livePeriods,
-      staffingTargets,
-      storeHoursOverrides,
-      staffingTargetOverrides
-    }
+  const callerIsOwner = !!auth.employee.isOwner;
+
+  // v2.32.0: owner-only archive list. Non-owner callers receive no field.
+  const employeesArchive = callerIsOwner
+    ? getSheetData(CONFIG.TABS.EMPLOYEES_ARCHIVE).map(e => safeEmployeeForCaller_(e, callerIsAdmin))
+    : undefined;
+
+  const responseData = {
+    employees: employees.map(e => safeEmployeeForCaller_(e, callerIsAdmin)),
+    shifts: shifts.map(s => { const { _rowIndex, ...rest } = s; return { ...rest, type: rest.type || 'work', note: rest.note || '' }; }),
+    settings,
+    announcements,
+    requests: requests.map(r => { const { _rowIndex, ...rest } = r; return rest; }),
+    livePeriods,
+    staffingTargets,
+    storeHoursOverrides,
+    staffingTargetOverrides
   };
+  if (callerIsOwner) responseData.employeesArchive = employeesArchive;
+
+  return { success: true, data: responseData };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2141,6 +2167,53 @@ function getShifts(payload) {
   return { success: true, data: { shifts } };
 }
 
+/**
+ * v2.32.0: Gate helper — returns true if caller is allowed to edit a shift
+ * on the given date. Owner bypasses all gates. Everyone else is gated by
+ * their pastPeriodGraceDays field (defaults to 0).
+ */
+function canEditShiftDate_(callerEmployee, shiftDateStr, todayStr) {
+  // Owner bypasses all gates.
+  if (callerEmployee && callerEmployee.isOwner === true) return true;
+
+  // Normalize dates.
+  const shiftDate = new Date(shiftDateStr);
+  const today = new Date(todayStr);
+  if (isNaN(shiftDate.getTime()) || isNaN(today.getTime())) return false;
+
+  // Compute current pay-period end (PAY_PERIOD_START anchor + 14-day cadence).
+  // Anchor matches src/utils/payPeriod.js: 2026-01-26.
+  const PAY_PERIOD_START = new Date(2026, 0, 26);
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const daysSinceAnchor = Math.floor((today - PAY_PERIOD_START) / msPerDay);
+  const currentPeriodIndex = Math.max(0, Math.floor(daysSinceAnchor / 14));
+  const currentPeriodStart = new Date(
+    PAY_PERIOD_START.getFullYear(),
+    PAY_PERIOD_START.getMonth(),
+    PAY_PERIOD_START.getDate() + (currentPeriodIndex * 14)
+  );
+
+  // Future or current period: allow.
+  if (shiftDate >= currentPeriodStart) return true;
+
+  // Past period: gated by pastPeriodGraceDays.
+  const grace = Number(callerEmployee && callerEmployee.pastPeriodGraceDays) || 0;
+  if (grace <= 0) return false;
+
+  // Past period end is the day before currentPeriodStart.
+  // But the shift could be many periods past — measure from the END of the period
+  // the shift falls in, not the most recent past period end.
+  const shiftDaysSinceAnchor = Math.floor((shiftDate - PAY_PERIOD_START) / msPerDay);
+  const shiftPeriodIndex = Math.floor(shiftDaysSinceAnchor / 14);
+  const shiftPeriodEnd = new Date(
+    PAY_PERIOD_START.getFullYear(),
+    PAY_PERIOD_START.getMonth(),
+    PAY_PERIOD_START.getDate() + (shiftPeriodIndex * 14) + 13
+  );
+  const daysSinceShiftPeriodEnd = Math.floor((today - shiftPeriodEnd) / msPerDay);
+  return daysSinceShiftPeriodEnd <= grace;
+}
+
 function saveShift(payload) {
   const { shift } = payload;
 
@@ -2155,6 +2228,14 @@ function saveShift(payload) {
   };
 
   const shiftDate = normalizeDate(shift.date);
+
+  // Past-period edit lock (v2.32.0). Allow current/future periods always; past
+  // periods gated by caller.pastPeriodGraceDays (owner bypasses entirely).
+  const todayStr = new Date().toISOString().split('T')[0];
+  if (!canEditShiftDate_(auth.employee, shiftDate, todayStr)) {
+    return { success: false, error: { code: 'PAST_PERIOD_LOCKED', message: 'You cannot edit shifts in past pay periods.' } };
+  }
+
   const shiftType = shift.type || 'work';
   const shifts = getSheetData(CONFIG.TABS.SHIFTS);
   const existingShift = shifts.find(s =>
@@ -2251,6 +2332,134 @@ function saveEmployee(payload) {
   return { success: true, data: { employee } };
 }
 
+/**
+ * v2.32.0: Move an employee row from Employees -> EmployeesArchive. Atomic.
+ * Caller must be admin1 tier (isAdmin || isOwner; adminTier='admin2' rejected).
+ * Snapshots employeeName/employeeEmail into shift rows missing them, then
+ * inserts the archive row, then deletes from Employees.
+ */
+function archiveEmployee(payload) {
+  const { employeeId } = payload;
+  const auth = verifyAuth(payload, true);
+  if (!auth.authorized) return { success: false, error: auth.error };
+
+  // admin1 tier only — adminTier='admin2' rejected
+  const callerIsAdmin1 = !!(auth.employee.isOwner || (auth.employee.isAdmin && auth.employee.adminTier !== 'admin2'));
+  if (!callerIsAdmin1) {
+    return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Only admin1 tier can archive employees.' } };
+  }
+
+  return withDocumentLock_(() => {
+    const employees = getSheetData(CONFIG.TABS.EMPLOYEES);
+    const target = employees.find(e => e.id === employeeId);
+    if (!target) {
+      return { success: false, error: { code: 'NOT_FOUND', message: 'Employee not found.' } };
+    }
+    if (target.isOwner === true) {
+      return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Cannot archive the owner account.' } };
+    }
+
+    // Snapshot employeeName/employeeEmail into shift rows missing them.
+    const shifts = getSheetData(CONFIG.TABS.SHIFTS);
+    let backfilled = 0;
+    shifts.forEach(s => {
+      if (s.employeeId === employeeId && (!s.employeeName || !s.employeeEmail)) {
+        updateRow(CONFIG.TABS.SHIFTS, s._rowIndex, {
+          employeeName: s.employeeName || target.name,
+          employeeEmail: s.employeeEmail || target.email
+        });
+        backfilled++;
+      }
+    });
+    if (backfilled > 0) bustSheetCache_(CONFIG.TABS.SHIFTS);
+
+    // Insert into EmployeesArchive.
+    const archiveRow = Object.assign({}, target, {
+      archivedAt: new Date().toISOString().split('T')[0],
+      archivedBy: auth.employee.id
+    });
+    delete archiveRow._rowIndex;
+    appendRow(CONFIG.TABS.EMPLOYEES_ARCHIVE, archiveRow);
+
+    // Delete from Employees.
+    getSheet(CONFIG.TABS.EMPLOYEES).deleteRow(target._rowIndex);
+    bustSheetCache_(CONFIG.TABS.EMPLOYEES);
+
+    return { success: true, data: { archivedId: employeeId, snapshottedShifts: backfilled } };
+  }, 'archiveEmployee');
+}
+
+/**
+ * v2.32.0: Restore an archived employee. Owner-only. Returns the row to
+ * Employees with active=false (Inactive state) so caller must explicitly
+ * reactivate.
+ */
+function unarchiveEmployee(payload) {
+  const { employeeId } = payload;
+  const auth = verifyAuth(payload, true);
+  if (!auth.authorized) return { success: false, error: auth.error };
+  if (!auth.employee.isOwner) {
+    return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Only the owner can restore archived employees.' } };
+  }
+
+  return withDocumentLock_(() => {
+    const archived = getSheetData(CONFIG.TABS.EMPLOYEES_ARCHIVE);
+    const target = archived.find(e => e.id === employeeId);
+    if (!target) {
+      return { success: false, error: { code: 'NOT_FOUND', message: 'Archived employee not found.' } };
+    }
+
+    const restored = Object.assign({}, target, { active: false });
+    delete restored.archivedAt;
+    delete restored.archivedBy;
+    delete restored._rowIndex;
+    appendRow(CONFIG.TABS.EMPLOYEES, restored);
+
+    getSheet(CONFIG.TABS.EMPLOYEES_ARCHIVE).deleteRow(target._rowIndex);
+    bustSheetCache_(CONFIG.TABS.EMPLOYEES);
+    bustSheetCache_(CONFIG.TABS.EMPLOYEES_ARCHIVE);
+
+    return { success: true, data: { restoredId: employeeId } };
+  }, 'unarchiveEmployee');
+}
+
+/**
+ * v2.32.0: Hard-delete an archived employee row. Owner-only. Gated on
+ * retention: archivedAt must be at least 5 years ago.
+ */
+function hardDeleteArchivedEmployee(payload) {
+  const { employeeId, confirmName } = payload;
+  const auth = verifyAuth(payload, true);
+  if (!auth.authorized) return { success: false, error: auth.error };
+  if (!auth.employee.isOwner) {
+    return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Only the owner can hard-delete archived employees.' } };
+  }
+
+  return withDocumentLock_(() => {
+    const archived = getSheetData(CONFIG.TABS.EMPLOYEES_ARCHIVE);
+    const target = archived.find(e => e.id === employeeId);
+    if (!target) {
+      return { success: false, error: { code: 'NOT_FOUND', message: 'Archived employee not found.' } };
+    }
+    if (String(confirmName || '').trim() !== String(target.name).trim()) {
+      return { success: false, error: { code: 'CONFIRM_MISMATCH', message: 'Typed name does not match.' } };
+    }
+
+    // Retention check.
+    const archivedAt = new Date(target.archivedAt);
+    const fiveYearsAgo = new Date();
+    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+    if (archivedAt > fiveYearsAgo) {
+      return { success: false, error: { code: 'RETENTION_NOT_MET', message: 'Retention period (5 years) has not elapsed.' } };
+    }
+
+    getSheet(CONFIG.TABS.EMPLOYEES_ARCHIVE).deleteRow(target._rowIndex);
+    bustSheetCache_(CONFIG.TABS.EMPLOYEES_ARCHIVE);
+
+    return { success: true, data: { hardDeletedId: employeeId } };
+  }, 'hardDeleteArchivedEmployee');
+}
+
 function saveLivePeriods(payload) {
   const { livePeriods } = payload;
 
@@ -2336,6 +2545,17 @@ function batchSaveShifts(payload) {
     if (d instanceof Date) return d.toISOString().split('T')[0];
     return String(d);
   };
+
+  // Past-period edit lock (v2.32.0). Reject the entire batch if any shift OR
+  // any period-purge date falls in a locked past period for this caller.
+  const todayStr = new Date().toISOString().split('T')[0];
+  const allDates = (shifts || []).map(s => normalizeDate(s.date)).concat(periodDates || []);
+  for (const d of allDates) {
+    if (!d) continue;
+    if (!canEditShiftDate_(auth.employee, d, todayStr)) {
+      return { success: false, error: { code: 'PAST_PERIOD_LOCKED', message: 'You cannot edit shifts in past pay periods.' } };
+    }
+  }
 
   // v2.19 perf: single Sheets.Spreadsheets.Values.update() replaces the N*deleteRow + N*updateRow/appendRow
   // loop. One round trip to Sheets API instead of hundreds. v2.30.2: lock acquisition delegated to
