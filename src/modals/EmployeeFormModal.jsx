@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Loader, UserCheck, UserX, Shield, Clock, Key, Check, AlertTriangle, Mail, Archive } from 'lucide-react';
+import { Loader, UserCheck, UserX, Shield, Clock, Key, Check, AlertTriangle, Mail, Archive } from 'lucide-react';
 import { THEME } from '../theme';
 import { ROLES } from '../constants';
 import { apiCall } from '../utils/api';
 import { Modal, GradientButton, Input } from '../components/primitives';
 import { hasTitle } from '../utils/employeeRender';
-import { computeDefaultPassword } from '../utils/employees';
-export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, onArchive, employee = null, currentUser = null, showToast, suggestedPassword = '', employees = [], onSendOnboarding }) => {
+import { computeDefaultPassword, getFutureShiftDates, getFutureEventDates } from '../utils/employees';
+export const EmployeeFormModal = ({ isOpen, onClose, onSave, onArchive, employee = null, currentUser = null, showToast, suggestedPassword = '', employees = [], onSendOnboarding, shifts = {}, events = {} }) => {
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   // Availability is the outer eligibility window, not the booking window.
   // Default to the widest reasonable bound (06-22) so Sarvi only narrows
@@ -17,15 +17,14 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, onArchive
     {}
   );
   const [formData, setFormData] = useState(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', adminTier: '', title: '', availability: defaultAvail });
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showEraseConfirm, setShowEraseConfirm] = useState(false);
-  const [eraseConfirmName, setEraseConfirmName] = useState('');
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [archiveConfirmName, setArchiveConfirmName] = useState('');
   const [password, setPassword] = useState(suggestedPassword);
   const [pwTouched, setPwTouched] = useState(false);
   const [errors, setErrors] = useState({});
   const [displayedPassword, setDisplayedPassword] = useState(employee?.password || '');
 
-  useEffect(() => { setFormData(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', adminTier: '', title: '', availability: defaultAvail }); setShowDeleteConfirm(false); setShowEraseConfirm(false); setEraseConfirmName(''); setPassword(suggestedPassword); setPwTouched(false); setErrors({}); setDisplayedPassword(employee?.password || ''); }, [employee, isOpen]);
+  useEffect(() => { setFormData(employee || { name: '', email: '', phone: '', address: '', dob: '', active: true, isAdmin: false, isOwner: false, showOnSchedule: true, employmentType: 'part-time', defaultSection: 'none', adminTier: '', title: '', availability: defaultAvail }); setShowArchiveConfirm(false); setArchiveConfirmName(''); setPassword(suggestedPassword); setPwTouched(false); setErrors({}); setDisplayedPassword(employee?.password || ''); }, [employee, isOpen]);
 
   // Live-preview the default password from the typed name (create mode only,
   // until admin manually edits the password field).
@@ -37,9 +36,8 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, onArchive
   const isEditingSelf = employee && currentUser && employee.email === currentUser.email;
   const isEditingOwner = employee?.isOwner === true;
   const canToggleAdmin = !isEditingOwner && !isEditingSelf;
-  const canDelete = !isEditingSelf && !isEditingOwner;
-  // v2.32.0: Erase (archive) is admin1 tier only (isAdmin + adminTier !== 'admin2'); owner excluded from being erased.
-  const canErase = !isEditingOwner && !isEditingSelf && !!(currentUser?.isOwner || (currentUser?.isAdmin && currentUser?.adminTier !== 'admin2'));
+  // v2.32.2: Archive is admin1 tier only (isAdmin + adminTier !== 'admin2'); owner excluded from being archived.
+  const canArchive = !isEditingOwner && !isEditingSelf && !!(currentUser?.isOwner || (currentUser?.isAdmin && currentUser?.adminTier !== 'admin2'));
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async () => {
@@ -100,53 +98,36 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, onArchive
     setFormData({ ...formData, defaultShift: Object.keys(cur).length ? cur : null });
   };
 
+  const futureShiftsCount = employee ? getFutureShiftDates(employee.id, shifts).length : 0;
+  const futureEventsCount = employee ? getFutureEventDates(employee.id, events).length : 0;
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={employee ? 'Edit Employee' : 'Add Employee'} size="xl">
-      {showEraseConfirm ? (
+      {showArchiveConfirm ? (
         <div className="py-3">
           <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: THEME.accent.purple + '20' }}>
             <Archive size={20} style={{ color: THEME.accent.purple }} />
           </div>
-          <h3 className="text-sm font-semibold mb-1 text-center" style={{ color: THEME.text.primary }}>Erase employee?</h3>
-          <p className="text-xs mb-3 text-center" style={{ color: THEME.text.secondary }}>This employee will be removed from the app. Their schedule history will be preserved.</p>
+          <h3 className="text-sm font-semibold mb-1 text-center" style={{ color: THEME.text.primary }}>Archive employee?</h3>
+          <p className="text-xs mb-3 text-center" style={{ color: THEME.text.secondary }}>Archive {employee?.name}? This will clear {futureShiftsCount} future shift{futureShiftsCount === 1 ? '' : 's'} and {futureEventsCount} future event{futureEventsCount === 1 ? '' : 's'}, then move them to the archive. Past shifts/events stay for payroll.</p>
           <p className="text-xs mb-1" style={{ color: THEME.text.muted }}>Type <strong style={{ color: THEME.text.primary }}>{employee?.name}</strong> to confirm</p>
           <Input
-            value={eraseConfirmName}
-            onChange={e => setEraseConfirmName(e.target.value)}
+            value={archiveConfirmName}
+            onChange={e => setArchiveConfirmName(e.target.value)}
             placeholder={`Type ${employee?.name} to confirm`}
             className="mb-3"
             autoFocus
           />
           <div className="flex justify-center gap-2">
-            <GradientButton variant="secondary" small onClick={() => { setShowEraseConfirm(false); setEraseConfirmName(''); }}>Cancel</GradientButton>
-            <GradientButton danger small disabled={isSaving || eraseConfirmName.trim() !== (employee?.name || '').trim()} onClick={async () => {
+            <GradientButton variant="secondary" small onClick={() => { setShowArchiveConfirm(false); setArchiveConfirmName(''); }}>Cancel</GradientButton>
+            <GradientButton danger small disabled={isSaving || archiveConfirmName.trim() !== (employee?.name || '').trim()} onClick={async () => {
               setIsSaving(true);
               const success = await onArchive(employee.id);
               setIsSaving(false);
               if (success !== false) onClose();
             }}>
               {isSaving ? <Loader size={12} className="animate-spin" /> : <Archive size={12} />}
-              {isSaving ? 'Erasing...' : 'Erase'}
-            </GradientButton>
-          </div>
-        </div>
-      ) : showDeleteConfirm ? (
-        <div className="text-center py-3">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: THEME.status.error + '20' }}>
-            <Trash2 size={20} style={{ color: THEME.status.error }} />
-          </div>
-          <h3 className="text-sm font-semibold mb-1" style={{ color: THEME.text.primary }}>Remove {employee?.name}?</h3>
-          <p className="text-xs mb-3" style={{ color: THEME.text.secondary }}>They'll be removed from scheduling but their past shifts will be preserved.</p>
-          <div className="flex justify-center gap-2">
-            <GradientButton variant="secondary" small onClick={() => setShowDeleteConfirm(false)}>Cancel</GradientButton>
-            <GradientButton danger small onClick={async () => {
-              setIsSaving(true);
-              const success = await onDelete(employee.id);
-              setIsSaving(false);
-              if (success !== false) onClose();
-            }} disabled={isSaving}>
-              {isSaving ? <Loader size={12} className="animate-spin" /> : <Trash2 size={12} />}
-              {isSaving ? 'Removing...' : 'Remove'}
+              {isSaving ? 'Archiving...' : 'Archive'}
             </GradientButton>
           </div>
         </div>
@@ -431,11 +412,10 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onDelete, onArchive
 
           <div className="flex justify-between mt-3 pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
             <div className="flex gap-2">
-              {employee && canDelete && <GradientButton danger small onClick={() => setShowDeleteConfirm(true)}><Trash2 size={10} />Remove</GradientButton>}
-              {employee && canErase && onArchive && <GradientButton variant="secondary" small onClick={() => { setEraseConfirmName(''); setShowEraseConfirm(true); }}><Archive size={10} />Erase</GradientButton>}
-              {employee && !canDelete && !canErase && (
+              {employee && canArchive && onArchive && <GradientButton variant="secondary" small onClick={() => { setArchiveConfirmName(''); setShowArchiveConfirm(true); }}><Archive size={10} />Archive</GradientButton>}
+              {employee && !canArchive && (
                 <span className="text-xs py-1" style={{ color: THEME.text.muted }}>
-                  {isEditingSelf ? "Can't remove yourself" : isEditingOwner ? "Can't remove owner" : ''}
+                  {isEditingSelf ? "Can't archive yourself" : isEditingOwner ? "Can't archive owner" : ''}
                 </span>
               )}
             </div>
