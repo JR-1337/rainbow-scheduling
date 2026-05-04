@@ -2642,6 +2642,11 @@ export default function App() {
         currentUser={currentUser}
         showToast={showToast}
         onClose={() => setOnboardingTarget(null)}
+        onSendSuccess={(empId, didUpdate) => {
+          if (!didUpdate) return;
+          const today = new Date().toISOString().slice(0, 10);
+          setEmployees(prev => prev.map(e => e.id === empId ? { ...e, welcomeSentAt: today } : e));
+        }}
       />
       {editingShift && (() => {
         const prior = new Date(editingShift.date); prior.setDate(prior.getDate() - 1);

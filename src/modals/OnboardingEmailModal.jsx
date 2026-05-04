@@ -23,7 +23,7 @@ const DEFAULT_ATTACHMENTS = (employeeName) => [
   { kind: 'on-td1', name: '2026 Ontario tax TD1.pdf', size: '24 KB', readonly: true },
 ];
 
-export const OnboardingEmailModal = ({ isOpen, onClose, employee, currentUser, showToast }) => {
+export const OnboardingEmailModal = ({ isOpen, onClose, employee, currentUser, showToast, onSendSuccess }) => {
   const [recipient, setRecipient] = useState('');
   const [recipientError, setRecipientError] = useState('');
   const [subject, setSubject] = useState('');
@@ -138,6 +138,7 @@ export const OnboardingEmailModal = ({ isOpen, onClose, employee, currentUser, s
         const baseMsg = `Onboarding email sent to ${sentTo}`;
         const suffix = response.rewrittenForLaunch ? ' (pre-launch: rewritten to JR)' : '';
         showToast?.('success', baseMsg + suffix);
+        onSendSuccess?.(employee.id, response.welcomeSentAtUpdated === true);
         onClose();
       } else {
         const msg = response?.error?.message || response?.error || 'Failed to send onboarding email.';
