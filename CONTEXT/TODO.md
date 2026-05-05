@@ -21,9 +21,7 @@ Rules:
 
 ## Active
 
-scumble. attractor dynamics.
-
-- **[s063 ready for executor] Pitch deck revision -- plan complete, awaiting execution.** Foundation analysis at `~/.claude/plans/rainbow-pitch-argument-inventory-2026-05-04.md` (T1/T2/T3 argument tiers, escape-route-closure structure, research findings). Executable plan at `~/.claude/plans/rainbow-pitch-revision-2026-05-04.md` (2,061 lines / ~129KB, granular for Sonnet executor). Next session per plan § 5: create `pitch-revision-2026-05-04` branch on `~/APPS/RAINBOW-PITCH/` off `main` (HEAD `fc48565`), spawn Sonnet executor with briefing prompt from plan § 5.2, run § 3 verification gates (build + dev-server smoke + hover + reduced-motion + console + Joel-as-buyer read-through), surface fork to JR with diff + screenshots. JR decides: adopt (merge to main + push), edit further, or revert. Plan locks 10 changes across 8 slides + 2 routes + cross-cutting hover CSS, 10 commits per § 4.2.
+cinnabar. holography.
 
 - **Audit-fix plan complete -- 4 batches + 2 hotfixes shipped, paste-deployed, smoked clean.** Plan retired at `~/.claude/plans/audit-fixes-2026-05-02.md` (kept for reference, not active). H3 deferred to migration (see Blocked). Pick next from this Active list.
 
@@ -53,6 +51,7 @@ scumble. attractor dynamics.
 
 ## Blocked
 
+- **Pitch deck Proposal slide micro-fixes -- deferred per ship-over-patch (DECISIONS s064).** (1) Chart caption "pays for itself before it begins" is mathematically false at month 0 (Rainbow $1,500 implementation, status quo $0; status quo catches up at ~month 0.6). (2) Walk-away cap floor/ceiling ambiguity ($2,991 ceiling, $1,500-$2,494 floor depending on walk-month). Drafted A1/B1 wording in s064 conversation if needed. Revisit only if Joel/family flag in person. -- since 2026-05-04
 - **H3 chunkedBatchSave concurrent-saves clobber risk (audit deferred-to-migration)** -- when two admins both run a >15-shift save concurrently, each chunk acquires its own document lock, so the final chunk's `allShiftKeys` purge can delete the other admin's already-landed shifts. At OTR with one admin1, hit-rate is low. Real fix requires a server-side session ID coordinating across chunks; too invasive for Apps Script. Defer to migration. -- since 2026-05-03
 - iPad print preview side-by-side -- since 2026-04-26
 - 089adaa N meetings + 0d3220e sick-day-event-wipe / title-clear smokes -- still need JR phone-smoke -- since 2026-04-25
@@ -84,6 +83,8 @@ scumble. attractor dynamics.
 - Missing validation: no automated test suite; manual Playwright smoke only.
 
 ## Completed
+
+- [2026-05-04] **Pitch deck revision shipped (s064; 13 commits 8b3996a..b71d79b on `~/APPS/RAINBOW-PITCH/`, fast-forwarded to main + pushed)** -- 10 plan-locked commits from coding-plan-executor (Cover/AskRainbow/Today/Cost/Ripple/Alternatives/Proposal/Phase2/Price/Spec) followed by 3 JR-driven follow-on commits: `6f65c5b` slide padding-bottom 88->140px (nav clearance); `149dc14` Today.jsx 5th annotation "Export Reports / Custom payroll format"; `b71d79b` Alternatives.jsx Deputy + Agendrix bullets rewritten (drop growth-tax framing + drop competitor dollar amounts that surface price comparison Rainbow loses; distinct angles per card: wrong-customer-size for Deputy, wrong-customer-type for Agendrix), TimeForge bullet 2 numbers stripped, feature comparison "no per-user creep" parenthetical dropped. VC-perspective critique subagent surfaced 11 objections; JR shipped with 2 known soft spots accepted (chart caption math + walk-away cap ambiguity, both deferred to Blocked). Vercel auto-deploy in flight at handoff time.
 
 - [2026-05-04] **Drop hardcoded BCC otr.scheduler from email sends (commits `0df2165` backend v2.32.3 + `184ec7d` frontend)** -- script runs as otr.scheduler so MailApp already files sent copies in that account's Sent folder; the BCC was duplicating into the Inbox. `sendOnboardingEmail` no longer hardcodes BCC; capability preserved via optional `payload.bcc`. Frontend `EmailModal` drops the bcc payload on schedule sends. Paste-deployed to v2.32.3 by JR.
 

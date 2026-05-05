@@ -17,6 +17,33 @@ ASCII operators only.
 
 <!-- 2026-05-04 (s061) archive pass: 78 entries moved to CONTEXT/archive/lessons-archive.md to bring active under 60%-of-ceiling target (15k chars). Carry from s059 + s060. Archive holds full preserved entries. Future entries: append at top per "newest at top" rule. -->
 
+## [PROJECT] -- Adversarial line-level critique must precede plan-lock for content artifacts
+
+Rule: Before locking a content-revision plan that a subagent will execute, run an adversarial line-level critique pass against the existing source AND the planned new content. Structural audits (argument tiers, repositioning, stat corrections) catch a different class of issue than line-level audits (claim provenance, math correctness, citation completeness, comparison-undermining specifics).
+Trigger: When writing a content-revision plan (pitch deck, marketing copy, any text artifact) that will be executed by a subagent.
+Why: A plan that passes a structural audit will still ship line-level errors a careful reader catches. Caught at execute-time means a follow-on patch round; caught at plan-time means the plan itself is corrected. The s063 -> s064 sequence shipped 10 plan-locked commits, then needed 3 follow-on commits to fix items (Alternatives growth-tax framing, page nav padding, Today annotation count) a VC-perspective critique surfaced.
+Provenance: 2026-05-04 (s064) -- VC subagent `a61594357d92ba9de` caught chart math conflation, "pays for itself before it begins" math error, walk-away cap floor/ceiling ambiguity, growth-tax against a maintaining business, and competitor-pricing surfaces undermining "argue fit not price" thesis.
+Tags: surface: prompt-kit, concern: workflow
+Affirmations: 0
+
+## [PROJECT] -- Pitch deck strategy "argue fit, not price" forbids surfacing competitor numbers Rainbow loses on
+
+Rule: When the pitch deck deliberately avoids price comparison, audit every per-card competitor bullet for specific dollar amounts (per-user pricing, implementation fees, monthly minimums, headline plan prices). If a quoted number is lower than Rainbow's equivalent, strip it. High numbers that establish wrong-fit (e.g., "chains of 50-500 employees", "thousands of small businesses") stay.
+Trigger: When writing or reviewing pitch deck competitor cards / Alternatives slide content.
+Why: The "argue fit not price" thesis (DECISIONS s063) breaks the moment a calculator comes out. Quoting Deputy's $2,730 USD/yr or Agendrix's $3.25/user/mo invites the comparison Rainbow loses (Rainbow Y1 = $7,464 CAD, ~2x competitors). Bullets stay structural ("USD billing on a Canadian customer", "built for multi-location chains") and avoid surfacing specific competitor pricing. JR's principle: "yes keep the numbers out. unless they are high."
+Provenance: 2026-05-04 (s064) -- JR-caught + fixed via Alternatives.jsx rewrite (commit `b71d79b`).
+Tags: surface: pitch-deck, concern: ux
+Affirmations: 0
+
+## [PROJECT] -- OTR is maintaining at 35 employees, not expanding -- growth-assumption arguments are invalid
+
+Rule: Do not write deck or marketing copy that assumes OTR is growing. OTR's stable-state is 35 employees with no expansion plans (JR-stated 2026-05-04). Per-user pricing critiques must be reframed around present-tense structural problems (vendor revenue uncoupled from value, line-item-per-employee regardless of fit), not future growth tax. "Per-user creep", "scales as OTR grows", "more headcount means more vendor revenue alongside expansion" all assume facts not in evidence.
+Trigger: When writing deck competitor critiques, ROI projections, feature-comparison rows, or any forward-looking financial framing involving OTR's headcount.
+Why: A growth-tax argument is hypothetical for a maintaining business; the buyer (Joel + family) doesn't share the assumption. The per-user critique still has teeth without growth (vendor revenue tied to roster regardless of value delivered), but the "as OTR grows" framing should be dropped wherever it appears. Caught + fixed across Alternatives.jsx Deputy bullet 2 + Agendrix bullet 3 + feature comparison table row 6 ("no per-user creep" parenthetical removed).
+Provenance: 2026-05-04 (s064) -- JR direct correction.
+Tags: surface: pitch-deck, concern: domain
+Affirmations: 0
+
 ## [PROJECT] -- Inventory mobile-parallel render surfaces in every plan touching admin UI
 
 Rule: Any plan that renames a button, changes a confirm copy, mounts a modal, or alters a panel render path on the admin side must inventory every mobile-parallel surface (App.jsx mobile branch, MobileStaffPanel, MobileAdminView, mobile modal mounts) and patch them in the same commit set.
@@ -91,25 +118,6 @@ Provenance: <unknown commit> -- measured Apps Script web-app latency floor.
 Tags: surface: apps-script, concern: perf
 Affirmations: 0
 
-## [PROJECT] -- Apps Script POST returns HTML redirect instead of JSON
-Rule: Use GET-with-params for `apiCall(action, payload)` routes; try POST first for large payloads, fall back to chunked GET.
-Trigger: When wiring a new `apiCall(action, payload)` route to Apps Script.
-Why: Apps Script POST responses are returned as HTML redirects, not JSON, breaking `response.json()` parse. GET-with-params is the working contract.
-Provenance: <unknown commit> -- Apps Script POST/redirect pitfall.
-Tags: surface: apps-script, concern: data-shape
-Affirmations: 0
-
-## React, perf, and refactor hazards
-
-## [PROJECT] -- Top-level use of `../App` symbols breaks circular imports
-Rule: Keep all `../App` references inside function bodies in `src/pdf/generate.js`, `src/email/build.js`, `src/panels/*`, `src/modals/*`.
-Trigger: When importing symbols from `../App` in any of those files.
-Why: ESM live bindings resolve at call-time, so the cycle works only if all uses are deferred. Top-level reads break the cycle and crash on load.
-Provenance: <unknown commit> -- circular-import constraint between App.jsx and its consumers.
-Wrong way: `import { ROLES } from '../App'` at module top level in `src/panels/*`.
-Tags: surface: react, concern: dependency
-Affirmations: 0
-
 ## Workflow and process
 
 ## [PROJECT] -- Follow approved plan verbatim
@@ -130,21 +138,7 @@ Affirmations: 0
 
 ## React conventions (from legacy conventions.md)
 
-## [PROJECT] -- `useIsMobile()` at 768px breakpoint
-Rule: Branch mobile vs desktop rendering with `useIsMobile()` at the 768px breakpoint.
-Trigger: When implementing any device-split surface.
-Why: 768px is the project's mobile/desktop boundary; ad-hoc breakpoints break parity audits across surfaces.
-Provenance: <unknown commit> -- legacy conventions.md.
-Tags: surface: react, concern: layout
-Affirmations: 0
 
-## [PROJECT] -- `verifyAuth(payload, requiredAdmin)` server-side on all protected endpoints
-Rule: Call `verifyAuth(payload, requiredAdmin)` server-side on every protected endpoint; read `payload.token` (preferred) or legacy `payload.callerEmail`, and derive `callerEmail` from `auth.employee.email` (never destructure from payload).
-Trigger: When adding or editing a protected endpoint in backend Code.gs.
-Why: Destructuring `callerEmail` directly from payload bypasses the auth check. The S41.1 rule fixes the derivation point.
-Provenance: S41.1 -- backend Code.gs auth rule.
-Tags: surface: apps-script, concern: auth
-Affirmations: 0
 
 <!-- TEMPLATE
 ## [PROJECT] -- [Lesson title]

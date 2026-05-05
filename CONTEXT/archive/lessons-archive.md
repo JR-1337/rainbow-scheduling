@@ -22,6 +22,44 @@ Rules:
 - ASCII operators only.
 -->
 
+
+<!-- ============================================================ -->
+<!-- 2026-05-04 (s064) cadence-trigger archive pass: 4 entries  -->
+<!-- moved (3 new entries this session triggered cadence rule). -->
+<!-- ============================================================ -->
+
+## [PROJECT] -- Apps Script POST returns HTML redirect instead of JSON
+Rule: Use GET-with-params for `apiCall(action, payload)` routes; try POST first for large payloads, fall back to chunked GET.
+Trigger: When wiring a new `apiCall(action, payload)` route to Apps Script.
+Why: Apps Script POST responses are returned as HTML redirects, not JSON, breaking `response.json()` parse. GET-with-params is the working contract.
+Provenance: <unknown commit> -- Apps Script POST/redirect pitfall.
+Tags: surface: apps-script, concern: data-shape
+Affirmations: 0
+
+## [PROJECT] -- Top-level use of `../App` symbols breaks circular imports
+Rule: Keep all `../App` references inside function bodies in `src/pdf/generate.js`, `src/email/build.js`, `src/panels/*`, `src/modals/*`.
+Trigger: When importing symbols from `../App` in any of those files.
+Why: ESM live bindings resolve at call-time, so the cycle works only if all uses are deferred. Top-level reads break the cycle and crash on load.
+Provenance: <unknown commit> -- circular-import constraint between App.jsx and its consumers.
+Wrong way: `import { ROLES } from '../App'` at module top level in `src/panels/*`.
+Tags: surface: react, concern: dependency
+Affirmations: 0
+
+## [PROJECT] -- `useIsMobile()` at 768px breakpoint
+Rule: Branch mobile vs desktop rendering with `useIsMobile()` at the 768px breakpoint.
+Trigger: When implementing any device-split surface.
+Why: 768px is the project's mobile/desktop boundary; ad-hoc breakpoints break parity audits across surfaces.
+Provenance: <unknown commit> -- legacy conventions.md.
+Tags: surface: react, concern: layout
+Affirmations: 0
+## [PROJECT] -- `verifyAuth(payload, requiredAdmin)` server-side on all protected endpoints
+Rule: Call `verifyAuth(payload, requiredAdmin)` server-side on every protected endpoint; read `payload.token` (preferred) or legacy `payload.callerEmail`, and derive `callerEmail` from `auth.employee.email` (never destructure from payload).
+Trigger: When adding or editing a protected endpoint in backend Code.gs.
+Why: Destructuring `callerEmail` directly from payload bypasses the auth check. The S41.1 rule fixes the derivation point.
+Provenance: S41.1 -- backend Code.gs auth rule.
+Tags: surface: apps-script, concern: auth
+Affirmations: 0
+
 <!-- ============================================================ -->
 <!-- 2026-05-04 (s061) bulk archive pass: 80 entries moved from   -->
 <!-- active LESSONS.md to bring it under the 15k char target per  -->

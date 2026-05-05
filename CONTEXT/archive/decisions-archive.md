@@ -22,6 +22,68 @@ Rules:
 - ASCII operators only.
 -->
 
+## 2026-05-02 (s055) -- Audit-fix scope: internal-trust waiver covers deactivation, NOT auth/data-exposure
+
+Decision: The "internal threat model" waiver that allowed frontend-only deactivation guards (self/owner/admin1, shipped as commits f1efc38 / 3093c60 / 9376c7b) does NOT extend to auth-bypass, data-exposure, or privilege-escalation gaps. Backend hardening from the 2026-05-02 adversarial audit ships in Batches 1-4 of plan `audit-fixes-2026-05-02.md`. M9 (sendBrandedScheduleEmail allowlist) is dropped because pre-launch staff-email restraint is a Claude-discipline rule (memory feedback_no_staff_emails_pre_launch), not a backend gap.
+Rationale: A stolen admin token must not equal full takeover. Sarvi is trusted, but a compromised laptop / phishing / replay scenario is a different threat than insider abuse. Three classes of fix carried distinct rationale: (1) data-exposure (hash + salt + PII leak via getAllData) is a credential-theft accelerator at any scale; (2) privilege-escalation (saveEmployee no allowlist) lets any admin grant themselves owner; (3) reset-the-owner gap means admin1 can lock out the owner trivially. None are mitigated by "we trust Sarvi."
+Confidence: H -- JR-stated 2026-05-02 after triage; verification by Playwright smokes after each batch ships.
+Evidence: plan file `~/.claude/plans/audit-fixes-2026-05-02.md`; audit task abc43136c61d5e215; commits to follow.
+
+## 2026-05-02 (s055) -- Default password switches from emp-XXX to FirstnameL, case-insensitive at first login
+
+Decision: New employees + admin password resets generate `FirstnameL` (first name + last initial) instead of the row-indexed `emp-XXX`. Single-word names use the whole word; hyphenated last names take the first segment's initial; collisions append a digit (`JohnR`, `JohnR2`). Empty/garbage names fall back to `emp-XXX`. Login is case-insensitive when `passwordChanged=false` (lowercases input before hash); user-chosen passwords stay strict. Existing rows are not migrated -- they keep their current `emp-XXX` until next admin reset. Helper duplicated frontend (preview) + backend (authoritative).
+Rationale: `emp-XXX` is opaque, tied to row index (drifts if rows reshuffle), and hard to communicate verbally. `FirstnameL` is memorable, easy to read off a phone, and survives row moves. Case-insensitive defaults survive iOS/Chromebook autocorrect on day-one logins -- a real user-blocker for 35 incoming employees who would otherwise call Sarvi about a capitalization mismatch. Keeping user-chosen passwords case-sensitive preserves the security posture for any password the employee picks themselves.
+Confidence: H -- JR-stated, build PASS 2026-05-02. Live verification pending JR's Apps Script paste-deploy.
+Evidence: backend `computeDefaultPassword_` + login lowercase branch in `backend/Code.gs` (v2.27.0); frontend `computeDefaultPassword` in `src/utils/employees.js`; live preview wired in `src/modals/EmployeeFormModal.jsx`. Reference memory `reference_default_passwords.md` updated.
+
+## 2026-05-01 (s049) -- /audit skill v5: caps raised + augmented marker_index + Read Discipline
+
+Decision: Stage 2 inventory caps raised 50k/75k -> 100k/150k and triage caps 30k/50k -> 40k/60k. `build-map.sh` augments `marker_index` to carry `{ path, line, context }` per hit (3-line context, 200 chars cap, 5 hits per marker per file -- map size 161 KB -> 523 KB). Stage 2 Operating rules add Read Discipline as binding: no full-file Reads (Reads must use offset+limit anchored to a marker line); 30 Reads max per pass; 1 Read per file max; demote-to-J when evidence requires Read budget unavailable; self-throttle (`[budget: Nk used, M reads]` per category checkpoint, finalize at 80% of soft cap); parent slices `marker_index` per-category via `jq` before invoking the agent (agent never reads the full ~500 KB map).
+Rationale: v4 (50k/75k caps) breached at 127k on the 86-file codebase because the agent treated marker-routed file lists as a Read list rather than a routing hint -- 27 file Reads at ~2-3k tokens each. Codebase grew (~75 -> 86 files) but caps didn't. v5 verified 2026-05-01 at 70k tokens with ~25 findings written to disk -- strict improvement on cost (-45%), recall (+150%), persistence (now writes to `inventory.md`). The win comes from focused looking + map-data-first evidence, not just from raised caps; the Read Discipline rules force commit-or-demote behavior that today's wandering-the-codebase pattern lacked.
+Confidence: H -- direct measurement (s048 attempt 127k -> s049 retest 70k), evolution log v5 verdict at `docs/audit-skill-evolution.md`.
+Evidence: commits `1527442` (v5 entry in evolution log), `1cd615d` (v5 verified). Skill files at `.claude/skills/audit/SKILL.md` and `.claude/skills/audit/scripts/build-map.sh` (gitignored, local only).
+
+## 2026-05-01 (s048) -- Email design system aligned across all surfaces
+
+Decision: One visual identity for every app-originated email. Both wrappers (frontend `buildBrandedHtml.js` for schedule distribution + backend `BRANDED_EMAIL_WRAPPER_HTML_` for the 19 lifecycle notifications) share the OVER THE / RAINBOW two-line CSS wordmark banner with 32/28 padding (Arial fallback; email clients strip Josefin Sans). Schedule distribution emails carry a static sick-day / late / coverage / time-off policy disclaimer at the bottom in 11px fine-print styling, and the schedule table is now framed by empty navy bars above and below (no column headers -- table is self-evident). Sarvi's 5 admin-bound notifications carry an `askType` label (bold accent uppercase) at the top of the body and an "Open in App" CTA button at the bottom; subjects tightened with leading emoji per type. The 14 staff lifecycle notifications use the aligned banner but no askType/CTA yet (staff are off-limits to email pre-launch per memory rule).
+Rationale: One visual identity = instant email-source recognition; admin emails get extra triage signals because Sarvi processes high volume; staff lifecycle minimal until explicitly tweaked. JR explicitly chose static disclaimer (no admin Settings surface) and disclaimer-styling (not policy-block styling).
+Confidence: H -- JR-stated + Sarvi reviewed schedule emails 2026-05-01, verified 2026-05-01
+Evidence: commits `1dfa218` (disclaimer), `2f42623` (schedule banner + framing), `306bd6f` (notification wrapper align), `3b5c02a` (stale-request error msg), `c155ed4` (subjects + askType + CTA on Sarvi's 5). Backend changes (`306bd6f`, `3b5c02a`, `c155ed4`) drift on live until paste-deploy in otr.scheduler Apps Script editor.
+
+## 2026-04-30 (s047) -- Retire 24h part-time weekly cap violation rule
+
+Decision: `partTimeCap` violation (warn when employmentType=part-time and weekHours > 24) removed from `computeViolations`; constant `PART_TIME_WEEKLY_CAP` deleted.
+Rationale: JR confirmed Sarvi schedules part-timers above 24h regularly; the warning fires constantly without changing scheduler behavior, polluting the violations panel with noise that hides actionable rules (consecutive-days, ESA 44h overage). Kept the 40h CAP / 44h ESA OVER_RED, consecutive 6+ days, approved-time-off, and unavailable rules unchanged.
+Confidence: H -- JR-stated, verified 2026-04-30
+Evidence: commit `e887881`; `src/utils/violations.js`, `src/utils/timemath.js`.
+
+## 2026-04-30 (s046) -- Pre-migration getAllData perf bridge = Apps Script CacheService (not CF Worker / Vercel Edge)
+
+Decision: For the pre-migration window, `getAllData` uses Apps Script's built-in `CacheService.getScriptCache()` to absorb concurrent reads. 600s TTL, ~90KB chunked keys per tab, automatic invalidation via writer wrappers in `updateRow`/`updateCell`/`appendRow` plus 2 inline busts at the direct-delete sites. Cache miss = unchanged 7-8s; cache hit ~2-3s (skips 5 sheet reads, still pays Apps Script cold start + JSON serialize). External edge layers (Cloudflare Worker + KV; Vercel Edge Function + Vercel KV) were considered + rejected for this window. Migration retires the layer at cutover; Supabase RLS reads land sub-200ms regardless.
+Rationale: JR direction 2026-04-30 -- "this won't matter anyway after the supabase migration so im thinking we do the inside appscript version of the fix." Bridge code economics: 1-2 hours of Apps Script wrapping > 4-6 hours of edge worker + KV setup + deploy + monitoring, when the entire layer dies in weeks. Vercel Edge would have been preferred over CF Worker if an edge layer were chosen (already on Vercel; one fewer vendor); recorded so the next time someone reaches for "let's add CF Worker" the simpler in-codebase option lands first.
+Confidence: H -- direct user direction 2026-04-30 + shipped commit `49b1053` build PASS, Apps Script live deployment redeployed by JR same session.
+Rejected alternatives:
+- Cloudflare Worker + KV in front of `/exec` -- rejected: another vendor account, edge cache wins (~150ms) overkill for 1-2 concurrent admins at OTR scale; Vercel Edge is the cleaner equivalent if external caching is later needed.
+- Vercel Edge Function + Vercel KV -- noted as the right external choice if cache miss times prove insufficient post-deploy; not built this session because Apps Script CacheService is enough at OTR's 1-2 concurrent admin profile.
+- Trim `getAllData` payload to 6 pay periods + on-demand range fetch -- rejected: 4-6 hours frontend work (in-memory period cache, direction-aware prefetch, debounce, cancel-prior-fetch) for a marginal incremental win on top of CacheService; deferred to migration which obviates the question.
+- Service Worker cache in the browser -- rejected: only helps repeat visits by the same user; CacheService helps every admin sharing the deployment.
+
+## 2026-04-30 (s044) -- Migration vendor + pricing framing locked
+
+Decision: Three Phase 0/4 cutover decisions resolved post-Wave-3. (1) **Custom SMTP for password-reset blast = AWS SES** (ca-central residency aligns with PIPEDA framing; ~$0.10 per 1k emails, free at OTR scale; SPF/DKIM verified during Phase 1). Resend + Mailgun both rejected -- AWS SES wins on residency. (2) **PITR add-on ($100/mo) dropped from Phase 0**; daily 7-day backups (included in Pro $25/mo) are the recovery floor. Revisit only if a customer compliance ask demands it. (3) **Migration is not itemized to OTR** -- treated as table stakes for PIPEDA / Ontario data-residency compliance, not a feature line. Bundled into the existing $497/mo + $125/hr post-trial arrangement. Customer #2 inherits a migrated platform from day one, so the ~$11-19k of dev hours OTR underwrites amortizes across future deals.
+Rationale: JR direction 2026-04-30 -- "don't want to spend $100/month" (PITR), "AWS SES sounds good" (SMTP), "shouldn't charge for it because it's a requirement for Ontario security compliance and so if I don't do it they can't use the app at all which defeats the whole purpose" (pricing). The pricing framing is durable: any future customer in Ontario or under similar privacy regimes inherits the same logic, so this is a pricing-philosophy fact, not a one-customer concession.
+Confidence: H -- direct user direction 2026-04-30.
+Rejected alternatives:
+- Resend / Mailgun for SMTP -- rejected: ca-residency story weaker; AWS SES is the only ca-central option among the 3.
+- PITR included from Phase 0 -- rejected: $100/mo equals the baseline Pro plan; defer until a customer compliance ask demands it.
+- Itemize migration as a separate $11-19k line -- rejected: defeats the offer's coherence (compliant scheduling app is what's being sold; migration is the cost of selling it).
+
+## 2026-04-30 (s043) -- Supabase migration schema design locked (Wave 3 synthesis complete)
+
+Decision: All 10 migration research docs landed. The Postgres schema in `docs/migration/02-schema-proposed.md` becomes the binding design for eventual cutover. Eight design questions resolved by JR: (1) sick days = `type='sick'` row in `shifts`; (2) no forward-compat KV table -- typed `store_config` only; (3) ShiftChanges splits into 4 tables (parent + time_off + offers + swaps); (4) `recipient_id`/`partner_id` are NOT NULL FK populated at insert via email lookup; (5) `legacy_id` columns kept forever for audit; (6) default-password UX uses Supabase `password_reset_required` flag (hard gate at login, replaces today's soft banner); (7) `employmentType` stays soft TEXT with CHECK constraint, not native ENUM; (8) Realtime publishes `shifts` + `shift_change_requests` (parent only) + `announcements`; `profiles` and `store_config` are not published. Cutover plan in `09-cutover-and-rollback.md` -- 7 phases, password-reset blast for 35 staff is the load-bearing irreversible step at Phase 4 T+1:10.
+Rationale: Wave 3 synthesis produced a coherent, internally-consistent schema; all 8 open questions had a clear winner once tradeoffs were spelled out (e.g. solo dev + 35-staff scale tilts every "strict vs flexible" call toward simpler/stricter, not toward optionality). The plan sits ready; ship decision is separate from research completeness.
+Confidence: H -- direct user direction 2026-04-30 across all 8 Qs; verified by re-reading 02-schema-proposed.md §11 against the 8 letter-answers.
+
 ## 2026-04-29 -- DATA plane scaffolded with gold-sources inventory
 
 Decision: RAINBOW adopts the kit's DATA/ scaffold per `DATA_CAPTURE_BOOTSTRAP.md` v5.2. Catalog at `DATA/catalog.md`; validator at `scripts/validate-data-catalog.sh`. Single first entry: `rubrics/gold-sources-inventory.md` -- forward-looking map covering Apps Script API surface, Sheets schema, frontend constants/theme, brand palette, PDF generator + layout registry, statutory citation discipline. PII boundary called out explicitly (live Sheets data is cloud-only, never in repo).
