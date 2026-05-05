@@ -48,9 +48,9 @@ const ROLE_LEGEND_LABEL = {
 };
 
 // S64 Stage 7 - events carry meeting/PK entries per `${empId}-${date}` key.
-// `targetWindow`: optional tab opened synchronously from the click handler (before
-// dynamic import). Browsers block window.open() after await; App passes a blank tab.
-export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = [], events = {}, targetWindow = null) => {
+// Pure builder: returns the full print-preview HTML string. No DOM/Blob side
+// effects so it can also feed the EmailModal PDF-attachment payload.
+export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = [], events = {}) => {
   const week1 = dates.slice(0, 7);
   const week2 = dates.slice(7, 14);
   const weekNum1 = getWeekNumber(week1[0]);
@@ -330,6 +330,13 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
 </body>
 </html>`;
 
+  return html;
+};
+
+// `targetWindow`: optional tab opened synchronously from the click handler (before
+// dynamic import). Browsers block window.open() after await; App passes a blank tab.
+export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announcement = null, timeOffRequests = [], events = {}, targetWindow = null) => {
+  const html = buildScheduleHtml(employees, shifts, dates, periodInfo, announcement, timeOffRequests, events);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   if (targetWindow) {

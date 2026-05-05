@@ -2,7 +2,16 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
- * Version: 2.32.3 (Drop hardcoded BCC otr.scheduler from sendOnboardingEmail; payload-driven optional)
+ * Version: 2.32.4 (sendBrandedScheduleEmail PDF attachment via Utilities.newBlob HTML->PDF)
+ *
+ * Changes in v2.32.4:
+ * - sendBrandedScheduleEmail accepts optional payload.pdfHtml + payload.pdfFilename.
+ *   When present, converts HTML to PDF via
+ *   Utilities.newBlob(html, 'text/html', name).getAs('application/pdf')
+ *   and attaches to the MailApp send. Same artifact as the print-preview PDF
+ *   (frontend builds via buildScheduleHtml) so the email attachment matches
+ *   what gets posted on the kitchen door.
+ * - Backwards compatible: payload without pdfHtml behaves exactly as before.
  *
  * Changes in v2.32.3:
  * - sendOnboardingEmail no longer hardcodes bcc: 'otr.scheduler@gmail.com'.
@@ -2966,7 +2975,9 @@ function sendEmail(to, subject, body, options) {
 }
 
 // Send a fully-formed branded schedule email built by the frontend.
-// Accepts { to, subject, htmlBody, plaintextBody } from the frontend EmailModal.
+// Accepts { to, subject, htmlBody, plaintextBody, pdfHtml?, pdfFilename?, bcc? } from EmailModal.
+// When pdfHtml is present, the schedule HTML is converted to PDF via
+// Utilities.newBlob().getAs('application/pdf') and attached to the send.
 // Auth gate: any logged-in admin (same pattern as saveAnnouncement).
 function sendBrandedScheduleEmail(payload) {
   var auth = verifyAuth(payload, true);
@@ -2976,14 +2987,25 @@ function sendBrandedScheduleEmail(payload) {
   var htmlBody = payload.htmlBody;
   var plaintextBody = payload.plaintextBody;
   var bcc = payload.bcc;
+  var pdfHtml = payload.pdfHtml;
+  var pdfFilename = payload.pdfFilename || 'OTR-Schedule.pdf';
   if (!to || !subject || !htmlBody) {
     return { success: false, error: { code: 'INVALID_PARAMS', message: 'Missing required fields: to, subject, htmlBody.' } };
   }
   try {
     var mailParams = { to: to, subject: subject, body: plaintextBody || '', htmlBody: htmlBody, name: 'OTR Scheduling' };
     if (bcc) mailParams.bcc = bcc;
+    if (pdfHtml) {
+      // HTML->PDF via Drive's conversion service. Strips JavaScript, limited
+      // CSS support; we accept Phase 0 probe fidelity as a one-time gate.
+      var sourceName = pdfFilename.replace(/\.pdf$/i, '') + '.html';
+      var pdfBlob = Utilities.newBlob(pdfHtml, 'text/html', sourceName)
+        .getAs('application/pdf')
+        .setName(pdfFilename);
+      mailParams.attachments = [pdfBlob];
+    }
     MailApp.sendEmail(mailParams);
-    Logger.log('Branded schedule email sent to ' + to + (bcc ? ' (bcc ' + bcc + ')' : '') + ': ' + subject);
+    Logger.log('Branded schedule email sent to ' + to + (bcc ? ' (bcc ' + bcc + ')' : '') + (pdfHtml ? ' [PDF attached]' : '') + ': ' + subject);
     return { success: true };
   } catch (error) {
     Logger.log('Failed to send branded schedule email to ' + to + ': ' + error.toString());

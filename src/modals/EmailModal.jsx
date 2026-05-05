@@ -8,7 +8,7 @@ import { Modal, GradientButton, Checkbox } from '../components/primitives';
 import { toDateKey, getWeekNumber, formatMonthWord } from '../utils/date';
 import { PRIMARY_CONTACT_EMAIL } from '../constants';
 
-export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, dates, periodInfo, announcement, onComplete }) => {
+export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, timeOffRequests = [], dates, periodInfo, announcement, onComplete }) => {
   const emailableEmps = useMemo(() => employees
     .filter(e => e.active && !e.deleted && !e.isOwner)
     .filter(e => (!e.isAdmin && e.adminTier !== 'admin2') || e.showOnSchedule), [employees]);
@@ -39,6 +39,16 @@ export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, da
 
     const accent = OTR_ACCENT.primary;
 
+    // Build the printable schedule HTML once. Backend converts this to PDF via
+    // Utilities.newBlob(html, 'text/html').getAs('application/pdf') and attaches
+    // to the MailApp send. Same artifact for group + individual modes -- the
+    // attachment mirrors what gets posted on the kitchen door.
+    // Dynamic-imported to match App.jsx's existing pattern; keeps PDF code in
+    // its own chunk and out of the initial-load bundle.
+    const { buildScheduleHtml } = await import('../pdf/generate');
+    const pdfHtml = buildScheduleHtml(employees, shifts, dates, periodInfo, announcement, timeOffRequests, events);
+    const pdfFilename = `OTR-Schedule-Wk${weekNum1}-${weekNum2}-${startMonth}${startDayNum}.pdf`;
+
     if (emailMode === 'group') {
       const emails = selectedEmps.map(e => e.email).join(',');
 
@@ -54,7 +64,7 @@ export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, da
         accent,
       });
 
-      const res = await apiCall('sendBrandedScheduleEmail', { to: emails, subject, htmlBody, plaintextBody, bcc: 'otr.scheduler@gmail.com' });
+      const res = await apiCall('sendBrandedScheduleEmail', { to: emails, subject, htmlBody, plaintextBody, pdfHtml, pdfFilename, bcc: 'otr.scheduler@gmail.com' });
 
       const emailResults = selectedEmps.map(emp => ({
         emp,
@@ -97,6 +107,8 @@ export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, da
           subject: built.subject,
           htmlBody: built.html,
           plaintextBody: built.plaintext,
+          pdfHtml,
+          pdfFilename,
         });
 
         if (res && res.success) {

@@ -2183,6 +2183,8 @@ export default function App() {
           onClose={() => setEmailOpen(false)}
           employees={employees}
           shifts={shifts}
+          events={events}
+          timeOffRequests={timeOffRequests}
           dates={dates}
           periodInfo={{ startDate, endDate }}
           announcement={currentAnnouncement}
@@ -2773,7 +2775,7 @@ export default function App() {
         return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} weekHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={approvedTimeOffSet.has(`${editingShift.employee.email}-${toDateKey(editingShift.date)}`)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
       })()}
       {violationsPanelEl}
-      <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
+      <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} timeOffRequests={timeOffRequests} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
       <EmployeesPanel isOpen={inactivePanelOpen} onClose={() => setInactivePanelOpen(false)} employees={employees} onEdit={(emp) => { setInactivePanelOpen(false); setEditingEmp(emp); setEmpFormOpen(true); }} onReactivate={reactivateEmployee} onArchive={archiveEmployee} />
       <ArchivedEmployeesPanel isOpen={archivedPanelOpen} onClose={() => setArchivedPanelOpen(false)} archivedEmployees={employeesArchive} employees={employees} onRestore={unarchiveEmployee} onHardDelete={hardDeleteArchivedEmployee} />
       <AdminSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} currentUser={currentUser} staffingTargets={staffingTargets} onStaffingTargetsChange={setStaffingTargets} showToast={showToast} />
