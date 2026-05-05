@@ -12,6 +12,12 @@ Photos/
 .playwright-mcp/
 /*.png
 
+# Audit skill regenerable runtime output (rebuilt by /audit each run).
+# Keep triage.md + inventory.md trackable for diff baselines + history.
+.claude/skills/audit/output/*
+!.claude/skills/audit/output/triage.md
+!.claude/skills/audit/output/inventory.md
+
 # Claude Code local preferences
 CLAUDE.local.md
 pitchdeck/assets/_video_raw/
