@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useIsMobile, MobileMySchedule, MobileBottomSheet } from './MobileEmployeeView';
 import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, MobileEmployeeQuickView, MobileAdminBottomNav } from './MobileAdminView';
 import { parseLocalDate, escapeHtml } from './utils/format';
-import { toDateKey, getDayName, formatDate, formatMonthWord, getWeekNumber, formatTimeDisplay, formatTimeShort, parseTime } from './utils/date';
+import { toDateKey, getDayName, formatDate, formatMonthWord, getWeekNumber, formatTimeDisplay, formatTimeShort, parseTime, mondayOfLocalWeek, filterDatesSameMondayWeek } from './utils/date';
 import { isStatHoliday } from './utils/storeHours';
 import { TooltipButton, Modal } from './components/primitives';
 import { AdaptiveModal } from './components/AdaptiveModal';
@@ -627,6 +627,20 @@ export default function App() {
     return t;
   };
 
+  // Full pay-period net hours (all dates in `dates`). Violations + modal totals must not use only `currentDates`.
+  const getEmpHoursFullPeriod = useCallback(
+    (id) => computeWeekHoursFor(id, dates, shifts, events),
+    [dates, shifts, events],
+  );
+
+  const getEmpHoursForWeekContaining = useCallback(
+    (id, anchorDate) => {
+      const weekDates = filterDatesSameMondayWeek(anchorDate, dates);
+      return computeWeekHoursFor(id, weekDates, shifts, events);
+    },
+    [dates, shifts, events],
+  );
+
   // Pre-compute per-date scheduled headcounts once per relevant state change.
   // O(n_emp * n_dates) cost paid once here instead of per-render per-date.
   const scheduledByDate = useMemo(() => {
@@ -650,7 +664,14 @@ export default function App() {
   const allViolations = useMemo(() => {
     const out = [];
     for (const emp of schedulableEmployees) {
-      const wkHours = computeWeekHoursFor(emp.id, dates, shifts, events);
+      const mondayKeys = [...new Set(dates.map((d) => toDateKey(mondayOfLocalWeek(d))))];
+      const hoursByWeekMonday = new Map();
+      for (const mk of mondayKeys) {
+        const anchor = dates.find((d) => toDateKey(mondayOfLocalWeek(d)) === mk);
+        if (!anchor) continue;
+        const weekDates = filterDatesSameMondayWeek(anchor, dates);
+        hoursByWeekMonday.set(mk, computeWeekHoursFor(emp.id, weekDates, shifts, events));
+      }
       for (const date of dates) {
         const dateStr = toDateKey(date);
         const key = `${emp.id}-${dateStr}`;
@@ -662,6 +683,7 @@ export default function App() {
           emp.id, toDateKey(prior),
           (id, k) => (events[`${id}-${k}`] || []).some(e => e.type === 'sick'),
         );
+        const wkHours = hoursByWeekMonday.get(toDateKey(mondayOfLocalWeek(date))) ?? 0;
         const v = computeViolations({
           employee: emp, dateStr, weekHours: wkHours,
           currentStreak: priorStreak + 1,
@@ -2132,8 +2154,8 @@ export default function App() {
               date={editingShift.date}
               existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]}
               existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []}
-              totalPeriodHours={getEmpHours(editingShift.employee.id)}
-              weekHours={getEmpHours(editingShift.employee.id)}
+              totalPeriodHours={getEmpHoursFullPeriod(editingShift.employee.id)}
+              weekHours={getEmpHoursForWeekContaining(editingShift.employee.id, editingShift.date)}
               availability={editingShift.employee.availability?.[getDayName(editingShift.date)]}
               hasApprovedTimeOff={approvedTimeOffSet.has(`${editingShift.employee.email}-${toDateKey(editingShift.date)}`)}
               priorWorkStreak={priorStreak}
@@ -2772,7 +2794,7 @@ export default function App() {
           toDateKey(prior),
           (id, k) => (events[`${id}-${k}`] || []).some(e => e.type === 'sick')
         );
-        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHours(editingShift.employee.id)} weekHours={getEmpHours(editingShift.employee.id)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={approvedTimeOffSet.has(`${editingShift.employee.email}-${toDateKey(editingShift.date)}`)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
+        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHoursFullPeriod(editingShift.employee.id)} weekHours={getEmpHoursForWeekContaining(editingShift.employee.id, editingShift.date)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={approvedTimeOffSet.has(`${editingShift.employee.email}-${toDateKey(editingShift.date)}`)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
       })()}
       {violationsPanelEl}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} timeOffRequests={timeOffRequests} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />

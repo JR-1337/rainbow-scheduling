@@ -19,6 +19,20 @@ export const getWeekNumber = (date) => {
   return Math.ceil((diff / 604800000) + 1);
 };
 
+/** Local Monday (00:00) for the Mon–Sun week containing `date`. Matches PAY_PERIOD_START (Monday-based periods). */
+export const mondayOfLocalWeek = (date) => {
+  const x = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dow = x.getDay();
+  x.setDate(x.getDate() - ((dow + 6) % 7));
+  return x;
+};
+
+/** Keep dates whose calendar week (Mon-start) matches `anchorDate`. */
+export const filterDatesSameMondayWeek = (anchorDate, poolDates) => {
+  const t = mondayOfLocalWeek(anchorDate).getTime();
+  return poolDates.filter((d) => mondayOfLocalWeek(d).getTime() === t);
+};
+
 export const parseTime = (t) => { if (!t) return 0; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
 export const formatTimeDisplay = (t) => { if (!t) return '--:--'; const [h, m] = t.split(':').map(Number); return `${h > 12 ? h - 12 : h || 12}:${m.toString().padStart(2, '0')}${h >= 12 ? 'PM' : 'AM'}`; };
