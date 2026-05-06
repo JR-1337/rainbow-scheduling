@@ -17,6 +17,20 @@ ASCII operators only.
 
 <!-- 2026-05-04 (s061) archive pass: 78 entries moved to CONTEXT/archive/lessons-archive.md to bring active under 60%-of-ceiling target (15k chars). Carry from s059 + s060. Archive holds full preserved entries. Future entries: append at top per "newest at top" rule. -->
 
+## [PROJECT] -- Schedule grid: `isOwner` does not imply off-schedule; use `showOnSchedule` + optional never-list
+
+Rule: Do not exclude employees from `filterSchedulableEmployees` (or mirrors) solely because `isOwner` is true. Co-owners who work the floor need the same visibility rules as other admins: `showOnSchedule` gates admin-tier rows. For remote owners who must not appear even in the admin **hidden staff** strip, use `SCHEDULE_UI_NEVER_LIST_EMAILS` in `constants.js` (login email, lowercase list).
+
+Trigger: Employee privilege / owner flag changes, schedulable-employee helpers, `hiddenStaff`, EmailModal recipient list.
+
+Why: Blanket `!isOwner` hid Sarvi from the grid when made co-owner. Owner answers access / saveEmployee policy; visibility answers floor presence.
+
+Provenance: 2026-05-06 -- commits `74f78fc`, `7606c66`.
+
+Tags: surface: scheduler, concern: correctness
+
+Affirmations: 0
+
 ## [PROJECT] -- Employee tier saves: client strip must match admin1-tier backend gates
 
 Rule: When shaping `saveEmployee` payloads in `App.jsx`, treat **admin1 tier** as `isOwner` or (`isAdmin` and `adminTier` neq `admin2`). Strip `isAdmin` and `adminTier` only when the caller is not admin1 tier. Do not key tier payload drops solely on `isOwner`.

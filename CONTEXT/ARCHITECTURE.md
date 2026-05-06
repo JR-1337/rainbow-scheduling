@@ -44,7 +44,7 @@ Rules:
 - `src/MobileEmployeeView.jsx` -- mobile components: MobileAlertsSheet, MobileBottomNav, MobileBottomSheet
 - `src/MobileAdminView.jsx` -- admin mobile view
 - `src/theme.js` -- THEME / TYPE / OTR accent palette
-- `src/constants.js` -- ROLES / ROLES_BY_ID / `DESKTOP_SCHEDULE_GRID_TEMPLATE` (240px + 7fr) / REQUEST_STATUS_COLORS / OFFER/SWAP / EVENT_TYPES / PRIMARY_CONTACT_EMAIL
+- `src/constants.js` -- ROLES / ROLES_BY_ID / `DESKTOP_SCHEDULE_GRID_TEMPLATE` (240px + 7fr) / REQUEST_STATUS_COLORS / OFFER/SWAP / EVENT_TYPES / PRIMARY_CONTACT_EMAIL / `SCHEDULE_UI_NEVER_LIST_EMAILS` (emails omitted from admin hidden-staff strip)
 - `src/components/` -- LoginScreen, ColumnHeaderEditor, ScheduleCell, EmployeeRow, CollapsibleSection, primitives (Modal/GradientButton/Input/Checkbox/TimePicker/TooltipButton), uiKit (haptic/AnimatedNumber/StaffingBar/ScheduleSkeleton/TaskStarTooltip/GradientBackground/Logo), Button, AdaptiveModal, MobileScheduleActionSheet
 - `src/hooks/` -- useFocusTrap, useUnsavedWarning, useDismissOnOutside, useAuth, useToast, useAnnouncements, useGuardedMutation, useTooltip
 - `src/panels/` -- admin + employee list panels; `EmployeesPanel` (desktop Employees modal: Active / Inactive / Archive chip), `MobileStaffPanel` (mobile Staff sheet: same filters); Archive chip -> `ArchivedEmployeesPanel` for owner (`openArchivedEmployeesPanel`), toast for non-owner admins; legacy Deleted tab removed
@@ -104,7 +104,7 @@ Rules:
 - Always store `employeeName` alongside `employeeId` (audit trail)
 - Pay periods: 14-day blocks from `PAY_PERIOD_START` = 2026-01-26
 - `editModeByPeriod[periodIndex]` -- each period tracked independently
-- Schedule grid / PDF / auto-fill / EmailModal / comms counts use `filterSchedulableEmployees` (active, not deleted; staff always; admin + admin2 require `showOnSchedule`). **Owner is not a schedule exclude** -- off-site-only owners set `showOnSchedule` false. Employees / Staff panels list active + inactive (including co-owners) for Reactivate / Archive workflows.
+- Schedule grid / PDF / auto-fill / EmailModal / comms counts use `filterSchedulableEmployees` (active, not deleted; staff always; admin + admin2 require `showOnSchedule`). **`isOwner` does not exclude from the grid** -- co-owners who work keep Show on schedule on; off-floor owners use Show off. **`hiddenStaff`** (admin strip below legend) uses the same inactive-or-admin-hidden predicate, then removes emails in `SCHEDULE_UI_NEVER_LIST_EMAILS`. Employees / Staff panels list active + inactive (including co-owners) for Reactivate / Archive workflows.
 
 ## Auth + Password
 

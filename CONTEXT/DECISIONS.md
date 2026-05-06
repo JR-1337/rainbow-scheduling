@@ -50,6 +50,14 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-05-06 -- Schedule UI: `isOwner` does not remove grid rows; `showOnSchedule` + optional never-list strip hide
+
+Decision: **Schedule grid / PDF / emailable set** use `filterSchedulableEmployees`: active, not deleted; staff (non-admin and not admin2) always; `isAdmin` or `admin2` only if `showOnSchedule`. **`isOwner` is not a hide flag** so co-owners who work the floor (e.g. Sarvi) stay on the grid when that bit is true and Show on schedule is on. **Remote / off-floor co-owner** stays off the grid via `showOnSchedule` false. **`SCHEDULE_UI_NEVER_LIST_EMAILS`** in `src/constants.js` (lowercase login emails) additionally drops matching rows from the **hidden staff** strip below the admin grid so JR does not appear there either; edit the list if the Employees-tab email differs.
+
+Rationale: Prior code excluded every `isOwner` row from schedulable sets; making Sarvi co-owner hid her from the schedule. Visibility is a product choice: floor presence lives in Show on schedule; strip suppression is a tiny explicit allowlist for non-floor owner accounts.
+
+Confidence: H -- shipped `74f78fc` (co-owner on grid) + `7606c66` (never-list strip); JR confirmed.
+
 ## 2026-05-06 -- saveEmployee privilege matrix (v2.32.5): admin1 tier writes, owner row immutability, no self tier edits
 
 Decision: `saveEmployee` enforces explicit rules instead of the v2.32.1 "non-owner silent-drop owner-only fields" loop. **Admin1** caller = `isOwner` or (`isAdmin` and `adminTier` neq `admin2`). Admin1 may set `isAdmin` and `adminTier` on targets that are not owner rows. **Owner rows** (`isOwner` on target): no in-app changes to `isAdmin`, `adminTier`, `isOwner`, or deactivation (`active` true->false). **Self:** caller cannot change own `isAdmin` or `adminTier`. **`isOwner` column:** only caller with `isOwner` may change the flag on any row. Non-admin1 callers get `AUTH_FORBIDDEN` on tier deltas (defense in depth; admin2 cannot pass `verifyAuth` save path today). Frontend `App.jsx` strips `isAdmin`/`adminTier` from the payload only when caller is not admin1 tier (not only when not owner), so non-owner admin1s persist tier edits. `EmployeeFormModal` greys Staff/Admin/Admin2 when `currentUser.adminTier === 'admin2'`.
