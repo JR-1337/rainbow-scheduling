@@ -47,6 +47,46 @@ const ROLE_LEGEND_LABEL = {
   floorMonitor: 'Floor Monitor',
 };
 
+/*
+  PDF schedule constraints (keep in sync when editing this file):
+  - B&W / greyscale only; role = glyph + borders; no last name in grid (first name + optional title).
+  - Sarvi (PRIMARY_CONTACT_EMAIL) on main staff weeks; other admin1 + admin2 on **page 3 only** (both admin weeks on that page).
+  - No “Scheduled” headcount row.
+  - Equal day column widths (colgroup). Uniform row height within a week table (no taller “Axl” rows).
+  - Staff weeks: week 1 vs later week use different usable tbody mm; **admin page (3) is tables only**; announcement,
+    legend, and contact start on the **following** page when admins exist.
+  - Tune: PDF_LEGAL_INNER_MM, PDF_STAFF_WEEK*_ABOVE_TBODY_MM, PDF_ADMIN_TBODY_USABLE_MM, MIN/MAX_PDF_ROW_MM.
+*/
+
+/** Inner printable height (mm) for legal portrait with @page margin ~5mm each side ≈ 335mm. */
+const PDF_LEGAL_INNER_MM = 335;
+/** Chrome above tbody: OTR wordmark + week strip + thead + breathing room (staff week 1). */
+const PDF_STAFF_WEEK1_ABOVE_TBODY_MM = 62;
+/** Chrome above tbody: week strip + thead — staff week 2+ on a fresh page. */
+const PDF_STAFF_WEEK_N_ABOVE_TBODY_MM = 28;
+/** Admin page: two week grids only (no announcement on that page). Per-table tbody budget (mm) for row-mm math. */
+const PDF_ADMIN_TBODY_USABLE_MM = 142;
+
+const MIN_PDF_ROW_MM = 7;
+const MAX_PDF_ROW_MM = 16;
+const PDF_DIVIDER_EST_MM = 1.2;
+
+/** Uniform row height so one week’s tbody fits usable vertical space. */
+const pdfRowMmForEmployeeCount = (employeeCount, dividerCount, usableTbodyMm) => {
+  if (employeeCount <= 0) return 12;
+  const net = Math.max(0, usableTbodyMm - dividerCount * PDF_DIVIDER_EST_MM);
+  const raw = Math.floor(net / employeeCount);
+  return Math.max(MIN_PDF_ROW_MM, Math.min(MAX_PDF_ROW_MM, raw));
+};
+
+const countPdfBucketDividers = (list) => {
+  let n = 0;
+  for (let i = 1; i < list.length; i++) {
+    if (employeeBucket(list[i]) !== employeeBucket(list[i - 1])) n++;
+  }
+  return n;
+};
+
 // S64 Stage 7 - events carry meeting/PK entries per `${empId}-${date}` key.
 // Pure builder: returns the full print-preview HTML string. No DOM/Blob side
 // effects so it can also feed the EmailModal PDF-attachment payload.
@@ -57,11 +97,15 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
   const weekNum2 = getWeekNumber(week2[0]);
 
   // Filter schedulable employees (exclude owner, exclude admins unless showOnSchedule).
-  // Split: staff pages (1+2) get Sarvi + non-admins; page 3 gets all other admins.
+  // Split: pages 1–2 = primary contact (Sarvi) + non-admin staff; page 3 = admin1 and admin2.
+  // Admin2 uses isAdmin: false, so routing must key off adminTier === 'admin2' as well.
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
+  const pdfIsPrimaryStoreContact = (e) => e.email === PRIMARY_CONTACT_EMAIL;
+  const pdfGoesOnAdminOnlyPage = (e) =>
+    (e.isAdmin || e.adminTier === 'admin2') && !pdfIsPrimaryStoreContact(e);
   const schedulableAll = sortBySarviAdminsFTPT(filterSchedulableEmployees(employees));
-  const schedulableMain = schedulableAll.filter(e => !e.isAdmin || e.email === PRIMARY_CONTACT_EMAIL);
-  const schedulableAdmins = schedulableAll.filter(e => e.isAdmin && e.email !== PRIMARY_CONTACT_EMAIL);
+  const schedulableMain = schedulableAll.filter((e) => !pdfGoesOnAdminOnlyPage(e));
+  const schedulableAdmins = schedulableAll.filter(pdfGoesOnAdminOnlyPage);
 
   // PDF contact row shows the primary store contact only (Sarvi). If her record
   // isn't found, fall back to any active non-owner admin so the PDF still lists
@@ -86,13 +130,16 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
     </div>
   `;
 
-  const makeWeekTable = (weekDates, weekNum, rowEmployees = schedulableMain, blockClass = 'wk-block staff') => {
+  const makeWeekTable = (weekDates, weekNum, rowEmployees = schedulableMain, blockClass = 'wk-block staff', usableTbodyMm = PDF_LEGAL_INNER_MM - PDF_STAFF_WEEK_N_ABOVE_TBODY_MM) => {
     const schedulable = rowEmployees;
+    const dividerN = countPdfBucketDividers(schedulable);
+    const rowMm = pdfRowMmForEmployeeCount(schedulable.length, dividerN, usableTbodyMm);
+
     const headers = weekDates.map(d => {
       const hol = isStatHoliday(d);
       // Holiday: heavy black top border + "HOL" caption in addition to yellow bg,
       // so the marker survives greyscale printing.
-      return `<th style="height:10mm;padding:1mm;border:1px solid ${G.border};${hol ? `border-top:3px solid ${G.ink};` : ''}background:${hol ? G.fillZebra : G.fillZebra};font-size:11px;text-align:center;vertical-align:middle;overflow:hidden;box-sizing:border-box;">
+      return `<th style="height:9mm;padding:1mm;border:1px solid ${G.border};${hol ? `border-top:3px solid ${G.ink};` : ''}background:${hol ? G.fillZebra : G.fillZebra};font-size:11px;text-align:center;vertical-align:middle;overflow:hidden;box-sizing:border-box;">
         ${hol ? `<div style="font-size:5pt;font-weight:800;color:${G.ink};letter-spacing:1px;line-height:1;">HOL</div>` : ''}
         <div style="font-weight:700;color:${G.text};text-transform:uppercase;font-size:7pt;line-height:1.1;">${getDayNameShort(d)}</div>
         <div style="font-size:11pt;font-weight:700;color:${G.ink};line-height:1.1;">${d.getDate()}</div>
@@ -111,7 +158,7 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
         if (!et) return '';
         const hideTime = ev.type === 'meeting' || ev.type === 'pk';
         const timeStr = hideTime ? '' : ` ${formatTimeShort(ev.startTime)}-${formatTimeShort(ev.endTime)}`;
-        return `<div style="font-size:5pt;line-height:1.1;color:${G.textMuted};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:0.5px;"><strong style="color:${G.ink};">${et.shortLabel}</strong>${timeStr}</div>`;
+        return `<div style="font-size:5pt;line-height:1.2;color:${G.textMuted};word-break:break-word;overflow-wrap:anywhere;margin-top:0.5px;"><strong style="color:${G.ink};">${et.shortLabel}</strong>${timeStr}</div>`;
       }).filter(Boolean);
       if (!lines.length) return '';
       return `<div style="margin-top:1px;">${lines.join('')}</div>`;
@@ -128,19 +175,19 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
         // Approved time-off wins over events - an employee on time-off shouldn't
         // show a meeting/PK card even if one was scheduled before the request was approved.
         if (!shift && hasApprovedTimeOffForDate(emp.email, dateStr, timeOffRequests)) {
-          return `<td style="padding:1mm;border:1px dashed ${G.border};background:${G.fill};text-align:center;vertical-align:middle;">
-            <div class="pdf-cell-inner" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+          return `<td class="pdf-grid-cell" style="border:1px dashed ${G.border};background:${G.fill};text-align:center;vertical-align:top;">
+            <div class="pdf-cell-inner pdf-cell-inner--fill" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
               <div style="font-size:7pt;font-weight:800;color:${G.ink};letter-spacing:1px;line-height:1.1;">OFF</div>
               <div style="font-size:5pt;color:${G.textFaint};line-height:1.1;">approved</div>
             </div>
           </td>`;
         }
         if (!shift && dayEvents.length === 0) {
-          return `<td style="padding:1mm;border:1px solid ${G.border};background:${G.fill};vertical-align:top;"><div class="pdf-cell-inner"></div></td>`;
+          return `<td class="pdf-grid-cell" style="border:1px solid ${G.border};background:${G.fill};vertical-align:top;"><div class="pdf-cell-inner pdf-cell-inner--fill"></div></td>`;
         }
         if (!shift) {
-          return `<td style="padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};text-align:left;vertical-align:top;">
-            <div class="pdf-cell-inner" style="display:flex;flex-direction:column;justify-content:flex-start;">
+          return `<td class="pdf-grid-cell" style="border:1px solid ${G.border};background:${G.fillZebra};text-align:left;vertical-align:top;">
+            <div class="pdf-cell-inner pdf-cell-inner--fill" style="display:flex;flex-direction:column;justify-content:flex-start;">
               ${eventBadgeHtml(dayEvents)}
             </div>
           </td>`;
@@ -151,25 +198,28 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
         // glyph (FS / FM / etc.), not in border weight.
         const cellBorder = `border:1px solid ${G.border};`;
         const shiftCellFill = G.fillZebra;
-        // Glyph absolute at top-left; time range on first line; events below.
-        // Role spell-out line DROPPED. Hours "Nh" line DROPPED.
-        return `<td style="padding:1mm;${cellBorder}background:${shiftCellFill};text-align:left;vertical-align:top;">
-          <div class="pdf-cell-inner" style="position:relative;${glyph ? 'padding-left:5mm;' : ''}">
-            ${glyph ? `<span style="position:absolute;top:0;left:0;font-size:8pt;font-weight:800;color:${G.ink};line-height:1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
-            ${shift.task ? `<span style="position:absolute;top:0;right:0;font-size:7pt;font-weight:800;color:${G.ink};line-height:1;">★</span>` : ''}
-            <div style="font-size:8.5pt;font-weight:600;color:${G.ink};line-height:1.15;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</div>
-            ${eventBadgeHtml(dayEvents)}
+        // Glyph + time + events: flex row so nothing is absolutely positioned
+        // on top of wrapped MTG/PK/SICK lines.
+        return `<td class="pdf-grid-cell" style="${cellBorder}background:${shiftCellFill};text-align:left;vertical-align:top;">
+          <div class="pdf-cell-inner pdf-cell-inner--fill pdf-cell-shift" style="display:flex;align-items:flex-start;gap:0.8mm;">
+            ${glyph ? `<span style="flex:0 0 auto;font-size:8pt;font-weight:800;color:${G.ink};line-height:1.1;letter-spacing:-0.5px;">${glyph}</span>` : ''}
+            <div style="flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:0;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5mm;min-width:0;">
+                <span style="font-size:8.5pt;font-weight:600;color:${G.ink};line-height:1.15;word-break:break-word;">${formatTimeShort(shift.startTime)}-${formatTimeShort(shift.endTime)}</span>
+                ${shift.task ? `<span style="font-size:7pt;font-weight:800;color:${G.ink};line-height:1;flex-shrink:0;">★</span>` : ''}
+              </div>
+              ${eventBadgeHtml(dayEvents)}
+            </div>
           </div>
         </td>`;
       }).join('');
 
       const titleStr = hasTitle(emp) && (emp.title || '').trim() ? cleanText(emp.title.trim()) : '';
-      const { first: nameFirst, rest: nameRest } = splitNameForSchedule(emp.name);
+      const { first: nameFirst } = splitNameForSchedule(emp.name);
       return `${showDivider ? dividerRow : ''}<tr class="schedule-row" style="page-break-inside:avoid;">
-        <td style="padding:1mm;border:1px solid ${G.border};background:${G.fill};width:22mm;vertical-align:top;">
-          <div class="pdf-cell-inner" style="display:flex;flex-direction:column;justify-content:center;">
+        <td class="pdf-grid-cell" style="border:1px solid ${G.border};background:${G.fill};vertical-align:top;">
+          <div class="pdf-cell-inner pdf-cell-inner--fill" style="display:flex;flex-direction:column;justify-content:flex-start;gap:0.5mm;">
             <div style="font-weight:700;font-size:10pt;line-height:1.05;color:${G.ink};word-break:break-word;hyphens:auto;">${cleanText(nameFirst)}</div>
-            ${nameRest ? `<div style="font-weight:700;font-size:10pt;line-height:1.05;color:${G.ink};word-break:break-word;hyphens:auto;">${cleanText(nameRest)}</div>` : ''}
             ${titleStr ? `<div style="font-size:5.5pt;color:${G.textMuted};line-height:1.1;font-style:italic;word-break:break-word;">${titleStr}</div>` : ''}
           </div>
         </td>
@@ -177,34 +227,19 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
       </tr>`;
     }).join('');
 
-    const headcountCells = weekDates.map(date => {
-      const dateStr = toDateKey(date);
-      const count = schedulable.reduce((n, emp) => {
-        if (!shifts[`${emp.id}-${dateStr}`]) return n;
-        const evs = events[`${emp.id}-${dateStr}`];
-        if (evs && evs.some(e => e.type === 'sick')) return n;
-        return n + 1;
-      }, 0);
-      return `<td style="padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};text-align:center;vertical-align:middle;">
-        <div class="pdf-cell-inner" style="display:flex;align-items:center;justify-content:center;font-size:11pt;font-weight:700;color:${G.ink};">${count}</div>
-      </td>`;
-    }).join('');
-    const headcountRow = `<tr class="schedule-row" style="page-break-inside:avoid;">
-      <td style="padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};width:22mm;vertical-align:middle;">
-        <div class="pdf-cell-inner" style="display:flex;align-items:center;font-size:7pt;font-weight:700;color:${G.text};text-transform:uppercase;letter-spacing:1px;">Scheduled</div>
-      </td>
-      ${headcountCells}
-    </tr>`;
-
     return `
-      <div class="${blockClass}" style="margin-bottom:10px;">
+      <div class="${blockClass} pdf-week-wrap" style="margin-bottom:10px;">
         <div style="background:${G.ink};padding:2mm 4mm;border-radius:4px 4px 0 0;display:flex;align-items:baseline;gap:4mm;">
           <h3 style="margin:0;color:#ffffff;font-size:11pt;font-weight:700;line-height:1;">Week ${weekNum}</h3>
           <span style="color:#dddddd;font-size:8pt;line-height:1;">${formatDate(weekDates[0])} - ${formatDate(weekDates[6])}</span>
         </div>
-        <table class="schedule-grid" style="width:100%;table-layout:fixed;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
-          <thead style="display:table-header-group;"><tr><th style="height:10mm;padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};width:22mm;font-size:7pt;text-align:left;color:${G.text};text-transform:uppercase;vertical-align:middle;overflow:hidden;box-sizing:border-box;">Employee</th>${headers}</tr></thead>
-          <tbody>${rows}${headcountRow}</tbody>
+        <table class="schedule-grid" style="--pdf-row-mm:${rowMm}mm;width:100%;table-layout:fixed;border-collapse:collapse;font-family:'Inter',Arial,sans-serif;">
+          <colgroup>
+            <col class="pdf-col-employee" />
+            <col class="pdf-col-day" /><col class="pdf-col-day" /><col class="pdf-col-day" /><col class="pdf-col-day" /><col class="pdf-col-day" /><col class="pdf-col-day" /><col class="pdf-col-day" />
+          </colgroup>
+          <thead style="display:table-header-group;"><tr><th class="pdf-employee-th" style="height:10mm;min-height:10mm;padding:1mm;border:1px solid ${G.border};background:${G.fillZebra};font-size:7pt;text-align:left;color:${G.text};text-transform:uppercase;vertical-align:middle;overflow:hidden;box-sizing:border-box;">Employee</th>${headers}</tr></thead>
+          <tbody>${rows}</tbody>
         </table>
       </div>
     `;
@@ -235,6 +270,22 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
 
   const printedAt = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
+  const staffTbodyUsableWeek1 = PDF_LEGAL_INNER_MM - PDF_STAFF_WEEK1_ABOVE_TBODY_MM;
+  const staffTbodyUsableWeekN = PDF_LEGAL_INNER_MM - PDF_STAFF_WEEK_N_ABOVE_TBODY_MM;
+  const adminTbodyUsable = PDF_ADMIN_TBODY_USABLE_MM;
+
+  const page3InfoFooterHtml = `
+    ${announcementHtml}
+    <div style="margin-top:6mm;padding:2mm 3mm;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
+      <div style="margin-bottom:2px;font-weight:700;font-size:7pt;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;">Legend</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2mm;align-items:center;">${legendItems}${eventLegendItems}<span style="font-size:8pt;display:inline-flex;align-items:center;gap:3px;"><span style="color:${G.ink};font-weight:700;">★</span><span style="color:${G.text};">Has Task</span></span><span style="font-size:8pt;display:inline-flex;align-items:center;gap:3px;"><span style="display:inline-block;padding:0 4px;border:1px dashed ${G.border};font-weight:800;color:${G.ink};font-size:7pt;letter-spacing:1px;">OFF</span><span style="color:${G.text};">Approved Time Off</span></span></div>
+    </div>
+    ${adminContactsHtml}
+    <div style="margin-top:4mm;padding-top:2mm;border-top:1px solid ${G.border};text-align:center;font-size:6pt;color:${G.textFaint};">
+      Printed ${printedAt} • This is a snapshot - live schedule at rainbow-scheduling.vercel.app
+    </div>
+  `;
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -261,28 +312,66 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
         page-break-before: always;
         padding-top: 5mm;
       }
+      .page-3-info {
+        break-before: page;
+        page-break-before: always;
+        padding-top: 5mm;
+      }
       tr { page-break-inside: avoid; break-inside: avoid; }
       thead { display: table-header-group; }
     }
     body { font-family: 'Inter', Arial, sans-serif; padding: 0; margin: 0 auto; max-width: 200mm; background: #ffffff; color: ${G.text}; }
     .print-btn { background: ${G.ink}; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
     .print-btn:hover { background: ${G.text}; }
-    /* Fixed cell height enforces consistent grid. overflow:hidden clips any
-       implausible edge-case (5+ events) without growing the row. */
-    .schedule-grid tbody tr.schedule-row td {
-      height: 8.5mm;
+    .wk-block,
+    .pdf-week-wrap {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .schedule-grid col.pdf-col-employee { width: 22mm; }
+    /* Seven day columns share the rest of the row equally (table-layout: fixed). */
+    .schedule-grid col.pdf-col-day { width: auto; }
+    /* --pdf-row-mm set per table from employee count vs usable tbody height (one week per page). */
+    .schedule-grid tbody tr.schedule-row {
+      height: var(--pdf-row-mm, 12mm);
+      max-height: var(--pdf-row-mm, 12mm);
+    }
+    .schedule-grid tbody tr.schedule-row td.pdf-grid-cell {
+      height: var(--pdf-row-mm, 12mm) !important;
+      min-height: var(--pdf-row-mm, 12mm) !important;
+      max-height: var(--pdf-row-mm, 12mm) !important;
+      padding: 1.5mm !important;
       vertical-align: top;
       overflow: hidden;
       box-sizing: border-box;
     }
-    .schedule-grid .pdf-cell-inner {
+    .schedule-grid tbody tr.schedule-row .pdf-cell-inner--fill {
       height: 100%;
+      max-height: 100%;
+      min-height: 0;
       overflow: hidden;
       box-sizing: border-box;
     }
+    .schedule-grid tbody tr.schedule-row .pdf-cell-shift {
+      min-height: 0;
+    }
+    .schedule-grid .pdf-cell-inner {
+      box-sizing: border-box;
+    }
     @media print {
-      .schedule-grid tbody tr.schedule-row td {
-        height: 8.5mm;
+      .wk-block,
+      .pdf-week-wrap {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .schedule-grid tbody tr.schedule-row {
+        height: var(--pdf-row-mm, 12mm);
+        max-height: var(--pdf-row-mm, 12mm);
+      }
+      .schedule-grid tbody tr.schedule-row td.pdf-grid-cell {
+        height: var(--pdf-row-mm, 12mm) !important;
+        min-height: var(--pdf-row-mm, 12mm) !important;
+        max-height: var(--pdf-row-mm, 12mm) !important;
         overflow: hidden;
       }
     }
@@ -307,26 +396,16 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
     </div>
   </div>
 
-  ${makeWeekTable(week1, weekNum1)}
-  ${makeWeekTable(week2, weekNum2)}
+  ${makeWeekTable(week1, weekNum1, schedulableMain, 'wk-block staff', staffTbodyUsableWeek1)}
+  ${makeWeekTable(week2, weekNum2, schedulableMain, 'wk-block staff', staffTbodyUsableWeekN)}
 
   <div class="page-3">
     ${schedulableAdmins.length > 0 ? `
-      ${makeWeekTable(week1, weekNum1, schedulableAdmins, 'wk-block admin')}
-      ${makeWeekTable(week2, weekNum2, schedulableAdmins, 'wk-block admin')}
-    ` : ''}
-
-    ${announcementHtml}
-
-    <div style="margin-top:6mm;padding:2mm 3mm;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
-      <div style="margin-bottom:2px;font-weight:700;font-size:7pt;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;">Legend</div>
-      <div style="display:flex;flex-wrap:wrap;gap:2mm;align-items:center;">${legendItems}${eventLegendItems}<span style="font-size:8pt;display:inline-flex;align-items:center;gap:3px;"><span style="color:${G.ink};font-weight:700;">★</span><span style="color:${G.text};">Has Task</span></span><span style="font-size:8pt;display:inline-flex;align-items:center;gap:3px;"><span style="display:inline-block;padding:0 4px;border:1px dashed ${G.border};font-weight:800;color:${G.ink};font-size:7pt;letter-spacing:1px;">OFF</span><span style="color:${G.text};">Approved Time Off</span></span></div>
-    </div>
-    ${adminContactsHtml}
-    <div style="margin-top:4mm;padding-top:2mm;border-top:1px solid ${G.border};text-align:center;font-size:6pt;color:${G.textFaint};">
-      Printed ${printedAt} • This is a snapshot - live schedule at rainbow-scheduling.vercel.app
-    </div>
+      ${makeWeekTable(week1, weekNum1, schedulableAdmins, 'wk-block admin', adminTbodyUsable)}
+      ${makeWeekTable(week2, weekNum2, schedulableAdmins, 'wk-block admin', adminTbodyUsable)}
+    ` : page3InfoFooterHtml}
   </div>
+  ${schedulableAdmins.length > 0 ? `<div class="page-3-info">${page3InfoFooterHtml}</div>` : ''}
 </body>
 </html>`;
 
