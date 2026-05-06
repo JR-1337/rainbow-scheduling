@@ -1664,6 +1664,16 @@ export default function App() {
       } catch (e) {
         console.error('[pdf-export]', e);
         try { printWindow.close(); } catch (_) { /* noop */ }
+        // Vite chunk-load failure after a deploy: the main bundle on this device
+        // references a chunk hash that no longer exists on the CDN. Auto-reload
+        // pulls the fresh main bundle; next click of Export PDF then succeeds.
+        const msg = e?.message || '';
+        const isChunkLoadFailure = /failed to fetch dynamically imported module|importing a module script failed|error loading dynamically imported module/i.test(msg);
+        if (isChunkLoadFailure) {
+          try { localStorage.setItem('pdf-export-last-error', JSON.stringify({ ts: new Date().toISOString(), message: 'chunk-load failure -> auto-reload triggered: ' + msg })); } catch (_) { /* noop */ }
+          window.location.reload();
+          return;
+        }
         const errText = `${e?.message || 'Could not build print view.'}\n\n${e?.stack || ''}`.trim();
         try { localStorage.setItem('pdf-export-last-error', JSON.stringify({ ts: new Date().toISOString(), message: errText })); } catch (_) { /* noop */ }
         setPdfExportError(errText);
