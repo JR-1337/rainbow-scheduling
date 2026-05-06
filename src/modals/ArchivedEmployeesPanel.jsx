@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Archive, ArchiveRestore, Trash2, AlertTriangle, Loader, X } from 'lucide-react';
+import { Archive, ArchiveRestore, Trash2, AlertTriangle, Loader, FolderArchive } from 'lucide-react';
 import { THEME } from '../theme';
-import { Modal, GradientButton, Input } from '../components/primitives';
+import { AdaptiveModal } from '../components/AdaptiveModal';
+import { GradientButton, Input } from '../components/primitives';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const FIVE_YEARS_MS = 5 * 365 * MS_PER_DAY;
@@ -31,7 +32,14 @@ export const ArchivedEmployeesPanel = ({ isOpen, onClose, archivedEmployees = []
   const [hardDeleteConfirmName, setHardDeleteConfirmName] = useState('');
   const [isBusy, setIsBusy] = useState(false);
 
-  if (!isOpen) return null;
+  const handleDismiss = () => {
+    if (hardDeleteTarget) {
+      setHardDeleteTarget(null);
+      setHardDeleteConfirmName('');
+    } else {
+      onClose();
+    }
+  };
 
   const handleRestore = async (row) => {
     setIsBusy(true);
@@ -50,8 +58,26 @@ export const ArchivedEmployeesPanel = ({ isOpen, onClose, archivedEmployees = []
     }
   };
 
+  const modalTitle = hardDeleteTarget ? 'Permanent delete' : 'Archived Employees';
+  const ModalIcon = hardDeleteTarget ? Trash2 : FolderArchive;
+  const modalIconColor = hardDeleteTarget ? THEME.status.error : THEME.accent.cyan;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Archived Employees" size="md">
+    <AdaptiveModal
+      isOpen={isOpen}
+      onClose={handleDismiss}
+      title={modalTitle}
+      icon={ModalIcon}
+      iconColor={modalIconColor}
+      ariaLabel={modalTitle}
+      footer={
+        hardDeleteTarget ? null : (
+          <div className="flex justify-end w-full">
+            <GradientButton variant="secondary" small onClick={onClose}>Close</GradientButton>
+          </div>
+        )
+      }
+    >
       {hardDeleteTarget ? (
         <div className="py-3">
           <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: THEME.status.error + '20' }}>
@@ -131,11 +157,8 @@ export const ArchivedEmployeesPanel = ({ isOpen, onClose, archivedEmployees = []
               })}
             </div>
           )}
-          <div className="flex justify-end mt-3 pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
-            <GradientButton variant="secondary" small onClick={onClose}>Close</GradientButton>
-          </div>
         </>
       )}
-    </Modal>
+    </AdaptiveModal>
   );
 };
