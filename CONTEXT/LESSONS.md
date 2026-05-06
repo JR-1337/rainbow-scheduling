@@ -155,7 +155,7 @@ Why: Plan sign-off removes decisions from the loop. Re-asking wastes context and
 Provenance: <unknown commit> -- repeated correction; flagged for graduation to root adapter at next audit.
 Tags: surface: harness, concern: naming
 Affirmations: 2
-Graduation: due 2026-05-13
+Graduated: 2026-05-06 to AGENTS.md
 
 ## [PROJECT] -- Topics JR has explicitly closed stay closed
 Rule: After JR explicitly closes a topic ("do not mention X again", "stop pushing X"), drop X from every downstream artifact (plan sections, audit findings, AskUserQuestion options, clarifications) for the rest of the session; surface again only if an external constraint forces it.

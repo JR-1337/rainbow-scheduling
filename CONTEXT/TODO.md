@@ -21,9 +21,9 @@ Rules:
 
 ## Active
 
-caesura. baryogenesis.
+grisaille. melisma.
 
-- **[s066] saveEmployee privilege matrix shipped -- backend v2.32.5 paste-deployed + frontend `d6010f4` on main.** JR: confirm Vercel picked up `d6010f4` (admin1 `canEditEmployeeTiers` strip + admin2 grey tier toggles). Smoke: non-owner admin1 changes Staff/Admin/Admin2 on another employee -> reload persists; owner row tier change -> error; admin2 sees disabled tier buttons; self tier change -> error. Optional: delete untracked `backend/pdf-probe.gs` and remove probe from Apps Script project (TODO carry from s066 email PDF work).
+- **saveEmployee privilege matrix -- smokes verified s067 (JR).** Admin1 demotes another admin ok; self `isAdmin`/`adminTier` blocked; owner row tier/deactivate blocked; admin2 `AUTH_FORBIDDEN` + grey tier toggles in `EmployeeFormModal`. Stack: `d6010f4` + Code.gs v2.32.5; plan `sarvi_admin_tier_persistence_a795dbd4` verify-matrix completed. Optional: confirm prod bundle hash matches `d6010f4` if not already. Optional: delete untracked `backend/pdf-probe.gs` and remove probe from Apps Script project (email PDF Phase 0 carry).
 
 - **[s066->next] EmailModal v2 PDF attachment -- shipped frontend (`1ac1052`) + backend v2.32.4 paste-deployed.** Awaiting smoke. JR action: (a) Schedule -> Publish -> group send to `johnrichmond007@gmail.com` only; confirm inline body unchanged + PDF attached + filename `OTR-Schedule-Wk{n1}-{n2}-{Mon}{D}.pdf`. (b) individual send to Test Guy `john@johnrichmond.ca`; confirm same. (c) reset Test Guy to Inactive after, per smoke-cleanup rule. (d) delete `backend/pdf-probe.gs` (untracked, 217KB Phase 0 probe artifact) and the `pdf-probe` file from the Apps Script project. Phase 0 fidelity probe passed by JR eyeball 2026-05-05.
 
@@ -81,6 +81,8 @@ caesura. baryogenesis.
 - Missing validation: Phase 4 smoke for PDF attachment -- group send to JR + individual send to Test Guy still owed.
 
 - **Apps Script live = v2.32.5 (2026-05-06):** `saveEmployee` privilege matrix -- admin1 tier (`isOwner` or (`isAdmin` and `adminTier` neq `admin2`)) may set `isAdmin`/`adminTier` on non-owner targets; owner rows immutable for tier/owner flag/deactivate; no self `isAdmin`/`adminTier` change; only owners may change `isOwner` on a row. Frontend `d6010f4`: same predicate for payload strip; admin2 tier toggles greyed in `EmployeeFormModal`. Prior: v2.32.4 PDF email attach, v2.32.1 audit fixes, v2.32.0 archive, v2.31.x onboarding.
+
+- **Last validated: s067 `saveEmployee` matrix prod smokes 2026-05-06 (JR).** admin1 -> lower another admin ok; self tier change blocked; owner row tier/deactivate blocked; admin2 tier change error + UI grey/disabled. Plan verify-matrix closed.
 
 - **Last validated: s056 bundled end-of-plan smoke at HEAD `39c55e0` 2026-05-03.** 5/5 PASS on prod (`https://rainbow-scheduling.vercel.app`): (1) v2.29.1 changePassword case-fold -- Test Guy completed Set-Your-Password modal `TestG` -> `TestG7`, then re-login no modal; (2) Batch 3 TOCTOU happy-path -- shift edit + save clean, no false CONCURRENT_EDIT, 0 console errors; (3) v2.30.1 lock-timeout symmetry -- both `withDocumentLock_` + `batchSaveShifts` at `tryLock(10000)`; (4) Batch 4 M8 -- corrupted `otr-auth-token`, redirect fired, banner "Your session ended. Please sign in again." rendered correctly (executor's race-condition flag was a non-issue); (5) Batch 4 M10 + M11 -- schedule + request panel render clean, 0 errors. Test Guy returned to Inactive + password reset to FirstnameL default `TestG` (`passwordChanged=false` preserved by Batch 1 allowlist drop).
 - Missing validation: prod paper-print of new portrait PDF (Sarvi kitchen-door legibility test).
