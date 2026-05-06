@@ -1,75 +1,40 @@
 <!-- SCHEMA: pdf-print-layout.md
-Purpose: Problem registry for staff schedule PDF (HTML -> browser print).
+Purpose: Reference for staff schedule PDF (HTML -> browser print).
 Audience: Claude Code / any agent touching src/pdf/generate.js
-Read trigger: before redesigning PDF layout, row geometry, or export pipeline.
+Read trigger: before redesigning PDF layout, row geometry, pagination, or export pipeline.
 -->
 
-# PDF schedule print -- problem registry
+# PDF schedule print -- reference
 
-## Output path today
+## Output path
 
-- `src/pdf/generate.js` -- `generateSchedulePDF` builds HTML string, Blob URL, navigates print tab.
-- `src/App.jsx` -- opens `about:blank` **synchronously** on button click, then `import('./pdf/generate')`, then passes that tab to `generateSchedulePDF` (popup blockers fire if `window.open` runs only after `await`).
-- Grayscale only (break-room B&W printer); role = glyph + typography, not hue.
-- `@page { size: landscape; margin: 0.3in; }` in embedded `<style>`.
-- Data: same schedulable employees + two week blocks as in-app (sort, buckets, dividers).
+- `src/pdf/generate.js` -- `buildScheduleHtml` (pure HTML string), `generateSchedulePDF` (Blob URL + target tab).
+- `src/App.jsx` -- opens `about:blank` **synchronously** on Export PDF click, then `import('./pdf/generate')`, passes tab to `generateSchedulePDF` (avoids popup blockers).
+- Email attach path reuses `buildScheduleHtml` payload (MailApp PDF path in Apps Script).
 
-## Competing goals (why this is not a one-line fix)
+## Current layout (2026-05)
 
-1. **Row height** -- JR: rows must not look "random" per cell; table rows should align across Mon-Sun.
-2. **No clipping** -- JR: do not hide text with ellipsis / overflow cut; content should be readable.
-3. **Dense grid** -- many employees x 7 days x 2 weeks; landscape has finite vertical space.
-4. **Print fidelity** -- WebKit/Chrome print preview != on-paper; flex/line-clamp varies.
-5. **Single artifact** -- one printable doc per export, not a separate "admin detail" app (unless we choose that).
-
-Goals 1 and 2 conflict if "same height" means **fixed px** and "no clip" means **arbitrary note length**.
-Current compromise (after 2026-04-25): `min-height` on cells, content **wraps**, **row height grows** to tallest cell in that employee row (standard HTML table). Uniform **across columns** within a row; **not** uniform across all employees.
-
-## Approaches already tried (brief)
-
-- Fixed inner box (~64px) + `overflow:hidden` + ellipsis on events -- uniform but clipped; rejected by JR.
-- Single-line events joined with ` · ` + nowrap -- clipped; rejected.
-- Taller fixed row + wrap -- still risks clip if max-height enforced; moving away from hard max.
-- **Tightened header-to-body spacing** (2026-04-26) -- header div margin-bottom 25->12 + padding-bottom 15->8, inner block margins shrunk, announcement wrapper margin 15->8. Saves ~20-27px between OTR wordmark and first table row; row-height behavior unchanged.
-
-## Solutions NOT fully explored (candidates for future work)
-
-**Layout / CSS**
-
-- **Continuation row** -- if cell content exceeds N lines, emit a second `<tr>` for same employee (merged name col) so no ellipsis; row count increases but nothing hidden.
-- **Per-week font scale** -- measure max text length per column (client-side) or estimate from char count; apply one `font-size` for whole table for that export.
-- **Narrower day columns + taller page** -- `size: landscape` + margin tweaks; or legal/ledger if printer supports.
-- **Split table** -- week1 on page 1, week 2 page 2 already; could split **employees** across pages with repeated header (print thead per chunk via `display: table-header-group` + manual chunking).
-- **Rotate to portrait** for schedule-only export (more vertical room, fewer employees per sheet).
-
-**Structural**
-
-- **Legend + codes in cells** -- e.g. `M1` for meeting type + footnote; frees horizontal space (JR must accept abbreviation).
-- **Drop long notes in PDF** -- show times + type only; full note "see app" (policy call; conflicts with "all visible" unless app is explicit).
-- **Second PDF page** -- "Detail" appendix listing `(emp, date, full note)` for cells with overflow risk only.
-
-**Tech swap**
-
-- **jsPDF / pdf-lib / Puppeteer** -- vector PDF with explicit layout engine; more control, more deps, different deploy story.
-- **Server render** -- Apps Script or small API generates PDF; same layout problems but one canonical renderer.
-
-**Process**
-
-- **Print CSS separate from preview HTML** -- `@media print` block that tightens padding/font only for print, looser on screen (reduces "preview lies").
-
-## Verification checklist (when changing PDF)
-
-- [ ] Chrome print preview: empty cell, work-only, work+task, meeting-only, multi-meeting, PK, sick, OFF, stat holiday column.
-- [ ] Longest real employee name + title; long meeting note; many events one day.
-- [ ] Headcount row aligns with body rows; bucket divider not stretched.
-- [ ] Grayscale: role glyphs + borders still distinguish roles.
+- **Page:** Legal **portrait**; `@page { margin: 5mm }`; body `max-width` ~200mm for on-screen preview.
+- **Flow:** Staff Week 1 table -> forced page break -> Staff Week 2 -> forced page break -> `.page-3` (either **both admin week tables** when non-primary-contact admins exist, or **info-only** `page3InfoFooterHtml` when none). If admins exist, another break -> `.page-3-info` repeats announcement + legend + footer (same `page3InfoFooterHtml` fragment).
+- **Brand lockup:** OVER THE / RAINBOW renders **only** at the top of `page3InfoFooterHtml` (final sheet when admins exist; last sheet when staff-only). Classes `.pdf-brand-lockup`, `__over`, `__wordmark` (Josefin Sans; sized for hierarchy vs announcement/legend). **No** wordmark above Staff Week 1 -- supports wall display when the info sheet is pinned at the top.
+- **Week 1 inset:** `@media print` rule `.no-print + .wk-block.staff { padding-top: 5mm }` matches the top inset Staff Week 2 gets via `.wk-block.staff + .wk-block.staff`.
+- **Row geometry:** Per-week `--pdf-row-mm` from `pdfRowMmForEmployeeCount(employeeCount, dividerCount, usableTbodyMm)`; dividers counted via `countScheduleDisplayDividers`. Uniform `tr`/`td` heights in print CSS; no variable row growth inside grid.
+- **Employee column:** `colgroup` `.pdf-col-employee` **24mm**; first-name cell **nowrap** + ellipsis (avoid `word-break` splitting names).
+- **Data parity:** Same schedulable pool + `sortSchedulableByHierarchy` + divider groups as in-app (`employeeSort.js`). PDF splits primary contact (`PRIMARY_CONTACT_EMAIL`) + floor staff vs other admins/admin2 onto staff vs admin pages (unchanged routing).
+- **Palette:** Grayscale / glyphs / borders only (break-room B&W printer).
 
 ## Related code
 
-- `collectPeriodShiftsForSave` / sick + meeting rules -- PDF reads same `shifts` + `events` as grid.
-- `employeeSort.js` -- `employeeBucket`, dividers must match app.
+- `src/utils/employeeSort.js` -- hierarchy sort + `scheduleDisplayDividerGroup`.
+- `src/constants.js` -- `SCHEDULE_ROW_FIRST_NAME_ORDER`, `PRIMARY_CONTACT_EMAIL`.
+
+## Verification checklist (when touching PDF)
+
+- [ ] Chrome print preview: staff-only vs admin-present pagination; lockup **only** on info sheet.
+- [ ] Week 1 top margin matches Week 2 when printed.
+- [ ] Cells: OFF, holiday strip, events, titled rows, longest realistic first name.
+- [ ] Grayscale: role glyphs still distinguish roles.
 
 ## Ownership
 
-- JR decides tradeoff between uniform global row height vs wrap vs abbrev vs appendix.
-- Update this file when a new approach ships or is ruled out (append to "tried" or DECISIONS).
+- JR owns density vs legibility tradeoffs; update this file when pagination or brand placement changes.

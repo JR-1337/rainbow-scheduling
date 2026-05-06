@@ -50,6 +50,14 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-05-06 -- Schedule PDF + grid: hierarchy row order, brand on info sheet, name columns, Week 1 print inset
+
+Decision: **Schedule row order** (desktop admin + employee grids, mobile admin/employee, PDF tables, AutofillClearModal list order) uses `sortSchedulableByHierarchy` in `src/utils/employeeSort.js`: Sarvi by first-name pin, then names in `SCHEDULE_ROW_FIRST_NAME_ORDER` (`src/constants.js`), then everyone else alphabetically by full `name`. **`employeeBucket` (admin1/admin2/FT/PT) remains only for AutofillClearModal bucket presets**, not for ordering. **PDF/UI divider `<tr>` / chrome** follows `scheduleDisplayDividerGroup` (Sarvi vs listed-first-names vs tail), not FT/PT buckets. **PDF brand:** OVER THE / RAINBOW lockup prints **only** atop `page3InfoFooterHtml` (final sheet when admins exist; lone `.page-3` sheet when staff-only) via `.pdf-brand-lockup*` -- enlarged vs the legacy mini header; **removed** from above Staff Week 1 for wall-post workflows. **`@media print`:** `.no-print + .wk-block.staff { padding-top: 5mm }` matches Week 2 page-top inset. **Name columns:** desktop name track via `DESKTOP_SCHEDULE_NAME_COL_PX` (172); mobile frozen column `MOBILE_SCHEDULE_NAME_COL_PX` (84); PDF employee col 24mm; PDF first-name cell nowrap + ellipsis instead of `word-break`.
+
+Rationale: Business hierarchy order decouples from admin1/admin2 permissions; wall display pins the info sheet at top so branding belongs there; wider columns prevent mid-token wraps on long first names.
+
+Confidence: M -- shipped `db3e893`..`3ba199a`; JR session-close OK without formal print checklist.
+
 ## 2026-05-06 -- Schedule UI: `isOwner` does not remove grid rows; `showOnSchedule` + optional never-list strip hide
 
 Decision: **Schedule grid / PDF / emailable set** use `filterSchedulableEmployees`: active, not deleted; staff (non-admin and not admin2) always; `isAdmin` or `admin2` only if `showOnSchedule`. **`isOwner` is not a hide flag** so co-owners who work the floor (e.g. Sarvi) stay on the grid when that bit is true and Show on schedule is on. **Remote / off-floor co-owner** stays off the grid via `showOnSchedule` false. **`SCHEDULE_UI_NEVER_LIST_EMAILS`** in `src/constants.js` (lowercase login emails) additionally drops matching rows from the **hidden staff** strip below the admin grid so JR does not appear there either; edit the list if the Employees-tab email differs.

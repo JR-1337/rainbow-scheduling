@@ -44,7 +44,7 @@ Rules:
 - `src/MobileEmployeeView.jsx` -- mobile components: MobileAlertsSheet, MobileBottomNav, MobileBottomSheet
 - `src/MobileAdminView.jsx` -- admin mobile view
 - `src/theme.js` -- THEME / TYPE / OTR accent palette
-- `src/constants.js` -- ROLES / ROLES_BY_ID / `DESKTOP_SCHEDULE_GRID_TEMPLATE` (240px + 7fr) / REQUEST_STATUS_COLORS / OFFER/SWAP / EVENT_TYPES / PRIMARY_CONTACT_EMAIL / `SCHEDULE_UI_NEVER_LIST_EMAILS` (emails omitted from admin hidden-staff strip)
+- `src/constants.js` -- ROLES / ROLES_BY_ID / `DESKTOP_SCHEDULE_GRID_TEMPLATE` (fixed name-column px + `repeat(7,1fr)`) / `SCHEDULE_ROW_FIRST_NAME_ORDER` (schedule+PDF row precedence) / `MOBILE_SCHEDULE_NAME_COL_PX` (frozen mobile name column) / REQUEST_STATUS_COLORS / OFFER/SWAP / EVENT_TYPES / PRIMARY_CONTACT_EMAIL / `SCHEDULE_UI_NEVER_LIST_EMAILS` (emails omitted from admin hidden-staff strip)
 - `src/components/` -- LoginScreen, ColumnHeaderEditor, ScheduleCell, EmployeeRow, CollapsibleSection, primitives (Modal/GradientButton/Input/Checkbox/TimePicker/TooltipButton), uiKit (haptic/AnimatedNumber/StaffingBar/ScheduleSkeleton/TaskStarTooltip/GradientBackground/Logo), Button, AdaptiveModal, MobileScheduleActionSheet
 - `src/hooks/` -- useFocusTrap, useUnsavedWarning, useDismissOnOutside, useAuth, useToast, useAnnouncements, useGuardedMutation, useTooltip
 - `src/panels/` -- admin + employee list panels; `EmployeesPanel` (desktop Employees modal: Active / Inactive / Archive chip), `MobileStaffPanel` (mobile Staff sheet: same filters); Archive chip -> `ArchivedEmployeesPanel` for owner (`openArchivedEmployeesPanel`), toast for non-owner admins; legacy Deleted tab removed
@@ -58,7 +58,7 @@ Rules:
 - `src/utils/eventDefaults.js` -- getPKDefaultTimes (Sat 10:00-10:45 else 18:00-20:00) / MEETING_DEFAULT_TIMES (14:00-16:00 locked) / getSickDefaultTimes (mirrors existing work shift)
 - `src/utils/storeHoursOverrides.js` -- module-level override refs + getStoreHoursForDate (re-exported from App.jsx for legacy importers; parked sub-area-6 Context refactor will replace)
 - `src/utils/payPeriod.js` / `src/utils/requests.js` / `src/utils/api.js` / `src/utils/eventDefaults.js`
-- `src/utils/employeeSort.js` -- five-bucket display order (Sarvi, admin1, admin2, FT, PT) + bucket-transition dividers; single source of truth for admin/employee/mobile/PDF rendering
+- `src/utils/employeeSort.js` -- `sortSchedulableByHierarchy` (Sarvi first-name pin, then `SCHEDULE_ROW_FIRST_NAME_ORDER`, then full-name A-Z); `scheduleDisplayDividerGroup` + `computeScheduleDividerIndices` + `countScheduleDisplayDividers` for grid/PDF divider rows; `employeeBucket` retained for AutofillClearModal presets (admin vs FT vs PT) only
 - `src/utils/employeeRender.js` -- `hasTitle(emp)`; `splitNameForSchedule(name)` for desktop+mobile name column; title branches in 8 files + desktop name cells
 - `src/utils/timemath.js` -- interval-union hours, availabilityCoversWindow
 - `backend/Code.gs` -- paste into Apps Script editor after edits
