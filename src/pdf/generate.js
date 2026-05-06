@@ -298,6 +298,10 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
       body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; padding: 0; }
       @page { size: legal portrait; margin: 5mm; }
       .no-print { display: none !important; }
+      /* Week 1 top inset matches Week 2 page top (see .wk-block.staff + .wk-block.staff). */
+      .no-print + .wk-block.staff {
+        padding-top: 5mm;
+      }
       /* Week 2 starts a fresh page. Staff Week 1 begins without the brand lockup
          (lockup is on the info sheet only). Row-level break protection keeps rows intact. */
       .wk-block.staff + .wk-block.staff {
