@@ -49,7 +49,6 @@ export const ShiftEditorModal = ({
   date,
   existingShift,
   existingEvents = [],
-  totalPeriodHours,
   weekHours,
   availability,
   hasApprovedTimeOff = false,
@@ -141,21 +140,21 @@ export const ShiftEditorModal = ({
   const workGross = calculateHours(workDraft.startTime, workDraft.endTime);
   const workBreakMin = computeBreakMinutes(workGross);
   const workNet = Math.max(0, workGross - workBreakMin / 60);
-  // Period projection: when day is off (sick or unavailable), day contributes 0;
-  // otherwise reflect the current work draft's net delta (existing shift net
-  // replaced by new draft net).
+  // Week projection (Mon-start week within the pay period): same delta logic as
+  // the old footer, but scoped to `weekHours` so 40h/44h ESA thresholds apply.
   const existingShiftNet = existingShift ? computeNetHoursForShift(existingShift) : 0;
-  const projectedTotal = isOffDay ? totalPeriodHours
+  const baseWeek = weekHours ?? 0;
+  const projectedWeekTotal = isOffDay ? baseWeek
     : hasType('work')
-      ? totalPeriodHours - existingShiftNet + workNet
-      : totalPeriodHours;
+      ? baseWeek - existingShiftNet + workNet
+      : baseWeek;
 
   // Compute violations on each render — cheap pure function.
   const currentStreak = !isOffDay && hasType('work') ? priorWorkStreak + 1 : 0;
   const violations = computeViolations({
     employee,
     dateStr: toDateKey(date),
-    weekHours: weekHours ?? 0,
+    weekHours: projectedWeekTotal,
     currentStreak,
     hasApprovedTimeOff,
     availability,
@@ -696,12 +695,12 @@ export const ShiftEditorModal = ({
           )}
         </div>
         <div>
-          <span className="text-xs" style={{ color: THEME.text.muted }}>PERIOD</span>
-          <p className="text-lg font-bold" style={{ color: projectedTotal >= OVERTIME_THRESHOLDS.OVER_RED ? THEME.status.error
-               : projectedTotal > OVERTIME_THRESHOLDS.CAP ? THEME.status.warning
-               : projectedTotal === OVERTIME_THRESHOLDS.CAP ? THEME.status.atCap
+          <span className="text-xs" style={{ color: THEME.text.muted }}>WEEK</span>
+          <p className="text-lg font-bold" style={{ color: projectedWeekTotal >= OVERTIME_THRESHOLDS.OVER_RED ? THEME.status.error
+               : projectedWeekTotal > OVERTIME_THRESHOLDS.CAP ? THEME.status.warning
+               : projectedWeekTotal === OVERTIME_THRESHOLDS.CAP ? THEME.status.atCap
                : THEME.accent.cyan }}>
-            <AnimatedNumber value={projectedTotal} decimals={1} suffix="h" />
+            <AnimatedNumber value={projectedWeekTotal} decimals={1} suffix="h" />
           </p>
         </div>
       </div>

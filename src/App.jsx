@@ -632,12 +632,6 @@ export default function App() {
     return t;
   };
 
-  // Full pay-period net hours (all dates in `dates`). Violations + modal totals must not use only `currentDates`.
-  const getEmpHoursFullPeriod = useCallback(
-    (id) => computeWeekHoursFor(id, dates, shifts, events),
-    [dates, shifts, events],
-  );
-
   const getEmpHoursForWeekContaining = useCallback(
     (id, anchorDate) => {
       const weekDates = filterDatesSameMondayWeek(anchorDate, dates);
@@ -2177,7 +2171,6 @@ export default function App() {
               date={editingShift.date}
               existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]}
               existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []}
-              totalPeriodHours={getEmpHoursFullPeriod(editingShift.employee.id)}
               weekHours={getEmpHoursForWeekContaining(editingShift.employee.id, editingShift.date)}
               availability={editingShift.employee.availability?.[getDayName(editingShift.date)]}
               hasApprovedTimeOff={approvedTimeOffSet.has(`${editingShift.employee.email}-${toDateKey(editingShift.date)}`)}
@@ -2811,7 +2804,7 @@ export default function App() {
           toDateKey(prior),
           (id, k) => (events[`${id}-${k}`] || []).some(e => e.type === 'sick')
         );
-        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} totalPeriodHours={getEmpHoursFullPeriod(editingShift.employee.id)} weekHours={getEmpHoursForWeekContaining(editingShift.employee.id, editingShift.date)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={approvedTimeOffSet.has(`${editingShift.employee.email}-${toDateKey(editingShift.date)}`)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
+        return <ShiftEditorModal isOpen onClose={() => setEditingShift(null)} onSave={saveShift} showToast={showToast} employee={editingShift.employee} date={editingShift.date} existingShift={shifts[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`]} existingEvents={events[`${editingShift.employee.id}-${toDateKey(editingShift.date)}`] || []} weekHours={getEmpHoursForWeekContaining(editingShift.employee.id, editingShift.date)} availability={editingShift.employee.availability?.[getDayName(editingShift.date)]} hasApprovedTimeOff={approvedTimeOffSet.has(`${editingShift.employee.email}-${toDateKey(editingShift.date)}`)} priorWorkStreak={priorStreak} currentUser={currentUser} />;
       })()}
       {violationsPanelEl}
       <EmailModal isOpen={emailOpen} onClose={() => setEmailOpen(false)} employees={employees} shifts={shifts} events={events} timeOffRequests={timeOffRequests} dates={dates} periodInfo={{ startDate, endDate }} announcement={currentAnnouncement} onComplete={() => { setPublished(true); setUnsaved(false); }} />
