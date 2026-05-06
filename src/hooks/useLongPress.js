@@ -1,11 +1,4 @@
-// Long-press hook. Debug: localStorage.setItem('lp_debug', '1') then reload — logs to console.
 import { useRef, useCallback, useMemo } from 'react';
-
-const lpDebug = (...args) => {
-  if (typeof window !== 'undefined' && window.localStorage?.getItem('lp_debug') === '1') {
-    console.log('[useLongPress]', ...args);
-  }
-};
 
 export function useLongPress(onLongPress, { ms = 500, moveThreshold: moveThresholdOpt } = {}) {
   const coarse = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)')?.matches;
@@ -38,20 +31,16 @@ export function useLongPress(onLongPress, { ms = 500, moveThreshold: moveThresho
     const t = e.touches?.[0];
     startPosRef.current = t ? { x: t.clientX, y: t.clientY } : null;
     if (timerRef.current) clearTimeout(timerRef.current);
-    lpDebug('touchstart', { x: t?.clientX, y: t?.clientY, ms, moveThreshold });
     timerRef.current = setTimeout(() => {
       firedRef.current = true;
       timerRef.current = null;
       scrollLockRef.current = false;
-      lpDebug('fire', { ms });
       onLongPress(e);
-      lpDebug('fire-complete');
     }, ms);
   }, [onLongPress, ms, moveThreshold]);
 
-  const cancel = useCallback((source = 'unknown') => {
+  const cancel = useCallback(() => {
     scrollLockRef.current = false;
-    lpDebug('cancel', { source, firedAlready: firedRef.current, hadTimer: !!timerRef.current });
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -64,19 +53,16 @@ export function useLongPress(onLongPress, { ms = 500, moveThreshold: moveThresho
     if (!t) return;
     const dx = Math.abs(t.clientX - startPosRef.current.x);
     const dy = Math.abs(t.clientY - startPosRef.current.y);
-    if (dx > moveThreshold || dy > moveThreshold) {
-      lpDebug('move-cancel', { dx, dy, threshold: moveThreshold });
-      cancel('move');
-    }
+    if (dx > moveThreshold || dy > moveThreshold) cancel();
   }, [cancel, moveThreshold]);
 
   const wasLongPress = useCallback(() => firedRef.current, []);
 
   const handlers = useMemo(() => ({
     onTouchStart: start,
-    onTouchEnd: () => cancel('touchend'),
+    onTouchEnd: cancel,
     onTouchMove: move,
-    onTouchCancel: () => cancel('touchcancel'),
+    onTouchCancel: cancel,
   }), [start, move, cancel]);
 
   return { handlers, wasLongPress, setTouchRef };

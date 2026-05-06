@@ -405,6 +405,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
         events={eventSheetData?.events || []}
         approvedTimeOff={!!eventSheetData?.approvedTimeOff}
         unavailable={!!eventSheetData?.unavailable}
+        showWorkHourTotals={false}
       />
     </div>
   );

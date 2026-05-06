@@ -20,6 +20,7 @@ function SectionLabel({ icon: Icon, children }) {
   );
 }
 
+/** Day detail bottom sheet. Set `showWorkHourTotals={false}` for staff (start/end only on work). */
 export default function EventDetailSheet({
   isOpen,
   onClose,
@@ -31,6 +32,7 @@ export default function EventDetailSheet({
   events = [],
   approvedTimeOff = false,
   unavailable = false,
+  showWorkHourTotals = true,
 }) {
   const { sickRows, meetingPkRows } = useMemo(() => {
     const known = (events || []).filter((ev) => EVENT_TYPES[ev.type]);
@@ -44,8 +46,10 @@ export default function EventDetailSheet({
   }, [events]);
 
   const hasSick = sickRows.length > 0;
-  const workNetHours = shift ? computeNetHoursForShift(shift) : null;
-  const workGrossHours = shift?.startTime && shift?.endTime ? calculateHours(shift.startTime, shift.endTime) : null;
+  const workNetHours = showWorkHourTotals && shift ? computeNetHoursForShift(shift) : null;
+  const workGrossHours = showWorkHourTotals && shift?.startTime && shift?.endTime
+    ? calculateHours(shift.startTime, shift.endTime)
+    : null;
 
   const showWork = !!shift;
   const showStatuses = approvedTimeOff || unavailable;
@@ -110,7 +114,7 @@ export default function EventDetailSheet({
                   <span style={{ color: THEME.text.muted, fontWeight: 600 }}> – </span>
                   {formatTimeShort(shift.endTime)}
                 </span>
-                {workNetHours != null && (
+                {showWorkHourTotals && workNetHours != null && (
                   <span
                     className="text-sm font-semibold tabular-nums px-2 py-0.5 rounded-md"
                     style={{

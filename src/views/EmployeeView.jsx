@@ -656,19 +656,11 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
                   {hasTitle(mobileShiftDetail.employee) ? (mobileShiftDetail.employee.title || '') : mobileShiftDetail.role?.name}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
-                  <p className="text-xs font-medium mb-1" style={{ color: THEME.text.muted }}>TIME</p>
-                  <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '14px' }}>
-                    {formatTimeDisplay(mobileShiftDetail.shift.startTime)} – {formatTimeDisplay(mobileShiftDetail.shift.endTime)}
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
-                  <p className="text-xs font-medium mb-1" style={{ color: THEME.text.muted }}>HOURS</p>
-                  <p className="font-bold" style={{ color: THEME.accent.cyan, fontSize: '16px' }}>
-                    {mobileShiftDetail.shift.hours}h
-                  </p>
-                </div>
+              <div className="p-3 rounded-lg" style={{ backgroundColor: THEME.bg.tertiary }}>
+                <p className="text-xs font-medium mb-1" style={{ color: THEME.text.muted }}>TIME</p>
+                <p className="font-semibold" style={{ color: THEME.text.primary, fontSize: '14px' }}>
+                  {formatTimeDisplay(mobileShiftDetail.shift.startTime)} – {formatTimeDisplay(mobileShiftDetail.shift.endTime)}
+                </p>
               </div>
               {mobileShiftDetail.shift.task && (
                 <div className="p-3 rounded-lg flex items-start gap-2" style={{ backgroundColor: THEME.task + '15', border: `1px solid ${THEME.task}40` }}>
@@ -937,7 +929,6 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
                     <div className="flex-1 flex items-center gap-2">
                       <span className="text-xs font-semibold" style={{ color: labelColor }}>{labelText}</span>
                       <span className="text-xs" style={{ color: THEME.text.muted }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
-                      <span className="text-xs" style={{ color: THEME.accent.cyan }}>{shift.hours}h</span>
                     </div>
                     {shift.task && (
                       <div className="flex items-center gap-1 px-2 py-0.5 rounded" style={{ backgroundColor: THEME.task + '20' }}>
