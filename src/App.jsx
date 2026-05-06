@@ -194,7 +194,8 @@ export default function App() {
   const [pkModalOpen, setPkModalOpen] = useState(false);
   const [mobileActionSheetOpen, setMobileActionSheetOpen] = useState(false);
   const [autofillClearOpen, setAutofillClearOpen] = useState(false);
-  
+  const [pdfExportError, setPdfExportError] = useState(null);
+
   // Mobile admin state
   const [mobileAdminDrawerOpen, setMobileAdminDrawerOpen] = useState(false);
   const [mobileStaffPanelOpen, setMobileStaffPanelOpen] = useState(false);
@@ -1661,11 +1662,11 @@ export default function App() {
         const { generateSchedulePDF } = await import('./pdf/generate');
         generateSchedulePDF(employees, shifts, dates, { startDate, endDate }, currentAnnouncement, timeOffRequests, events, printWindow);
       } catch (e) {
-        console.error(e);
-        try {
-          printWindow.close();
-        } catch (_) { /* noop */ }
-        showToast('error', e?.message || 'Could not build print view.');
+        console.error('[pdf-export]', e);
+        try { printWindow.close(); } catch (_) { /* noop */ }
+        const errText = `${e?.message || 'Could not build print view.'}\n\n${e?.stack || ''}`.trim();
+        try { localStorage.setItem('pdf-export-last-error', JSON.stringify({ ts: new Date().toISOString(), message: errText })); } catch (_) { /* noop */ }
+        setPdfExportError(errText);
       }
     })();
   }, [employees, shifts, dates, startDate, endDate, currentAnnouncement, timeOffRequests, events, showToast]);
@@ -1780,6 +1781,29 @@ export default function App() {
     setPeriodIndex(CURRENT_PERIOD_INDEX);
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // PDF export error modal — renders above both mobile and desktop paths.
+  // Persists until dismissed; error is also written to localStorage['pdf-export-last-error'].
+  const pdfErrorModalEl = pdfExportError ? (
+    <Modal isOpen={true} onClose={() => setPdfExportError(null)} title="PDF Export Failed" size="lg">
+      <p className="text-sm mb-3" style={{ color: THEME.text.secondary }}>
+        The print preview could not be built. Copy the error below and send it to your app contact.
+      </p>
+      <pre className="text-xs rounded-lg p-3 overflow-auto max-h-48 select-all whitespace-pre-wrap break-all mb-3"
+        style={{ background: THEME.bg.elevated, color: THEME.text.primary, border: `1px solid ${THEME.border.default}` }}>
+        {pdfExportError}
+      </pre>
+      <button
+        className="w-full py-2 rounded-lg text-sm font-semibold"
+        style={{ background: `linear-gradient(135deg, ${THEME.accent.blue}, ${THEME.accent.purple})`, color: '#fff' }}
+        onClick={() => {
+          try { navigator.clipboard.writeText(pdfExportError); } catch (_) { /* noop — clipboard blocked in some mobile browsers */ }
+        }}
+      >
+        Copy error to clipboard
+      </button>
+    </Modal>
+  ) : null;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // MOBILE ADMIN VIEW
@@ -2285,6 +2309,9 @@ export default function App() {
           onOpenAutofillClear={() => setAutofillClearOpen(true)}
           onOpenPKModal={() => setPkModalOpen(true)}
         />
+
+        {/* PDF export error modal */}
+        {pdfErrorModalEl}
 
         {/* Toast */}
         {toast && (
@@ -2854,6 +2881,9 @@ export default function App() {
       />
       
       {autofillClearModal}
+
+      {/* PDF export error modal */}
+      {pdfErrorModalEl}
 
       {/* Toast Notification - fixed position at top center, ABOVE modals */}
       {toast && (
