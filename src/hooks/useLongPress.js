@@ -1,6 +1,5 @@
-// Long-press hook. To debug on phone, run in console: localStorage.setItem('lp_debug', '1') then reload.
-// Logs touchstart/move-cancel/cancel/fire/fire-complete events to console.
-import { useRef, useCallback } from 'react';
+// Long-press hook. Debug: localStorage.setItem('lp_debug', '1') then reload — logs to console.
+import { useRef, useCallback, useMemo } from 'react';
 
 const lpDebug = (...args) => {
   if (typeof window !== 'undefined' && window.localStorage?.getItem('lp_debug') === '1') {
@@ -8,13 +7,34 @@ const lpDebug = (...args) => {
   }
 };
 
-export function useLongPress(onLongPress, { ms = 500, moveThreshold = 10 } = {}) {
+export function useLongPress(onLongPress, { ms = 500, moveThreshold: moveThresholdOpt } = {}) {
+  const coarse = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)')?.matches;
+  const moveThreshold = moveThresholdOpt ?? (coarse ? 28 : 10);
+
   const timerRef = useRef(null);
   const startPosRef = useRef(null);
   const firedRef = useRef(false);
+  const scrollLockRef = useRef(false);
+  const touchElRef = useRef(null);
+
+  // Native non-passive touchmove + preventDefault while the long-press timer is armed
+  // stops the surrounding overflow-scroll view from stealing the gesture on Android
+  // (small touchmove deltas were clearing the 10px threshold before 500ms).
+  const blockScrollListener = useCallback((e) => {
+    if (scrollLockRef.current) e.preventDefault();
+  }, []);
+
+  const setTouchRef = useCallback((el) => {
+    const prev = touchElRef.current;
+    if (prev === el) return;
+    if (prev) prev.removeEventListener('touchmove', blockScrollListener);
+    touchElRef.current = el;
+    if (el) el.addEventListener('touchmove', blockScrollListener, { passive: false });
+  }, [blockScrollListener]);
 
   const start = useCallback((e) => {
     firedRef.current = false;
+    scrollLockRef.current = true;
     const t = e.touches?.[0];
     startPosRef.current = t ? { x: t.clientX, y: t.clientY } : null;
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -22,14 +42,16 @@ export function useLongPress(onLongPress, { ms = 500, moveThreshold = 10 } = {})
     timerRef.current = setTimeout(() => {
       firedRef.current = true;
       timerRef.current = null;
+      scrollLockRef.current = false;
       lpDebug('fire', { ms });
       onLongPress(e);
       lpDebug('fire-complete');
     }, ms);
-  }, [onLongPress, ms]);
+  }, [onLongPress, ms, moveThreshold]);
 
-  const cancel = useCallback(() => {
-    lpDebug('cancel', { firedAlready: firedRef.current, hadTimer: !!timerRef.current });
+  const cancel = useCallback((source = 'unknown') => {
+    scrollLockRef.current = false;
+    lpDebug('cancel', { source, firedAlready: firedRef.current, hadTimer: !!timerRef.current });
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -44,14 +66,18 @@ export function useLongPress(onLongPress, { ms = 500, moveThreshold = 10 } = {})
     const dy = Math.abs(t.clientY - startPosRef.current.y);
     if (dx > moveThreshold || dy > moveThreshold) {
       lpDebug('move-cancel', { dx, dy, threshold: moveThreshold });
-      cancel();
+      cancel('move');
     }
   }, [cancel, moveThreshold]);
 
   const wasLongPress = useCallback(() => firedRef.current, []);
 
-  return {
-    handlers: { onTouchStart: start, onTouchEnd: cancel, onTouchMove: move, onTouchCancel: cancel },
-    wasLongPress
-  };
+  const handlers = useMemo(() => ({
+    onTouchStart: start,
+    onTouchEnd: () => cancel('touchend'),
+    onTouchMove: move,
+    onTouchCancel: () => cancel('touchcancel'),
+  }), [start, move, cancel]);
+
+  return { handlers, wasLongPress, setTouchRef };
 }
