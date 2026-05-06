@@ -17,6 +17,20 @@ ASCII operators only.
 
 <!-- 2026-05-04 (s061) archive pass: 78 entries moved to CONTEXT/archive/lessons-archive.md to bring active under 60%-of-ceiling target (15k chars). Carry from s059 + s060. Archive holds full preserved entries. Future entries: append at top per "newest at top" rule. -->
 
+## [PROJECT] -- Employee tier saves: client strip must match admin1-tier backend gates
+
+Rule: When shaping `saveEmployee` payloads in `App.jsx`, treat **admin1 tier** as `isOwner` or (`isAdmin` and `adminTier` neq `admin2`). Strip `isAdmin` and `adminTier` only when the caller is not admin1 tier. Do not key tier payload drops solely on `isOwner`.
+
+Trigger: Any change to employee save, admin flags, or admin2 UX.
+
+Why: v2.32.1 stripped those fields for every non-owner; API omitted tiers while UI optimistically updated, so reload reverted (silent failure for admin1s who are not owners).
+
+Provenance: 2026-05-06 -- commit `d6010f4` + Code.gs v2.32.5.
+
+Tags: surface: auth, concern: correctness
+
+Affirmations: 0
+
 ## [PROJECT] -- "Weekly" hour caps follow payroll week geometry
 
 Rule: When enforcing weekly thresholds (OT warnings, caps), aggregate hours only across the calendar week definition payroll uses here Monday-start weeks aligned with `PAY_PERIOD_START`, intersected with whatever date window is editable unless explicitly documenting otherwise.
@@ -141,6 +155,7 @@ Why: Plan sign-off removes decisions from the loop. Re-asking wastes context and
 Provenance: <unknown commit> -- repeated correction; flagged for graduation to root adapter at next audit.
 Tags: surface: harness, concern: naming
 Affirmations: 2
+Graduation: due 2026-05-13
 
 ## [PROJECT] -- Topics JR has explicitly closed stay closed
 Rule: After JR explicitly closes a topic ("do not mention X again", "stop pushing X"), drop X from every downstream artifact (plan sections, audit findings, AskUserQuestion options, clarifications) for the rest of the session; surface again only if an external constraint forces it.

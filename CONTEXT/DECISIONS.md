@@ -50,6 +50,14 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-05-06 -- saveEmployee privilege matrix (v2.32.5): admin1 tier writes, owner row immutability, no self tier edits
+
+Decision: `saveEmployee` enforces explicit rules instead of the v2.32.1 "non-owner silent-drop owner-only fields" loop. **Admin1** caller = `isOwner` or (`isAdmin` and `adminTier` neq `admin2`). Admin1 may set `isAdmin` and `adminTier` on targets that are not owner rows. **Owner rows** (`isOwner` on target): no in-app changes to `isAdmin`, `adminTier`, `isOwner`, or deactivation (`active` true->false). **Self:** caller cannot change own `isAdmin` or `adminTier`. **`isOwner` column:** only caller with `isOwner` may change the flag on any row. Non-admin1 callers get `AUTH_FORBIDDEN` on tier deltas (defense in depth; admin2 cannot pass `verifyAuth` save path today). Frontend `App.jsx` strips `isAdmin`/`adminTier` from the payload only when caller is not admin1 tier (not only when not owner), so non-owner admin1s persist tier edits. `EmployeeFormModal` greys Staff/Admin/Admin2 when `currentUser.adminTier === 'admin2'`.
+
+Rationale: v2.32.1 client strip dropped `isAdmin`/`adminTier` for every non-owner, so Sarvi (admin1, not owner) saw success toasts while the Sheet never updated; reload reverted. Co-owner Sheet fix alone does not help other admin1s. Backend must match product: owners are immutable for privilege in-app; admin2 stays view-limited.
+
+Confidence: H -- shipped commit `d6010f4` (frontend) + JR paste-deploy backend v2.32.5 labeled in repo `backend/Code.gs` header.
+
 ## 2026-05-06 -- Employees lists: Deleted filter retired; Archive chip + EmployeesArchive panel owns archival UX
 
 Decision: Desktop Employees modal (`EmployeesPanel`) and mobile Staff sheet (`MobileStaffPanel`) expose Active / Inactive / Archive (third chip, FolderArchive icon) for all admins. Opening `ArchivedEmployeesPanel` runs through `openArchivedEmployeesPanel`: owner proceeds (closes Employees or Staff, opens archive modal); non-owner gets informational toast. Desktop header admin dropdown no longer lists a separate Archive... menu row (duplicate removed). Legacy Sheets `deleted` flag rows appear under Inactive with "(legacy removed)" hint and skip Archive button on row actions. `ArchivedEmployeesPanel` uses `AdaptiveModal` so mobile gets bottom-sheet parity.

@@ -24,7 +24,7 @@ Rules:
 ## Components
 
 - Frontend -- React 18 + Vite + Tailwind + Lucide -- `src/`
-- Backend -- Google Apps Script -- `backend/Code.gs` (~3484 lines, v2.32.3 live as of s062 paste-deploy 2026-05-04)
+- Backend -- Google Apps Script -- `backend/Code.gs` (~3567 lines, v2.32.5 saveEmployee matrix as of 2026-05-06 deploy; prior header notes v2.32.4 email PDF)
 - Data -- Google Sheets (5 tabs) -- schema in `docs/schemas/sheets-schema.md`
 - Deploy -- Vercel auto on push (frontend) + Apps Script manual (backend)
 - Email -- MailApp as "OTR Scheduling"
@@ -73,6 +73,7 @@ Rules:
 ## Flows
 
 - Auth: login -> HMAC token (12h TTL) -> token auto-attached by apiCall
+- Employee save: `saveEmployee` (Code.gs v2.32.5) gates `isAdmin` / `adminTier` / `isOwner` / owner deactivation; `App.jsx` strips tier fields from API payload unless caller is admin1 tier (owner or full admin, not admin2)
 - Request: submit -> recipient accepts (offers/swaps) -> admin approve/deny -> email
 - Cancel pending; revoke approved (future only)
 - Save button cycle: SAVE (blue) -> GO LIVE (green) -> EDIT (yellow)
