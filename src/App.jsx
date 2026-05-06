@@ -33,7 +33,7 @@ import { createShiftFromAvailability, applyShiftMutation, collectPeriodShiftsFor
 import { computeDayUnionHours, computeNetHoursForShift, computeConsecutiveWorkDayStreak, availabilityCoversWindow } from './utils/timemath';
 import { computeViolations } from './utils/violations';
 import { getPKDefaultTimes } from './utils/eventDefaults';
-import { sortBySarviAdminsFTPT, employeeBucket } from './utils/employeeSort';
+import { sortSchedulableByHierarchy, scheduleDisplayDividerGroup } from './utils/employeeSort';
 import { canEditShiftDate } from './utils/canEditShiftDate';
 import { hasTitle } from './utils/employeeRender';
 import { getAuthToken, setAuthToken, clearAuth, setCachedUser, handleAuthError } from './auth';
@@ -555,7 +555,7 @@ export default function App() {
   
   // Active employees for scheduling (admins + admin2 unless showOnSchedule; staff always)
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
-  const schedulableEmployees = useMemo(() => sortBySarviAdminsFTPT(filterSchedulableEmployees(employees)), [employees]);
+  const schedulableEmployees = useMemo(() => sortSchedulableByHierarchy(filterSchedulableEmployees(employees)), [employees]);
   
   // Full-time employees only (for auto-populate feature)
   const fullTimeEmployees = useMemo(() => schedulableEmployees.filter(e => e.employmentType === 'full-time'), [schedulableEmployees]);
@@ -2571,7 +2571,7 @@ export default function App() {
                   })}
                 </div>
                 <div>{schedulableEmployees.map((e, i) => {
-                  const showDivider = i > 0 && employeeBucket(e) !== employeeBucket(schedulableEmployees[i-1]);
+                  const showDivider = i > 0 && scheduleDisplayDividerGroup(e) !== scheduleDisplayDividerGroup(schedulableEmployees[i - 1]);
                   return (
                     <React.Fragment key={e.id}>
                       {showDivider && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}

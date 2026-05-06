@@ -7,7 +7,7 @@ import { isStatHoliday } from '../utils/storeHours';
 import { hasApprovedTimeOffForDate } from '../utils/requests';
 import { ROLES, ROLES_BY_ID, EVENT_TYPES, PRIMARY_CONTACT_EMAIL } from '../constants';
 import { escapeHtml, stripEmoji } from '../utils/format';
-import { sortBySarviAdminsFTPT, employeeBucket } from '../utils/employeeSort';
+import { sortSchedulableByHierarchy, countScheduleDisplayDividers, scheduleDisplayDividerGroup } from '../utils/employeeSort';
 import { hasTitle, splitNameForSchedule } from '../utils/employeeRender';
 import { filterSchedulableEmployees } from '../utils/employees';
 
@@ -51,6 +51,7 @@ const ROLE_LEGEND_LABEL = {
   PDF schedule constraints (keep in sync when editing this file):
   - B&W / greyscale only; role = glyph + borders; no last name in grid (first name + optional title).
   - Sarvi (PRIMARY_CONTACT_EMAIL) on main staff weeks; other admin1 + admin2 on **page 3 only** (both admin weeks on that page).
+  - Row order: Sarvi (first name) pin, then SCHEDULE_ROW_FIRST_NAME_ORDER (`constants`), then full-name A–Z; divider `<tr>` only on Sarvi vs list vs tail groups (`employeeSort`).
   - No “Scheduled” headcount row.
   - Equal day column widths (colgroup). Uniform row height within a week table (no taller “Axl” rows).
   - Staff weeks: week 1 vs later week use different usable tbody mm; **admin page (3) is tables only**; announcement,
@@ -79,14 +80,6 @@ const pdfRowMmForEmployeeCount = (employeeCount, dividerCount, usableTbodyMm) =>
   return Math.max(MIN_PDF_ROW_MM, Math.min(MAX_PDF_ROW_MM, raw));
 };
 
-const countPdfBucketDividers = (list) => {
-  let n = 0;
-  for (let i = 1; i < list.length; i++) {
-    if (employeeBucket(list[i]) !== employeeBucket(list[i - 1])) n++;
-  }
-  return n;
-};
-
 // S64 Stage 7 - events carry meeting/PK entries per `${empId}-${date}` key.
 // Pure builder: returns the full print-preview HTML string. No DOM/Blob side
 // effects so it can also feed the EmailModal PDF-attachment payload.
@@ -99,11 +92,11 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
   // Schedulable employees (admins + admin2 unless showOnSchedule; staff always).
   // Split: pages 1–2 = primary contact (Sarvi) + non-admin staff; page 3 = admin1 and admin2.
   // Admin2 uses isAdmin: false, so routing must key off adminTier === 'admin2' as well.
-  // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
+  // Sort/filter: hierarchy order per employeeSort (same subset split as before).
   const pdfIsPrimaryStoreContact = (e) => e.email === PRIMARY_CONTACT_EMAIL;
   const pdfGoesOnAdminOnlyPage = (e) =>
     (e.isAdmin || e.adminTier === 'admin2') && !pdfIsPrimaryStoreContact(e);
-  const schedulableAll = sortBySarviAdminsFTPT(filterSchedulableEmployees(employees));
+  const schedulableAll = sortSchedulableByHierarchy(filterSchedulableEmployees(employees));
   const schedulableMain = schedulableAll.filter((e) => !pdfGoesOnAdminOnlyPage(e));
   const schedulableAdmins = schedulableAll.filter(pdfGoesOnAdminOnlyPage);
 
@@ -131,7 +124,7 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
 
   const makeWeekTable = (weekDates, weekNum, rowEmployees = schedulableMain, blockClass = 'wk-block staff', usableTbodyMm = PDF_LEGAL_INNER_MM - PDF_STAFF_WEEK_N_ABOVE_TBODY_MM) => {
     const schedulable = rowEmployees;
-    const dividerN = countPdfBucketDividers(schedulable);
+    const dividerN = countScheduleDisplayDividers(schedulable);
     const rowMm = pdfRowMmForEmployeeCount(schedulable.length, dividerN, usableTbodyMm);
 
     const headers = weekDates.map(d => {
@@ -166,7 +159,7 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
     const dividerColspan = weekDates.length + 1;
     const dividerRow = `<tr class="pdf-divider"><td colspan="${dividerColspan}" style="padding:0;border:0;background:${G.fill};"><div style="height:1px;background:${G.border};margin:3px 8px;"></div></td></tr>`;
     const rows = schedulable.map((emp, i) => {
-      const showDivider = i > 0 && employeeBucket(emp) !== employeeBucket(schedulable[i - 1]);
+      const showDivider = i > 0 && scheduleDisplayDividerGroup(emp) !== scheduleDisplayDividerGroup(schedulable[i - 1]);
       const cells = weekDates.map(date => {
         const dateStr = toDateKey(date);
         const shift = shifts[`${emp.id}-${dateStr}`];

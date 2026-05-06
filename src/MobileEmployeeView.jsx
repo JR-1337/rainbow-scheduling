@@ -21,7 +21,7 @@ import { isStatHoliday } from './utils/storeHours';
 import { useFocusTrap } from './hooks/useFocusTrap';
 import { useEscapeKey } from './hooks/useEscapeKey';
 import { EVENT_TYPES } from './constants';
-import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
+import { sortSchedulableByHierarchy, computeScheduleDividerIndices } from './utils/employeeSort';
 import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
 import { buildMyScheduleShape } from './utils/myScheduleShape';
 import { EventGlyphPill } from './components/EventGlyphPill';
@@ -175,10 +175,10 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
   const HEADER_HEIGHT = 52;
   
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
-  const sortedEmployees = useMemo(() => sortBySarviAdminsFTPT(employees), [employees]);
+  const sortedEmployees = useMemo(() => sortSchedulableByHierarchy(employees), [employees]);
 
   // Indices where a divider should render (bucket transition, skips empty buckets).
-  const dividerIndices = useMemo(() => computeDividerIndices(sortedEmployees), [sortedEmployees]);
+  const dividerIndices = useMemo(() => computeScheduleDividerIndices(sortedEmployees), [sortedEmployees]);
   const todayStr = useMemo(() => toDateKey(new Date()), []);
 
   return (

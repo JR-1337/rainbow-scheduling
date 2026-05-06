@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Zap, Trash2, Users, Crown, Briefcase, Clock } from 'lucide-react';
 import { AdaptiveModal } from '../components/AdaptiveModal';
 import { THEME } from '../theme';
-import { sortBySarviAdminsFTPT, computeDividerIndices, employeeBucket } from '../utils/employeeSort';
+import { sortSchedulableByHierarchy, computeScheduleDividerIndices, employeeBucket } from '../utils/employeeSort';
 
 // Unified auto-fill / auto-clear modal (replaces the two desktop dropdowns and the
 // mobile two-level Fill/Clear sheet branches).
@@ -29,8 +29,8 @@ export const AutofillClearModal = ({
     ));
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sorted = useMemo(() => sortBySarviAdminsFTPT(schedulableEmployees), [schedulableEmployees]);
-  const dividers = useMemo(() => computeDividerIndices(sorted), [sorted]);
+  const sorted = useMemo(() => sortSchedulableByHierarchy(schedulableEmployees), [schedulableEmployees]);
+  const dividers = useMemo(() => computeScheduleDividerIndices(sorted), [sorted]);
 
   const bucketIds = (bucketName) => {
     if (bucketName === 'all') return sorted.map(e => e.id);

@@ -53,6 +53,11 @@ export const EVENT_TYPES = {
 // Primary store contact rendered on the PDF printout. Matches backend CONFIG.ADMIN_EMAIL.
 export const PRIMARY_CONTACT_EMAIL = 'sarvi@rainbowjeans.com';
 
+/** Business-hierarchy first-name order for schedule + PDF rows (case-insensitive match on first token). Sarvi stays pinned above this via employeeSort. Anyone else sorts after this list, A–Z by full name. */
+export const SCHEDULE_ROW_FIRST_NAME_ORDER = Object.freeze([
+  'Joel', 'Daniel', 'Amy', 'Genia', 'Scott', 'Jessica', 'Domenica', 'Axl', 'Isha', 'Patrisha', 'Anjali', 'Ella', 'Feng',
+]);
+
 // Admin schedule UI: employee rows whose login email is listed here are omitted from the
 // "hidden staff" strip below the grid (remote co-owner with no floor presence). Lowercase.
 // Add or change to match your Employees-tab email if needed.

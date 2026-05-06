@@ -21,7 +21,7 @@ import {
 import { GradientBackground, haptic } from './components/uiKit';
 import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } from './utils/date';
 import { isStatHoliday } from './utils/storeHours';
-import { sortBySarviAdminsFTPT, computeDividerIndices } from './utils/employeeSort';
+import { sortSchedulableByHierarchy, computeScheduleDividerIndices } from './utils/employeeSort';
 import { OVERTIME_THRESHOLDS } from './utils/timemath';
 import { useEscapeKey } from './hooks/useEscapeKey';
 
@@ -185,10 +185,10 @@ export const MobileAdminScheduleGrid = ({
   const HEADER_HEIGHT = 68; // Taller to fit staffing counter
   
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
-  const sortedEmployees = useMemo(() => sortBySarviAdminsFTPT(employees), [employees]);
+  const sortedEmployees = useMemo(() => sortSchedulableByHierarchy(employees), [employees]);
 
   // Indices where a divider should render (bucket transition, skips empty buckets).
-  const dividerIndices = useMemo(() => computeDividerIndices(sortedEmployees), [sortedEmployees]);
+  const dividerIndices = useMemo(() => computeScheduleDividerIndices(sortedEmployees), [sortedEmployees]);
 
   const totalWidth = NAME_COL_WIDTH + (dates.length * CELL_WIDTH);
   const todayStr = toDateKey(new Date());

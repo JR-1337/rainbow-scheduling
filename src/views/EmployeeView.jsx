@@ -9,7 +9,7 @@ import { CollapsibleSection } from '../components/CollapsibleSection';
 import { CURRENT_PERIOD_INDEX } from '../utils/payPeriod';
 import { toDateKey, getWeekNumber, formatDate, formatTimeDisplay, formatTimeShort, getDayName } from '../utils/date';
 import { isStatHoliday } from '../utils/storeHours';
-import { sortBySarviAdminsFTPT, employeeBucket } from '../utils/employeeSort';
+import { sortSchedulableByHierarchy, scheduleDisplayDividerGroup } from '../utils/employeeSort';
 import { filterSchedulableEmployees } from '../utils/employees';
 import { useIsMobile, MobileMenuDrawer, MobileAnnouncementPopup, MobileScheduleGrid, MobileMySchedule, MobileBottomNav, MobileBottomSheet, MobileAlertsSheet, computeAlertItems } from '../MobileEmployeeView';
 import { EVENT_TYPES, DESKTOP_SCHEDULE_GRID_TEMPLATE } from '../constants';
@@ -322,7 +322,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
   
   // Schedulable on grid (co-owners who work use showOnSchedule like other admins).
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
-  const schedulableEmployees = useMemo(() => sortBySarviAdminsFTPT(filterSchedulableEmployees(employees)), [employees]);
+  const schedulableEmployees = useMemo(() => sortSchedulableByHierarchy(filterSchedulableEmployees(employees)), [employees]);
   
   // Admin contacts for employee-facing display: Sarvi only (other admins hidden per JR)
   const adminContacts = employees.filter(e => e.isAdmin && e.active && !e.deleted && e.name?.toLowerCase() === 'sarvi');
@@ -857,7 +857,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
               })}
             </div>
             <div>{schedulableEmployees.map((e, i) => {
-              const showDivider = i > 0 && employeeBucket(e) !== employeeBucket(schedulableEmployees[i-1]);
+              const showDivider = i > 0 && scheduleDisplayDividerGroup(e) !== scheduleDisplayDividerGroup(schedulableEmployees[i - 1]);
               return (
                 <React.Fragment key={e.id}>
                   {showDivider && <div style={{ height: 1, margin: '3px 8px', backgroundColor: THEME.border.default }} />}
