@@ -299,6 +299,13 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                     const hasAdminUnavailable = rawCellEvents.some(ev => ev.type === 'unavailable');
                     const effectivelyUnavailable = isUnavailable || hasAdminUnavailable;
 
+                    const canDayDetail = !!(
+                      shift ||
+                      cellEvents.length > 0 ||
+                      isTimeOff ||
+                      effectivelyUnavailable
+                    );
+
                     return (
                       <td key={i} style={{
                         width: CELL_WIDTH, minWidth: CELL_WIDTH, height: CELL_HEIGHT,
@@ -307,8 +314,17 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                         padding: '2px'
                       }}>
                         <LongPressCell as="div"
-                          enabled={cellEvents.length >= 2}
-                          onLongPress={() => setEventSheetData({ events: cellEvents, dateLabel: `${getDayName(date)} ${formatDate(date)}` })}
+                          enabled={canDayDetail}
+                          onLongPress={() => setEventSheetData({
+                            dateLabel: `${getDayName(date)} · ${formatDate(date)}`,
+                            employeeName: emp.name,
+                            shift: shift || null,
+                            roleDisplay: isTitled ? ((emp.title || '').trim() || '—') : (role?.name || ''),
+                            roleColor: isTitled ? THEME.text.primary : (role?.color || THEME.text.secondary),
+                            events: cellEvents,
+                            approvedTimeOff: isTimeOff,
+                            unavailable: effectivelyUnavailable,
+                          })}
                           className="h-full rounded-md relative overflow-hidden"
                           onClick={(shift || hasEvents) && onShiftClick ? () => onShiftClick({ employee: emp, date, dateStr, shift, role, events: cellEvents }) : undefined}
                           style={{
@@ -381,8 +397,14 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
       <EventDetailSheet
         isOpen={!!eventSheetData}
         onClose={() => setEventSheetData(null)}
-        events={eventSheetData?.events || []}
         dateLabel={eventSheetData?.dateLabel || ''}
+        employeeName={eventSheetData?.employeeName || ''}
+        shift={eventSheetData?.shift ?? null}
+        roleDisplay={eventSheetData?.roleDisplay || ''}
+        roleColor={eventSheetData?.roleColor}
+        events={eventSheetData?.events || []}
+        approvedTimeOff={!!eventSheetData?.approvedTimeOff}
+        unavailable={!!eventSheetData?.unavailable}
       />
     </div>
   );

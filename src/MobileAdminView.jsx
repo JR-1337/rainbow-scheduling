@@ -374,10 +374,27 @@ export const MobileAdminScheduleGrid = ({
                     const labelText = shift ? (isTitled ? '' : role?.name) : '';
                     const labelColor = shift ? role?.color : THEME.text.muted;
 
+                    const canDayDetail = !!(
+                      shift ||
+                      cellEvents.length > 0 ||
+                      approvedTimeOff ||
+                      isUnavailable ||
+                      hasAdminUnavailable
+                    );
+
                     return (
                       <LongPressCell as="td" key={i}
-                        enabled={cellEvents.length >= 2}
-                        onLongPress={() => setEventSheetData({ events: cellEvents, dateLabel: `${getDayName(date)} ${formatDate(date)}` })}
+                        enabled={canDayDetail}
+                        onLongPress={() => setEventSheetData({
+                          dateLabel: `${getDayName(date)} · ${formatDate(date)}`,
+                          employeeName: emp.name,
+                          shift: shift || null,
+                          roleDisplay: isTitled ? ((emp.title || '').trim() || '—') : (role?.name || ''),
+                          roleColor: isTitled ? THEME.text.primary : (role?.color || THEME.text.secondary),
+                          events: cellEvents,
+                          approvedTimeOff,
+                          unavailable: isUnavailable || hasAdminUnavailable,
+                        })}
                         onClick={() => isEditMode && onCellClick && onCellClick(emp, date, shift || null)}
                         {...(isEditMode && onCellClick ? {
                           role: 'button',
@@ -459,8 +476,14 @@ export const MobileAdminScheduleGrid = ({
       <EventDetailSheet
         isOpen={!!eventSheetData}
         onClose={() => setEventSheetData(null)}
-        events={eventSheetData?.events || []}
         dateLabel={eventSheetData?.dateLabel || ''}
+        employeeName={eventSheetData?.employeeName || ''}
+        shift={eventSheetData?.shift ?? null}
+        roleDisplay={eventSheetData?.roleDisplay || ''}
+        roleColor={eventSheetData?.roleColor}
+        events={eventSheetData?.events || []}
+        approvedTimeOff={!!eventSheetData?.approvedTimeOff}
+        unavailable={!!eventSheetData?.unavailable}
       />
     </div>
   );
