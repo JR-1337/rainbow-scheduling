@@ -38,6 +38,8 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onArchive, employee
   const canToggleAdmin = !isEditingOwner && !isEditingSelf;
   // v2.32.2: Archive is admin1 tier only (isAdmin + adminTier !== 'admin2'); owner excluded from being archived.
   const canArchive = !isEditingOwner && !isEditingSelf && !!(currentUser?.isOwner || (currentUser?.isAdmin && currentUser?.adminTier !== 'admin2'));
+  const callerTierLocked = currentUser?.adminTier === 'admin2';
+  const tierToggleTitle = 'Only full admins can change role tier.';
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async () => {
@@ -229,23 +231,51 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onArchive, employee
                     <Shield size={12} />
                     {formData.isOwner ? 'Owner' : formData.isAdmin ? 'Admin' : formData.adminTier === 'admin2' ? 'Admin 2' : 'Staff'}
                   </span>
-                  {!formData.isOwner && canToggleAdmin && (
+                  {!formData.isOwner && canToggleAdmin && !callerTierLocked && (
                     <div className="flex gap-1">
                       <button
+                        type="button"
                         onClick={() => setFormData({ ...formData, isAdmin: false, adminTier: '' })}
                         className="px-2 py-0.5 rounded text-xs"
                         style={{ backgroundColor: !formData.isAdmin && formData.adminTier !== 'admin2' ? THEME.text.muted : THEME.bg.elevated, color: !formData.isAdmin && formData.adminTier !== 'admin2' ? '#fff' : THEME.text.muted }}>
                         Staff
                       </button>
                       <button
+                        type="button"
                         onClick={() => setFormData({ ...formData, isAdmin: true, adminTier: 'admin1' })}
                         className="px-2 py-0.5 rounded text-xs"
                         style={{ backgroundColor: formData.isAdmin ? THEME.accent.purple : THEME.bg.elevated, color: formData.isAdmin ? '#fff' : THEME.text.muted }}>
                         Admin
                       </button>
                       <button
+                        type="button"
                         onClick={() => setFormData({ ...formData, isAdmin: false, adminTier: 'admin2' })}
                         className="px-2 py-0.5 rounded text-xs"
+                        style={{ backgroundColor: formData.adminTier === 'admin2' ? THEME.accent.blue : THEME.bg.elevated, color: formData.adminTier === 'admin2' ? '#fff' : THEME.text.muted }}>
+                        Admin 2
+                      </button>
+                    </div>
+                  )}
+                  {!formData.isOwner && canToggleAdmin && callerTierLocked && (
+                    <div className="flex gap-1 opacity-50 pointer-events-none" title={tierToggleTitle}>
+                      <button
+                        type="button"
+                        disabled
+                        className="px-2 py-0.5 rounded text-xs cursor-not-allowed"
+                        style={{ backgroundColor: !formData.isAdmin && formData.adminTier !== 'admin2' ? THEME.text.muted : THEME.bg.elevated, color: !formData.isAdmin && formData.adminTier !== 'admin2' ? '#fff' : THEME.text.muted }}>
+                        Staff
+                      </button>
+                      <button
+                        type="button"
+                        disabled
+                        className="px-2 py-0.5 rounded text-xs cursor-not-allowed"
+                        style={{ backgroundColor: formData.isAdmin ? THEME.accent.purple : THEME.bg.elevated, color: formData.isAdmin ? '#fff' : THEME.text.muted }}>
+                        Admin
+                      </button>
+                      <button
+                        type="button"
+                        disabled
+                        className="px-2 py-0.5 rounded text-xs cursor-not-allowed"
                         style={{ backgroundColor: formData.adminTier === 'admin2' ? THEME.accent.blue : THEME.bg.elevated, color: formData.adminTier === 'admin2' ? '#fff' : THEME.text.muted }}>
                         Admin 2
                       </button>

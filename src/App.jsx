@@ -892,13 +892,17 @@ export default function App() {
       ...(e.password ? { password: e.password } : {})
     };
 
-    // v2.32.1: strip owner-only fields client-side when caller isn't the owner.
-    // Backend silent-strips on no-op too (defense in depth), but pre-stripping
-    // here keeps the payload clean and avoids ambiguous AUTH_FORBIDDEN paths.
-    if (!currentUser?.isOwner) {
+    // v2.33: admin1 tier (not admin2) may send isAdmin/adminTier; only owners send isOwner.
+    const canEditEmployeeTiers = !!(
+      currentUser?.isOwner ||
+      (currentUser?.isAdmin && currentUser?.adminTier !== 'admin2')
+    );
+    if (!canEditEmployeeTiers) {
       delete employeeForApi.isAdmin;
-      delete employeeForApi.isOwner;
       delete employeeForApi.adminTier;
+    }
+    if (!currentUser?.isOwner) {
+      delete employeeForApi.isOwner;
     }
 
     // Call API to persist

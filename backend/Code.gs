@@ -2,6 +2,15 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.32.5 (saveEmployee privilege matrix for admin1 tier + owner immutability)
+ *
+ * Changes in v2.32.5:
+ * - saveEmployee: replaces v2.32.1 owner-only loop with explicit rules. Admin1
+ *   (isOwner || (isAdmin && adminTier !== 'admin2')) may set isAdmin/adminTier
+ *   on non-owner targets; owner rows cannot change tier, owner flag, or deactivate
+ *   in-app; callers cannot change their own isAdmin/adminTier; only owners may
+ *   change isOwner on a row. Non-admin1 callers get AUTH_FORBIDDEN on tier deltas.
+ *
  * Version: 2.32.4 (sendBrandedScheduleEmail PDF attachment via Utilities.newBlob HTML->PDF)
  *
  * Changes in v2.32.4:
@@ -365,7 +374,17 @@ const SAVE_EMPLOYEE_FIELDS_ = [
   'showOnSchedule', 'availability', 'defaultShift', 'counterPointId',
   'adpNumber', 'rateOfPay', 'employmentType', 'defaultSection', 'title'
 ];
-const SAVE_EMPLOYEE_OWNER_ONLY_FIELDS_ = ['isAdmin', 'isOwner', 'adminTier'];
+
+function normalizeEmailSave_(s) {
+  return String(s || '').trim().toLowerCase();
+}
+
+/** Sheet + JSON booleans (TRUE string, etc.) */
+function sheetBool_(v) {
+  if (v === true || v === 1) return true;
+  if (typeof v === 'string' && v.toUpperCase() === 'TRUE') return true;
+  return false;
+}
 
 // ─── Onboarding email constants (v2.31.0) ────────────────────────────────────
 // Drive folder "New Employee Files" (otr.scheduler-owned). Apps Script runs
@@ -2358,36 +2377,70 @@ function saveEmployee(payload) {
     }
   }
 
-  // v2.28: filter incoming employee to allowlist. Owner-only fields require
-  // caller to be owner; protected credential fields are silently dropped.
   const callerIsOwner = !!auth.employee.isOwner;
+  const callerIsAdmin1 = callerIsOwner || (!!auth.employee.isAdmin && String(auth.employee.adminTier || '') !== 'admin2');
+  const callerEmail = normalizeEmailSave_(auth.employee.email);
+
+  const existingEmployee = employees.find(e => e.id === employee.id);
   const filtered = {};
   for (const key of SAVE_EMPLOYEE_FIELDS_) {
     if (employee[key] !== undefined) filtered[key] = employee[key];
   }
-  // v2.32.1: previously, ANY non-owner submitting any owner-only field was
-  // hard-rejected with AUTH_FORBIDDEN — even when the value matched the
-  // existing row (i.e. "no change"). That broke non-owner admin's ability to
-  // add a new staff employee, because the form always sent isAdmin=false.
-  // New behavior: owner-only fields are silently dropped for non-owner callers
-  // unless the value differs from the existing row's value (edit) or is
-  // non-default (new row attempt to elevate). Hard-reject only when it would
-  // be a real privilege escalation.
-  const existingEmployee = employees.find(e => e.id === employee.id);
-  for (const key of SAVE_EMPLOYEE_OWNER_ONLY_FIELDS_) {
-    if (employee[key] === undefined) continue;
-    if (callerIsOwner) {
-      filtered[key] = employee[key];
-      continue;
+
+  if (existingEmployee && sheetBool_(existingEmployee.isOwner)) {
+    if (employee.isAdmin !== undefined && sheetBool_(employee.isAdmin) !== sheetBool_(existingEmployee.isAdmin)) {
+      return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Cannot change privilege on an owner account.' } };
     }
-    // Non-owner: drop silently if no-op, reject if escalation.
-    const submitted = employee[key];
-    const existingValue = existingEmployee ? existingEmployee[key] : undefined;
-    const isNoOp = existingEmployee
-      ? String(submitted) === String(existingValue || '')
-      : (submitted === false || submitted === '' || submitted === null || submitted === undefined);
-    if (isNoOp) continue;
-    return { success: false, error: { code: 'AUTH_FORBIDDEN', message: `Only the owner can change ${key}` } };
+    if (employee.adminTier !== undefined && String(employee.adminTier || '') !== String(existingEmployee.adminTier || '')) {
+      return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Cannot change privilege on an owner account.' } };
+    }
+    if (employee.isOwner !== undefined && sheetBool_(employee.isOwner) !== sheetBool_(existingEmployee.isOwner)) {
+      return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Cannot change privilege on an owner account.' } };
+    }
+    if (existingEmployee.active && filtered.active === false) {
+      return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Cannot deactivate an owner account.' } };
+    }
+  }
+
+  if (existingEmployee && !sheetBool_(existingEmployee.isOwner) && callerEmail && normalizeEmailSave_(existingEmployee.email) === callerEmail) {
+    if (employee.isAdmin !== undefined && sheetBool_(employee.isAdmin) !== sheetBool_(existingEmployee.isAdmin)) {
+      return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You cannot change your own admin tier in the app.' } };
+    }
+    if (employee.adminTier !== undefined && String(employee.adminTier || '') !== String(existingEmployee.adminTier || '')) {
+      return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You cannot change your own admin tier in the app.' } };
+    }
+  }
+
+  if (employee.isOwner !== undefined) {
+    const prevOwn = existingEmployee ? sheetBool_(existingEmployee.isOwner) : false;
+    const nextOwn = sheetBool_(employee.isOwner);
+    if (nextOwn !== prevOwn && !callerIsOwner) {
+      return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'Only owners can change the owner flag.' } };
+    }
+    if (callerIsOwner) {
+      filtered.isOwner = employee.isOwner;
+    }
+  }
+
+  if (!callerIsAdmin1) {
+    if (existingEmployee) {
+      if (employee.isAdmin !== undefined && sheetBool_(employee.isAdmin) !== sheetBool_(existingEmployee.isAdmin)) {
+        return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You cannot change employee privilege tier.' } };
+      }
+      if (employee.adminTier !== undefined && String(employee.adminTier || '') !== String(existingEmployee.adminTier || '')) {
+        return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You cannot change employee privilege tier.' } };
+      }
+    } else {
+      if (employee.isAdmin !== undefined && sheetBool_(employee.isAdmin)) {
+        return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You cannot create privileged accounts.' } };
+      }
+      if (employee.adminTier !== undefined && String(employee.adminTier || '') !== '') {
+        return { success: false, error: { code: 'AUTH_FORBIDDEN', message: 'You cannot assign admin tiers.' } };
+      }
+    }
+  } else {
+    if (employee.isAdmin !== undefined) filtered.isAdmin = employee.isAdmin;
+    if (employee.adminTier !== undefined) filtered.adminTier = employee.adminTier;
   }
 
   // v2.32.2: detect active=true → active=false transition. Clear future shifts
