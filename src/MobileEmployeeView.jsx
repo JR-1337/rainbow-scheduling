@@ -20,7 +20,7 @@ import { toDateKey, formatDate, formatTimeShort, getDayName, getWeekNumber } fro
 import { isStatHoliday } from './utils/storeHours';
 import { useFocusTrap } from './hooks/useFocusTrap';
 import { useEscapeKey } from './hooks/useEscapeKey';
-import { EVENT_TYPES } from './constants';
+import { EVENT_TYPES, MOBILE_SCHEDULE_NAME_COL_PX } from './constants';
 import { sortSchedulableByHierarchy, computeScheduleDividerIndices } from './utils/employeeSort';
 import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
 import { buildMyScheduleShape } from './utils/myScheduleShape';
@@ -169,7 +169,7 @@ export const MobileAnnouncementPopup = ({ isOpen, onClose, announcement }) => {
 export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, loggedInUser, getEmployeeHours, approvedTimeOffSet, onShiftClick }) => {
   const scrollContainerRef = useRef(null);
   const [eventSheetData, setEventSheetData] = useState(null);
-  const NAME_COL_WIDTH = 60;
+  const NAME_COL_WIDTH = MOBILE_SCHEDULE_NAME_COL_PX;
   const CELL_WIDTH = 80;
   const CELL_HEIGHT = 74;
   const HEADER_HEIGHT = 52;

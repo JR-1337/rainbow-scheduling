@@ -138,8 +138,8 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
             {titledRow && (employee.title || '').trim() ? (
               <p className="truncate text-[9px] uppercase tracking-wide leading-none" style={{ color: THEME.text.muted }} title={employee.title}>{employee.title}</p>
             ) : null}
-            <p className="flex min-w-0 items-center gap-1 text-xs font-medium leading-tight" style={{ color: isMe ? THEME.accent.purple : THEME.text.primary }}>
-              <span className="min-w-0 truncate">{nameFirst}</span>
+            <p className="flex min-w-0 items-center gap-1 whitespace-nowrap text-xs font-medium leading-tight" style={{ color: isMe ? THEME.accent.purple : THEME.text.primary }}>
+              <span className="min-w-0 flex-1 truncate">{nameFirst}</span>
               {isMe && <span className="shrink-0" style={{ color: THEME.accent.cyan, fontSize: '9px' }}>(You)</span>}
             </p>
             {nameRest ? (

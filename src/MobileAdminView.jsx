@@ -26,7 +26,7 @@ import { OVERTIME_THRESHOLDS } from './utils/timemath';
 import { useEscapeKey } from './hooks/useEscapeKey';
 
 import { MobileScheduleGrid } from './MobileEmployeeView';
-import { EVENT_TYPES } from './constants';
+import { EVENT_TYPES, MOBILE_SCHEDULE_NAME_COL_PX } from './constants';
 import { Button } from './components/Button';
 import { hasTitle, splitNameForSchedule } from './utils/employeeRender';
 import { EventGlyphPill } from './components/EventGlyphPill';
@@ -179,7 +179,7 @@ export const MobileAdminScheduleGrid = ({
 }) => {
   const scrollContainerRef = React.useRef(null);
   const [eventSheetData, setEventSheetData] = useState(null);
-  const NAME_COL_WIDTH = 60;
+  const NAME_COL_WIDTH = MOBILE_SCHEDULE_NAME_COL_PX;
   const CELL_WIDTH = 80;
   const CELL_HEIGHT = 74;
   const HEADER_HEIGHT = 68; // Taller to fit staffing counter

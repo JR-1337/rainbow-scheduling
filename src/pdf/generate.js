@@ -211,7 +211,7 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
       return `${showDivider ? dividerRow : ''}<tr class="schedule-row" style="page-break-inside:avoid;">
         <td class="pdf-grid-cell" style="border:1px solid ${G.border};background:${G.fill};vertical-align:top;">
           <div class="pdf-cell-inner pdf-cell-inner--fill" style="display:flex;flex-direction:column;justify-content:flex-start;gap:0.5mm;">
-            <div style="font-weight:700;font-size:10pt;line-height:1.05;color:${G.ink};word-break:break-word;hyphens:auto;">${cleanText(nameFirst)}</div>
+            <div style="font-weight:700;font-size:10pt;line-height:1.05;color:${G.ink};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cleanText(nameFirst)}</div>
             ${titleStr ? `<div style="font-size:5.5pt;color:${G.textMuted};line-height:1.1;font-style:italic;word-break:break-word;">${titleStr}</div>` : ''}
           </div>
         </td>
@@ -320,7 +320,7 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
       break-inside: avoid;
       page-break-inside: avoid;
     }
-    .schedule-grid col.pdf-col-employee { width: 22mm; }
+    .schedule-grid col.pdf-col-employee { width: 24mm; }
     /* Seven day columns share the rest of the row equally (table-layout: fixed). */
     .schedule-grid col.pdf-col-day { width: auto; }
     /* --pdf-row-mm set per table from employee count vs usable tbody height (one week per page). */
