@@ -2,11 +2,19 @@ import { SCHEDULE_ROW_FIRST_NAME_ORDER } from '../constants';
 import { splitNameForSchedule } from './employeeRender';
 
 /**
- * Schedule row order + divider groups (desktop admin/employee, mobile, PDF):
- * - Sort: Sarvi (first name) pinned, then SCHEDULE_ROW_FIRST_NAME_ORDER, then full-name A–Z.
- * - Dividers: transitions between display groups 0=Sarvi, 1=list names, 2=everyone else.
+ * Schedule row order + divider groups (desktop admin/employee, mobile, PDF).
  *
- * employeeBucket is only for semantic presets (e.g. AutofillClearModal admin/FT/PT).
+ * Three visual buckets, two dividers:
+ *   0 Sarvi (pinned)
+ *   1 Admin: isAdmin OR adminTier='admin2' OR isOwner. employmentType is ignored.
+ *   2 Employee: everyone else schedulable, alphabetical.
+ *
+ * Inside the admin bucket, rows sort by SCHEDULE_ROW_FIRST_NAME_ORDER index, then
+ * full-name A–Z (any admin not in the list lands at the alpha tail of the bucket).
+ * The employee bucket is pure A–Z.
+ *
+ * employeeBucket below is a separate concern — it powers AutofillClearModal's
+ * preset selection and keeps its current 5-value Sarvi/admin1/admin2/FT/PT shape.
  */
 
 const SCHEDULE_FIRST_NAME_RANK = new Map(
@@ -25,28 +33,27 @@ export const employeeBucket = (e) => {
 export const isScheduleSarviPin = (e) =>
   (splitNameForSchedule(e.name).first || '').toLowerCase() === 'sarvi';
 
-/** 0 Sarvi, 1 listed first names, 2 tail (alphabetical after list). */
-export const scheduleDisplayDividerGroup = (e) => {
+/** Schedule sort + divider bucket. 0=Sarvi, 1=Admin, 2=Employee. */
+const scheduleBucket = (e) => {
   if (isScheduleSarviPin(e)) return 0;
-  const first = (splitNameForSchedule(e.name).first || '').toLowerCase();
-  if (SCHEDULE_FIRST_NAME_RANK.has(first)) return 1;
+  if (e.isAdmin || e.adminTier === 'admin2' || e.isOwner) return 1;
   return 2;
 };
 
+export const scheduleDisplayDividerGroup = scheduleBucket;
+
 export const sortSchedulableByHierarchy = (employees) =>
   [...employees].sort((a, b) => {
-    const sa = isScheduleSarviPin(a);
-    const sb = isScheduleSarviPin(b);
-    if (sa !== sb) return sa ? -1 : 1;
-
-    const fa = (splitNameForSchedule(a.name).first || '').toLowerCase();
-    const fb = (splitNameForSchedule(b.name).first || '').toLowerCase();
-    const ia = SCHEDULE_FIRST_NAME_RANK.get(fa);
-    const ib = SCHEDULE_FIRST_NAME_RANK.get(fb);
-    const listedA = ia !== undefined;
-    const listedB = ib !== undefined;
-    if (listedA !== listedB) return listedA ? -1 : 1;
-    if (listedA && listedB && ia !== ib) return ia - ib;
+    const ba = scheduleBucket(a);
+    const bb = scheduleBucket(b);
+    if (ba !== bb) return ba - bb;
+    if (ba === 1) {
+      const fa = (splitNameForSchedule(a.name).first || '').toLowerCase();
+      const fb = (splitNameForSchedule(b.name).first || '').toLowerCase();
+      const ra = SCHEDULE_FIRST_NAME_RANK.get(fa) ?? Infinity;
+      const rb = SCHEDULE_FIRST_NAME_RANK.get(fb) ?? Infinity;
+      if (ra !== rb) return ra - rb;
+    }
     return a.name.localeCompare(b.name);
   });
 
