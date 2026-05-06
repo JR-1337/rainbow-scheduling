@@ -4,14 +4,15 @@ import { splitNameForSchedule } from './employeeRender';
 /**
  * Schedule row order + divider groups (desktop admin/employee, mobile, PDF).
  *
- * Three visual buckets, two dividers:
+ * Four visual buckets, three dividers:
  *   0 Sarvi (pinned)
  *   1 Admin: isAdmin OR adminTier='admin2' OR isOwner. employmentType is ignored.
- *   2 Employee: everyone else schedulable, alphabetical.
+ *   2 Full-time: employmentType='full-time' AND not admin.
+ *   3 Part-time / other: everyone else schedulable.
  *
  * Inside the admin bucket, rows sort by SCHEDULE_ROW_FIRST_NAME_ORDER index, then
  * full-name A–Z (any admin not in the list lands at the alpha tail of the bucket).
- * The employee bucket is pure A–Z.
+ * Full-time and part-time buckets are pure A–Z.
  *
  * employeeBucket below is a separate concern — it powers AutofillClearModal's
  * preset selection and keeps its current 5-value Sarvi/admin1/admin2/FT/PT shape.
@@ -33,11 +34,12 @@ export const employeeBucket = (e) => {
 export const isScheduleSarviPin = (e) =>
   (splitNameForSchedule(e.name).first || '').toLowerCase() === 'sarvi';
 
-/** Schedule sort + divider bucket. 0=Sarvi, 1=Admin, 2=Employee. */
+/** Schedule sort + divider bucket. 0=Sarvi, 1=Admin, 2=Full-time, 3=Part-time/other. */
 const scheduleBucket = (e) => {
   if (isScheduleSarviPin(e)) return 0;
   if (e.isAdmin || e.adminTier === 'admin2' || e.isOwner) return 1;
-  return 2;
+  if (e.employmentType === 'full-time') return 2;
+  return 3;
 };
 
 export const scheduleDisplayDividerGroup = scheduleBucket;
