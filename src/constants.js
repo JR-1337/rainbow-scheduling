@@ -53,6 +53,11 @@ export const EVENT_TYPES = {
 // Primary store contact rendered on the PDF printout. Matches backend CONFIG.ADMIN_EMAIL.
 export const PRIMARY_CONTACT_EMAIL = 'sarvi@rainbowjeans.com';
 
+// Admin schedule UI: employee rows whose login email is listed here are omitted from the
+// "hidden staff" strip below the grid (remote co-owner with no floor presence). Lowercase.
+// Add or change to match your Employees-tab email if needed.
+export const SCHEDULE_UI_NEVER_LIST_EMAILS = Object.freeze(['johnrichmond007@gmail.com']);
+
 export const REQUEST_STATUS_COLORS = {
   pending: THEME.status.warning,
   approved: THEME.status.success,

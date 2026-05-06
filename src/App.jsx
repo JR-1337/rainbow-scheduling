@@ -38,7 +38,7 @@ import { canEditShiftDate } from './utils/canEditShiftDate';
 import { hasTitle } from './utils/employeeRender';
 import { getAuthToken, setAuthToken, clearAuth, setCachedUser, handleAuthError } from './auth';
 import { OTR, THEME, TYPE } from './theme';
-import { ROLES, ROLES_BY_ID, EVENT_TYPES, DESKTOP_SCHEDULE_GRID_TEMPLATE } from './constants';
+import { ROLES, ROLES_BY_ID, EVENT_TYPES, DESKTOP_SCHEDULE_GRID_TEMPLATE, SCHEDULE_UI_NEVER_LIST_EMAILS } from './constants';
 import { AdminTimeOffPanel } from './panels/AdminTimeOffPanel';
 import { AdminMyTimeOffPanel } from './panels/AdminMyTimeOffPanel';
 import { AdminShiftOffersPanel } from './panels/AdminShiftOffersPanel';
@@ -575,11 +575,13 @@ export default function App() {
   // Count inactive/deleted for badge
   const inactiveCount = employees.filter(e => !e.active || e.deleted).length;
   
-  // Hidden staff: inactive employees + admins not on schedule (for management section below legend)
+  // Hidden staff: inactive employees + admins not on schedule (for management section below legend).
+  // SCHEDULE_UI_NEVER_LIST_EMAILS: remote owner never listed here either (see constants.js).
   const hiddenStaff = useMemo(() => {
     return employees
       .filter(e => !e.deleted)
-      .filter(e => !e.active || ((e.isAdmin || e.adminTier === 'admin2') && !e.showOnSchedule)) // Inactive OR admin/admin2 hidden from schedule
+      .filter(e => !e.active || ((e.isAdmin || e.adminTier === 'admin2') && !e.showOnSchedule))
+      .filter((e) => !SCHEDULE_UI_NEVER_LIST_EMAILS.includes(String(e.email || '').trim().toLowerCase()))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [employees]);
 
