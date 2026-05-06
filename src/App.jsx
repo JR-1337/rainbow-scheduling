@@ -553,7 +553,7 @@ export default function App() {
     }
   };
   
-  // Active employees for scheduling (exclude owner, exclude admins unless showOnSchedule)
+  // Active employees for scheduling (admins + admin2 unless showOnSchedule; staff always)
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
   const schedulableEmployees = useMemo(() => sortBySarviAdminsFTPT(filterSchedulableEmployees(employees)), [employees]);
   
@@ -563,19 +563,22 @@ export default function App() {
   // Part-time employees (Clear dropdown can target them; Auto-Fill stays FT-only by design)
   const partTimeEmployees = useMemo(() => schedulableEmployees.filter(e => e.employmentType === 'part-time'), [schedulableEmployees]);
   
-  // Admin contacts (admins who are not owner, for display purposes)
-  const adminContacts = useMemo(() => employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted), [employees]);
+  // Admin contacts: other active admins (exclude current user), so co-owner Sarvi still lists peers
+  const adminContacts = useMemo(
+    () => employees.filter(e => e.isAdmin && e.active && !e.deleted && e.email !== currentUser?.email),
+    [employees, currentUser?.email],
+  );
   
-  // All active employees including admins (for employee management)
-  const allActiveEmployees = useMemo(() => [...employees].filter(e => e.active && !e.deleted && !e.isOwner).sort((a, b) => a.name.localeCompare(b.name)), [employees]);
+  // All active employees including admins + on-site owners (for employee management)
+  const allActiveEmployees = useMemo(() => [...employees].filter(e => e.active && !e.deleted).sort((a, b) => a.name.localeCompare(b.name)), [employees]);
   
-  // Count inactive/deleted for badge (exclude owner from count)
-  const inactiveCount = employees.filter(e => (!e.active || e.deleted) && !e.isOwner).length;
+  // Count inactive/deleted for badge
+  const inactiveCount = employees.filter(e => !e.active || e.deleted).length;
   
   // Hidden staff: inactive employees + admins not on schedule (for management section below legend)
   const hiddenStaff = useMemo(() => {
     return employees
-      .filter(e => !e.isOwner && !e.deleted) // Not owner, not deleted
+      .filter(e => !e.deleted)
       .filter(e => !e.active || ((e.isAdmin || e.adminTier === 'admin2') && !e.showOnSchedule)) // Inactive OR admin/admin2 hidden from schedule
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [employees]);

@@ -6,6 +6,7 @@ import { toDateKey, formatTimeShort } from '../utils/date';
 import { THEME } from '../theme';
 import { availabilityCoversWindow } from '../utils/timemath';
 import { getPKDefaultTimes } from '../utils/eventDefaults';
+import { filterSchedulableEmployees } from '../utils/employees';
 
 // OTR brand purple — fixed PK identity color. THEME.accent.purple is the daily
 // rotating accent's dark variant, not the brand purple, so it cannot be used here.
@@ -99,7 +100,7 @@ export const PKModal = ({
 
   // ── CREATE: candidates list ───────────────────────────────────────────────
   const candidates = useMemo(() => {
-    const active = (employees || []).filter(e => e.active && !e.deleted && !e.isOwner);
+    const active = filterSchedulableEmployees(employees || []);
     return active.map(e => {
       const check = availabilityCoversWindow(e.availability, date, start, end);
       const wasBooked = existingPKBookedIds.ids.has(String(e.id));

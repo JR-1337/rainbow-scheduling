@@ -104,7 +104,7 @@ Rules:
 - Always store `employeeName` alongside `employeeId` (audit trail)
 - Pay periods: 14-day blocks from `PAY_PERIOD_START` = 2026-01-26
 - `editModeByPeriod[periodIndex]` -- each period tracked independently
-- Schedule grid / PDF / auto-fill use `filterSchedulableEmployees` (active, not deleted, not owner); admin Employees / Staff panels intentionally include inactive employees for Reactivate / Archive workflows
+- Schedule grid / PDF / auto-fill / EmailModal / comms counts use `filterSchedulableEmployees` (active, not deleted; staff always; admin + admin2 require `showOnSchedule`). **Owner is not a schedule exclude** -- off-site-only owners set `showOnSchedule` false. Employees / Staff panels list active + inactive (including co-owners) for Reactivate / Archive workflows.
 
 ## Auth + Password
 

@@ -20,8 +20,8 @@ export const MobileStaffPanel = ({
   const [confirmArchive, setConfirmArchive] = useState(null);
 
   const { active, inactive } = useMemo(() => ({
-    active: employees.filter(e => e.active && !e.deleted && !e.isOwner),
-    inactive: employees.filter(e => !e.active && !e.isOwner),
+    active: employees.filter(e => e.active && !e.deleted),
+    inactive: employees.filter(e => !e.active),
   }), [employees]);
 
   const counts = { active: active.length, inactive: inactive.length };

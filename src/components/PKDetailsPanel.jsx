@@ -3,6 +3,7 @@ import { BookOpen } from 'lucide-react';
 import { THEME } from '../theme';
 import { toDateKey, formatTimeShort } from '../utils/date';
 import { parseLocalDate } from '../utils/format';
+import { filterSchedulableEmployees } from '../utils/employees';
 
 // Aggregate PK events into unique {date, startTime, endTime} slots within the
 // given period. Iterates active employees × period dates and reads events keyed
@@ -13,8 +14,7 @@ import { parseLocalDate } from '../utils/format';
 const buildPKSlots = (events, dates, employees) => {
   if (!events || !dates?.length || !employees?.length) return [];
   const slotMap = new Map();
-  for (const emp of employees) {
-    if (!emp.active || emp.deleted || emp.isOwner) continue;
+  for (const emp of filterSchedulableEmployees(employees || [])) {
     for (const d of dates) {
       const dateKey = toDateKey(d);
       const list = events[`${emp.id}-${dateKey}`] || [];

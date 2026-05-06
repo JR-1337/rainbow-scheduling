@@ -320,12 +320,12 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
   const weekNum1 = getWeekNumber(week1[0]), weekNum2 = getWeekNumber(week2[0]);
   const currentDates = activeWeek === 1 ? week1 : week2;
   
-  // Schedulable employees (exclude owner, exclude admins unless showOnSchedule).
+  // Schedulable on grid (co-owners who work use showOnSchedule like other admins).
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
   const schedulableEmployees = useMemo(() => sortBySarviAdminsFTPT(filterSchedulableEmployees(employees)), [employees]);
   
   // Admin contacts for employee-facing display: Sarvi only (other admins hidden per JR)
-  const adminContacts = employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted && e.name?.toLowerCase() === 'sarvi');
+  const adminContacts = employees.filter(e => e.isAdmin && e.active && !e.deleted && e.name?.toLowerCase() === 'sarvi');
   
   // Perf: memoize date-key arrays so inner loops are O(N) strings, not O(N) ISO allocations
   const currentDateStrs = useMemo(() => currentDates.map(toDateKey), [currentDates]);

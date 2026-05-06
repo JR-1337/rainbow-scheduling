@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { MessageSquare, Eye, AlertCircle, Check, Loader, Save } from 'lucide-react';
 import { THEME } from '../theme';
 import { getWeekNumber, toDateKey } from '../utils/date';
+import { filterSchedulableEmployees } from '../utils/employees';
 
 export const CommunicationsPanel = ({ employees, shifts, dates, periodInfo, adminContacts, announcement, onAnnouncementChange, onSave, onClear, isEditMode, isSaving }) => {
   const weekNum1 = getWeekNumber(dates[0]);
@@ -15,11 +16,8 @@ export const CommunicationsPanel = ({ employees, shifts, dates, periodInfo, admi
   }, [announcement.subject, announcement.message]);
 
   const scheduledCount = useMemo(() => {
-    return employees
-      .filter(e => e.active && !e.deleted && !e.isOwner)
-      .filter(e => (!e.isAdmin && e.adminTier !== 'admin2') || e.showOnSchedule)
-      .filter(emp => dates.some(d => shifts[`${emp.id}-${toDateKey(d)}`]))
-      .length;
+    const sched = filterSchedulableEmployees(employees);
+    return sched.filter(emp => dates.some(d => shifts[`${emp.id}-${toDateKey(d)}`])).length;
   }, [employees, shifts, dates]);
 
   const handleLocalChange = (newAnn) => {

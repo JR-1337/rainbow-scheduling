@@ -7,11 +7,10 @@ import { apiCall } from '../utils/api';
 import { Modal, GradientButton, Checkbox } from '../components/primitives';
 import { toDateKey, getWeekNumber, formatMonthWord } from '../utils/date';
 import { PRIMARY_CONTACT_EMAIL } from '../constants';
+import { filterSchedulableEmployees } from '../utils/employees';
 
 export const EmailModal = ({ isOpen, onClose, employees, shifts, events = {}, timeOffRequests = [], dates, periodInfo, announcement, onComplete }) => {
-  const emailableEmps = useMemo(() => employees
-    .filter(e => e.active && !e.deleted && !e.isOwner)
-    .filter(e => (!e.isAdmin && e.adminTier !== 'admin2') || e.showOnSchedule), [employees]);
+  const emailableEmps = useMemo(() => filterSchedulableEmployees(employees), [employees]);
 
   const adminContacts = useMemo(() => employees.filter(e => e.email === PRIMARY_CONTACT_EMAIL && e.active && !e.deleted), [employees]);
 

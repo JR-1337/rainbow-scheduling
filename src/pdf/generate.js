@@ -96,7 +96,7 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
   const weekNum1 = getWeekNumber(week1[0]);
   const weekNum2 = getWeekNumber(week2[0]);
 
-  // Filter schedulable employees (exclude owner, exclude admins unless showOnSchedule).
+  // Schedulable employees (admins + admin2 unless showOnSchedule; staff always).
   // Split: pages 1–2 = primary contact (Sarvi) + non-admin staff; page 3 = admin1 and admin2.
   // Admin2 uses isAdmin: false, so routing must key off adminTier === 'admin2' as well.
   // Sort: Sarvi, other admins (alpha), full-time (alpha), part-time (alpha).
@@ -108,12 +108,11 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
   const schedulableAdmins = schedulableAll.filter(pdfGoesOnAdminOnlyPage);
 
   // PDF contact row shows the primary store contact only (Sarvi). If her record
-  // isn't found, fall back to any active non-owner admin so the PDF still lists
-  // a human to contact.
+  // isn't found, fall back to any active admin so the PDF still lists a human.
   const primaryContact = employees.find(e => e.email === PRIMARY_CONTACT_EMAIL && e.active && !e.deleted);
   const adminContacts = primaryContact
     ? [primaryContact]
-    : employees.filter(e => e.isAdmin && !e.isOwner && e.active && !e.deleted);
+    : employees.filter(e => e.isAdmin && e.active && !e.deleted);
 
   // Announcements: italic body + "[!]" prefix + heavy left bar + double top border.
   // Lives on page 3 (info page). When empty, box still renders so admins can pen-

@@ -53,9 +53,13 @@ export function computeDefaultPassword(name, employees, excludeId) {
   return `${base}${i}`;
 }
 
+// Schedulable on grid / PDF / comms: active, not deleted. Admin + admin2 rows
+// need showOnSchedule; staff (non-admin, non-admin2) always qualify. isOwner
+// does NOT exclude -- co-owners can work the floor (use showOnSchedule off for
+// off-site owners only).
 export function filterSchedulableEmployees(employees) {
   return employees
-    .filter(e => e.active && !e.deleted && !e.isOwner)
+    .filter(e => e.active && !e.deleted)
     .filter(e => (!e.isAdmin && e.adminTier !== 'admin2') || e.showOnSchedule);
 }
 
