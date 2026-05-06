@@ -39,7 +39,7 @@ Rules:
 
 ## Key Files
 
-- `src/App.jsx` (~2512) -- main App component, state, shared exports
+- `src/App.jsx` (~2930) -- main App component, state, shared exports
 - `src/views/EmployeeView.jsx` -- extracted employee desktop/mobile view
 - `src/MobileEmployeeView.jsx` -- mobile components: MobileAlertsSheet, MobileBottomNav, MobileBottomSheet
 - `src/MobileAdminView.jsx` -- admin mobile view
@@ -47,13 +47,13 @@ Rules:
 - `src/constants.js` -- ROLES / ROLES_BY_ID / `DESKTOP_SCHEDULE_GRID_TEMPLATE` (240px + 7fr) / REQUEST_STATUS_COLORS / OFFER/SWAP / EVENT_TYPES / PRIMARY_CONTACT_EMAIL
 - `src/components/` -- LoginScreen, ColumnHeaderEditor, ScheduleCell, EmployeeRow, CollapsibleSection, primitives (Modal/GradientButton/Input/Checkbox/TimePicker/TooltipButton), uiKit (haptic/AnimatedNumber/StaffingBar/ScheduleSkeleton/TaskStarTooltip/GradientBackground/Logo), Button, AdaptiveModal, MobileScheduleActionSheet
 - `src/hooks/` -- useFocusTrap, useUnsavedWarning, useDismissOnOutside, useAuth, useToast, useAnnouncements, useGuardedMutation, useTooltip
-- `src/panels/` -- admin + employee list panels
-- `src/modals/` -- request/offer/swap/settings/password/shift-editor modals
+- `src/panels/` -- admin + employee list panels; `EmployeesPanel` (desktop Employees modal: Active / Inactive / Archive chip), `MobileStaffPanel` (mobile Staff sheet: same filters); Archive chip -> `ArchivedEmployeesPanel` for owner (`openArchivedEmployeesPanel`), toast for non-owner admins; legacy Deleted tab removed
+- `src/modals/` -- includes `ArchivedEmployeesPanel` (EmployeesArchive list; AdaptiveModal for mobile sheet) plus request/offer/swap/settings/password/shift-editor modals
 - `src/auth.js` -- stateless HMAC session token + cached user + auth-failure callback
 - `src/pdf/generate.js` -- PDF via HTML + window.open + browser print; layout tradeoffs in `CONTEXT/pdf-print-layout.md`
 - `src/email/build.js` -- plaintext email body builder
 - `src/utils/format.js` -- parseLocalDate, formatDate, escapeHtml, stripEmoji
-- `src/utils/date.js` -- pure date/time helpers (toDateKey, parseTime, formatTimeShort, ...)
+- `src/utils/date.js` -- pure date/time helpers (toDateKey, parseTime, formatTimeShort, mondayOfLocalWeek, filterDatesSameMondayWeek for weekly violation hour buckets)
 - `src/utils/storeHours.js` -- STAT_HOLIDAYS_2026 / STORE_HOURS / DEFAULT_SHIFT (FT+PT unified) / isStatHoliday (pure)
 - `src/utils/eventDefaults.js` -- getPKDefaultTimes (Sat 10:00-10:45 else 18:00-20:00) / MEETING_DEFAULT_TIMES (14:00-16:00 locked) / getSickDefaultTimes (mirrors existing work shift)
 - `src/utils/storeHoursOverrides.js` -- module-level override refs + getStoreHoursForDate (re-exported from App.jsx for legacy importers; parked sub-area-6 Context refactor will replace)
@@ -77,6 +77,7 @@ Rules:
 - Cancel pending; revoke approved (future only)
 - Save button cycle: SAVE (blue) -> GO LIVE (green) -> EDIT (yellow)
 - Publish: publishedShifts + publishedEvents = LIVE periods only; employees never see drafts
+- Schedule violations (`computeViolations`): weekly overtime compares net hours per Monday-start calendar week intersecting the active 14-day pay period, not summed across both weeks
 - Non-work entries (meeting, pk) blocked from offer/swap via `INVALID_SHIFT_TYPE`
 
 ## Employee Shape
@@ -102,7 +103,7 @@ Rules:
 - Always store `employeeName` alongside `employeeId` (audit trail)
 - Pay periods: 14-day blocks from `PAY_PERIOD_START` = 2026-01-26
 - `editModeByPeriod[periodIndex]` -- each period tracked independently
-- Inactive employees excluded from all views/scheduling
+- Schedule grid / PDF / auto-fill use `filterSchedulableEmployees` (active, not deleted, not owner); admin Employees / Staff panels intentionally include inactive employees for Reactivate / Archive workflows
 
 ## Auth + Password
 

@@ -50,6 +50,22 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-05-06 -- Employees lists: Deleted filter retired; Archive chip + EmployeesArchive panel owns archival UX
+
+Decision: Desktop Employees modal (`EmployeesPanel`) and mobile Staff sheet (`MobileStaffPanel`) expose Active / Inactive / Archive (third chip, FolderArchive icon) for all admins. Opening `ArchivedEmployeesPanel` runs through `openArchivedEmployeesPanel`: owner proceeds (closes Employees or Staff, opens archive modal); non-owner gets informational toast. Desktop header admin dropdown no longer lists a separate Archive... menu row (duplicate removed). Legacy Sheets `deleted` flag rows appear under Inactive with "(legacy removed)" hint and skip Archive button on row actions. `ArchivedEmployeesPanel` uses `AdaptiveModal` so mobile gets bottom-sheet parity.
+
+Rationale: Product vocabulary standardized on Archive vs EmployeesArchive; Deleted tab duplicated a deprecated sheet semantic and competed with the archive sheet workflow.
+
+Confidence: H -- shipped commit `fbb8568`, pushed `origin/main`.
+
+## 2026-05-06 -- Weekly overtime violations bucket net hours per Monday-start week inside pay period
+
+Decision: `allViolations` passes each employee-week aggregate computed only over dates in the active pay period that share the same Monday-start calendar week as the evaluated grid date (`mondayOfLocalWeek`, `filterDatesSameMondayWeek` in `src/utils/date.js`). Shift editor receives distinct totals via `getEmpHoursFullPeriod` vs `getEmpHoursForWeekContaining`.
+
+Rationale: Summing all 14 pay-period days compared weekly thresholds produced hundreds of false weekly-over violations.
+
+Confidence: H -- shipped commit `0b83189`; JR localhost verified before ship.
+
 ## 2026-05-04 (s064) -- Pitch deck v2 shipped with VC-flagged soft spots accepted; ship-over-patch when buyer profile dampens line-level perfectionism
 
 Decision: `pitch-revision-2026-05-04` branch shipped to `origin/main` HEAD `b71d79b` (13 commits = 10 plan-locked from coding-plan-executor + 3 JR-driven follow-on) without addressing two VC-critique-flagged items: (1) Proposal chart caption "pays for itself before it begins" is mathematically false at month 0 (Rainbow at $1,500 implementation, status quo at $0; status quo catches up at ~month 0.6); (2) walk-away cap floor/ceiling ambiguity ($2,991 ceiling, $1,500-$2,494 floor depending on walk-month, never disambiguated). Both tracked in TODO.md Blocked. The chart math conflation (Sarvi-time-cost vs cash-saved on Proposal three-year strip) was acknowledged-true and retained intentionally because the time-freed-for-higher-value-work argument holds independently. Growth-tax framing removed across Alternatives.jsx + feature comparison table because OTR is maintaining at 35 employees, not expanding.

@@ -17,6 +17,20 @@ ASCII operators only.
 
 <!-- 2026-05-04 (s061) archive pass: 78 entries moved to CONTEXT/archive/lessons-archive.md to bring active under 60%-of-ceiling target (15k chars). Carry from s059 + s060. Archive holds full preserved entries. Future entries: append at top per "newest at top" rule. -->
 
+## [PROJECT] -- "Weekly" hour caps follow payroll week geometry
+
+Rule: When enforcing weekly thresholds (OT warnings, caps), aggregate hours only across the calendar week definition payroll uses here Monday-start weeks aligned with `PAY_PERIOD_START`, intersected with whatever date window is editable unless explicitly documenting otherwise.
+
+Trigger: Violations, labor summaries, modal totals keyed off employee hours.
+
+Why: Summing a whole biweekly slice against a 40h weekly threshold doubles counted hours and floods false positives.
+
+Provenance: 2026-05-06 -- Sarvi-reported violations spike fixed via commit `0b83189`.
+
+Tags: surface: scheduler, concern: correctness
+
+Affirmations: 0
+
 ## [PROJECT] -- Adversarial line-level critique must precede plan-lock for content artifacts
 
 Rule: Before locking a content-revision plan that a subagent will execute, run an adversarial line-level critique pass against the existing source AND the planned new content. Structural audits (argument tiers, repositioning, stat corrections) catch a different class of issue than line-level audits (claim provenance, math correctness, citation completeness, comparison-undermining specifics).
