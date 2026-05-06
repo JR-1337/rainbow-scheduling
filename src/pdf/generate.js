@@ -52,6 +52,7 @@ const ROLE_LEGEND_LABEL = {
   - B&W / greyscale only; role = glyph + borders; no last name in grid (first name + optional title).
   - Sarvi (PRIMARY_CONTACT_EMAIL) on main staff weeks; other admin1 + admin2 on **page 3 only** (both admin weeks on that page).
   - Row order: Sarvi (first name) pin, then SCHEDULE_ROW_FIRST_NAME_ORDER (`constants`), then full-name A–Z; divider `<tr>` only on Sarvi vs list vs tail groups (`employeeSort`).
+  - **Brand lockup** (OVER THE / RAINBOW): prints only on the **final info sheet** (announcements + legend + footer), not above Staff Week 1 — matches wall display when that sheet is pinned at the top.
   - No “Scheduled” headcount row.
   - Equal day column widths (colgroup). Uniform row height within a week table (no taller “Axl” rows).
   - Staff weeks: week 1 vs later week use different usable tbody mm; **admin page (3) is tables only**; announcement,
@@ -262,13 +263,20 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
 
   const printedAt = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
+  const pdfBrandLockupHtml = `
+    <div class="pdf-brand-lockup">
+      <div class="pdf-brand-lockup__over">OVER THE</div>
+      <div class="pdf-brand-lockup__wordmark">RAINBOW</div>
+    </div>`;
+
   const staffTbodyUsableWeek1 = PDF_LEGAL_INNER_MM - PDF_STAFF_WEEK1_ABOVE_TBODY_MM;
   const staffTbodyUsableWeekN = PDF_LEGAL_INNER_MM - PDF_STAFF_WEEK_N_ABOVE_TBODY_MM;
   const adminTbodyUsable = PDF_ADMIN_TBODY_USABLE_MM;
 
   const page3InfoFooterHtml = `
+    ${pdfBrandLockupHtml}
     ${announcementHtml}
-    <div style="margin-top:6mm;padding:2mm 3mm;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
+    <div style="margin-top:5mm;padding:2mm 3mm;background:${G.fillZebra};border-radius:4px;border:1px solid ${G.border};">
       <div style="margin-bottom:2px;font-weight:700;font-size:7pt;color:${G.textMuted};text-transform:uppercase;letter-spacing:1px;">Legend</div>
       <div style="display:flex;flex-wrap:wrap;gap:2mm;align-items:center;">${legendItems}${eventLegendItems}<span style="font-size:8pt;display:inline-flex;align-items:center;gap:3px;"><span style="color:${G.ink};font-weight:700;">★</span><span style="color:${G.text};">Has Task</span></span><span style="font-size:8pt;display:inline-flex;align-items:center;gap:3px;"><span style="display:inline-block;padding:0 4px;border:1px dashed ${G.border};font-weight:800;color:${G.ink};font-size:7pt;letter-spacing:1px;">OFF</span><span style="color:${G.text};">Approved Time Off</span></span></div>
     </div>
@@ -290,10 +298,8 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
       body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; padding: 0; }
       @page { size: legal portrait; margin: 5mm; }
       .no-print { display: none !important; }
-      /* Week 2 always starts a fresh page. Week 1 flows naturally below the
-         header instead of being pushed whole to page 2 when the 14-row block
-         can't fit alongside the header (caused the big page-1 gap). Row-level
-         break protection (tr rule below) still keeps individual rows intact. */
+      /* Week 2 starts a fresh page. Staff Week 1 begins without the brand lockup
+         (lockup is on the info sheet only). Row-level break protection keeps rows intact. */
       .wk-block.staff + .wk-block.staff {
         break-before: page;
         page-break-before: always;
@@ -313,6 +319,32 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
       thead { display: table-header-group; }
     }
     body { font-family: 'Inter', Arial, sans-serif; padding: 0; margin: 0 auto; max-width: 200mm; background: #ffffff; color: ${G.text}; }
+    .pdf-brand-lockup {
+      text-align: center;
+      margin: 0 0 5mm;
+      padding: 0 0 3mm;
+      border-bottom: 2px solid ${G.ink};
+      box-sizing: border-box;
+    }
+    .pdf-brand-lockup__over {
+      font-family: 'Josefin Sans', sans-serif;
+      color: ${G.textMuted};
+      font-size: 10pt;
+      font-weight: 400;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+    .pdf-brand-lockup__wordmark {
+      font-family: 'Josefin Sans', sans-serif;
+      color: ${G.ink};
+      font-size: 26pt;
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      line-height: 1.1;
+      margin-top: 3px;
+    }
     .print-btn { background: ${G.ink}; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
     .print-btn:hover { background: ${G.text}; }
     .wk-block,
@@ -380,12 +412,6 @@ export const buildScheduleHtml = (employees, shifts, dates, periodInfo, announce
   <div class="no-print" style="position:sticky;top:0;background:#ffffff;padding:10px 0;margin-bottom:10px;border-bottom:1px solid ${G.border};text-align:right;z-index:10;">
     <button class="print-btn" onclick="window.print()">Print Schedule</button>
     <span style="margin-left:15px;color:${G.textFaint};font-size:11px;">Review the preview below, then click Print.</span>
-  </div>
-  <div style="text-align:center;margin-bottom:3mm;padding-bottom:2mm;border-bottom:2px solid ${G.ink};">
-    <div style="font-family:'Josefin Sans',sans-serif;line-height:1;">
-      <span style="color:${G.textMuted};font-size:8px;letter-spacing:3px;">OVER THE</span><br>
-      <span style="color:${G.ink};font-size:18px;letter-spacing:4px;font-weight:700;">RAINBOW</span>
-    </div>
   </div>
 
   ${makeWeekTable(week1, weekNum1, schedulableMain, 'wk-block staff', staffTbodyUsableWeek1)}
