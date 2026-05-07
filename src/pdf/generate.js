@@ -456,5 +456,8 @@ export const generateSchedulePDF = (employees, shifts, dates, periodInfo, announ
     }
   }
   // Do not revoke quickly: some browsers unload blob documents when the URL is revoked.
-  setTimeout(() => URL.revokeObjectURL(url), 600000);
+  // 30s is generous for the new tab to finish loading the document; afterwards the
+  // blob (containing the full schedule HTML string) is GC'd, easing per-tab heap on
+  // memory-constrained devices like iPhone 12 Safari.
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 };

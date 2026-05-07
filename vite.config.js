@@ -10,4 +10,13 @@ export default defineConfig({
       modernPolyfills: true,
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+        },
+      },
+    },
+  },
 })

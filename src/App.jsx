@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback, useDeferredValue } from 'react';
 import { useIsMobile, MobileMySchedule, MobileBottomSheet } from './MobileEmployeeView';
 import { MobileAdminDrawer, MobileAdminScheduleGrid, MobileAnnouncementPanel, MobileEmployeeQuickView, MobileAdminBottomNav } from './MobileAdminView';
 import { parseLocalDate, escapeHtml } from './utils/format';
@@ -664,6 +664,12 @@ export default function App() {
 
   // Global violations across all schedulable employees × active period dates.
   // Pure derived state — no Sheets persistence. Hidden when count = 0.
+  // Deferred inputs so an urgent re-render (Save click, edit toggle) doesn't
+  // trigger the ~6,860-lookup recompute on the main thread before user input
+  // can be processed. Trade-off: violations badge briefly lags the live grid
+  // after a Save until React's deferred render lands.
+  const deferredShifts = useDeferredValue(shifts);
+  const deferredEvents = useDeferredValue(events);
   const allViolations = useMemo(() => {
     const out = [];
     for (const emp of schedulableEmployees) {
@@ -673,18 +679,18 @@ export default function App() {
         const anchor = dates.find((d) => toDateKey(mondayOfLocalWeek(d)) === mk);
         if (!anchor) continue;
         const weekDates = filterDatesSameMondayWeek(anchor, dates);
-        hoursByWeekMonday.set(mk, computeWeekHoursFor(emp.id, weekDates, shifts, events));
+        hoursByWeekMonday.set(mk, computeWeekHoursFor(emp.id, weekDates, deferredShifts, deferredEvents));
       }
       for (const date of dates) {
         const dateStr = toDateKey(date);
         const key = `${emp.id}-${dateStr}`;
-        const hasShift = !!shifts[key] || !!(events[key] || []).length;
+        const hasShift = !!deferredShifts[key] || !!(deferredEvents[key] || []).length;
         if (!hasShift) continue;
         const prior = new Date(date); prior.setDate(prior.getDate() - 1);
         const priorStreak = computeConsecutiveWorkDayStreak(
-          (id, k) => !!shifts[`${id}-${k}`],
+          (id, k) => !!deferredShifts[`${id}-${k}`],
           emp.id, toDateKey(prior),
-          (id, k) => (events[`${id}-${k}`] || []).some(e => e.type === 'sick'),
+          (id, k) => (deferredEvents[`${id}-${k}`] || []).some(e => e.type === 'sick'),
         );
         const wkHours = hoursByWeekMonday.get(toDateKey(mondayOfLocalWeek(date))) ?? 0;
         const v = computeViolations({
@@ -697,7 +703,7 @@ export default function App() {
       }
     }
     return out;
-  }, [schedulableEmployees, dates, shifts, events, approvedTimeOffSet]);
+  }, [schedulableEmployees, dates, deferredShifts, deferredEvents, approvedTimeOffSet]);
 
   // Count scheduled employees for a given date. Sick days drop out of the
   // headcount — the employee isn't actually there, even though the work row
