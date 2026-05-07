@@ -17,6 +17,34 @@ ASCII operators only.
 
 <!-- 2026-05-04 (s061) archive pass: 78 entries moved to CONTEXT/archive/lessons-archive.md to bring active under 60%-of-ceiling target (15k chars). Carry from s059 + s060. Archive holds full preserved entries. Future entries: append at top per "newest at top" rule. -->
 
+## [PROJECT] -- No non-passive `touchmove` listeners on long-list mobile cells
+
+Rule: Do not attach non-passive `touchmove` listeners (via `addEventListener('touchmove', fn, { passive: false })`) per cell on long mobile lists; rely on React's passive `onTouchMove` + a movement-distance threshold to handle gesture cancellation.
+
+Trigger: When adding scroll-blocking, long-press detection, drag-to-cancel, or any other touch handler to cells in a mobile schedule grid, list, or table component.
+
+Why: iOS Safari must walk every non-passive touchmove handler synchronously before deciding whether to engage scroll. With 490 mobile-grid cells each registering one, every touchmove during scroll waits on 490 handler calls -- canonical iOS scroll-perf cliff. Symptom: page visible but scroll feels frozen for seconds.
+
+Provenance: 2026-05-06 (s069) -- commit `62d992c` -- Sarvi reported scroll freeze on iPhone 12; root cause was `useLongPress` registering a non-passive `touchmove` listener on every `LongPressCell` via `setTouchRef` + `useLayoutEffect`. Fix removed the native listener; React `onTouchMove` + 28px coarse-pointer threshold preserved long-press behavior.
+
+Tags: surface: react, concern: perf
+
+Affirmations: 0
+
+## [PROJECT] -- `useDeferredValue` on inputs (not outputs) to defer a synchronous `useMemo` recompute
+
+Rule: When a `useMemo` body is expensive AND its computation is what blocks the main thread, wrap the *inputs* in `useDeferredValue` and route the deferred values into the memo's dependency array. Do NOT wrap the memo result in `useDeferredValue` and expect the computation to defer.
+
+Trigger: When trying to defer a synchronous render-time computation (e.g. a violations recompute, a derived index, an aggregation) so user input gets processed first.
+
+Why: `useDeferredValue` defers consumers' reads, not the computation itself. Wrapping the result still runs the `useMemo` synchronously when its real deps change. Wrapping the inputs means the memo's deps don't change during urgent renders (cache hit, no recompute), then catch up in a deferred low-priority pass.
+
+Provenance: 2026-05-06 (s069) -- commit `c7c3406` (A5) -- `allViolations` was a ~6,860-lookup recompute blocking every render after a Save. Fix wrapped `shifts` and `events` (the inputs) in `useDeferredValue`, routed `deferredShifts`/`deferredEvents` into the memo deps. Urgent renders bypass the recompute; the violations badge briefly lags during a Save then catches up.
+
+Tags: surface: react, concern: perf
+
+Affirmations: 0
+
 ## [PROJECT] -- Schedule grid: `isOwner` does not imply off-schedule; use `showOnSchedule` + optional never-list
 
 Rule: Do not exclude employees from `filterSchedulableEmployees` (or mirrors) solely because `isOwner` is true. Co-owners who work the floor need the same visibility rules as other admins: `showOnSchedule` gates admin-tier rows. For remote owners who must not appear even in the admin **hidden staff** strip, use `SCHEDULE_UI_NEVER_LIST_EMAILS` in `constants.js` (login email, lowercase list).

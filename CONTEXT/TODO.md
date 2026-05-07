@@ -21,7 +21,7 @@ Rules:
 
 ## Active
 
-mizugumo. holography.
+scumble. instanton.
 
 - **iPhone 12 / iOS Safari freeze investigation (Sarvi-reported).** Symptom (initial): page visible but taps dead, exit + re-enter Safari tab fixes it, often after Save. Symptom (follow-up): scrolling on the main schedule grid also freezes (resolved by long-press scroll fix). Fix candidates ranked at `docs/iphone12-freeze-fixes-2026-05-06.md`. **Shipped:** Batch 1 A1+A2+A3 (`c386cb9`), Batch 2 A4 (`c83c1fe`), Batch 3 A5+B2+C3 (`c7c3406`), long-press scroll fix (`62d992c`), A6 mobile grid + cell memoization (`ffeafd6`). **Remaining candidates:** B1 (lazy 14 modals, ~1-2hr), B3 (mobile/desktop view split, bigger refactor), C2 (useToast cleanup, ~10min). C1 skipped per JR. C4 ruled out (memo wouldn't bail given current prop flow). **Next:** wait for Sarvi feedback on whether the cumulative work cures the freeze before chasing B1.
 
