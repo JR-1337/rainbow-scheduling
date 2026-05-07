@@ -17,6 +17,20 @@ ASCII operators only.
 
 <!-- 2026-05-04 (s061) archive pass: 78 entries moved to CONTEXT/archive/lessons-archive.md to bring active under 60%-of-ceiling target (15k chars). Carry from s059 + s060. Archive holds full preserved entries. Future entries: append at top per "newest at top" rule. -->
 
+## [PROJECT] -- Verify the actual delivery surface before treating an audit-spec symbol pointer as unambiguous
+
+Rule: When an audit / fix spec names a code symbol (e.g. "edit `WELCOME_TEMPLATE_HTML_`"), verify what that symbol becomes downstream (PDF attachment? email body? both? something else?) before treating the spec as unambiguous. The user-facing intent ("welcome email body") and the code symbol's actual delivery surface ("welcome PDF template") can differ silently when names drift.
+
+Trigger: Any fix spec that points at a constant, function, or template by name and describes user-facing behavior in different terms ("email body" vs `WELCOME_TEMPLATE_HTML_`; "modal copy" vs `MODAL_TEXT`).
+
+Why: v2.33.0 followed the literal R1 audit pointer (`WELCOME_TEMPLATE_HTML_`) and added the URL + default-password paragraph there. The constant becomes a PDF attachment, not the email body. JR opened the email and saw an empty body with three attachments. v2.33.1 + v2.33.2 closed the gap. Cost: one extra paste-deploy cycle.
+
+Provenance: 2026-05-07 (s072) -- commits `8f9c812` (followed literal pointer), `505b005` + `1e2ac7e` (closed gap).
+
+Tags: surface: email, concern: spec-interpretation
+
+Affirmations: 0
+
 ## [PROJECT] -- No non-passive `touchmove` listeners on long-list mobile cells
 
 Rule: Do not attach non-passive `touchmove` listeners (via `addEventListener('touchmove', fn, { passive: false })`) per cell on long mobile lists; rely on React's passive `onTouchMove` + a movement-distance threshold to handle gesture cancellation.
