@@ -34,6 +34,8 @@ import MobileDrawerShell from './components/MobileDrawerShell';
 import LongPressCell from './components/LongPressCell';
 import EventDetailSheet from './components/EventDetailSheet';
 
+const EMPTY_EVENTS = Object.freeze([]);
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE DETECTION HOOK
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -279,7 +281,7 @@ export const MobileScheduleGrid = ({ employees, shifts, events = {}, dates, logg
                     const dateStr = toDateKey(date);
                     const shift = shifts[`${emp.id}-${dateStr}`];
                     // Defensive: unknown event types are silently hidden.
-                    const rawCellEvents = events[`${emp.id}-${dateStr}`] || [];
+                    const rawCellEvents = events[`${emp.id}-${dateStr}`] || EMPTY_EVENTS;
                     // `unavailable` is filtered out of cellEvents (it's a status, not a displayable event)
                     // but still counted via hasAdminUnavailable below for the cell render branch.
                     const cellEvents = rawCellEvents.filter(ev => EVENT_TYPES[ev.type] && ev.type !== 'unavailable');

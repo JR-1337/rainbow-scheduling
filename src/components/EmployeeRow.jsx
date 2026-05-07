@@ -30,6 +30,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
 
   // Fixed row strip: 4.5rem cell + p-0.5 vertical (0.25rem) so grid row height cannot grow from name stack min-content.
   const rowStrip = 'p-0.5 h-[calc(4.5rem+0.25rem)] max-h-[calc(4.5rem+0.25rem)] min-h-0 overflow-hidden box-border';
+  const today = new Date();
   return (
     <div className="grid gap-px schedule-row" style={{ gridTemplateColumns: DESKTOP_SCHEDULE_GRID_TEMPLATE, backgroundColor: THEME.border.subtle, opacity: isDeleted ? 0.5 : 1 }}>
       <div ref={rowRef} className={rowStrip} style={{ backgroundColor: THEME.bg.secondary }} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
@@ -62,7 +63,7 @@ export const EmployeeRow = React.memo(({ employee, dates, shifts, events = {}, o
         const cellEvents = events[`${employee.id}-${dateStr}`] || EMPTY_EVENTS;
         const approvedTimeOff = approvedTimeOffSet?.has(`${employee.email}-${dateStr}`) || false;
         // v2.32.0: cell is locked if edit-mode lock OR past-period lock applies.
-        const pastLocked = currentUser ? !canEditShiftDate(currentUser, date, new Date()) : false;
+        const pastLocked = currentUser ? !canEditShiftDate(currentUser, date, today) : false;
         const cellIsLocked = isLocked || pastLocked;
         return (
           <div key={dateStr} className={rowStrip} style={{ backgroundColor: THEME.bg.secondary }}>

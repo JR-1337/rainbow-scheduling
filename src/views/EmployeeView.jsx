@@ -34,6 +34,8 @@ import SickStripeOverlay from '../components/SickStripeOverlay';
 import { computeCellStyles } from '../utils/scheduleCellStyles';
 import EventOnlyCell from '../components/EventOnlyCell';
 
+const EMPTY_EVENTS = Object.freeze([]);
+
 const EmployeeScheduleCell = React.memo(({ shift, events = [], date, loggedInEmpId, storeHours, employee = null, isTimeOff = false, isUnavailable = false }) => {
   const [showTask, setShowTask] = useState(false);
   const starRef = useRef(null);
@@ -153,7 +155,7 @@ const EmployeeViewRow = React.memo(({ employee, dates, shifts, events = {}, logg
         const storeHrs = getStoreHoursForDate(date);
         const dateStr = toDateKey(date);
         const shift = shifts[`${employee.id}-${dateStr}`];
-        const cellEvents = events[`${employee.id}-${dateStr}`] || [];
+        const cellEvents = events[`${employee.id}-${dateStr}`] || EMPTY_EVENTS;
         const isTimeOff = approvedTimeOffSet?.has(`${employee.email}-${dateStr}`) || false;
         const dayName = getDayName(date);
         const avail = employee.availability?.[dayName];
@@ -316,7 +318,10 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
     [swapsIAccepted, seenRequestIds]
   );
   
-  const week1 = dates.slice(0, 7), week2 = dates.slice(7, 14);
+  const { week1, week2 } = useMemo(() => ({
+    week1: dates.slice(0, 7),
+    week2: dates.slice(7, 14),
+  }), [dates]);
   const weekNum1 = getWeekNumber(week1[0]), weekNum2 = getWeekNumber(week2[0]);
   const currentDates = activeWeek === 1 ? week1 : week2;
   

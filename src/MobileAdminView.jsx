@@ -38,6 +38,8 @@ import MobileDrawerShell from './components/MobileDrawerShell';
 import LongPressCell from './components/LongPressCell';
 import EventDetailSheet from './components/EventDetailSheet';
 
+const EMPTY_EVENTS = Object.freeze([]);
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN MOBILE HAMBURGER DRAWER
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -354,7 +356,7 @@ export const MobileAdminScheduleGrid = ({
                     const shift = shifts[`${emp.id}-${dateStr}`];
                     // Defensive: unknown event types are silently hidden so a malformed
                     // Sheet row can't crash the grid.
-                    const rawCellEvents = events[`${emp.id}-${dateStr}`] || [];
+                    const rawCellEvents = events[`${emp.id}-${dateStr}`] || EMPTY_EVENTS;
                     const cellEvents = rawCellEvents.filter(ev => EVENT_TYPES[ev.type] && ev.type !== 'unavailable');
                     const hasEvents = cellEvents.length > 0;
                     const firstEvent = hasEvents ? cellEvents[0] : null;

@@ -388,7 +388,10 @@ export default function App() {
   };
   
   const { startDate, endDate, dates } = useMemo(() => getPayPeriodDates(periodIndex), [periodIndex]);
-  const week1 = dates.slice(0, 7), week2 = dates.slice(7, 14);
+  const { week1, week2 } = useMemo(() => ({
+    week1: dates.slice(0, 7),
+    week2: dates.slice(7, 14),
+  }), [dates]);
   const weekNum1 = getWeekNumber(week1[0]), weekNum2 = getWeekNumber(week2[0]);
   const currentDates = activeWeek === 1 ? week1 : week2;
   
