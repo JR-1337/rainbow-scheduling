@@ -2,6 +2,13 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.33.0 (welcome PDF body adds app URL + default-password format + first-login expectation)
+ *
+ * Changes in v2.33.0:
+ * - WELCOME_TEMPLATE_HTML_: new first body paragraph prepended before "Welcome to Over the Rainbow Ltd."
+ *   paragraph. Contains app URL (https://rainbow-scheduling.vercel.app), default-password format
+ *   (FirstnameL e.g. JohnR), and first-login expectation (prompted to set personal password on first login).
+ *
  * Version: 2.32.5 (saveEmployee privilege matrix for admin1 tier + owner immutability)
  *
  * Changes in v2.32.5:
@@ -440,6 +447,9 @@ var WELCOME_TEMPLATE_HTML_ = '<!DOCTYPE html>' +
   '<!-- Body paragraphs -->' +
   '<tr><td style="padding:8px 24px 24px 24px;background-color:#FFFFFF;">' +
   '<div style="font-size:14px;color:#374151;line-height:1.8;">' +
+
+  '<p style="margin:0 0 14px 0;">Schedule app: <a href="https://rainbow-scheduling.vercel.app" style="color:#0D0E22;">https://rainbow-scheduling.vercel.app</a><br>' +
+  'Your login is your email address. Your default password is your first name and last initial with no space (e.g. JohnR). On first login you\'ll be asked to set a personal password.</p>' +
 
   '<p style="margin:0 0 14px 0;">Welcome to Over the Rainbow Ltd. Please print the attached documents:</p>' +
 

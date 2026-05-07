@@ -72,9 +72,13 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onArchive, employee
     if (hasTitle(formData)) saveData.title = (formData.title || '').trim();
     else saveData.title = '';
     if (!employee && password) saveData.password = password;
-    const success = await onSave(saveData);
+    const result = await onSave(saveData);
     setIsSaving(false);
-    if (success !== false) onClose();
+    if (result && result.error) {
+      setErrors({ form: result.error });
+      return;
+    }
+    if (result !== false) onClose();
   };
   const toggleDay = (d) => setFormData({ ...formData, availability: { ...formData.availability, [d]: { ...formData.availability[d], available: !formData.availability[d].available } } });
   const updateTime = (d, f, v) => setFormData({ ...formData, availability: { ...formData.availability, [d]: { ...formData.availability[d], [f]: v } } });
@@ -439,6 +443,13 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSave, onArchive, employee
               })}
             </div>
           </div>
+
+          {errors.form && (
+            <div className="mt-2 p-2 rounded-lg flex items-start gap-2" style={{ backgroundColor: THEME.status.error + '20', border: `1px solid ${THEME.status.error}` }}>
+              <AlertTriangle size={14} style={{ color: THEME.status.error, flexShrink: 0, marginTop: 2 }} />
+              <p className="text-xs leading-snug" style={{ color: THEME.text.primary }}>{errors.form}</p>
+            </div>
+          )}
 
           <div className="flex justify-between mt-3 pt-2" style={{ borderTop: `1px solid ${THEME.border.subtle}` }}>
             <div className="flex gap-2">

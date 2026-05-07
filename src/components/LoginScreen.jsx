@@ -127,7 +127,7 @@ export const LoginScreen = ({ onLogin, onLoadingComplete }) => {
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
-          <p className="login-hint text-xs mt-1">First time? Your default password is your first name and last initial with no space, e.g. JohnR</p>
+          <p className="login-hint text-xs mt-1">First time? Use the password your manager gave you. If you haven't received one, ask them.</p>
         </div>
 
         {error && <p className="text-xs mb-3" style={{ color: THEME.status.error }}>{error}</p>}

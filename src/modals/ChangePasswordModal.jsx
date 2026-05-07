@@ -97,6 +97,7 @@ export const ChangePasswordModal = ({ isOpen, onClose, currentUser, isFirstLogin
             onChangeConfirm={e => { setConfirmPassword(e.target.value); setError(''); }}
             onSubmitEnter={handleSubmit}
           />
+          <p className="text-xs mt-1.5" style={{ color: THEME.text.muted }}>Min 4 characters.</p>
 
           {error && <p className="text-xs mt-2" style={{ color: THEME.status.error }}>{error}</p>}
 

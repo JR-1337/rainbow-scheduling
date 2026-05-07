@@ -111,8 +111,9 @@ Rules:
 - Stateless HMAC session tokens (12h TTL) via `HMAC_SECRET` Script Property
 - Passwords: salted SHA-256, columns R (`passwordHash`) + S (`passwordSalt`)
 - Column T `passwordChanged` is authoritative for default-password detection
-- Fallback regex `emp-XXX` only when column T blank (back-compat)
-- Default password: `emp-XXX` sequential by Sheets row (row 2 = emp-001)
+- Default password: `FirstnameL` (e.g. `JohnR`) per `computeDefaultPassword_` at `Code.gs:1187-1210`; collisions append digits (`JohnR2`, `JohnR3`)
+- Fallback `emp-XXX` (sequential by Sheets row) only when name is empty
+- Login regex fallback (Code.gs:1095) matches FirstnameL pattern OR legacy emp-XXX when column T blank (back-compat)
 - Self-change writes `passwordChanged=TRUE`; admin reset writes `FALSE` + clears hash
 
 ## Roles

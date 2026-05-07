@@ -880,16 +880,19 @@ export default function App() {
   const saveEmployee = async (e) => {
     if (editingEmp && !e.active && editingEmp.active) {
       if (currentUser && e.email === currentUser.email) {
-        showToast('error', 'You cannot deactivate your own account.', 6000);
-        return false;
+        const msg = 'You cannot deactivate your own account.';
+        showToast('error', msg, 6000);
+        return { error: msg };
       }
       if (editingEmp.isOwner) {
-        showToast('error', 'The owner account cannot be deactivated.', 6000);
-        return false;
+        const msg = 'The owner account cannot be deactivated.';
+        showToast('error', msg, 6000);
+        return { error: msg };
       }
-      if (editingEmp.isAdmin) {
-        showToast('error', 'Admin accounts cannot be deactivated. Demote to Staff first.', 6000);
-        return false;
+      if (e.isAdmin) {
+        const msg = 'Admin accounts cannot be deactivated. Demote to Staff first.';
+        showToast('error', msg, 6000);
+        return { error: msg };
       }
     }
 
