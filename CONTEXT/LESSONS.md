@@ -199,6 +199,14 @@ Tags: surface: harness, concern: naming
 Affirmations: 2
 Graduated: 2026-05-06 to AGENTS.md
 
+## [PROJECT] -- Switch to direct API when admin form Save no-ops
+Rule: When an admin form's Save click fires no fetch + leaves modal open + shows no error, stop after 2-3 retries and call the API directly with the form's payload via `fetch` to the Apps Script URL using the cached `otr-auth-token`.
+Trigger: Fixture management or admin actions where the Edit Employee form silently fails to commit.
+Why: Spent ~30 min in s071 fighting the form on Test Admin demote+deactivate (silent no-op, hidden toast, stale closure on `editingEmp.isAdmin`). Direct API call took 5 sec and worked first try. The form has multiple defensive guards that don't surface to the user.
+Provenance: 2026-05-07 (s071) -- fixture rename for new-user audit follow-up.
+Tags: surface: harness, concern: ux
+Affirmations: 0
+
 ## [PROJECT] -- Topics JR has explicitly closed stay closed
 Rule: After JR explicitly closes a topic ("do not mention X again", "stop pushing X"), drop X from every downstream artifact (plan sections, audit findings, AskUserQuestion options, clarifications) for the rest of the session; surface again only if an external constraint forces it.
 Trigger: When JR closes a topic in-session.

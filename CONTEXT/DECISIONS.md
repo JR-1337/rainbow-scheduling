@@ -50,6 +50,14 @@ Archive behavior:
   User must approve before write.
 -->
 
+## 2026-05-07 -- Test fixtures standardized; admin fixtures rest at Staff tier
+
+Decision: Test fixtures renamed to **Test Employee1** (`john@johnrichmond.ca`, password `TestE`), **Test Employee2** (`johnrichmond007+onboarding-smoke@gmail.com`, password `TestE2`), **Test Admin** (`johnrichmond007+testadmin@gmail.com`, password `TestA`). All three Inactive at session end. **Test Admin's resting tier is Staff, not admin1** -- the frontend guard at `App.jsx:880-893` blocks deactivating any admin account; system requires demote-to-Staff before deactivate. To exercise admin1 paths during testing: Reactivate -> set Admin tier -> save -> test -> demote to Staff -> set Inactive -> save (multi-step roundtrip per session).
+
+Rationale: JR asked for unified fixture names ahead of shift-switch testing 3 months out (target window: Aug 2026 schedule weeks). Standardized names eliminate the ambiguity of legacy "Test Guy" / "Onboard Smoke". Resting-Staff state for the admin fixture honors the "Inactive when not testing" rule despite the system's admin-deactivation guard. Localhost dev server hits the same Sheet as prod, so showOnSchedule=false on Test Admin and Inactive on the others keeps Sarvi's grid clean.
+
+Confidence: M -- shipped via direct `saveEmployee` API call (form's Save button silently no-op'd on the admin demote-then-deactivate combination, surfaced as 4 separate UX bugs in `docs/audit/new-user-experience-2026-05-07.md`); persistence verified by Active 35 / Inactive 5 / Archive 2 final counts.
+
 ## 2026-05-06 -- Schedule PDF + grid: hierarchy row order, brand on info sheet, name columns, Week 1 print inset
 
 Decision: **Schedule row order** (desktop admin + employee grids, mobile admin/employee, PDF tables, AutofillClearModal list order) uses `sortSchedulableByHierarchy` in `src/utils/employeeSort.js`: Sarvi by first-name pin, then names in `SCHEDULE_ROW_FIRST_NAME_ORDER` (`src/constants.js`), then everyone else alphabetically by full `name`. **`employeeBucket` (admin1/admin2/FT/PT) remains only for AutofillClearModal bucket presets**, not for ordering. **PDF/UI divider `<tr>` / chrome** follows `scheduleDisplayDividerGroup` (Sarvi vs listed-first-names vs tail), not FT/PT buckets. **PDF brand:** OVER THE / RAINBOW lockup prints **only** atop `page3InfoFooterHtml` (final sheet when admins exist; lone `.page-3` sheet when staff-only) via `.pdf-brand-lockup*` -- enlarged vs the legacy mini header; **removed** from above Staff Week 1 for wall-post workflows. **`@media print`:** `.no-print + .wk-block.staff { padding-top: 5mm }` matches Week 2 page-top inset. **Name columns:** desktop name track via `DESKTOP_SCHEDULE_NAME_COL_PX` (172); mobile frozen column `MOBILE_SCHEDULE_NAME_COL_PX` (84); PDF employee col 24mm; PDF first-name cell nowrap + ellipsis instead of `word-break`.
