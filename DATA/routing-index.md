@@ -1,5 +1,5 @@
 <!-- SCHEMA: DATA/routing-index.md
-Version: 6.2
+Version: 6.4
 Purpose: routing index for project-authoritative sources that live outside DATA/.
   Answers "where does this project keep its gold?" -- points at in-tree files
   (knowledge, schemas, rubrics, fixtures, traces, lineage snapshots) and

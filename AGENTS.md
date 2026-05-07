@@ -15,7 +15,7 @@ All durable project state lives under `CONTEXT/`:
 - `CONTEXT/ARCHITECTURE.md` -- current structure snapshot
 - `CONTEXT/LESSONS.md` -- durable preferences, pitfalls, corrections
 - `CONTEXT/handoffs/*.md` -- up to 3 recent handoffs; older archived per drivers/HANDOFF.md Step 6
-- `CONTEXT/drift-reports/drift-YYYY-MM-DD.md` -- rolling 5; written by the per-consumer `/drift-scan` cron (registered at /bootstrap), observation-only
+- `CONTEXT/drift-reports/drift-YYYY-MM-DD.md` -- rolling 5; written by the per-consumer `/drift-scan` cron (registered at /bootstrap; reads kit machinery from local `.claude/kit/` snapshot, no kit clone), observation-only
 
 Cross-project lessons live in `~/.context-system/CONTEXT/LESSONS.md` and are read only when `[GLOBAL]`-scoped context is relevant.
 

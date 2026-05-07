@@ -1,5 +1,5 @@
 <!-- SCHEMA: decisions-archive.md
-Version: 6.2
+Version: 6.4
 Purpose: retired decision entries moved out of active DECISIONS.md when
   the 25,000-char ceiling is crossed, on `Superseded by:` link, or on
   opportunistic stale review. Distinct from CONTEXT/archive/YYYY-MM-{slug}.md

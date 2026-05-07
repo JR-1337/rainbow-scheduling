@@ -1,5 +1,5 @@
 <!-- SCHEMA: lessons-archive.md
-Version: 6.2
+Version: 6.4
 Purpose: retired LESSONS entries moved out of active LESSONS.md when
   the 25,000-char ceiling is crossed, on `Graduated: YYYY-MM-DD to <target>`
   marker, or on opportunistic stale review. Distinct from

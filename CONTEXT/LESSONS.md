@@ -1,5 +1,5 @@
 <!-- SCHEMA: LESSONS.md
-Version: 6.2
+Version: 6.4
 Purpose: durable user preferences, repeated pitfalls, and workflow corrections.
 Write mode: append. Increment Affirmations counter on recurrence.
 

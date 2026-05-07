@@ -1,5 +1,5 @@
 <!-- SCHEMA: DECISIONS.md
-Version: 6.2
+Version: 6.4
 Purpose: durable product, architecture, and workflow decisions with rationale.
 Write mode: append new entries at the top. Reverse chronological.
 
