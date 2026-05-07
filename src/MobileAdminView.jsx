@@ -41,6 +41,136 @@ import EventDetailSheet from './components/EventDetailSheet';
 const EMPTY_EVENTS = Object.freeze([]);
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN MOBILE SCHEDULE CELL - memoized to avoid re-render when parent state
+// changes but this cell's data hasn't changed (toast, resize, request count, etc.)
+// ═══════════════════════════════════════════════════════════════════════════════
+const MobileAdminScheduleCell = React.memo(({
+  emp,
+  date,
+  shift,
+  rawCellEvents,
+  approvedTimeOff,
+  isEditMode,
+  onCellClick,
+  onLongPress,
+  cellWidth,
+  cellHeight,
+}) => {
+  const dateStr = toDateKey(date);
+  // Defensive: unknown event types are silently hidden so a malformed
+  // Sheet row can't crash the grid.
+  const cellEvents = rawCellEvents.filter(ev => EVENT_TYPES[ev.type] && ev.type !== 'unavailable');
+  const hasEvents = cellEvents.length > 0;
+  const firstEvent = hasEvents ? cellEvents[0] : null;
+  const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
+  const eventOnly = !shift && hasEvents;
+  const sickEvent = cellEvents.find(ev => ev.type === 'sick');
+  const hasSick = !!sickEvent;
+  const hasAdminUnavailable = rawCellEvents.some(ev => ev.type === 'unavailable');
+
+  const dayName = getDayName(date);
+  const avail = emp.availability?.[dayName];
+  const isUnavailable = (avail && !avail.available) || hasAdminUnavailable;
+  const role = shift ? ROLES_BY_ID[shift.role] : null;
+  const isTitled = hasTitle(emp);
+  const labelText = shift ? (isTitled ? '' : role?.name) : '';
+  const labelColor = shift ? role?.color : THEME.text.muted;
+
+  const canDayDetail = !!(
+    shift ||
+    cellEvents.length > 0 ||
+    approvedTimeOff ||
+    isUnavailable ||
+    hasAdminUnavailable
+  );
+
+  return (
+    <LongPressCell as="td" key={dateStr}
+      enabled={canDayDetail}
+      onLongPress={() => onLongPress({
+        dateLabel: `${getDayName(date)} · ${formatDate(date)}`,
+        employeeName: emp.name,
+        shift: shift || null,
+        roleDisplay: isTitled ? ((emp.title || '').trim() || '—') : (role?.name || ''),
+        roleColor: isTitled ? THEME.text.primary : (role?.color || THEME.text.secondary),
+        events: cellEvents,
+        approvedTimeOff,
+        unavailable: isUnavailable || hasAdminUnavailable,
+      })}
+      onClick={() => isEditMode && onCellClick && onCellClick(emp, date, shift || null)}
+      {...(isEditMode && onCellClick ? {
+        role: 'button',
+        tabIndex: 0,
+        onKeyDown: (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onCellClick(emp, date, shift || null);
+          }
+        },
+        'aria-label': `${emp.name} ${dateStr}${shift ? ' edit shift' : ' add shift'}`,
+      } : {})}
+      style={{
+        width: cellWidth, minWidth: cellWidth,
+        height: cellHeight,
+        maxHeight: cellHeight,
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+        backgroundColor: THEME.bg.secondary,
+        borderBottom: `1px solid ${THEME.border.subtle}`,
+        padding: '2px',
+        cursor: isEditMode ? 'pointer' : 'default'
+      }}>
+      <div className="h-full rounded-md relative overflow-hidden" style={{
+        ...computeCellStyles({ hasSick, isTimeOff: approvedTimeOff, isUnavailable, isTitled, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: false }),
+        height: cellHeight - 4
+      }}>
+        {hasSick && <SickStripeOverlay />}
+        {approvedTimeOff && !shift && !hasEvents ? (
+          <div className="flex items-center justify-center h-full">
+            <span style={{ color: THEME.text.muted, fontSize: '9px' }}>Time Off</span>
+          </div>
+        ) : isUnavailable && !shift && !hasEvents ? (
+          <div className="flex items-center justify-center h-full">
+            <span style={{ color: THEME.text.muted, fontSize: '8px' }}>Unavailable</span>
+          </div>
+        ) : shift ? (
+          <div className="p-1 h-full flex flex-col justify-between">
+            {(labelText || hasEvents) ? (
+              <div className="flex items-start justify-between gap-1">
+                {labelText ? (
+                  <span className="font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : labelColor, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '10px' }}>{labelText}</span>
+                ) : <span className="min-w-0 flex-1" />}
+                {hasEvents && !hasSick && <EventGlyphPill events={cellEvents} size="sm" />}
+              </div>
+            ) : null}
+            {hasSick && sickEvent?.note ? (
+              <span className="italic truncate block" style={{ color: THEME.text.muted, fontSize: '9px' }} title={sickEvent?.note}>
+                {sickEvent?.note}
+              </span>
+            ) : (
+              <>
+                <div>
+                  <span style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '9px' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '9px' }}>{hasSick ? '0' : shift.hours}h</span>
+                  {shift.task && (
+                    <Star size={8} fill={THEME.task} color={THEME.task} />
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        ) : eventOnly ? (
+          <EventOnlyCell events={cellEvents} firstEventType={firstEventType} firstEvent={firstEvent} size="sm" />
+        ) : null}
+      </div>
+    </LongPressCell>
+  );
+});
+MobileAdminScheduleCell.displayName = 'MobileAdminScheduleCell';
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN MOBILE HAMBURGER DRAWER
 // ═══════════════════════════════════════════════════════════════════════════════
 export const MobileAdminDrawer = ({
@@ -173,7 +303,7 @@ export const MobileAdminDrawer = ({
 // ADMIN MOBILE SCHEDULE GRID - Read-only with staffing counters
 // Extends the employee grid pattern with staffing target info in headers
 // ═══════════════════════════════════════════════════════════════════════════════
-export const MobileAdminScheduleGrid = ({
+export const MobileAdminScheduleGrid = React.memo(({
   employees, shifts, events = {}, dates, loggedInUser, getEmployeeHours,
   approvedTimeOffSet, getScheduledCount, getStaffingTarget,
   staffingTargetOverrides = {}, storeHoursOverrides = {},
@@ -351,121 +481,25 @@ export const MobileAdminScheduleGrid = ({
                   </td>
                   
                   {/* Day cells */}
-                  {dates.map((date, i) => {
+                  {dates.map((date) => {
                     const dateStr = toDateKey(date);
                     const shift = shifts[`${emp.id}-${dateStr}`];
-                    // Defensive: unknown event types are silently hidden so a malformed
-                    // Sheet row can't crash the grid.
                     const rawCellEvents = events[`${emp.id}-${dateStr}`] || EMPTY_EVENTS;
-                    const cellEvents = rawCellEvents.filter(ev => EVENT_TYPES[ev.type] && ev.type !== 'unavailable');
-                    const hasEvents = cellEvents.length > 0;
-                    const firstEvent = hasEvents ? cellEvents[0] : null;
-                    const firstEventType = firstEvent && EVENT_TYPES[firstEvent.type];
-                    const eventOnly = !shift && hasEvents;
-                    const sickEvent = cellEvents.find(ev => ev.type === 'sick');
-                    const hasSick = !!sickEvent;
-                    const hasAdminUnavailable = rawCellEvents.some(ev => ev.type === 'unavailable');
-
                     const approvedTimeOff = approvedTimeOffSet?.has(`${emp.email}-${dateStr}`) || false;
-
-                    const dayName = getDayName(date);
-                    const avail = emp.availability?.[dayName];
-                    const isUnavailable = (avail && !avail.available) || hasAdminUnavailable;
-                    const role = shift ? ROLES_BY_ID[shift.role] : null;
-                    const isTitled = hasTitle(emp);
-                    const labelText = shift ? (isTitled ? '' : role?.name) : '';
-                    const labelColor = shift ? role?.color : THEME.text.muted;
-
-                    const canDayDetail = !!(
-                      shift ||
-                      cellEvents.length > 0 ||
-                      approvedTimeOff ||
-                      isUnavailable ||
-                      hasAdminUnavailable
-                    );
-
                     return (
-                      <LongPressCell as="td" key={i}
-                        enabled={canDayDetail}
-                        onLongPress={() => setEventSheetData({
-                          dateLabel: `${getDayName(date)} · ${formatDate(date)}`,
-                          employeeName: emp.name,
-                          shift: shift || null,
-                          roleDisplay: isTitled ? ((emp.title || '').trim() || '—') : (role?.name || ''),
-                          roleColor: isTitled ? THEME.text.primary : (role?.color || THEME.text.secondary),
-                          events: cellEvents,
-                          approvedTimeOff,
-                          unavailable: isUnavailable || hasAdminUnavailable,
-                        })}
-                        onClick={() => isEditMode && onCellClick && onCellClick(emp, date, shift || null)}
-                        {...(isEditMode && onCellClick ? {
-                          role: 'button',
-                          tabIndex: 0,
-                          onKeyDown: (e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              onCellClick(emp, date, shift || null);
-                            }
-                          },
-                          'aria-label': `${emp.name} ${toDateKey(date)}${shift ? ' edit shift' : ' add shift'}`,
-                        } : {})}
-                        style={{
-                          width: CELL_WIDTH, minWidth: CELL_WIDTH,
-                          height: CELL_HEIGHT,
-                          maxHeight: CELL_HEIGHT,
-                          boxSizing: 'border-box',
-                          overflow: 'hidden',
-                          backgroundColor: THEME.bg.secondary,
-                          borderBottom: `1px solid ${THEME.border.subtle}`,
-                          padding: '2px',
-                          cursor: isEditMode ? 'pointer' : 'default'
-                        }}>
-                        <div className="h-full rounded-md relative overflow-hidden" style={{
-                          ...computeCellStyles({ hasSick, isTimeOff: approvedTimeOff, isUnavailable, isTitled, hasShift: !!shift, hasEvents, role, eventOnly, firstEventType, useOverlayForTimeOff: false }),
-                          height: CELL_HEIGHT - 4
-                        }}>
-                          {hasSick && <SickStripeOverlay />}
-                          {approvedTimeOff && !shift && !hasEvents ? (
-                            <div className="flex items-center justify-center h-full">
-                              <span style={{ color: THEME.text.muted, fontSize: '9px' }}>Time Off</span>
-                            </div>
-                          ) : isUnavailable && !shift && !hasEvents ? (
-                            <div className="flex items-center justify-center h-full">
-                              <span style={{ color: THEME.text.muted, fontSize: '8px' }}>Unavailable</span>
-                            </div>
-                          ) : shift ? (
-                            <div className="p-1 h-full flex flex-col justify-between">
-                              {(labelText || hasEvents) ? (
-                                <div className="flex items-start justify-between gap-1">
-                                  {labelText ? (
-                                    <span className="font-semibold truncate" style={{ color: hasSick ? THEME.text.muted : labelColor, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '10px' }}>{labelText}</span>
-                                  ) : <span className="min-w-0 flex-1" />}
-                                  {hasEvents && !hasSick && <EventGlyphPill events={cellEvents} size="sm" />}
-                                </div>
-                              ) : null}
-                              {hasSick && sickEvent?.note ? (
-                                <span className="italic truncate block" style={{ color: THEME.text.muted, fontSize: '9px' }} title={sickEvent?.note}>
-                                  {sickEvent?.note}
-                                </span>
-                              ) : (
-                                <>
-                                  <div>
-                                    <span style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '9px' }}>{formatTimeShort(shift.startTime)}-{formatTimeShort(shift.endTime)}</span>
-                                  </div>
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-medium" style={{ color: THEME.text.muted, textDecoration: hasSick ? 'line-through' : 'none', fontSize: '9px' }}>{hasSick ? '0' : shift.hours}h</span>
-                                    {shift.task && (
-                                      <Star size={8} fill={THEME.task} color={THEME.task} />
-                                    )}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          ) : eventOnly ? (
-                            <EventOnlyCell events={cellEvents} firstEventType={firstEventType} firstEvent={firstEvent} size="sm" />
-                          ) : null}
-                        </div>
-                      </LongPressCell>
+                      <MobileAdminScheduleCell
+                        key={dateStr}
+                        emp={emp}
+                        date={date}
+                        shift={shift}
+                        rawCellEvents={rawCellEvents}
+                        approvedTimeOff={approvedTimeOff}
+                        isEditMode={isEditMode}
+                        onCellClick={onCellClick}
+                        onLongPress={setEventSheetData}
+                        cellWidth={CELL_WIDTH}
+                        cellHeight={CELL_HEIGHT}
+                      />
                     );
                   })}
                 </tr>
@@ -489,7 +523,7 @@ export const MobileAdminScheduleGrid = ({
       />
     </div>
   );
-};
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MOBILE ANNOUNCEMENT VIEWER/EDITOR

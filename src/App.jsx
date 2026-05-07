@@ -714,12 +714,12 @@ export default function App() {
   );
   
   // Get staffing target for a given date (per-date override → weekly default → fallback)
-  const getStaffingTarget = (date) => {
+  const getStaffingTarget = useCallback((date) => {
     const dateStr = toDateKey(date);
     if (staffingTargetOverrides[dateStr] !== undefined) return staffingTargetOverrides[dateStr];
     const dayName = getDayName(date).toLowerCase();
     return staffingTargets[dayName] || DEFAULT_STAFFING_TARGETS[dayName] || 8;
-  };
+  }, [staffingTargetOverrides, staffingTargets]);
   
   // Auto-populate shift for an employee on a date.
   // v2.24.0: prefer per-day defaultShift; fall back to availability window.
@@ -1652,6 +1652,18 @@ export default function App() {
   // Column header click handler — stable ref keeps ColumnHeaderCell memo effective
   const handleColumnHeaderClick = useCallback((date) => setEditingColumnDate(date), []);
 
+  // Mobile admin grid handlers — stable refs so MobileAdminScheduleGrid memo holds
+  const handleMobileAdminCellClick = useCallback((emp, date, shift) => {
+    if (!isCurrentPeriodEditMode) return;
+    if (!canEditShiftDate(currentUser, date, new Date())) {
+      showToast('info', 'Past pay period is locked.');
+      return;
+    }
+    setEditingShift({ employee: emp, date, shift });
+  }, [isCurrentPeriodEditMode, currentUser, showToast]);
+
+  const handleMobileNameClick = useCallback((emp) => setQuickViewEmployee(emp), []);
+
   // Edit employee handler — stable ref keeps EmployeeRow memo effective
   const handleEditEmployee = useCallback((emp) => {
     setEditingEmp(emp);
@@ -1997,18 +2009,9 @@ export default function App() {
                 staffingTargetOverrides={staffingTargetOverrides}
                 storeHoursOverrides={storeHoursOverrides}
                 isEditMode={isCurrentPeriodEditMode}
-                onCellClick={(emp, date, shift) => {
-                  if (isCurrentPeriodEditMode) {
-                    // v2.32.0: past-period edit lock; owner bypasses via canEditShiftDate.
-                    if (!canEditShiftDate(currentUser, date, new Date())) {
-                      showToast('info', 'Past pay period is locked.');
-                      return;
-                    }
-                    setEditingShift({ employee: emp, date, shift });
-                  }
-                }}
-                onNameClick={(emp) => setQuickViewEmployee(emp)}
-                onHeaderClick={(date) => setEditingColumnDate(date)}
+                onCellClick={handleMobileAdminCellClick}
+                onNameClick={handleMobileNameClick}
+                onHeaderClick={handleColumnHeaderClick}
               />
 
               {hiddenStaff.length > 0 && (

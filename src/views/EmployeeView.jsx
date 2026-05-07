@@ -352,6 +352,10 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
   const getEmpHours = useCallback(() => 0, []);
   const getEmpHoursWeek2 = useCallback(() => 0, []);
 
+  // Stable ref keeps MobileScheduleGrid memo effective.
+  // haptic and setMobileShiftDetail are both stable (imported fn + React setter).
+  const handleMobileShiftClick = useCallback((info) => { haptic(); setMobileShiftDetail(info); }, []);
+
   const myShiftsCount = allDateStrs.reduce((n, ds) => shifts[`${currentUser.id}-${ds}`] ? n + 1 : n, 0);
   
   const handleSelectRequestType = (type) => {
@@ -495,7 +499,7 @@ const EmployeeView = ({ employees, shifts, events = {}, dates, periodInfo, curre
               loggedInUser={currentUser}
               getEmployeeHours={mobileActiveTab === 'week1' ? getEmpHours : getEmpHoursWeek2}
               approvedTimeOffSet={approvedTimeOffSet}
-              onShiftClick={(info) => { haptic(); setMobileShiftDetail(info); }}
+              onShiftClick={handleMobileShiftClick}
             />
           )}
           
