@@ -2,6 +2,18 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.33.1 (onboarding email body: always-on static block with sign-in URL + default-password format + first-login note)
+ *
+ * Changes in v2.33.1:
+ * - sendOnboardingEmail: always renders an "always-on" static block below the admin's typed message.
+ *   Closes the gap where R1 in v2.33.0 only landed in the Welcome PDF attachment, leaving the
+ *   email body itself empty when admin doesn't type a message. Recipient now sees the sign-in URL,
+ *   default-password format, and first-login expectation in the email body without needing to
+ *   download the PDF. Admin's typed message stays the primary body content; static block sits below.
+ * - BRANDED_EMAIL_WRAPPER_HTML_: new opts.trustedHtmlAfter param renders raw HTML below the escaped
+ *   content block. Used to inject the static block without losing its <a href> link to escapeHtml_.
+ * - ONBOARDING_EMAIL_STATIC_BLOCK_HTML_ + ONBOARDING_EMAIL_STATIC_BLOCK_PLAINTEXT_ constants added.
+ *
  * Version: 2.33.0 (welcome PDF body adds app URL + default-password format + first-login expectation)
  *
  * Changes in v2.33.0:
@@ -484,6 +496,29 @@ var WELCOME_TEMPLATE_HTML_ = '<!DOCTYPE html>' +
   '</td></tr>' +
   '</table>' +
   '</body></html>';
+
+// ─── v2.33.1: Onboarding email static block ──────────────────────────────────
+// Always-on block appended to the onboarding email body. Contains app sign-in
+// URL, default-password format, and first-login expectation. Admin's typed
+// message renders ABOVE this block; static block renders BELOW. When the admin
+// types nothing, the email body is just this block.
+//
+// Update site: change copy in BOTH the HTML and plaintext versions, kept in sync
+// by hand. The HTML version goes through BRANDED_EMAIL_WRAPPER_HTML_ as
+// trustedHtmlAfter (raw, unescaped). The plaintext version is concatenated to
+// the typed body for the MailApp body= field.
+var ONBOARDING_EMAIL_STATIC_BLOCK_HTML_ =
+  '<hr style="border:none;border-top:1px solid #E5E7EB;margin:20px 0 16px 0;">' +
+  '<div style="font-size:14px;color:#0D0E22;line-height:1.7;">' +
+  '<p style="margin:0 0 8px 0;"><strong>Sign in:</strong> <a href="https://rainbow-scheduling.vercel.app" style="color:#0D0E22;">https://rainbow-scheduling.vercel.app</a></p>' +
+  '<p style="margin:0 0 8px 0;">Your login is your email address. Your default password is your first name and last initial with no space (e.g. JohnR).</p>' +
+  '<p style="margin:0;">On first login you\'ll be asked to set a personal password.</p>' +
+  '</div>';
+
+var ONBOARDING_EMAIL_STATIC_BLOCK_PLAINTEXT_ =
+  'Sign in: https://rainbow-scheduling.vercel.app\n' +
+  'Your login is your email address. Your default password is your first name and last initial with no space (e.g. JohnR).\n' +
+  'On first login you\'ll be asked to set a personal password.';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // WEB APP ENTRY POINTS
@@ -2977,6 +3012,11 @@ function BRANDED_EMAIL_WRAPPER_HTML_(content, accentHex, opts) {
   var askType = opts.askType || '';
   var ctaText = opts.ctaText || '';
   var ctaUrl = opts.ctaUrl || '';
+  // v2.33.1: trustedHtmlAfter renders raw HTML below the (escaped) content
+  // block, before the CTA. Used by sendOnboardingEmail to append the always-on
+  // sign-in / default-password block. Caller is responsible for HTML safety
+  // since this string is NOT escaped.
+  var trustedHtmlAfter = opts.trustedHtmlAfter || '';
   // Escape HTML entities in content string before injecting.
   // content is already a formatted plaintext body; convert newlines to <br>.
   var escapeHtml_ = function (s) {
@@ -3007,6 +3047,7 @@ function BRANDED_EMAIL_WRAPPER_HTML_(content, accentHex, opts) {
     '<tr><td style="padding:20px 24px;background-color:#FFFFFF;">' +
     askTypeHtml +
     '<div style="font-size:14px;color:' + OTR_NAVY_ + ';line-height:1.6;">' + safeContent + '</div>' +
+    trustedHtmlAfter +
     ctaHtml +
     '</td></tr>' +
     '<tr><td style="padding:16px 24px;background-color:#F5F3F0;border-top:1px solid #E5E7EB;">' +
@@ -3137,21 +3178,25 @@ function sendOnboardingEmail(payload) {
     var extraAttachments = (payload.attachments || []).map(decodeUploadedAttachment_);
     var attachments = [welcomePdf, fedBlob, onBlob].concat(extraAttachments);
 
-    // v2.31.1: when Sarvi types a body, wrap it in the branded email shell so the
-    // typed message matches the schedule-distribution email visual language. When
-    // the body is empty, send htmlBody as '' (recipient sees subject + attachments
-    // with no body block — attachments are the payload).
+    // v2.33.1: always render the static block (sign-in URL + default-password
+    // format + first-login note) below the admin's typed body. Empty typed body
+    // renders just the static block. Static block goes in as trustedHtmlAfter
+    // (raw HTML, NOT escaped) so the <a href> tag survives the wrapper's
+    // escapeHtml_ pass on user-typed content.
     var bodyText = payload.bodyText || '';
-    var htmlBody = bodyText.trim()
-      ? BRANDED_EMAIL_WRAPPER_HTML_(bodyText, OTR_ACCENT_DEFAULT_)
-      : '';
+    var htmlBody = BRANDED_EMAIL_WRAPPER_HTML_(bodyText, OTR_ACCENT_DEFAULT_, {
+      trustedHtmlAfter: ONBOARDING_EMAIL_STATIC_BLOCK_HTML_
+    });
+    var plaintextBody = bodyText.trim()
+      ? bodyText + '\n\n' + ONBOARDING_EMAIL_STATIC_BLOCK_PLAINTEXT_
+      : ONBOARDING_EMAIL_STATIC_BLOCK_PLAINTEXT_;
 
     // Send email. BCC is payload-driven and optional (mirrors sendBrandedScheduleEmail).
     var mailParams = {
       to: actualRecipient,
       subject: payload.subject,
-      body: bodyText,
-      htmlBody: htmlBody || '',
+      body: plaintextBody,
+      htmlBody: htmlBody,
       attachments: attachments,
       name: 'OTR Scheduling'
     };
