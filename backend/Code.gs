@@ -2,6 +2,19 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.33.2 (onboarding email matches schedule-distribution branded shell)
+ *
+ * Changes in v2.33.2:
+ * - sendOnboardingEmail: navy-header eyebrow now reads "NEW EMPLOYEE WELCOME" (mirrors the welcome PDF
+ *   eyebrow). Greeting row "Hi {firstName}," renders above the admin's typed body. Static block
+ *   restyled as an accent-bordered "Get Started" card matching the schedule email's announcement-row
+ *   pattern (left border, tinted bg, eyebrow label).
+ * - BRANDED_EMAIL_WRAPPER_HTML_: new opts.headerEyebrow + opts.greetingHtml params. headerEyebrow
+ *   defaults to "OTR Scheduling" so existing notification callers stay unchanged. greetingHtml
+ *   renders raw HTML at the top of the body cell (caller responsible for escaping).
+ * - escapeHtmlForEmail_: hoisted from BRANDED_EMAIL_WRAPPER_HTML_ closure to module scope so
+ *   sendOnboardingEmail can use it for firstName injection.
+ *
  * Version: 2.33.1 (onboarding email body: always-on static block with sign-in URL + default-password format + first-login note)
  *
  * Changes in v2.33.1:
@@ -405,6 +418,13 @@ function sheetBool_(v) {
   return false;
 }
 
+/** v2.33.2: HTML-escape user-supplied strings before inlining into email HTML.
+ *  Hoisted to module scope so sendOnboardingEmail can escape firstName for the
+ *  greeting row and BRANDED_EMAIL_WRAPPER_HTML_ can escape its content args. */
+function escapeHtmlForEmail_(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // ─── Onboarding email constants (v2.31.0) ────────────────────────────────────
 // Drive folder "New Employee Files" (otr.scheduler-owned). Apps Script runs
 // as otr.scheduler so DriveApp reads these without additional share grants.
@@ -507,13 +527,18 @@ var WELCOME_TEMPLATE_HTML_ = '<!DOCTYPE html>' +
 // by hand. The HTML version goes through BRANDED_EMAIL_WRAPPER_HTML_ as
 // trustedHtmlAfter (raw, unescaped). The plaintext version is concatenated to
 // the typed body for the MailApp body= field.
+//
+// v2.33.2: restyled as an accent-bordered "Get Started" card matching the
+// announcement-row pattern in the schedule email (left border, tinted bg,
+// eyebrow label).
 var ONBOARDING_EMAIL_STATIC_BLOCK_HTML_ =
-  '<hr style="border:none;border-top:1px solid #E5E7EB;margin:20px 0 16px 0;">' +
-  '<div style="font-size:14px;color:#0D0E22;line-height:1.7;">' +
-  '<p style="margin:0 0 8px 0;"><strong>Sign in:</strong> <a href="https://rainbow-scheduling.vercel.app" style="color:#0D0E22;">https://rainbow-scheduling.vercel.app</a></p>' +
-  '<p style="margin:0 0 8px 0;">Your login is your email address. Your default password is your first name and last initial with no space (e.g. JohnR).</p>' +
-  '<p style="margin:0;">On first login you\'ll be asked to set a personal password.</p>' +
-  '</div>';
+  '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;border-collapse:collapse;">' +
+  '<tr><td style="padding:16px 18px;background-color:' + OTR_ACCENT_DEFAULT_ + '15;border-left:4px solid ' + OTR_ACCENT_DEFAULT_ + ';">' +
+  '<div style="font-size:11px;font-weight:700;color:' + OTR_ACCENT_DEFAULT_ + ';letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Get Started</div>' +
+  '<p style="margin:0 0 8px 0;font-size:14px;color:#0D0E22;line-height:1.6;"><strong>Sign in:</strong> <a href="https://rainbow-scheduling.vercel.app" style="color:' + OTR_ACCENT_DEFAULT_ + ';">rainbow-scheduling.vercel.app</a></p>' +
+  '<p style="margin:0 0 8px 0;font-size:14px;color:#0D0E22;line-height:1.6;">Your login is your email address. Your default password is your first name and last initial with no space (e.g. JohnR).</p>' +
+  '<p style="margin:0;font-size:14px;color:#0D0E22;line-height:1.6;">On first login you\'ll be asked to set a personal password.</p>' +
+  '</td></tr></table>';
 
 var ONBOARDING_EMAIL_STATIC_BLOCK_PLAINTEXT_ =
   'Sign in: https://rainbow-scheduling.vercel.app\n' +
@@ -3017,19 +3042,25 @@ function BRANDED_EMAIL_WRAPPER_HTML_(content, accentHex, opts) {
   // sign-in / default-password block. Caller is responsible for HTML safety
   // since this string is NOT escaped.
   var trustedHtmlAfter = opts.trustedHtmlAfter || '';
-  // Escape HTML entities in content string before injecting.
-  // content is already a formatted plaintext body; convert newlines to <br>.
-  var escapeHtml_ = function (s) {
-    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  };
-  var safeContent = escapeHtml_(content).replace(/\n/g, '<br>');
+  // v2.33.2: headerEyebrow overrides the default "OTR Scheduling" eyebrow inside
+  // the navy header band. Used to differentiate email types (e.g. "NEW EMPLOYEE
+  // WELCOME" for onboarding) without building a parallel wrapper. Defaults to
+  // "OTR Scheduling" so existing callers stay unchanged.
+  var headerEyebrow = opts.headerEyebrow || 'OTR Scheduling';
+  // v2.33.2: greetingHtml renders raw HTML at the top of the body cell, above
+  // askType and content. Caller is responsible for HTML safety. Used for the
+  // "Hi {firstName}," row in onboarding emails.
+  var greetingHtml = opts.greetingHtml || '';
+  // v2.33.2: escapeHtml_ lifted to module scope (escapeHtmlForEmail_) so
+  // sendOnboardingEmail can use it for the firstName injection too.
+  var safeContent = escapeHtmlForEmail_(content).replace(/\n/g, '<br>');
   var askTypeHtml = askType
-    ? '<div style="font-size:11px;font-weight:700;color:' + accent + ';letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">' + escapeHtml_(askType) + '</div>'
+    ? '<div style="font-size:11px;font-weight:700;color:' + accent + ';letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">' + escapeHtmlForEmail_(askType) + '</div>'
     : '';
   var ctaHtml = (ctaText && ctaUrl)
     ? '<table cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;"><tr>' +
       '<td style="background-color:' + accent + ';border-radius:6px;padding:10px 22px;">' +
-      '<a href="' + ctaUrl + '" style="color:#FFFFFF;text-decoration:none;font-weight:600;font-size:13px;display:inline-block;">' + escapeHtml_(ctaText) + '</a>' +
+      '<a href="' + ctaUrl + '" style="color:#FFFFFF;text-decoration:none;font-weight:600;font-size:13px;display:inline-block;">' + escapeHtmlForEmail_(ctaText) + '</a>' +
       '</td></tr></table>'
     : '';
   return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"></head>' +
@@ -3042,9 +3073,10 @@ function BRANDED_EMAIL_WRAPPER_HTML_(content, accentHex, opts) {
     '<div style="font-size:12px;font-weight:300;letter-spacing:3px;text-transform:uppercase;">OVER THE</div>' +
     '<div style="font-size:18px;font-weight:600;letter-spacing:2.7px;text-transform:uppercase;margin-top:2px;">RAINBOW</div>' +
     '</div>' +
-    '<div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:18px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">OTR Scheduling</div>' +
+    '<div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:18px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">' + headerEyebrow + '</div>' +
     '</td></tr>' +
     '<tr><td style="padding:20px 24px;background-color:#FFFFFF;">' +
+    greetingHtml +
     askTypeHtml +
     '<div style="font-size:14px;color:' + OTR_NAVY_ + ';line-height:1.6;">' + safeContent + '</div>' +
     trustedHtmlAfter +
@@ -3183,8 +3215,14 @@ function sendOnboardingEmail(payload) {
     // renders just the static block. Static block goes in as trustedHtmlAfter
     // (raw HTML, NOT escaped) so the <a href> tag survives the wrapper's
     // escapeHtml_ pass on user-typed content.
+    // v2.33.2: header eyebrow shows "NEW EMPLOYEE WELCOME" (mirrors the welcome
+    // PDF) and a "Hi {firstName}," greeting row renders above the typed body so
+    // the email visually matches the schedule-distribution branded shell.
     var bodyText = payload.bodyText || '';
+    var greetingHtml = '<div style="font-size:14px;color:' + OTR_NAVY_ + ';font-weight:600;margin-bottom:14px;">Hi ' + escapeHtmlForEmail_(firstName) + ',</div>';
     var htmlBody = BRANDED_EMAIL_WRAPPER_HTML_(bodyText, OTR_ACCENT_DEFAULT_, {
+      headerEyebrow: 'NEW EMPLOYEE WELCOME',
+      greetingHtml: greetingHtml,
       trustedHtmlAfter: ONBOARDING_EMAIL_STATIC_BLOCK_HTML_
     });
     var plaintextBody = bodyText.trim()
