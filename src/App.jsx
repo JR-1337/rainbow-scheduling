@@ -6,7 +6,7 @@ import { toDateKey, getDayName, formatDate, formatMonthWord, getWeekNumber, form
 import { isStatHoliday } from './utils/storeHours';
 import { TooltipButton, Modal } from './components/primitives';
 import { AdaptiveModal } from './components/AdaptiveModal';
-import { haptic, AnimatedNumber, ScheduleSkeleton, TaskStarTooltip, GradientBackground, Logo, StaffingBar } from './components/uiKit';
+import { haptic, ScheduleSkeleton, TaskStarTooltip, GradientBackground, Logo, StaffingBar } from './components/uiKit';
 import { PAY_PERIOD_START, CURRENT_PERIOD_INDEX, getPayPeriodDates } from './utils/payPeriod';
 import { matchesOfferId, matchesSwapId, errorMsg } from './utils/requests';
 import { CollapsibleSection } from './components/CollapsibleSection';

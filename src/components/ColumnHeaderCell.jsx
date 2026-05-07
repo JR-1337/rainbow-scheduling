@@ -1,7 +1,7 @@
 import React from 'react';
 import { THEME } from '../theme';
 import { getDayName, formatTimeShort } from '../utils/date';
-import { AnimatedNumber, StaffingBar } from './uiKit';
+import { StaffingBar } from './uiKit';
 
 const ColumnHeaderCell = React.memo(function ColumnHeaderCell({
   date,
@@ -56,11 +56,7 @@ const ColumnHeaderCell = React.memo(function ColumnHeaderCell({
         {formatTimeShort(storeOpen)}-{formatTimeShort(storeClose)}
       </p>
       <p className="text-xs mt-0.5">
-        <AnimatedNumber
-          value={scheduled}
-          overtimeThreshold={Infinity}
-          style={{ color: overTarget ? THEME.status.error + 'AA' : atTarget ? THEME.status.success + '99' : THEME.text.muted }}
-        />
+        <span style={{ color: overTarget ? THEME.status.error + 'AA' : atTarget ? THEME.status.success + '99' : THEME.text.muted }}>{scheduled}</span>
         <span style={{ color: hasOverride ? THEME.accent.cyan + '99' : THEME.text.muted }}>/{target}</span>
       </p>
       {target > 0 && <div className="px-1"><StaffingBar scheduled={scheduled} target={target} /></div>}
