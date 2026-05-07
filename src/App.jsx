@@ -742,6 +742,9 @@ export default function App() {
           // an event so the employee's recurring availability is untouched.
           const dayEvents = events[key] || [];
           if (dayEvents.some(e => e.type === 'unavailable')) return;
+          // Stat holidays are off-limits for autofill -- store may be open with
+          // reduced hours, but bookings on holidays are an opt-in manual action.
+          if (isStatHoliday(date)) return;
           const shift = createShiftFromAvailability(emp, date);
           if (shift) {
             newShifts[key] = shift;
