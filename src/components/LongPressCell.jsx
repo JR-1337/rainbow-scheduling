@@ -1,8 +1,8 @@
-import React, { useRef, useLayoutEffect, useCallback } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { useLongPress } from '../hooks/useLongPress';
 
 export default function LongPressCell({ as: As = 'td', enabled, onLongPress, onClick, children, ...rest }) {
-  const { handlers, wasLongPress, setTouchRef } = useLongPress(onLongPress || (() => {}));
+  const { handlers, wasLongPress } = useLongPress(onLongPress || (() => {}));
   const nodeRef = useRef(null);
 
   const handleClick = (e) => {
@@ -17,12 +17,6 @@ export default function LongPressCell({ as: As = 'td', enabled, onLongPress, onC
     if (typeof refFromParent === 'function') refFromParent(node);
     else if (refFromParent != null) refFromParent.current = node;
   }, [refFromParent]);
-
-  useLayoutEffect(() => {
-    if (enabled && nodeRef.current) setTouchRef(nodeRef.current);
-    else setTouchRef(null);
-    return () => setTouchRef(null);
-  }, [enabled, setTouchRef]);
 
   return (
     <As onClick={handleClick} ref={mergedRef} {...(enabled ? handlers : {})} {...restSansRef}>
