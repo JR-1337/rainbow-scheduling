@@ -2,6 +2,17 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * RAINBOW SCHEDULING APP - GOOGLE APPS SCRIPT BACKEND
  * ═══════════════════════════════════════════════════════════════════════════════
+ * Version: 2.33.3 (welcome PDF: drop R1 paragraph + light CSS compression for 1-page fit)
+ *
+ * Changes in v2.33.3:
+ * - WELCOME_TEMPLATE_HTML_: removed the R1 paragraph (Schedule app URL + default-password line +
+ *   first-login note) added in v2.33.0. That info now lives in the email body via v2.33.1+v2.33.2's
+ *   ONBOARDING_EMAIL_STATIC_BLOCK_HTML_; duplicating it in the printed PDF was low-value (the URL
+ *   isn't clickable in print). PDF returns to its pre-s072 paragraph count (10 paragraphs).
+ * - WELCOME_TEMPLATE_HTML_: paragraph margins tightened from 14px to 10px; navy header padding
+ *   reduced from 32+28 to 24+20. Net ~80px saved across the body to ensure 1-page Letter fit.
+ * - No change to email body shell (still v2.33.2 with always-on Get Started card).
+ *
  * Version: 2.33.2 (onboarding email matches schedule-distribution branded shell)
  *
  * Changes in v2.33.2:
@@ -450,7 +461,7 @@ var WELCOME_TEMPLATE_HTML_ = '<!DOCTYPE html>' +
   '<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;border-collapse:collapse;border:1px solid #E5E7EB;">' +
 
   '<!-- Header -->' +
-  '<tr><td style="background-color:#0D0E22;padding:32px 24px 28px 24px;text-align:center;">' +
+  '<tr><td style="background-color:#0D0E22;padding:24px 24px 20px 24px;text-align:center;">' +
   '<div style="line-height:1;color:#FDFEFC;">' +
   '<div style="font-size:12px;font-weight:300;letter-spacing:3px;text-transform:uppercase;">OVER THE</div>' +
   '<div style="font-size:18px;font-weight:600;letter-spacing:2.7px;text-transform:uppercase;margin-top:2px;">RAINBOW</div>' +
@@ -480,28 +491,25 @@ var WELCOME_TEMPLATE_HTML_ = '<!DOCTYPE html>' +
   '<tr><td style="padding:8px 24px 24px 24px;background-color:#FFFFFF;">' +
   '<div style="font-size:14px;color:#374151;line-height:1.8;">' +
 
-  '<p style="margin:0 0 14px 0;">Schedule app: <a href="https://rainbow-scheduling.vercel.app" style="color:#0D0E22;">https://rainbow-scheduling.vercel.app</a><br>' +
-  'Your login is your email address. Your default password is your first name and last initial with no space (e.g. JohnR). On first login you\'ll be asked to set a personal password.</p>' +
+  '<p style="margin:0 0 10px 0;">Welcome to Over the Rainbow Ltd. Please print the attached documents:</p>' +
 
-  '<p style="margin:0 0 14px 0;">Welcome to Over the Rainbow Ltd. Please print the attached documents:</p>' +
+  '<p style="margin:0 0 10px 0;">Employee Employment Contract. Please read this document and bring a signed copy with you on your first day of work or prior to.</p>' +
 
-  '<p style="margin:0 0 14px 0;">Employee Employment Contract. Please read this document and bring a signed copy with you on your first day of work or prior to.</p>' +
+  '<p style="margin:0 0 10px 0;">TD1 Federal and Ontario. These are personal tax credit forms that must be filled out and brought with you on your first day of work or prior to. Please note on page 2 &#8220;Total income less than total claim amount&#8221; &#8211; this box needs to be checked IF it pertains to you. Otherwise, please leave it blank.</p>' +
 
-  '<p style="margin:0 0 14px 0;">TD1 Federal and Ontario. These are personal tax credit forms that must be filled out and brought with you on your first day of work or prior to. Please note on page 2 &#8220;Total income less than total claim amount&#8221; &#8211; this box needs to be checked IF it pertains to you. Otherwise, please leave it blank.</p>' +
+  '<p style="margin:0 0 10px 0;">Please be sure to include apartment numbers, and postal codes on the above.</p>' +
 
-  '<p style="margin:0 0 14px 0;">Please be sure to include apartment numbers, and postal codes on the above.</p>' +
+  '<p style="margin:0 0 10px 0;">Please write your email contact information on the top of one of the TD1 forms when you submit them.</p>' +
 
-  '<p style="margin:0 0 14px 0;">Please write your email contact information on the top of one of the TD1 forms when you submit them.</p>' +
+  '<p style="margin:0 0 10px 0;">On your first day, please bring a void cheque for our payroll direct deposit.</p>' +
 
-  '<p style="margin:0 0 14px 0;">On your first day, please bring a void cheque for our payroll direct deposit.</p>' +
+  '<p style="margin:0 0 10px 0;">If you do not have a chequing account, please ask your bank for the direct deposit information. It is your responsibility to provide accurate information.</p>' +
 
-  '<p style="margin:0 0 14px 0;">If you do not have a chequing account, please ask your bank for the direct deposit information. It is your responsibility to provide accurate information.</p>' +
+  '<p style="margin:0 0 10px 0;">If these forms are not signed and completed before your first shift, you will not be permitted to begin your shift.</p>' +
 
-  '<p style="margin:0 0 14px 0;">If these forms are not signed and completed before your first shift, you will not be permitted to begin your shift.</p>' +
+  '<p style="margin:0 0 10px 0;">Please acknowledge receipt of this email.</p>' +
 
-  '<p style="margin:0 0 14px 0;">Please acknowledge receipt of this email.</p>' +
-
-  '<p style="margin:0 0 14px 0;">Sincerely,<br><br>Sarvi Ghahremanpour</p>' +
+  '<p style="margin:0 0 10px 0;">Sincerely,<br><br>Sarvi Ghahremanpour</p>' +
 
   '</div>' +
   '</td></tr>' +
